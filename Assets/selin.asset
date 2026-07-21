@@ -1,0 +1,86 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
+  m_Name: selin
+  m_EditorClassIdentifier: 
+  levelName: New Level
+  timeLimit: 60
+  boardColumns: 8
+  boardRows: 8
+  subdivisions: 4
+  backgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
+  gravityScale: 1.5
+  exitWidth: 3
+  shredderCount: 2
+  shredderRadius: 0.42
+  shredderRotationSpeed: 220
+  pieces:
+  - name: Piece 1
+    color: {r: 1, g: 0.3, b: 0.3, a: 1}
+    origin: {x: 10, y: 23}
+    quarterTurns: 0
+    cells: []
+  pins: []
+  obstacles: []
+  shredders:
+  - name: Shredder 1
+    cell: {x: 1, y: 1}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 2
+    cell: {x: 6, y: 1}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 3
+    cell: {x: 12, y: 1}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 4
+    cell: {x: 19, y: 1}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 5
+    cell: {x: 24, y: 1}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 6
+    cell: {x: 29, y: 1}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 7
+    cell: {x: 16, y: 1}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 8
+    cell: {x: 9, y: 1}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  inactiveBoardCells:
+  - {x: 2, y: 7}
+  - {x: 2, y: 6}
+  - {x: 2, y: 5}
+  - {x: 3, y: 5}
+  - {x: 4, y: 5}
+  - {x: 4, y: 6}
+  - {x: 4, y: 7}
+  - {x: 3, y: 7}
+  - {x: 3, y: 6}
+  inactiveFineCells: []
