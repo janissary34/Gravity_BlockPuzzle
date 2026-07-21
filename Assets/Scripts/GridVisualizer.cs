@@ -17,33 +17,48 @@ namespace GravityPuzzle
         public int gridRadiusY = 20;
         public bool showGizmos = true;
 
-        private void OnEnable()
+        private void OnDrawGizmos()
         {
-            RefreshVisuals();
-        }
-
-        private void OnValidate()
-        {
-            RefreshVisuals();
-        }
-
-        private void RefreshVisuals()
-        {
-            if (cellSize.x <= 0f || cellSize.y <= 0f) return;
-
-            // Clear old dots
-            while (transform.childCount > 0)
+            if (!showGizmos || cellSize.x <= 0f || cellSize.y <= 0f) return;
+            
+            Gizmos.color = gridColor;
+            
+            for (int x = -gridRadiusX; x <= gridRadiusX; x++)
             {
-                DestroyImmediate(transform.GetChild(0).gameObject);
+                for (int y = -gridRadiusY; y <= gridRadiusY; y++)
+                {
+                    Vector3 center = new Vector3(
+                        gridOriginOffset.x + x * cellSize.x,
+                        gridOriginOffset.y + y * cellSize.y,
+                        0f
+                    );
+                    
+                    Gizmos.DrawSphere(center, cellSize.x * 0.15f);
+                    Gizmos.DrawWireCube(center, new Vector3(cellSize.x, cellSize.y, 0f));
+                }
+            }
+        }
+        
+        private void OnDrawGizmosSelected()
+        {
+            OnDrawGizmos();
+        }
+
+        private Texture2D dotTexture;
+
+        private void OnGUI()
+        {
+            if (!showGizmos || cellSize.x <= 0f || cellSize.y <= 0f) return;
+            if (Camera.main == null) return;
+
+            if (dotTexture == null)
+            {
+                dotTexture = new Texture2D(1, 1);
+                dotTexture.SetPixel(0, 0, gridColor);
+                dotTexture.Apply();
             }
 
-            if (!showGizmos) return;
-
-            // Create a simple sprite if we don't have one
-            Texture2D tex = new Texture2D(1, 1);
-            tex.SetPixel(0, 0, Color.white);
-            tex.Apply();
-            Sprite dotSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 100f);
+            GUI.color = Color.white; // Texture is already colored
 
             for (int x = -gridRadiusX; x <= gridRadiusX; x++)
             {
@@ -55,19 +70,17 @@ namespace GravityPuzzle
                         0f
                     );
 
-                    GameObject dot = new GameObject($"Dot_{x}_{y}");
-                    dot.transform.SetParent(transform);
-                    dot.transform.position = worldPos;
-                    // Make the dot small (e.g. 0.05 world units)
-                    dot.transform.localScale = new Vector3(0.08f, 0.08f, 1f);
+                    Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
+                    
+                    if (screenPos.z < 0) continue;
 
-                    SpriteRenderer sr = dot.AddComponent<SpriteRenderer>();
-                    sr.sprite = dotSprite;
-                    sr.color = gridColor;
-                    sr.sortingOrder = 999; // Ensure it renders on top
+                    float guiY = Screen.height - screenPos.y;
+
+                    // Draw a massive 12x12 red box
+                    Rect rect = new Rect(screenPos.x - 6, guiY - 6, 12, 12);
+                    GUI.DrawTexture(rect, dotTexture);
                 }
             }
         }
-
     }
 }

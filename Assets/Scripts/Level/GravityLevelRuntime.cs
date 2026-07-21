@@ -67,6 +67,14 @@ namespace GravityPuzzle
 
         public static int CurrentLevelNumber => Mathf.Max(1, currentLevelIndex + 1);
 
+        /// <summary>
+        /// Requests that the next scene load immediately starts the active level without showing the main menu.
+        /// </summary>
+        public static void RequestRestart()
+        {
+            previewLaunchRequested = true;
+        }
+
         internal static bool ConsumePreviewLaunchRequest()
         {
             bool requested = previewLaunchRequested;
@@ -160,7 +168,8 @@ namespace GravityPuzzle
             foreach (PinDefinition pin in level.pins)
                 CreatePin(level, pin);
 
-            foreach (PieceDefinition piece in level.pieces)
+            List<PieceDefinition> fusedPieces = PieceFuser.Fuse(level.pieces);
+            foreach (PieceDefinition piece in fusedPieces)
                 CreatePiece(level, piece);
         }
 
@@ -419,7 +428,10 @@ namespace GravityPuzzle
             float radius = Mathf.Clamp(level.shredderRadius, .2f, exitWidth / (count + .5f));
             float spacing = count == 1 ? 0f : exitWidth / count;
             float startX = -(count - 1) * spacing * .5f;
-            float y = -halfHeight - radius * .7f;
+            
+            // Lower the shredders so their top edge (y + radius) is exactly at the bottom of the board (-halfHeight).
+            // This prevents blocks resting on the shredder from being pushed vertically out of the grid alignment.
+            float y = -halfHeight - radius;
 
             for (int i = 0; i < count; i++)
             {
@@ -597,6 +609,34 @@ namespace GravityPuzzle
             }
 
             pieceComposite.GenerateGeometry();
+
+            // Draw a unified outline around the outer perimeter of the shape
+            LineRenderer outline = piece.AddComponent<LineRenderer>();
+            outline.useWorldSpace = false;
+            outline.loop = true;
+            outline.startWidth = 0.08f;
+            outline.endWidth = 0.08f;
+            outline.numCornerVertices = 4;
+            outline.numCapVertices = 4;
+            outline.sortingOrder = -1; // Draw just behind the colored blocks
+            
+            // Standard sprite material so it matches the 2D lighting/rendering
+            outline.material = new Material(Shader.Find("Sprites/Default"));
+            Color outlineColor = new Color(0.12f, 0.12f, 0.15f, 1f);
+            outline.startColor = outlineColor;
+            outline.endColor = outlineColor;
+
+            if (pieceComposite.pathCount > 0)
+            {
+                int pointCount = pieceComposite.GetPathPointCount(0);
+                outline.positionCount = pointCount;
+                Vector2[] path = new Vector2[pointCount];
+                pieceComposite.GetPath(0, path);
+                for (int i = 0; i < pointCount; i++)
+                {
+                    outline.SetPosition(i, new Vector3(path[i].x, path[i].y, 0f));
+                }
+            }
 
             PuzzlePiece puzzlePiece = piece.AddComponent<PuzzlePiece>();
             puzzlePiece.ConfigureCollisionGeometry(

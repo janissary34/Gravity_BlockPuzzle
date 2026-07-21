@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: EasyLevel_01
   m_EditorClassIdentifier: 
   levelName: New Level
+  timeLimit: 60
   boardColumns: 4
   boardRows: 4
   subdivisions: 4

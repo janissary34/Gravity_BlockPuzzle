@@ -31,20 +31,14 @@ namespace GravityPuzzle
         private const float TouchSelectionRadiusInGridCells = .45f;
         private const float MouseSelectionRadiusInGridCells = .18f;
 
-        private Vector2 cellSize = new Vector2(0.25f, 0.25f);
-        private Vector2 gridOriginOffset = new Vector2(0.125f, 0.125f);
+        // Track the true mathematical starting X coordinate for each piece
+        // to guarantee it always snaps perfectly on its specific fine-cell alignment
+        private Dictionary<int, float> pieceStartingX = new Dictionary<int, float>();
 
         private void Awake()
         {
             gameCamera = Camera.main;
             
-            // Auto-pull calibration from visualizer if present
-            GridVisualizer visualizer = FindObjectOfType<GridVisualizer>();
-            if (visualizer != null)
-            {
-                cellSize = visualizer.cellSize;
-                gridOriginOffset = visualizer.gridOriginOffset;
-            }
             solidContactFilter = new ContactFilter2D();
             solidContactFilter.NoFilter();
             solidContactFilter.useTriggers = false;
@@ -52,6 +46,16 @@ namespace GravityPuzzle
 
         private void Update()
         {
+            if (LevelTimerUI.IsGameOver)
+            {
+                if (selectedPiece != null)
+                {
+                    ReleasePiece();
+                    activeFingerId = -1;
+                }
+                return;
+            }
+
             if (Input.touchCount > 0)
                 ProcessTouchInput();
             else
@@ -523,7 +527,30 @@ namespace GravityPuzzle
             selectedPiece.SetSelected(true);
             Physics2D.SyncTransforms();
 
-            snappingTargetsX.Remove(piece.GetInstanceID());
+            int pieceId = piece.GetInstanceID();
+
+            // Record the piece's mathematically true origin X the very first time it is grabbed.
+            // Because pieces spawn perfectly aligned to the grid, we can guarantee that 
+            // any valid snapped position is simply a whole integer offset from this starting X!
+            if (!pieceStartingX.ContainsKey(pieceId))
+            {
+                GravityLevelDefinition activeLevel = GravityLevelRuntime.FindLevelToPlay();
+                int boardColumns = activeLevel != null ? activeLevel.boardColumns : 6;
+                int subdivisions = activeLevel != null ? activeLevel.subdivisions : 4;
+                float fineCellSize = 1f / subdivisions;
+                
+                float boardLeftEdge = -boardColumns * 0.5f;
+                float offset = fineCellSize * 0.5f;
+                
+                // Reconstruct the exact mathematical spawn point of this fine cell
+                float kFloat = (body.position.x - offset - boardLeftEdge) / fineCellSize;
+                int kRound = Mathf.RoundToInt(kFloat);
+                float trueOriginX = boardLeftEdge + kRound * fineCellSize + offset;
+                
+                pieceStartingX[pieceId] = trueOriginX;
+            }
+
+            snappingTargetsX.Remove(pieceId);
             grabOffset = body.position - pointerPosition;
             dragTarget = body.position;
         }
@@ -534,14 +561,21 @@ namespace GravityPuzzle
             selectedPiece.SetSelected(false);
             Physics2D.SyncTransforms();
             PrepareKinematicBody(body);
-            fallingSpeeds[selectedPiece.GetInstanceID()] = 0f;
+            int pieceId = selectedPiece.GetInstanceID();
+            fallingSpeeds[pieceId] = 0f;
 
-            // Use user-calibrated inspector variables for snapping
-            float intendedX = dragTarget.x;
+            // We use the ACTUAL current physical position (which has already been restricted by 
+            // wall collisions in MoveSelectedBody) to determine the nearest valid grid cell.
+            float currentX = body.position.x;
             
-            // Formula: GridOriginX + Mathf.Round((CurrentX - GridOriginX) / CellSize) * CellSize
-            float snappedX = gridOriginOffset.x + Mathf.Round((intendedX - gridOriginOffset.x) / cellSize.x) * cellSize.x;
-            snappingTargetsX[selectedPiece.GetInstanceID()] = snappedX;
+            // Formula: StartingX + Mathf.Round((CurrentX - StartingX) / 1.0f) * 1.0f
+            // This guarantees the block snaps exactly 1 coarse cell at a time relative to its true physics alignment!
+            float startX = pieceStartingX[pieceId];
+            float offsetFromStart = currentX - startX;
+            float snappedX = startX + Mathf.Round(offsetFromStart); // Round to nearest 1.0
+            
+            // Set the final target for the snap animation
+            snappingTargetsX[pieceId] = snappedX;
 
             selectedPiece = null;
         }
