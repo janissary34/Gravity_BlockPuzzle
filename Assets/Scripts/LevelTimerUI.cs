@@ -28,6 +28,10 @@ namespace GravityPuzzle
         [Tooltip("Drag your Main Menu button here")]
         public Button mainMenuButton;
 
+        [Header("Scene Navigation")]
+        [Tooltip("Name of your Main Menu scene (e.g., 'MainMenu'). Leave blank to load Scene Index 0.")]
+        public string mainMenuSceneName = "MainMenu";
+
         // Global flag that other systems (like PuzzleDragController) can check to disable input
         public static bool IsGameOver { get; private set; }
 
@@ -134,8 +138,10 @@ namespace GravityPuzzle
         public void OnMainMenuClicked()
         {
             IsGameOver = false;
-            // Assuming 0 is the main menu scene index. Change this if your main menu has a specific name.
-            SceneManager.LoadScene(0); 
+            if (!string.IsNullOrEmpty(mainMenuSceneName))
+                SceneManager.LoadScene(mainMenuSceneName);
+            else
+                SceneManager.LoadScene(0);
         }
     }
 }

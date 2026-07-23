@@ -127,6 +127,7 @@ namespace GravityPuzzle
                 if (piece == null || !piece.TryRemoveCellAt(worldPosition))
                     continue;
 
+                boundBoard?.StartTimer();
                 usedThisLevel = true;
                 activeBooster = null;
                 // Update order between UI/booster/drag components is not fixed.

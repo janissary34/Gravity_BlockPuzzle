@@ -606,6 +606,15 @@ namespace GravityPuzzle
         private bool sequentialLevelsEnabled;
         private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
 
+        public static event System.Action OnLevelCleared;
+
+        [Header("Win UI Scene Configuration")]
+        [Tooltip("If set, this scene will be loaded when the level is cleared instead of the default auto-reload behavior.")]
+        public string winSceneName = "MainMenu";
+
+        [Tooltip("If true, renders the old debug OnGUI 'LEVEL CLEARED!' text overlay on screen.")]
+        public bool showRuntimeWinGUI = false;
+
         public float TimeLimit { get; private set; }
         public float TimeRemaining { get; private set; }
         public int DestroyedPieceCount { get; private set; }
@@ -715,8 +724,16 @@ namespace GravityPuzzle
                     boardCleared = true;
                     Debug.Log("LEVEL CLEARED!");
 
-                    if (sequentialLevelsEnabled && GravityLevelRuntime.HasNextLevel)
+                    OnLevelCleared?.Invoke();
+
+                    if (!string.IsNullOrEmpty(winSceneName))
+                    {
+                        StartCoroutine(LoadWinScene(winSceneName));
+                    }
+                    else if (sequentialLevelsEnabled && GravityLevelRuntime.HasNextLevel)
+                    {
                         StartCoroutine(LoadNextLevel());
+                    }
                 }
                 else if (TimeLimit > 0f && TimeRemaining <= 0f)
                 {
@@ -751,6 +768,13 @@ namespace GravityPuzzle
             }
         }
 
+        private IEnumerator LoadWinScene(string sceneName)
+        {
+            yield return new WaitForSecondsRealtime(NextLevelDelay);
+            GravityLevelRuntime.TryAdvanceToNextLevel();
+            SceneManager.LoadScene(sceneName);
+        }
+
         private IEnumerator LoadNextLevel()
         {
             yield return new WaitForSecondsRealtime(NextLevelDelay);
@@ -764,7 +788,7 @@ namespace GravityPuzzle
 
         private void OnGUI()
         {
-            if (!boardCleared)
+            if (!showRuntimeWinGUI || !boardCleared)
                 return;
 
             GUIStyle style = new GUIStyle(GUI.skin.label)

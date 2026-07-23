@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelName: New Level
   timeLimit: 60
-  boardColumns: 8
-  boardRows: 14
+  boardColumns: 7
+  boardRows: 7
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
@@ -826,70 +826,6 @@ MonoBehaviour:
     - localCell: {x: 0, y: 1}
       type: 0
     - localCell: {x: 1, y: 1}
-      type: 0
-    - localCell: {x: -6, y: 18}
-      type: 0
-    - localCell: {x: -5, y: 18}
-      type: 0
-    - localCell: {x: -4, y: 18}
-      type: 0
-    - localCell: {x: -3, y: 18}
-      type: 0
-    - localCell: {x: -6, y: 19}
-      type: 0
-    - localCell: {x: -5, y: 19}
-      type: 0
-    - localCell: {x: -4, y: 19}
-      type: 0
-    - localCell: {x: -3, y: 19}
-      type: 0
-    - localCell: {x: -6, y: 20}
-      type: 0
-    - localCell: {x: -5, y: 20}
-      type: 0
-    - localCell: {x: -4, y: 20}
-      type: 0
-    - localCell: {x: -3, y: 20}
-      type: 0
-    - localCell: {x: -6, y: 21}
-      type: 0
-    - localCell: {x: -5, y: 21}
-      type: 0
-    - localCell: {x: -4, y: 21}
-      type: 0
-    - localCell: {x: -3, y: 21}
-      type: 0
-    - localCell: {x: 14, y: 38}
-      type: 0
-    - localCell: {x: 15, y: 38}
-      type: 0
-    - localCell: {x: 16, y: 38}
-      type: 0
-    - localCell: {x: 17, y: 38}
-      type: 0
-    - localCell: {x: 14, y: 39}
-      type: 0
-    - localCell: {x: 15, y: 39}
-      type: 0
-    - localCell: {x: 16, y: 39}
-      type: 0
-    - localCell: {x: 17, y: 39}
-      type: 0
-    - localCell: {x: 14, y: 40}
-      type: 0
-    - localCell: {x: 15, y: 40}
-      type: 0
-    - localCell: {x: 16, y: 40}
-      type: 0
-    - localCell: {x: 17, y: 40}
-      type: 0
-    - localCell: {x: 14, y: 41}
-      type: 0
-    - localCell: {x: 15, y: 41}
-      type: 0
-    - localCell: {x: 16, y: 41}
-      type: 0
-    - localCell: {x: 17, y: 41}
       type: 0
   pins: []
   obstacles:
