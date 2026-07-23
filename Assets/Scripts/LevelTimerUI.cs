@@ -11,6 +11,8 @@ namespace GravityPuzzle
     /// </summary>
     public class LevelTimerUI : MonoBehaviour
     {
+        public static LevelTimerUI Active { get; private set; }
+
         [Header("Timer UI")]
         [Tooltip("The text component that displays the remaining time (e.g., 01:30)")]
         public TMP_Text timerText;
@@ -29,13 +31,24 @@ namespace GravityPuzzle
         // Global flag that other systems (like PuzzleDragController) can check to disable input
         public static bool IsGameOver { get; private set; }
 
-        private float timeRemaining;
-        private bool hasTimeLimit;
+        private PrototypeBoard board;
+        private int lastDisplayedSecond = -1;
 
         private void Awake()
         {
             // Always ensure the game state is reset when this script wakes up (e.g. on scene reload)
             IsGameOver = false;
+        }
+
+        private void OnEnable()
+        {
+            Active = this;
+        }
+
+        private void OnDisable()
+        {
+            if (Active == this)
+                Active = null;
         }
 
         private void Start()
@@ -49,48 +62,40 @@ namespace GravityPuzzle
             if (mainMenuButton != null)
                 mainMenuButton.onClick.AddListener(OnMainMenuClicked);
 
-            // Fetch the active level definition to get the dynamically configured time limit
-            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
-            
-            if (level != null && level.timeLimit > 0f)
-            {
-                hasTimeLimit = true;
-                timeRemaining = level.timeLimit;
-            }
-            else
-            {
-                hasTimeLimit = false;
-                if (timerText != null)
-                {
-                    timerText.gameObject.SetActive(false);
-                }
-            }
-            
-            UpdateTimerDisplay();
+            SetTimerVisible(false);
         }
 
         private void Update()
         {
-            // Stop updating if the game is over or there is no timer
-            if (IsGameOver || !hasTimeLimit)
-                return;
-
-            timeRemaining -= Time.deltaTime;
-
-            if (timeRemaining <= 0f)
+            if (board != PrototypeBoard.Active)
             {
-                timeRemaining = 0f;
-                ShowFailPopup();
+                board = PrototypeBoard.Active;
+                lastDisplayedSecond = -1;
             }
 
-            UpdateTimerDisplay();
+            bool hasTimeLimit = board != null && board.TimeLimit > 0f;
+            SetTimerVisible(hasTimeLimit);
+            if (!hasTimeLimit)
+                return;
+
+            UpdateTimerDisplay(board.TimeRemaining);
         }
 
-        private void UpdateTimerDisplay()
+        private void SetTimerVisible(bool visible)
+        {
+            if (timerText != null && timerText.gameObject.activeSelf != visible)
+                timerText.gameObject.SetActive(visible);
+        }
+
+        private void UpdateTimerDisplay(float timeRemaining)
         {
             if (timerText == null) return;
 
             int totalSeconds = Mathf.CeilToInt(timeRemaining);
+            if (totalSeconds == lastDisplayedSecond)
+                return;
+
+            lastDisplayedSecond = totalSeconds;
             int minutes = totalSeconds / 60;
             int seconds = totalSeconds % 60;
             timerText.text = $"{minutes:00}:{seconds:00}";

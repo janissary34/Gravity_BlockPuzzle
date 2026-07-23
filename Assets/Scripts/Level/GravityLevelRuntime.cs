@@ -168,8 +168,7 @@ namespace GravityPuzzle
             foreach (PinDefinition pin in level.pins)
                 CreatePin(level, pin);
 
-            List<PieceDefinition> fusedPieces = PieceFuser.Fuse(level.pieces);
-            foreach (PieceDefinition piece in fusedPieces)
+            foreach (PieceDefinition piece in level.pieces)
                 CreatePiece(level, piece);
         }
 
@@ -582,30 +581,23 @@ namespace GravityPuzzle
 
             GetPiecePartBounds(parts, out Vector2 minimum, out Vector2 maximum);
             Vector2 collisionCentre = (minimum + maximum) * .5f;
-            Vector2 pieceSize = maximum - minimum;
-            Vector2 restingColliderScale = CollisionScaleForSkin(
-                pieceSize,
-                GravityGridMetrics.RestingPieceCollisionSkinInCells);
-            Vector2 draggingColliderScale = CollisionScaleForSkin(
-                pieceSize,
-                GravityGridMetrics.DraggingPieceCollisionSkinInCells);
 
             GameObject collisionRootObject = new GameObject("Collision Geometry");
             collisionRootObject.transform.SetParent(piece.transform, false);
             collisionRootObject.transform.localPosition = collisionCentre;
-            collisionRootObject.transform.localScale = new Vector3(
-                restingColliderScale.x,
-                restingColliderScale.y,
-                1f);
 
+            List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(parts.Count);
+            List<SpriteRenderer> collisionCellVisuals = new List<SpriteRenderer>(parts.Count);
             foreach (PiecePartGeometry part in parts)
             {
-                CreatePiecePart(
+                collisionCells.Add(CreatePiecePart(
                     piece.transform,
                     collisionRootObject.transform,
                     collisionCentre,
                     part,
-                    definition.color);
+                    definition.color,
+                    out SpriteRenderer cellVisual));
+                collisionCellVisuals.Add(cellVisual);
             }
 
             pieceComposite.GenerateGeometry();
@@ -640,25 +632,25 @@ namespace GravityPuzzle
 
             PuzzlePiece puzzlePiece = piece.AddComponent<PuzzlePiece>();
             puzzlePiece.ConfigureCollisionGeometry(
-                collisionRootObject.transform,
                 pieceComposite,
-                restingColliderScale,
-                draggingColliderScale);
+                collisionCells,
+                collisionCellVisuals);
+            puzzlePiece.ConfigureFreeze(
+                definition.frozenMoveCount,
+                definition.iceCounterFontSize,
+                definition.iceCounterTextColor,
+                definition.iceCounterOutlineColor,
+                definition.iceCounterOutlineWidth,
+                definition.iceCounterOffset);
         }
 
-        private static Vector2 CollisionScaleForSkin(Vector2 pieceSize, float skin)
-        {
-            return new Vector2(
-                Mathf.Clamp01((pieceSize.x - skin * 2f) / Mathf.Max(pieceSize.x, skin * 2f)),
-                Mathf.Clamp01((pieceSize.y - skin * 2f) / Mathf.Max(pieceSize.y, skin * 2f)));
-        }
-
-        private static void CreatePiecePart(
+        private static BoxCollider2D CreatePiecePart(
             Transform visualParent,
             Transform collisionRoot,
             Vector2 collisionCentre,
             PiecePartGeometry part,
-            Color color)
+            Color color,
+            out SpriteRenderer cellVisual)
         {
             GameObject visual = PrototypeBootstrap.CreateVisualBlock(
                 part.name,
@@ -667,17 +659,18 @@ namespace GravityPuzzle
                 color);
             visual.transform.SetParent(visualParent, false);
             visual.transform.localPosition = part.localPosition;
+            cellVisual = visual.GetComponent<SpriteRenderer>();
 
             GameObject colliderObject = new GameObject($"{part.name} Collider");
             colliderObject.transform.SetParent(collisionRoot, false);
             colliderObject.transform.localPosition = part.localPosition - collisionCentre;
             BoxCollider2D partCollider = colliderObject.AddComponent<BoxCollider2D>();
             partCollider.size = part.size;
-            // The drag-only inset handles corner clearance. Radius on both the
-            // piece and the map would consume that clearance again and make an
-            // exact modular opening behave as if it were too small.
+            // PuzzlePiece applies clearance to this individual modular cell.
+            // Its centre never moves relative to the corresponding artwork.
             partCollider.edgeRadius = 0f;
             partCollider.usedByComposite = true;
+            return partCollider;
         }
 
         private static void GetPiecePartBounds(
@@ -819,7 +812,9 @@ namespace GravityPuzzle
             foreach (SpriteRenderer renderer in renderers)
             {
                 if (renderer.gameObject.name.StartsWith("Selected Fill") ||
-                    renderer.gameObject.name.StartsWith("White Selection Outline"))
+                    renderer.gameObject.name.StartsWith("White Selection Outline") ||
+                    renderer.gameObject.name.StartsWith("Ice ") ||
+                    renderer.gameObject.name.StartsWith("Block Border"))
                     continue;
 
                 pieceColor = renderer.color;

@@ -27,6 +27,8 @@ namespace GravityPuzzle
             if (body == null)
                 return;
 
+            PrototypeBoard.Active?.StartTimer();
+
             Vector2 pointer = PointerWorldPosition();
             grabOffset = body.position - pointer;
             isDragging = true;

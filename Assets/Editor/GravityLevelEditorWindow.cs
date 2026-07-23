@@ -125,7 +125,10 @@ namespace GravityPuzzle.Editor
                 Color previous = GUI.backgroundColor;
                 if (i == selectedPiece)
                     GUI.backgroundColor = new Color(.55f, .8f, 1f);
-                if (GUILayout.Button(level.pieces[i].name))
+                string pieceLabel = level.pieces[i].frozenMoveCount > 0
+                    ? $"{level.pieces[i].name} [Ice {level.pieces[i].frozenMoveCount}]"
+                    : level.pieces[i].name;
+                if (GUILayout.Button(pieceLabel))
                     SelectPiece(i);
                 GUI.backgroundColor = previous;
             }
@@ -210,14 +213,51 @@ namespace GravityPuzzle.Editor
                 Color newColor = EditorGUILayout.ColorField("Color", piece.color);
                 Vector2Int newOrigin = EditorGUILayout.Vector2IntField("Origin", piece.origin);
                 int newRotation = EditorGUILayout.Popup("Start Rotation", piece.quarterTurns, new[] { "0°", "90°", "180°", "270°" });
+                int newFrozenMoveCount = Mathf.Max(0, EditorGUILayout.IntField(
+                    new GUIContent(
+                        "Frozen Move Count",
+                        "The piece unlocks after this many pieces have been destroyed. Use 0 for a normal piece."),
+                    piece.frozenMoveCount));
+                float newCounterFontSize = piece.iceCounterFontSize;
+                Color newCounterTextColor = piece.iceCounterTextColor;
+                Color newCounterOutlineColor = piece.iceCounterOutlineColor;
+                float newCounterOutlineWidth = piece.iceCounterOutlineWidth;
+                Vector2 newCounterOffset = piece.iceCounterOffset;
+                if (newFrozenMoveCount > 0)
+                {
+                    GUILayout.Label("Ice Counter Text", EditorStyles.boldLabel);
+                    newCounterFontSize = Mathf.Max(1f,
+                        EditorGUILayout.FloatField("Font Size", piece.iceCounterFontSize));
+                    newCounterTextColor = EditorGUILayout.ColorField(
+                        "Text Color", piece.iceCounterTextColor);
+                    newCounterOutlineColor = EditorGUILayout.ColorField(
+                        "Outline Color", piece.iceCounterOutlineColor);
+                    newCounterOutlineWidth = EditorGUILayout.Slider(
+                        "Outline Width", piece.iceCounterOutlineWidth, 0f, 1f);
+                    newCounterOffset = EditorGUILayout.Vector2Field(
+                        "Position Offset", piece.iceCounterOffset);
+                }
 
-                if (newName != piece.name || newColor != piece.color || newOrigin != piece.origin || newRotation != piece.quarterTurns)
+                if (newName != piece.name || newColor != piece.color ||
+                    newOrigin != piece.origin || newRotation != piece.quarterTurns ||
+                    newFrozenMoveCount != piece.frozenMoveCount ||
+                    !Mathf.Approximately(newCounterFontSize, piece.iceCounterFontSize) ||
+                    newCounterTextColor != piece.iceCounterTextColor ||
+                    newCounterOutlineColor != piece.iceCounterOutlineColor ||
+                    !Mathf.Approximately(newCounterOutlineWidth, piece.iceCounterOutlineWidth) ||
+                    newCounterOffset != piece.iceCounterOffset)
                 {
                     Undo.RecordObject(level, "Edit puzzle piece");
                     piece.name = newName;
                     piece.color = newColor;
                     piece.origin = newOrigin;
                     piece.quarterTurns = newRotation;
+                    piece.frozenMoveCount = newFrozenMoveCount;
+                    piece.iceCounterFontSize = newCounterFontSize;
+                    piece.iceCounterTextColor = newCounterTextColor;
+                    piece.iceCounterOutlineColor = newCounterOutlineColor;
+                    piece.iceCounterOutlineWidth = newCounterOutlineWidth;
+                    piece.iceCounterOffset = newCounterOffset;
                     MarkDirty();
                 }
 
@@ -589,6 +629,8 @@ namespace GravityPuzzle.Editor
             for (int pieceIndex = 0; pieceIndex < level.pieces.Count; pieceIndex++)
             {
                 PieceDefinition piece = level.pieces[pieceIndex];
+                Rect pieceBounds = default;
+                bool hasVisibleCell = false;
                 foreach (PieceCellDefinition cell in piece.cells)
                 {
                     Vector2Int absolute = piece.origin + QuarterTurnUtility.Rotate(cell.localCell, piece.quarterTurns);
@@ -596,10 +638,40 @@ namespace GravityPuzzle.Editor
                         continue;
 
                     Rect rect = CellRect(board, cellSize, absolute);
+                    if (hasVisibleCell)
+                    {
+                        float xMin = Mathf.Min(pieceBounds.xMin, rect.xMin);
+                        float yMin = Mathf.Min(pieceBounds.yMin, rect.yMin);
+                        float xMax = Mathf.Max(pieceBounds.xMax, rect.xMax);
+                        float yMax = Mathf.Max(pieceBounds.yMax, rect.yMax);
+                        pieceBounds = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+                    }
+                    else
+                    {
+                        pieceBounds = rect;
+                        hasVisibleCell = true;
+                    }
+
                     Color color = cell.type == PieceCellType.Hook
                         ? Color.Lerp(piece.color, Color.white, .22f)
                         : piece.color;
                     EditorGUI.DrawRect(new Rect(rect.x + 1f, rect.y + 1f, rect.width - 2f, rect.height - 2f), color);
+                    if (piece.frozenMoveCount > 0)
+                    {
+                        Color ice = new Color(.55f, .9f, 1f, .48f);
+                        EditorGUI.DrawRect(
+                            new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f),
+                            ice);
+                    }
+                }
+
+                if (piece.frozenMoveCount > 0 && hasVisibleCell)
+                {
+                    float worldToEditorPixels = cellSize * level.subdivisions;
+                    pieceBounds.position += new Vector2(
+                        piece.iceCounterOffset.x * worldToEditorPixels,
+                        -piece.iceCounterOffset.y * worldToEditorPixels);
+                    DrawIceCounterPreview(pieceBounds, piece);
                 }
 
                 if (pieceIndex == selectedPiece && IsInside(piece.origin))
@@ -608,6 +680,35 @@ namespace GravityPuzzle.Editor
                     EditorGUI.DrawRect(new Rect(origin.center.x - 3f, origin.center.y - 3f, 6f, 6f), Color.white);
                 }
             }
+        }
+
+        private static void DrawIceCounterPreview(
+            Rect bounds,
+            PieceDefinition piece)
+        {
+            // The Level Editor is the visual source of truth: this value is a
+            // normal GUI point size. Runtime converts the same value to TMP's
+            // much larger world-space typography scale.
+            int previewFontSize = Mathf.Clamp(
+                Mathf.RoundToInt(piece.iceCounterFontSize), 8, 96);
+            GUIStyle textStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = previewFontSize
+            };
+
+            string count = piece.frozenMoveCount.ToString();
+            int outlinePixels = Mathf.Max(
+                1,
+                Mathf.RoundToInt(previewFontSize * piece.iceCounterOutlineWidth * .08f));
+            textStyle.normal.textColor = piece.iceCounterOutlineColor;
+            GUI.Label(new Rect(bounds.x - outlinePixels, bounds.y, bounds.width, bounds.height), count, textStyle);
+            GUI.Label(new Rect(bounds.x + outlinePixels, bounds.y, bounds.width, bounds.height), count, textStyle);
+            GUI.Label(new Rect(bounds.x, bounds.y - outlinePixels, bounds.width, bounds.height), count, textStyle);
+            GUI.Label(new Rect(bounds.x, bounds.y + outlinePixels, bounds.width, bounds.height), count, textStyle);
+
+            textStyle.normal.textColor = piece.iceCounterTextColor;
+            GUI.Label(bounds, count, textStyle);
         }
 
         private void DrawPins(Rect board, float cellSize)

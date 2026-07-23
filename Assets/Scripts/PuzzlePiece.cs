@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using TMPro;
 
 namespace GravityPuzzle
 {
@@ -10,49 +11,108 @@ namespace GravityPuzzle
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class PuzzlePiece : MonoBehaviour
     {
+        private const float RuntimeIceCounterFontScale = .32f;
+        private static readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
+
+        public static IReadOnlyList<PuzzlePiece> ActivePieces => activePieces;
         public Rigidbody2D Body { get; private set; }
         public bool IsSelected => isSelected;
         public bool IsBeingShredded => beingShredded;
-        public float CurrentCollisionInset
+        public bool IsFrozen { get; private set; }
+        public Bounds CollisionBounds
         {
             get
             {
-                if (collisionGeometryRoot == null)
-                    return 0f;
+                if (compositeCollider != null && compositeCollider.enabled)
+                    return compositeCollider.bounds;
 
-                return isSelected
-                    ? GravityGridMetrics.DraggingPieceCollisionSkinInCells
-                    : GravityGridMetrics.RestingPieceCollisionSkinInCells;
+                if (solidColliders == null)
+                    CacheSolidColliders();
+
+                Bounds bounds = new Bounds(transform.position, Vector3.zero);
+                bool found = false;
+                foreach (Collider2D collider in solidColliders)
+                {
+                    if (collider == null || !collider.enabled || collider.isTrigger)
+                        continue;
+
+                    if (found)
+                        bounds.Encapsulate(collider.bounds);
+                    else
+                    {
+                        bounds = collider.bounds;
+                        found = true;
+                    }
+                }
+
+                return bounds;
             }
         }
+
+        public float CurrentCollisionInset => collisionCells == null
+            ? 0f
+            : isSelected
+                ? GravityGridMetrics.DraggingPieceCollisionSkinInCells
+                : GravityGridMetrics.RestingPieceCollisionSkinInCells;
 
         private readonly List<SpriteRenderer> normalRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> selectedRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> outlineRenderers = new List<SpriteRenderer>();
+        private readonly List<SpriteRenderer> iceRenderers = new List<SpriteRenderer>();
         private Transform selectionVisualsRoot;
-        private Transform collisionGeometryRoot;
         private CompositeCollider2D compositeCollider;
-        private Vector3 restingCollisionScale = Vector3.one;
-        private Vector3 draggingCollisionScale = Vector3.one;
+        private List<BoxCollider2D> collisionCells;
+        private List<Vector2> fullCollisionCellSizes;
+        private List<SpriteRenderer> collisionCellVisuals;
+        private Collider2D[] solidColliders;
         private bool selectionVisualsBuilt;
         private bool beingShredded;
         private bool isSelected;
+        private bool destructionReported;
+        private int frozenUntilDestroyedCount;
+        private TextMeshPro iceCounterText;
+        private float iceCounterFontSize = 36f;
+        private Color iceCounterTextColor = Color.black;
+        private Color iceCounterOutlineColor = Color.white;
+        private float iceCounterOutlineWidth = .18f;
+        private Vector2 iceCounterOffset;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetActivePieces()
+        {
+            activePieces.Clear();
+        }
 
         private void Awake()
         {
             Body = GetComponent<Rigidbody2D>();
         }
 
+        private void OnEnable()
+        {
+            if (!activePieces.Contains(this))
+                activePieces.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            activePieces.Remove(this);
+        }
+
         private void Start()
         {
+            CacheSolidColliders();
             BuildSelectionVisuals();
         }
 
         public void SetSelected(bool isSelected)
         {
+            if (isSelected && IsFrozen)
+                return;
+
             this.isSelected = isSelected;
 
-            ApplyCollisionProfile(isSelected);
+            ApplyCollisionProfile();
 
             // Script recompiles during Play Mode can clear these runtime lists while
             // leaving the generated outline objects alive. Rebuild/reconnect them
@@ -74,26 +134,377 @@ namespace GravityPuzzle
         }
 
         public void ConfigureCollisionGeometry(
-            Transform collisionRoot,
             CompositeCollider2D composite,
-            Vector2 restingScale,
-            Vector2 draggingScale)
+            List<BoxCollider2D> cells,
+            List<SpriteRenderer> cellVisuals)
         {
-            collisionGeometryRoot = collisionRoot;
-            compositeCollider = composite;
-            restingCollisionScale = new Vector3(restingScale.x, restingScale.y, 1f);
-            draggingCollisionScale = new Vector3(draggingScale.x, draggingScale.y, 1f);
-            ApplyCollisionProfile(isSelected);
+            List<Vector2> cellSizes = new List<Vector2>(cells.Count);
+            for (int i = 0; i < cells.Count; i++)
+                cellSizes.Add(cells[i].size);
+
+            ConfigureCollisionGeometry(composite, cells, cellVisuals, cellSizes);
         }
 
-        private void ApplyCollisionProfile(bool dragging)
+        private void ConfigureCollisionGeometry(
+            CompositeCollider2D composite,
+            List<BoxCollider2D> cells,
+            List<SpriteRenderer> cellVisuals,
+            List<Vector2> cellSizes)
         {
-            if (collisionGeometryRoot == null)
+            compositeCollider = composite;
+            collisionCells = new List<BoxCollider2D>(cells);
+            collisionCellVisuals = new List<SpriteRenderer>(cellVisuals);
+            fullCollisionCellSizes = new List<Vector2>(cellSizes);
+
+            EnsureBlockBorders();
+            ApplyCollisionProfile();
+            CacheSolidColliders();
+        }
+
+        public void ConfigureFreeze(
+            int requiredDestroyedPieces,
+            float counterFontSize,
+            Color counterTextColor,
+            Color counterOutlineColor,
+            float counterOutlineWidth,
+            Vector2 counterOffset)
+        {
+            frozenUntilDestroyedCount = Mathf.Max(0, requiredDestroyedPieces);
+            iceCounterFontSize = Mathf.Max(1f, counterFontSize);
+            iceCounterTextColor = counterTextColor;
+            iceCounterOutlineColor = counterOutlineColor;
+            iceCounterOutlineWidth = Mathf.Clamp01(counterOutlineWidth);
+            iceCounterOffset = counterOffset;
+            PrototypeBoard board = PrototypeBoard.Active;
+            RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+        }
+
+        public void RefreshFreezeState(int destroyedPieceCount)
+        {
+            bool shouldBeFrozen =
+                frozenUntilDestroyedCount > 0 &&
+                destroyedPieceCount < frozenUntilDestroyedCount &&
+                !beingShredded;
+
+            IsFrozen = shouldBeFrozen;
+            if (shouldBeFrozen)
+            {
+                if (iceRenderers.Count == 0)
+                    BuildIceVisuals();
+                UpdateIceCounter(frozenUntilDestroyedCount - destroyedPieceCount);
+            }
+            else
+            {
+                ClearIceVisuals();
+                if (Body != null)
+                    Body.WakeUp();
+            }
+        }
+
+        public void ReportDestroyed()
+        {
+            if (destructionReported)
                 return;
 
-            collisionGeometryRoot.localScale = dragging
-                ? draggingCollisionScale
-                : restingCollisionScale;
+            destructionReported = true;
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board != null)
+                board.NotifyPieceDestroyed(this);
+        }
+
+        /// <summary>
+        /// Removes the modular cell whose visible square contains worldPosition.
+        /// Returns false when the tap did not land on this piece.
+        /// </summary>
+        public bool TryRemoveCellAt(Vector2 worldPosition)
+        {
+            if (beingShredded || collisionCells == null || collisionCellVisuals == null)
+                return false;
+
+            int targetIndex = -1;
+            float closestDistance = float.PositiveInfinity;
+            for (int i = 0; i < collisionCellVisuals.Count; i++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[i];
+                if (visual == null || !visual.bounds.Contains(worldPosition))
+                    continue;
+
+                float distance = ((Vector2)visual.bounds.center - worldPosition).sqrMagnitude;
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    targetIndex = i;
+                }
+            }
+
+            if (targetIndex < 0)
+                return false;
+
+            if (isSelected)
+                SetSelected(false);
+
+            ClearIceVisuals();
+
+            SpriteRenderer removedVisual = collisionCellVisuals[targetIndex];
+            BoxCollider2D removedCollider = collisionCells[targetIndex];
+            if (removedCollider != null)
+                removedCollider.enabled = false;
+
+            RemoveSelectionVisualFor(removedVisual);
+            collisionCellVisuals.RemoveAt(targetIndex);
+            collisionCells.RemoveAt(targetIndex);
+            fullCollisionCellSizes.RemoveAt(targetIndex);
+
+            if (removedVisual != null)
+                Destroy(removedVisual.gameObject);
+            if (removedCollider != null)
+                Destroy(removedCollider.gameObject);
+
+            if (compositeCollider != null)
+                compositeCollider.GenerateGeometry();
+            CacheSolidColliders();
+
+            // Avoid leaving the original silhouette around a modified piece.
+            LineRenderer perimeter = GetComponent<LineRenderer>();
+            if (perimeter != null)
+                perimeter.enabled = false;
+
+            if (collisionCells.Count == 0)
+            {
+                ReportDestroyed();
+                Destroy(gameObject);
+            }
+            else
+            {
+                SplitDisconnectedCells();
+                ApplyCollisionProfile();
+                PrototypeBoard board = PrototypeBoard.Active;
+                RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+            }
+
+            return true;
+        }
+
+        private void SplitDisconnectedCells()
+        {
+            List<List<int>> components = FindConnectedComponents();
+            if (components.Count <= 1)
+                return;
+
+            int largestIndex = 0;
+            for (int i = 1; i < components.Count; i++)
+            {
+                if (components[i].Count > components[largestIndex].Count)
+                    largestIndex = i;
+            }
+
+            List<int> largest = components[largestIndex];
+            components[largestIndex] = components[0];
+            components[0] = largest;
+
+            Transform sourceCollisionRoot = collisionCells[0].transform.parent;
+            List<int> movedIndices = new List<int>();
+            for (int componentIndex = 1; componentIndex < components.Count; componentIndex++)
+            {
+                CreateIndependentPiece(components[componentIndex], sourceCollisionRoot, componentIndex);
+                movedIndices.AddRange(components[componentIndex]);
+            }
+
+            movedIndices.Sort();
+            for (int i = movedIndices.Count - 1; i >= 0; i--)
+            {
+                int sourceIndex = movedIndices[i];
+                collisionCells.RemoveAt(sourceIndex);
+                collisionCellVisuals.RemoveAt(sourceIndex);
+                fullCollisionCellSizes.RemoveAt(sourceIndex);
+            }
+
+            if (compositeCollider != null)
+                compositeCollider.GenerateGeometry();
+            CacheSolidColliders();
+        }
+
+        private List<List<int>> FindConnectedComponents()
+        {
+            const float adjacencyTolerance = .001f;
+            List<List<int>> components = new List<List<int>>();
+            bool[] visited = new bool[collisionCells.Count];
+            Queue<int> pending = new Queue<int>();
+
+            for (int start = 0; start < collisionCells.Count; start++)
+            {
+                if (visited[start])
+                    continue;
+
+                List<int> component = new List<int>();
+                visited[start] = true;
+                pending.Enqueue(start);
+                while (pending.Count > 0)
+                {
+                    int current = pending.Dequeue();
+                    component.Add(current);
+                    for (int candidate = 0; candidate < collisionCells.Count; candidate++)
+                    {
+                        if (visited[candidate] ||
+                            !CellsAreConnected(current, candidate, adjacencyTolerance))
+                            continue;
+
+                        visited[candidate] = true;
+                        pending.Enqueue(candidate);
+                    }
+                }
+
+                components.Add(component);
+            }
+
+            return components;
+        }
+
+        private bool CellsAreConnected(int first, int second, float tolerance)
+        {
+            Vector2 firstCentre = collisionCells[first].transform.localPosition;
+            Vector2 secondCentre = collisionCells[second].transform.localPosition;
+            Vector2 firstHalf = fullCollisionCellSizes[first] * .5f;
+            Vector2 secondHalf = fullCollisionCellSizes[second] * .5f;
+            float xDistance = Mathf.Abs(firstCentre.x - secondCentre.x);
+            float yDistance = Mathf.Abs(firstCentre.y - secondCentre.y);
+            float xReach = firstHalf.x + secondHalf.x;
+            float yReach = firstHalf.y + secondHalf.y;
+
+            bool sharesVerticalEdge =
+                Mathf.Abs(xDistance - xReach) <= tolerance &&
+                yDistance < yReach - tolerance;
+            bool sharesHorizontalEdge =
+                Mathf.Abs(yDistance - yReach) <= tolerance &&
+                xDistance < xReach - tolerance;
+            bool overlaps =
+                xDistance < xReach - tolerance &&
+                yDistance < yReach - tolerance;
+            return sharesVerticalEdge || sharesHorizontalEdge || overlaps;
+        }
+
+        private void CreateIndependentPiece(
+            List<int> component,
+            Transform sourceCollisionRoot,
+            int splitNumber)
+        {
+            GameObject splitObject = new GameObject($"{name} - Split {splitNumber}");
+            splitObject.transform.SetParent(transform.parent, false);
+            splitObject.transform.localPosition = transform.localPosition;
+            splitObject.transform.localRotation = transform.localRotation;
+            splitObject.transform.localScale = transform.localScale;
+
+            Rigidbody2D splitBody = splitObject.AddComponent<Rigidbody2D>();
+            CopyBodySettings(Body, splitBody);
+
+            CompositeCollider2D splitComposite = splitObject.AddComponent<CompositeCollider2D>();
+            splitComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+            splitComposite.generationType = CompositeCollider2D.GenerationType.Synchronous;
+            splitComposite.edgeRadius = 0f;
+
+            GameObject collisionRootObject = new GameObject("Collision Geometry");
+            Transform splitCollisionRoot = collisionRootObject.transform;
+            splitCollisionRoot.SetParent(splitObject.transform, false);
+            splitCollisionRoot.localPosition = sourceCollisionRoot.localPosition;
+            splitCollisionRoot.localRotation = sourceCollisionRoot.localRotation;
+            splitCollisionRoot.localScale = sourceCollisionRoot.localScale;
+
+            List<BoxCollider2D> splitCells = new List<BoxCollider2D>(component.Count);
+            List<SpriteRenderer> splitVisuals = new List<SpriteRenderer>(component.Count);
+            List<Vector2> splitSizes = new List<Vector2>(component.Count);
+
+            component.Sort();
+            for (int i = 0; i < component.Count; i++)
+            {
+                int sourceIndex = component[i];
+                BoxCollider2D cell = collisionCells[sourceIndex];
+                SpriteRenderer visual = collisionCellVisuals[sourceIndex];
+                Vector2 fullSize = fullCollisionCellSizes[sourceIndex];
+
+                RemoveSelectionVisualFor(visual);
+                cell.size = fullSize;
+                cell.transform.SetParent(splitCollisionRoot, true);
+                visual.transform.SetParent(splitObject.transform, true);
+                splitCells.Add(cell);
+                splitVisuals.Add(visual);
+                splitSizes.Add(fullSize);
+            }
+
+            splitComposite.GenerateGeometry();
+            PuzzlePiece splitPiece = splitObject.AddComponent<PuzzlePiece>();
+            splitPiece.ConfigureCollisionGeometry(
+                splitComposite,
+                splitCells,
+                splitVisuals,
+                splitSizes);
+            splitPiece.ConfigureFreeze(
+                frozenUntilDestroyedCount,
+                iceCounterFontSize,
+                iceCounterTextColor,
+                iceCounterOutlineColor,
+                iceCounterOutlineWidth,
+                iceCounterOffset);
+        }
+
+        private static void CopyBodySettings(Rigidbody2D source, Rigidbody2D target)
+        {
+            target.bodyType = RigidbodyType2D.Kinematic;
+            target.simulated = source.simulated;
+            target.useFullKinematicContacts = source.useFullKinematicContacts;
+            target.collisionDetectionMode = source.collisionDetectionMode;
+            target.interpolation = source.interpolation;
+            target.constraints = source.constraints;
+            target.sleepMode = source.sleepMode;
+            target.gravityScale = source.gravityScale;
+            target.mass = source.mass;
+            target.drag = source.drag;
+            target.angularDrag = source.angularDrag;
+        }
+
+        private void RemoveSelectionVisualFor(SpriteRenderer removedVisual)
+        {
+            int visualIndex = normalRenderers.IndexOf(removedVisual);
+            if (visualIndex < 0)
+                return;
+
+            normalRenderers.RemoveAt(visualIndex);
+            if (visualIndex < selectedRenderers.Count)
+            {
+                SpriteRenderer selected = selectedRenderers[visualIndex];
+                selectedRenderers.RemoveAt(visualIndex);
+                if (selected != null)
+                    Destroy(selected.gameObject);
+            }
+
+            if (visualIndex < outlineRenderers.Count)
+            {
+                SpriteRenderer outline = outlineRenderers[visualIndex];
+                outlineRenderers.RemoveAt(visualIndex);
+                if (outline != null)
+                    Destroy(outline.gameObject);
+            }
+        }
+
+        private void ApplyCollisionProfile()
+        {
+            if (collisionCells == null || fullCollisionCellSizes == null)
+                return;
+
+            float inset = isSelected
+                ? GravityGridMetrics.DraggingPieceCollisionSkinInCells
+                : GravityGridMetrics.RestingPieceCollisionSkinInCells;
+
+            // Inset every modular cell around its own centre. Scaling the common
+            // root instead would move the cells of concave pieces relative to
+            // their artwork and recreate the intertwining bug.
+            for (int i = 0; i < collisionCells.Count; i++)
+            {
+                Vector2 fullSize = fullCollisionCellSizes[i];
+                collisionCells[i].size = new Vector2(
+                    Mathf.Max(.01f, fullSize.x - inset * 2f),
+                    Mathf.Max(.01f, fullSize.y - inset * 2f));
+            }
+
             if (compositeCollider != null)
                 compositeCollider.GenerateGeometry();
 
@@ -107,7 +518,196 @@ namespace GravityPuzzle
                 return false;
 
             beingShredded = true;
+            ReportDestroyed();
             return true;
+        }
+
+        private void BuildIceVisuals()
+        {
+            if (collisionCellVisuals == null)
+                return;
+
+            foreach (SpriteRenderer source in collisionCellVisuals)
+            {
+                if (source == null)
+                    continue;
+
+                CreateIceLayer(
+                    source,
+                    "Ice Overlay",
+                    Vector3.one,
+                    new Color(.42f, .82f, 1f, .58f),
+                    source.sortingOrder + 5);
+                CreateIceLayer(
+                    source,
+                    "Ice Frost",
+                    new Vector3(.72f, .72f, 1f),
+                    new Color(.9f, 1f, 1f, .3f),
+                    source.sortingOrder + 6);
+            }
+        }
+
+        private void UpdateIceCounter(int remainingCount)
+        {
+            if (collisionCellVisuals == null || collisionCellVisuals.Count == 0)
+                return;
+
+            Bounds combinedBounds = collisionCellVisuals[0].bounds;
+            for (int i = 1; i < collisionCellVisuals.Count; i++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[i];
+                if (visual != null)
+                    combinedBounds.Encapsulate(visual.bounds);
+            }
+
+            if (iceCounterText == null)
+            {
+                GameObject counterObject = new GameObject("Ice Remaining Count");
+                counterObject.transform.SetParent(transform, true);
+                iceCounterText = counterObject.AddComponent<TextMeshPro>();
+                iceCounterText.alignment = TextAlignmentOptions.Center;
+                iceCounterText.fontStyle = FontStyles.Bold;
+            }
+
+            // Apply style on every refresh, not only on object creation. This
+            // keeps Play Mode previews in sync after editor recompilation and
+            // after changing the serialized level settings.
+            iceCounterText.color = iceCounterTextColor;
+            iceCounterText.enableAutoSizing = false;
+            iceCounterText.fontSize = iceCounterFontSize * RuntimeIceCounterFontScale;
+            iceCounterText.outlineColor = iceCounterOutlineColor;
+            iceCounterText.outlineWidth = iceCounterOutlineWidth * .1f;
+            iceCounterText.renderer.sortingLayerID = collisionCellVisuals[0].sortingLayerID;
+            iceCounterText.renderer.sortingOrder = 50;
+            iceCounterText.text = Mathf.Max(0, remainingCount).ToString();
+            iceCounterText.transform.position = new Vector3(
+                combinedBounds.center.x + iceCounterOffset.x,
+                combinedBounds.center.y + iceCounterOffset.y,
+                transform.position.z - .1f);
+            iceCounterText.rectTransform.sizeDelta = new Vector2(
+                Mathf.Max(.75f, combinedBounds.size.x * .9f),
+                Mathf.Max(.75f, combinedBounds.size.y * .9f));
+            iceCounterText.ForceMeshUpdate();
+        }
+
+        private void EnsureBlockBorders()
+        {
+            if (collisionCellVisuals == null)
+                return;
+
+            for (int i = 0; i < collisionCellVisuals.Count; i++)
+            {
+                SpriteRenderer source = collisionCellVisuals[i];
+                if (source == null || source.transform.Find("Block Border Top") != null)
+                    continue;
+
+                Vector2 fullSize = i < fullCollisionCellSizes.Count
+                    ? fullCollisionCellSizes[i]
+                    : (Vector2)source.bounds.size;
+                float thickness = Mathf.Min(.025f, Mathf.Min(fullSize.x, fullSize.y) * .18f);
+                float horizontalRatio = thickness / Mathf.Max(fullSize.y, .001f);
+                float verticalRatio = thickness / Mathf.Max(fullSize.x, .001f);
+
+                CreateBorderStrip(source, "Block Border Top",
+                    new Vector2(0f, .5f - horizontalRatio * .5f),
+                    new Vector2(1f, horizontalRatio));
+                CreateBorderStrip(source, "Block Border Bottom",
+                    new Vector2(0f, -.5f + horizontalRatio * .5f),
+                    new Vector2(1f, horizontalRatio));
+                CreateBorderStrip(source, "Block Border Left",
+                    new Vector2(-.5f + verticalRatio * .5f, 0f),
+                    new Vector2(verticalRatio, 1f));
+                CreateBorderStrip(source, "Block Border Right",
+                    new Vector2(.5f - verticalRatio * .5f, 0f),
+                    new Vector2(verticalRatio, 1f));
+            }
+        }
+
+        private static void CreateBorderStrip(
+            SpriteRenderer source,
+            string stripName,
+            Vector2 localPosition,
+            Vector2 localScale)
+        {
+            GameObject strip = new GameObject(stripName);
+            strip.transform.SetParent(source.transform, false);
+            strip.transform.localPosition = localPosition;
+            strip.transform.localRotation = Quaternion.identity;
+            strip.transform.localScale = new Vector3(localScale.x, localScale.y, 1f);
+
+            SpriteRenderer renderer = strip.AddComponent<SpriteRenderer>();
+            renderer.sprite = source.sprite;
+            renderer.color = Color.black;
+            renderer.sortingLayerID = source.sortingLayerID;
+            renderer.sortingOrder = source.sortingOrder + 8;
+        }
+
+        private void CreateIceLayer(
+            SpriteRenderer source,
+            string layerName,
+            Vector3 scale,
+            Color color,
+            int sortingOrder)
+        {
+            GameObject layer = new GameObject(layerName);
+            layer.transform.SetParent(source.transform, false);
+            layer.transform.localPosition = Vector3.zero;
+            layer.transform.localRotation = Quaternion.identity;
+            layer.transform.localScale = scale;
+
+            SpriteRenderer renderer = layer.AddComponent<SpriteRenderer>();
+            renderer.sprite = source.sprite;
+            renderer.color = color;
+            renderer.sortingLayerID = source.sortingLayerID;
+            renderer.sortingOrder = sortingOrder;
+            iceRenderers.Add(renderer);
+        }
+
+        private void ClearIceVisuals()
+        {
+            foreach (SpriteRenderer renderer in iceRenderers)
+            {
+                if (renderer == null)
+                    continue;
+
+                renderer.enabled = false;
+                Destroy(renderer.gameObject);
+            }
+            iceRenderers.Clear();
+
+            if (iceCounterText != null)
+            {
+                iceCounterText.enabled = false;
+                Destroy(iceCounterText.gameObject);
+                iceCounterText = null;
+            }
+        }
+
+        public float LowestColliderPoint()
+        {
+            if (compositeCollider != null && compositeCollider.enabled)
+                return compositeCollider.bounds.min.y;
+
+            if (solidColliders == null)
+                CacheSolidColliders();
+
+            float lowest = transform.position.y;
+            bool found = false;
+            foreach (Collider2D collider in solidColliders)
+            {
+                if (collider == null || !collider.enabled || collider.isTrigger)
+                    continue;
+
+                lowest = found ? Mathf.Min(lowest, collider.bounds.min.y) : collider.bounds.min.y;
+                found = true;
+            }
+
+            return lowest;
+        }
+
+        private void CacheSolidColliders()
+        {
+            solidColliders = GetComponentsInChildren<Collider2D>();
         }
 
         private void BuildSelectionVisuals()
@@ -132,7 +732,9 @@ namespace GravityPuzzle
             int visualIndex = 0;
             foreach (SpriteRenderer original in pieceRenderers)
             {
-                if (original.transform.IsChildOf(selectionVisualsRoot))
+                if (original.transform.IsChildOf(selectionVisualsRoot) ||
+                    original.gameObject.name.StartsWith("Ice ") ||
+                    original.gameObject.name.StartsWith("Block Border"))
                     continue;
 
                 normalRenderers.Add(original);

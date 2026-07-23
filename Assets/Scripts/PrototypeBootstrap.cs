@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -596,20 +597,82 @@ namespace GravityPuzzle
     /// </summary>
     public sealed class PrototypeBoard : MonoBehaviour
     {
+        public static PrototypeBoard Active { get; private set; }
+
         private const float NextLevelDelay = 1.25f;
         private float removalHeight = -5.5f;
         private bool boardCleared;
         private bool boardFailed;
         private bool sequentialLevelsEnabled;
+        private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
 
         public float TimeLimit { get; private set; }
         public float TimeRemaining { get; private set; }
-        public bool IsTimerActive => TimeLimit > 0f && !boardCleared && !boardFailed;
+        public int DestroyedPieceCount { get; private set; }
+        public bool IsTimerStarted { get; private set; }
+        public bool IsTimerActive => TimeLimit > 0f && IsTimerStarted && !boardCleared && !boardFailed;
+        public bool IsTimerPaused => timerPauseOwners.Count > 0;
+        public bool IsLevelRunning => !boardCleared && !boardFailed;
+
+        private void OnEnable()
+        {
+            Active = this;
+        }
+
+        private void OnDisable()
+        {
+            if (Active == this)
+                Active = null;
+        }
 
         public void SetTimeLimit(float timeLimit)
         {
             TimeLimit = timeLimit;
             TimeRemaining = timeLimit;
+            IsTimerStarted = false;
+            DestroyedPieceCount = 0;
+            timerPauseOwners.Clear();
+        }
+
+        public void StartTimer()
+        {
+            IsTimerStarted = true;
+        }
+
+        public void NotifyPieceDestroyed(PuzzlePiece destroyedPiece)
+        {
+            if (!IsLevelRunning || destroyedPiece == null)
+                return;
+
+            DestroyedPieceCount++;
+            IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                PuzzlePiece piece = pieces[i];
+                if (piece != null && piece != destroyedPiece)
+                    piece.RefreshFreezeState(DestroyedPieceCount);
+            }
+        }
+
+        /// <summary>
+        /// Adds an owner-specific timer pause. Multiple systems may pause the
+        /// timer safely; it resumes only after every owner releases its pause.
+        /// </summary>
+        public bool TryPauseTimer(object owner)
+        {
+            if (owner == null || !IsTimerActive || TimeRemaining <= 0f)
+                return false;
+
+            return timerPauseOwners.Add(owner);
+        }
+
+        /// <summary>
+        /// Releases only the pause belonging to the supplied owner.
+        /// </summary>
+        public void ResumeTimer(object owner)
+        {
+            if (owner != null)
+                timerPauseOwners.Remove(owner);
         }
 
         public void SetRemovalHeight(float height)
@@ -624,22 +687,30 @@ namespace GravityPuzzle
 
         private void Update()
         {
-            if (IsTimerActive)
+            if (IsTimerActive && !IsTimerPaused)
             {
                 TimeRemaining = Mathf.Max(0f, TimeRemaining - Time.deltaTime);
             }
 
-            PuzzlePiece[] pieces = Object.FindObjectsOfType<PuzzlePiece>();
-
-            foreach (PuzzlePiece piece in pieces)
+            IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            int livePieceCount = 0;
+            for (int i = 0; i < pieces.Count; i++)
             {
+                PuzzlePiece piece = pieces[i];
+                if (piece == null)
+                    continue;
+
+                livePieceCount++;
                 if (piece.transform.position.y < removalHeight)
+                {
+                    piece.ReportDestroyed();
                     Object.Destroy(piece.gameObject);
+                }
             }
 
             if (!boardCleared && !boardFailed)
             {
-                if (pieces.Length == 0)
+                if (livePieceCount == 0)
                 {
                     boardCleared = true;
                     Debug.Log("LEVEL CLEARED!");
@@ -650,8 +721,12 @@ namespace GravityPuzzle
                 else if (TimeLimit > 0f && TimeRemaining <= 0f)
                 {
                     bool allSettled = true;
-                    foreach (PuzzlePiece piece in pieces)
+                    for (int i = 0; i < pieces.Count; i++)
                     {
+                        PuzzlePiece piece = pieces[i];
+                        if (piece == null)
+                            continue;
+
                         if (piece.Body != null && (piece.Body.velocity.sqrMagnitude > 0.01f || Mathf.Abs(piece.Body.angularVelocity) > 1f))
                         {
                             allSettled = false;
@@ -668,7 +743,7 @@ namespace GravityPuzzle
                         if (dragController != null)
                             dragController.enabled = false;
                             
-                        LevelTimerUI timerUI = Object.FindObjectOfType<LevelTimerUI>();
+                        LevelTimerUI timerUI = LevelTimerUI.Active;
                         if (timerUI != null)
                             timerUI.ShowFailPopup();
                     }

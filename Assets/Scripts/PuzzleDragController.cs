@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -20,11 +19,15 @@ namespace GravityPuzzle
         private readonly Vector2[] contactNormals = new Vector2[32];
         private readonly Dictionary<int, float> fallingSpeeds = new Dictionary<int, float>();
         private readonly Dictionary<int, float> snappingTargetsX = new Dictionary<int, float>();
+        private readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
+        private readonly Collider2D[] selectionHits = new Collider2D[32];
         private const float MaximumDragSpeed = 10f;
         private const float MaximumFallSpeed = 8f;
         private const int MaximumSlideIterations = 4;
         private const float MinimumMoveDistance = .0005f;
         private const float CastContactPadding = .002f;
+        private const float VisualContactTolerance = .01f;
+        private const float MinimumBlockingCrossSection = .001f;
         private const float BlockingNormalDotThreshold = -.001f;
         private const float ContactManifoldTolerance = .004f;
         private const float DuplicateNormalDotThreshold = .9995f;
@@ -33,7 +36,7 @@ namespace GravityPuzzle
 
         // Track the true mathematical starting X coordinate for each piece
         // to guarantee it always snaps perfectly on its specific fine-cell alignment
-        private Dictionary<int, float> pieceStartingX = new Dictionary<int, float>();
+        private readonly Dictionary<int, float> pieceStartingX = new Dictionary<int, float>();
 
         private void Awake()
         {
@@ -46,6 +49,16 @@ namespace GravityPuzzle
 
         private void Update()
         {
+            if (HammerBooster.IsTargeting)
+            {
+                if (selectedPiece != null)
+                {
+                    ReleasePiece();
+                    activeFingerId = -1;
+                }
+                return;
+            }
+
             if (LevelTimerUI.IsGameOver)
             {
                 if (selectedPiece != null)
@@ -118,6 +131,9 @@ namespace GravityPuzzle
                     if (Vector2.Dot(direction, hit.normal) >= BlockingNormalDotThreshold)
                         continue;
 
+                    if (!HasBlockingCrossSection(piece, hit.collider, direction))
+                        continue;
+
                     float clearance = RequiredVisualClearance(piece, hit.collider);
                     if (hit.distance > requestedDistance + clearance)
                         continue;
@@ -176,7 +192,8 @@ namespace GravityPuzzle
 
                 Vector2 normal = hit.normal;
                 if (normal.sqrMagnitude < .5f ||
-                    Vector2.Dot(direction, normal) >= BlockingNormalDotThreshold)
+                    Vector2.Dot(direction, normal) >= BlockingNormalDotThreshold ||
+                    !HasBlockingCrossSection(movingPiece, hit.collider, direction))
                     continue;
 
                 float clearance = RequiredVisualClearance(movingPiece, hit.collider);
@@ -249,27 +266,32 @@ namespace GravityPuzzle
             PuzzlePiece movingPiece,
             Collider2D hitCollider)
         {
-            float clearance = movingPiece.CurrentCollisionInset + CastContactPadding;
+            float collisionInset = movingPiece.CurrentCollisionInset;
             PuzzlePiece hitPiece = hitCollider.GetComponentInParent<PuzzlePiece>();
             if (hitPiece != null && hitPiece != movingPiece)
-                clearance += hitPiece.CurrentCollisionInset;
-            return clearance;
+                collisionInset += hitPiece.CurrentCollisionInset;
+
+            // Equal-size pieces and openings cannot satisfy positive visual
+            // clearance on both opposing faces at once. Keep a sub-pixel-scale
+            // tolerance inside the per-cell collision skin so exact grid fits do
+            // not lock at their corners, while the colliders still cap how far
+            // any two visuals can overlap.
+            return Mathf.Max(0f, collisionInset - VisualContactTolerance) +
+                   CastContactPadding;
         }
 
         private void AdvanceManualGravity()
         {
-            PuzzlePiece[] pieces = FindObjectsOfType<PuzzlePiece>();
-            Array.Sort(pieces, CompareGravityOrder);
+            RefreshActivePieces();
+            activePieces.Sort(CompareGravityOrder);
 
-            HashSet<int> livePieceIds = new HashSet<int>();
-            foreach (PuzzlePiece piece in pieces)
+            foreach (PuzzlePiece piece in activePieces)
             {
                 if (piece == null || piece.Body == null)
                     continue;
 
                 int pieceId = piece.GetInstanceID();
-                livePieceIds.Add(pieceId);
-                if (piece == selectedPiece || piece.IsBeingShredded)
+                if (piece == selectedPiece || piece.IsBeingShredded || piece.IsFrozen)
                 {
                     fallingSpeeds[pieceId] = 0f;
                     continue;
@@ -315,8 +337,18 @@ namespace GravityPuzzle
                 bool grounded = MovePieceDown(piece, requestedDistance);
                 fallingSpeeds[pieceId] = grounded ? 0f : fallingSpeed;
             }
+        }
 
-            RemoveDestroyedPieceSpeeds(livePieceIds);
+        private void RefreshActivePieces()
+        {
+            activePieces.Clear();
+            IReadOnlyList<PuzzlePiece> registeredPieces = PuzzlePiece.ActivePieces;
+            for (int i = 0; i < registeredPieces.Count; i++)
+            {
+                PuzzlePiece piece = registeredPieces[i];
+                if (piece != null)
+                    activePieces.Add(piece);
+            }
         }
 
         private bool MovePieceDown(PuzzlePiece piece, float requestedDistance)
@@ -341,7 +373,8 @@ namespace GravityPuzzle
             {
                 RaycastHit2D hit = castHits[i];
                 if (hit.collider == null || hit.collider.isTrigger ||
-                    Vector2.Dot(Vector2.down, hit.normal) >= BlockingNormalDotThreshold)
+                    Vector2.Dot(Vector2.down, hit.normal) >= BlockingNormalDotThreshold ||
+                    !HasBlockingCrossSection(piece, hit.collider, Vector2.down))
                     continue;
 
                 float clearance = RequiredVisualClearance(piece, hit.collider);
@@ -368,54 +401,43 @@ namespace GravityPuzzle
                    allowedDistance < requestedDistance - MinimumMoveDistance;
         }
 
+        private static bool HasBlockingCrossSection(
+            PuzzlePiece movingPiece,
+            Collider2D hitCollider,
+            Vector2 movementDirection)
+        {
+            // A sweep can return a diagonal normal where two sharp corners only
+            // touch. Project both AABBs onto the axis perpendicular to movement:
+            // without a real cross-section overlap, the contact is tangent and
+            // must not stop a piece sliding past a staggered obstacle corner.
+            Vector2 perpendicular = new Vector2(
+                -movementDirection.y,
+                movementDirection.x).normalized;
+            Bounds movingBounds = movingPiece.CollisionBounds;
+            Bounds hitBounds = hitCollider.bounds;
+
+            Vector2 centreDelta = (Vector2)hitBounds.center -
+                                  (Vector2)movingBounds.center;
+            float centreSeparation = Mathf.Abs(Vector2.Dot(centreDelta, perpendicular));
+            float movingRadius =
+                movingBounds.extents.x * Mathf.Abs(perpendicular.x) +
+                movingBounds.extents.y * Mathf.Abs(perpendicular.y);
+            float hitRadius =
+                hitBounds.extents.x * Mathf.Abs(perpendicular.x) +
+                hitBounds.extents.y * Mathf.Abs(perpendicular.y);
+
+            return movingRadius + hitRadius - centreSeparation >
+                   MinimumBlockingCrossSection;
+        }
+
         private static int CompareGravityOrder(PuzzlePiece first, PuzzlePiece second)
         {
-            float firstBottom = LowestColliderPoint(first);
-            float secondBottom = LowestColliderPoint(second);
+            float firstBottom = first.LowestColliderPoint();
+            float secondBottom = second.LowestColliderPoint();
             int verticalOrder = firstBottom.CompareTo(secondBottom);
             return verticalOrder != 0
                 ? verticalOrder
                 : first.GetInstanceID().CompareTo(second.GetInstanceID());
-        }
-
-        private static float LowestColliderPoint(PuzzlePiece piece)
-        {
-            Collider2D[] colliders = piece.GetComponentsInChildren<Collider2D>();
-            float lowest = piece.transform.position.y;
-            bool found = false;
-            foreach (Collider2D collider in colliders)
-            {
-                if (collider.isTrigger)
-                    continue;
-
-                lowest = found ? Mathf.Min(lowest, collider.bounds.min.y) : collider.bounds.min.y;
-                found = true;
-            }
-
-            return lowest;
-        }
-
-        private void RemoveDestroyedPieceSpeeds(HashSet<int> livePieceIds)
-        {
-            if (fallingSpeeds.Count == livePieceIds.Count)
-                return;
-
-            List<int> staleIds = null;
-            foreach (int pieceId in fallingSpeeds.Keys)
-            {
-                if (livePieceIds.Contains(pieceId))
-                    continue;
-
-                if (staleIds == null)
-                    staleIds = new List<int>();
-                staleIds.Add(pieceId);
-            }
-
-            if (staleIds == null)
-                return;
-
-            foreach (int staleId in staleIds)
-                fallingSpeeds.Remove(staleId);
         }
 
         private static void PrepareKinematicBody(Rigidbody2D body)
@@ -491,22 +513,25 @@ namespace GravityPuzzle
             // one arbitrary collider, which made a pin hide the movable piece
             // beneath it. Check every hit and give PuzzlePiece colliders priority.
             PuzzlePiece piece = null;
-            Collider2D[] hits = Physics2D.OverlapPointAll(pointerPosition);
-            foreach (Collider2D hit in hits)
+            int hitCount = Physics2D.OverlapPointNonAlloc(pointerPosition, selectionHits);
+            for (int i = 0; i < hitCount; i++)
             {
+                Collider2D hit = selectionHits[i];
                 piece = hit.GetComponentInParent<PuzzlePiece>();
-                if (piece != null)
+                if (piece != null && !piece.IsFrozen)
                     break;
+                piece = null;
             }
 
             if (piece == null)
             {
                 float closestDistance = float.PositiveInfinity;
-                Collider2D[] nearbyHits = Physics2D.OverlapCircleAll(pointerPosition, fallbackRadius);
-                foreach (Collider2D hit in nearbyHits)
+                hitCount = Physics2D.OverlapCircleNonAlloc(pointerPosition, fallbackRadius, selectionHits);
+                for (int i = 0; i < hitCount; i++)
                 {
+                    Collider2D hit = selectionHits[i];
                     PuzzlePiece candidate = hit.GetComponentInParent<PuzzlePiece>();
-                    if (candidate == null)
+                    if (candidate == null || candidate.IsFrozen)
                         continue;
 
                     float distance = Vector2.SqrMagnitude(hit.ClosestPoint(pointerPosition) - pointerPosition);
@@ -520,6 +545,8 @@ namespace GravityPuzzle
 
             if (piece == null)
                 return;
+
+            PrototypeBoard.Active?.StartTimer();
 
             selectedPiece = piece;
             Rigidbody2D body = piece.Body;
