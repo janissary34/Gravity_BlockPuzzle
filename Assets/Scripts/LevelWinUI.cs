@@ -24,6 +24,9 @@ namespace GravityPuzzle
         [Tooltip("Name of your main gameplay level scene (e.g. 'Scene1'). Leave blank to reload the active scene.")]
         public string gameSceneName = "Scene1";
 
+        [Tooltip("Name of your main menu scene (e.g. 'Main_Menu').")]
+        public string mainMenuSceneName = "Main_Menu";
+
         private void Start()
         {
             if (nextLevelButton != null)
@@ -57,7 +60,10 @@ namespace GravityPuzzle
 
         public void OnMainMenuClicked()
         {
-            SceneManager.LoadScene(0);
+            if (!string.IsNullOrEmpty(mainMenuSceneName))
+                SceneManager.LoadScene(mainMenuSceneName);
+            else
+                SceneManager.LoadScene("Main_Menu");
         }
 
         private void LoadGameScene()

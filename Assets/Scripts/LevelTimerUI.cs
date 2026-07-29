@@ -29,8 +29,8 @@ namespace GravityPuzzle
         public Button mainMenuButton;
 
         [Header("Scene Navigation")]
-        [Tooltip("Name of your Main Menu scene (e.g., 'MainMenu'). Leave blank to load Scene Index 0.")]
-        public string mainMenuSceneName = "MainMenu";
+        [Tooltip("Name of your Main Menu scene. Leave blank to reload current level directly.")]
+        public string mainMenuSceneName = "";
 
         // Global flag that other systems (like PuzzleDragController) can check to disable input
         public static bool IsGameOver { get; private set; }
@@ -138,10 +138,16 @@ namespace GravityPuzzle
         public void OnMainMenuClicked()
         {
             IsGameOver = false;
+            GravityLevelRuntime.RequestRestart();
             if (!string.IsNullOrEmpty(mainMenuSceneName))
+            {
                 SceneManager.LoadScene(mainMenuSceneName);
+            }
             else
-                SceneManager.LoadScene(0);
+            {
+                Scene activeScene = SceneManager.GetActiveScene();
+                SceneManager.LoadScene(activeScene.name);
+            }
         }
     }
 }

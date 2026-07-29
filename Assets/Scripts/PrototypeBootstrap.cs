@@ -30,13 +30,17 @@ namespace GravityPuzzle
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            if (scene.name == "Main_Menu" || scene.name == "MainMenu")
+                return;
+
             CreatePrototype();
         }
 
         private static void CreatePrototype()
         {
             if (Object.FindObjectOfType<PrototypeBoard>() != null ||
-                Object.FindObjectOfType<GravityMainMenu>() != null)
+                Object.FindObjectOfType<GravityMainMenu>() != null ||
+                Object.FindObjectOfType<MainMenuUI>() != null)
                 return;
 
             GravityLevelDefinition authoredLevel = GravityLevelRuntime.FindLevelToPlay();
@@ -603,17 +607,17 @@ namespace GravityPuzzle
         private float removalHeight = -5.5f;
         private bool boardCleared;
         private bool boardFailed;
-        private bool sequentialLevelsEnabled;
+        private bool sequentialLevelsEnabled = true;
         private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
 
         public static event System.Action OnLevelCleared;
 
         [Header("Win UI Scene Configuration")]
         [Tooltip("If set, this scene will be loaded when the level is cleared instead of the default auto-reload behavior.")]
-        public string winSceneName = "MainMenu";
+        public string winSceneName = "";
 
         [Tooltip("If true, renders the old debug OnGUI 'LEVEL CLEARED!' text overlay on screen.")]
-        public bool showRuntimeWinGUI = false;
+        public bool showRuntimeWinGUI = true;
 
         public float TimeLimit { get; private set; }
         public float TimeRemaining { get; private set; }
@@ -719,7 +723,7 @@ namespace GravityPuzzle
 
             if (!boardCleared && !boardFailed)
             {
-                if (livePieceCount == 0)
+                if (livePieceCount == 0 && !BlockShredder.HasActiveGemFlights)
                 {
                     boardCleared = true;
                     Debug.Log("LEVEL CLEARED!");
