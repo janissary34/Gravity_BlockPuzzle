@@ -17,7 +17,7 @@ namespace GravityPuzzle
     {
         // One visible 3x3 board voxel becomes this many micro sand grains.
         // The same value is used for the slider denominator and arrivals.
-        public const int SandGrainsPerRenderedVoxel = 6;
+        public const int SandGrainsPerRenderedVoxel = 8;
 
         public static LevelProgressManager Instance { get; private set; }
 
@@ -268,7 +268,7 @@ namespace GravityPuzzle
             RectTransform voxelRect = flyingVoxel.GetComponent<RectTransform>();
             voxelRect.anchorMin = new Vector2(.5f, .5f);
             voxelRect.anchorMax = new Vector2(.5f, .5f);
-            voxelRect.sizeDelta = Vector2.one * Mathf.Max(7f, voxelSize * 25f);
+            voxelRect.sizeDelta = Vector2.one * Mathf.Max(10f, voxelSize * 34f);
             voxelRect.anchoredPosition = start;
             Image voxelImage = flyingVoxel.GetComponent<Image>();
             voxelImage.sprite = PrototypeBootstrap.GetSquareSprite();

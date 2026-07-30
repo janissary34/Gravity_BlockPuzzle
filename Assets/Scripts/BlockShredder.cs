@@ -67,8 +67,18 @@ namespace GravityPuzzle
             TryShredBlock(other, transform.position);
         }
 
+        private void OnTriggerStay2D(Collider2D other)
+        {
+            // Covers a fast body that is already overlapping the gear trigger when
+            // the simulation advances; TryBeginShredding makes this idempotent.
+            TryShredBlock(other, transform.position);
+        }
+
         [SerializeField, Tooltip("Speed (units/sec) at which blocks physically descend into the shredder.")]
         private float blockFeedSpeed = 1.6f;
+
+        [SerializeField, Tooltip("Brief angular impulse applied when a piece first bites into the gears.")]
+        private float shredderTumbleTorque = 7.5f;
 
         /// <summary>
         /// Attempts to shred an entering PuzzlePiece into Stone and Gem voxels slowly/progressively with high-density particle effects.
@@ -78,6 +88,16 @@ namespace GravityPuzzle
             PuzzlePiece piece = targetCollider.GetComponentInParent<PuzzlePiece>();
             if (piece == null || !piece.TryBeginShredding())
                 return;
+
+            // Lock the piece into the shredder path immediately. Continuous detection
+            // catches high-speed/tumbling pieces before they can leak through intact.
+            Rigidbody2D body = piece.Body;
+            if (body != null)
+            {
+                body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                body.constraints &= ~RigidbodyConstraints2D.FreezeRotation;
+                body.AddTorque(Random.Range(-shredderTumbleTorque, shredderTumbleTorque), ForceMode2D.Impulse);
+            }
 
             StartCoroutine(FeedPieceIntoShredder(piece, shredderCenter.y));
         }
@@ -160,6 +180,8 @@ namespace GravityPuzzle
 
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
             Vector3 basePosition = piece.transform.position;
+            float startingAngle = piece.transform.eulerAngles.z;
+            float feedAngularVelocity = Random.Range(-75f, 75f);
             float maxTime = 4.0f;
             float elapsed = 0f;
 
@@ -174,6 +196,10 @@ namespace GravityPuzzle
                 // Light micro-jitter on X-axis (random small offset [-0.02f, +0.02f])
                 float microJitterX = Random.Range(-0.02f, 0.02f);
                 piece.transform.position = new Vector3(basePosition.x + microJitterX, basePosition.y, basePosition.z);
+                // After colliders are disabled, retain a small visual tumble so the
+                // feed does not look mechanically frozen while remaining contained.
+                feedAngularVelocity = Mathf.Lerp(feedAngularVelocity, 0f, Time.deltaTime * 1.8f);
+                piece.transform.rotation = Quaternion.Euler(0f, 0f, startingAngle + feedAngularVelocity * elapsed);
 
                 // A) Shred voxel shards crossing shredderY line & EMERGE FROM BOTTOM MOUTH OF SHREDDER
                 for (int i = 0; i < shardList.Count; i++)
@@ -300,7 +326,7 @@ namespace GravityPuzzle
                 Vector2 offset = new Vector2(UnityEngine.Random.Range(-.13f, .13f), UnityEngine.Random.Range(-.035f, .035f));
                 GameObject grain = PrototypeBootstrap.CreateVisualBlock(
                     "Shredder Sand Grain", position + offset,
-                    Vector2.one * UnityEngine.Random.Range(.02f, .04f),
+                    Vector2.one * UnityEngine.Random.Range(.04f, .065f),
                     new Color(color.r, color.g, color.b, 1f));
                 grain.AddComponent<ShredderVoxelHandoff>().Initialize(color, handoffY, UnityEngine.Random.Range(0f, .16f));
             }

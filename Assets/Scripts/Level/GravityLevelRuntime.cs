@@ -524,7 +524,9 @@ namespace GravityPuzzle
             body.useFullKinematicContacts = true;
             body.interpolation = RigidbodyInterpolation2D.None;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            body.constraints = RigidbodyConstraints2D.None; // Do not freeze rotation
+            // Pieces stay upright during normal board play; BlockShredder releases
+            // rotation only at gear contact, then contains the piece immediately.
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
             body.sleepMode = RigidbodySleepMode2D.StartAwake;
 
             CompositeCollider2D pieceComposite = piece.AddComponent<CompositeCollider2D>();
@@ -876,6 +878,13 @@ namespace GravityPuzzle
 
         private void OnTriggerEnter2D(Collider2D other)
         {
+            ShredderWheel.TryShred(other, new Vector2(other.transform.position.x, shredY));
+        }
+
+        private void OnTriggerStay2D(Collider2D other)
+        {
+            // Safety net for a body which enters the large catch trigger in the same
+            // physics step as a fast rotation or contact change.
             ShredderWheel.TryShred(other, new Vector2(other.transform.position.x, shredY));
         }
     }
