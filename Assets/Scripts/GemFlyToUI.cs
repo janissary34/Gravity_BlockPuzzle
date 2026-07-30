@@ -104,10 +104,8 @@ namespace GravityPuzzle
                 rb2D.angularVelocity = UnityEngine.Random.Range(-360f, 360f);
             }
 
-            Vector3 jumpEndPos = startWorldPos + (Vector3)popVector * popDuration;
-            activeJumpTween = transform.DOJump(jumpEndPos, popPower, 1, popDuration)
-                .SetEase(Ease.OutQuad)
-                .OnComplete(StartMagnetFlyToUI);
+            // Let physics handle the downward pull/tumble
+            activeJumpTween = DOVirtual.DelayedCall(popDuration, StartMagnetFlyToUI);
         }
 
         // STAGE 2 & 3: Disable physics and fly to UI
@@ -115,6 +113,9 @@ namespace GravityPuzzle
         {
             // Low-overhead optimization: Disable physics components while flying
             EnablePhysics(false);
+            
+            if (spriteRenderer != null)
+                spriteRenderer.sortingOrder = 30; // Bring to front for UI flight
 
             if (targetRectTransform == null)
             {

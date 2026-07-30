@@ -652,14 +652,18 @@ namespace GravityPuzzle
             Color color,
             out SpriteRenderer cellVisual)
         {
-            GameObject visual = PrototypeBootstrap.CreateVisualBlock(
-                part.name,
-                Vector2.zero,
-                part.size,
-                color);
+            GameObject visual = new GameObject(part.name);
             visual.transform.SetParent(visualParent, false);
             visual.transform.localPosition = part.localPosition;
-            cellVisual = visual.GetComponent<SpriteRenderer>();
+            
+            // Add a disabled SpriteRenderer to satisfy PuzzlePiece's internal logic
+            cellVisual = visual.AddComponent<SpriteRenderer>();
+            cellVisual.sprite = PrototypeBootstrap.GetSquareSprite();
+            cellVisual.color = color;
+            cellVisual.enabled = false;
+            
+            // Build the actual visible 3x3 voxel grid
+            VoxelBlockBuilder.BuildVoxelGrid(visual.transform, part.name, part.size, color);
 
             GameObject colliderObject = new GameObject($"{part.name} Collider");
             colliderObject.transform.SetParent(collisionRoot, false);
