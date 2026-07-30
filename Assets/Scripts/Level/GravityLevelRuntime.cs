@@ -762,7 +762,7 @@ namespace GravityPuzzle
             SpriteRenderer discRenderer = disc.AddComponent<SpriteRenderer>();
             discRenderer.sprite = PrototypeBootstrap.GetCircleSprite();
             discRenderer.color = new Color(.32f, .36f, .48f);
-            discRenderer.sortingOrder = 8;
+            discRenderer.sortingOrder = 25; // In front of feeding blocks
 
             GameObject hub = new GameObject("Shredder Hub");
             hub.transform.SetParent(transform, false);
@@ -770,7 +770,7 @@ namespace GravityPuzzle
             SpriteRenderer hubRenderer = hub.AddComponent<SpriteRenderer>();
             hubRenderer.sprite = PrototypeBootstrap.GetCircleSprite();
             hubRenderer.color = new Color(.1f, .12f, .18f);
-            hubRenderer.sortingOrder = 10;
+            hubRenderer.sortingOrder = 27; // In front of feeding blocks
 
             for (int i = 0; i < ToothCount; i++)
             {
@@ -783,7 +783,7 @@ namespace GravityPuzzle
                 tooth.transform.SetParent(transform, false);
                 tooth.transform.localPosition = Quaternion.Euler(0f, 0f, angle) * Vector3.up * (radius * .86f);
                 tooth.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
-                tooth.GetComponent<SpriteRenderer>().sortingOrder = 9;
+                tooth.GetComponent<SpriteRenderer>().sortingOrder = 26; // In front of feeding blocks
             }
 
             if (gameObject.GetComponent<BlockShredder>() == null)
@@ -837,6 +837,7 @@ namespace GravityPuzzle
                 originalPartCount++;
             }
 
+            ShredderParticleEffects.SpawnBurst(contactPoint, pieceColor, 8, 4, 3);
             int fragmentCount = Mathf.Clamp(originalPartCount * 5, 18, 40);
             for (int i = 0; i < fragmentCount; i++)
             {
@@ -852,8 +853,8 @@ namespace GravityPuzzle
                 Rigidbody2D body = fragment.AddComponent<Rigidbody2D>();
                 body.gravityScale = .9f;
                 body.velocity = new Vector2(
-                    UnityEngine.Random.Range(-2.8f, 2.8f),
-                    UnityEngine.Random.Range(.8f, 3.8f));
+                    UnityEngine.Random.Range(-2.0f, 2.0f),
+                    UnityEngine.Random.Range(-3.8f, -1.2f));
                 body.angularVelocity = UnityEngine.Random.Range(-720f, 720f);
 
                 ShredderFragment fragmentLife = fragment.AddComponent<ShredderFragment>();

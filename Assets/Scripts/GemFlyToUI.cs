@@ -28,8 +28,8 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Initial pop-out jump power/height.")]
         private float popPower = 1.2f;
 
-        [SerializeField, Tooltip("Duration of initial physical pop jump before magnetic fly mode.")]
-        private float popDuration = 0.3f;
+        [SerializeField, Tooltip("Duration of initial physical pop jump before magnetic fly mode (0 = no jump).")]
+        private float popDuration = 0.0f;
 
         [SerializeField, Tooltip("Duration of the flight from shredder to UI target.")]
         private float flyDuration = 0.75f;
@@ -104,8 +104,10 @@ namespace GravityPuzzle
                 rb2D.angularVelocity = UnityEngine.Random.Range(-360f, 360f);
             }
 
-            // Let physics handle the downward pull/tumble
-            activeJumpTween = DOVirtual.DelayedCall(popDuration, StartMagnetFlyToUI);
+            if (popDuration > 0f)
+                activeJumpTween = DOVirtual.DelayedCall(popDuration, StartMagnetFlyToUI);
+            else
+                StartMagnetFlyToUI();
         }
 
         // STAGE 2 & 3: Disable physics and fly to UI

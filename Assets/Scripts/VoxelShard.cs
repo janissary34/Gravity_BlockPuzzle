@@ -38,6 +38,8 @@ namespace GravityPuzzle
         public void TriggerShred(Vector2 impactPoint, Vector2 ejectionForce, bool isGem, Action<GemFlyToUI> onGemRecycle, RectTransform uiTargetRect, UnityEngine.UI.Slider uiTargetSlider, Camera cam, float flyDuration, DG.Tweening.Ease flyEase)
         {
             transform.SetParent(null); // Detach from parent block
+            if (spriteRenderer != null)
+                spriteRenderer.maskInteraction = SpriteMaskInteraction.None;
 
             col.enabled = true;
             col.size = Vector2.one; 
@@ -64,9 +66,9 @@ namespace GravityPuzzle
                 spriteRenderer.sortingOrder = 4; // Behind shredder disc
                 rb.simulated = true;
                 rb.bodyType = RigidbodyType2D.Dynamic;
-                rb.gravityScale = 0.9f;
-                rb.velocity = ejectionForce;
-                rb.angularVelocity = UnityEngine.Random.Range(-540f, 540f);
+                rb.gravityScale = 0.35f;
+                rb.velocity = ejectionForce * 0.5f;
+                rb.angularVelocity = UnityEngine.Random.Range(-180f, 180f);
                 StartCoroutine(FadeOutAndRecycle());
             }
         }
