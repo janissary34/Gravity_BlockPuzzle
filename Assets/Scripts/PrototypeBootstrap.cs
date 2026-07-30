@@ -723,7 +723,11 @@ namespace GravityPuzzle
 
             if (!boardCleared && !boardFailed)
             {
-                if (livePieceCount == 0 && !BlockShredder.HasActiveGemFlights)
+                LevelProgressManager progress = LevelProgressManager.Instance;
+                bool requiresProgress = progress != null && progress.TotalBlockUnits > 0;
+                bool progressReady = !requiresProgress ||
+                                     (progress.IsLevelComplete && !progress.HasPendingProgressPresentation);
+                if (livePieceCount == 0 && !BlockShredder.HasActiveGemFlights && progressReady)
                 {
                     boardCleared = true;
                     Debug.Log("LEVEL CLEARED!");

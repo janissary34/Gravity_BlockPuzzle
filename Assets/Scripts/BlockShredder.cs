@@ -89,11 +89,19 @@ namespace GravityPuzzle
             if (globalShredderMaskObject == null)
             {
                 globalShredderMaskObject = new GameObject("Shredder Sprite Mask Root");
-                globalShredderMaskObject.transform.position = new Vector3(0f, shredderY - 10f, 0f);
-                globalShredderMaskObject.transform.localScale = new Vector3(40f, 20f, 1f);
+                globalShredderMaskObject.transform.position = new Vector3(0f, shredderY - 15f, 0f);
+                globalShredderMaskObject.transform.localScale = new Vector3(60f, 30f, 1f);
 
                 SpriteMask mask = globalShredderMaskObject.AddComponent<SpriteMask>();
                 mask.sprite = PrototypeBootstrap.GetSquareSprite();
+                mask.frontSortingLayerID = SortingLayer.NameToID("Default");
+                mask.frontSortingOrder = 32767;
+                mask.backSortingLayerID = SortingLayer.NameToID("Default");
+                mask.backSortingOrder = -32768;
+            }
+            else
+            {
+                globalShredderMaskObject.transform.position = new Vector3(0f, shredderY - 15f, 0f);
             }
         }
 
@@ -103,7 +111,7 @@ namespace GravityPuzzle
 
             EnsureSpriteMask(shredderY);
 
-            // 1. Disable dynamic physics / falling motion & user dragging immediately
+            // 1. Non-Blocking Trigger setup: disable physical colliders & set Kinematic motion
             piece.SetSelected(false);
             Rigidbody2D rb = piece.Body;
             if (rb != null)
@@ -113,30 +121,20 @@ namespace GravityPuzzle
                 rb.angularVelocity = 0f;
             }
 
-            // Disable all physical colliders to eliminate hard gear-boundary jamming
+            // Disable all physical colliders on the block so it never sits, lingers, or sticks on gear collisions
             Collider2D[] cols = piece.GetComponentsInChildren<Collider2D>();
             foreach (var c in cols) c.enabled = false;
 
-            // 2. Enable Sprite Masking on base block renderers so solid background pixels below shredderY are masked out
+            // 2. Sprite Masking / Visual Clipping: mask out any portion moving below shredderY
             SpriteRenderer[] pieceRenderers = piece.GetComponentsInChildren<SpriteRenderer>(true);
-            Color tileColor = Color.white;
+            // Always use the authored PuzzlePiece colour for debris and UI voxels.
+            // Renderer colours can be temporarily changed by selection or masking.
+            Color tileColor = Opaque(piece.VisualColor);
             foreach (var r in pieceRenderers)
             {
                 if (r != null)
                 {
-                    if (r.GetComponent<VoxelShard>() == null)
-                    {
-                        r.maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
-                    }
-                    else
-                    {
-                        r.maskInteraction = SpriteMaskInteraction.None;
-                    }
-
-                    if (r.enabled && !r.gameObject.name.StartsWith("Selected Fill") && !r.gameObject.name.StartsWith("White Selection"))
-                    {
-                        tileColor = r.color;
-                    }
+                    r.maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
                 }
             }
 
@@ -160,83 +158,55 @@ namespace GravityPuzzle
             // Bottom exit mouth where shredded voxels, sparks, and mini-cubes emerge (below shredder wheels)
             float bottomMouthY = shredderY - 0.65f;
 
-            // Snap X position to nearest clean grid column so side-by-side pieces never overlap
-            Vector3 basePosition = piece.transform.position;
-            basePosition.x = Mathf.Round(basePosition.x * 2f) / 2f;
-
-            // Assign distinct sorting order per feeding piece to prevent visual overlap/Z-fighting
-            int shredderSortingOrder = 10 + (Mathf.Abs(piece.GetInstanceID()) % 30);
-            foreach (var r in pieceRenderers)
-            {
-                if (r != null)
-                {
-                    r.sortingOrder = shredderSortingOrder;
-                }
-            }
-
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
-
-            // 3. Move block downward at constant slow "feed rate" with vertical mechanical gear teeth jitter
+            Vector3 basePosition = piece.transform.position;
             float maxTime = 4.0f;
             float elapsed = 0f;
 
+            // 3. Smooth Fixed Downward Speed + Light Micro-Jitter on X-axis [-1px, +1px]
             while (piece != null && elapsed < maxTime)
             {
                 elapsed += Time.deltaTime;
 
-                // Move base position downward at constant feed rate
+                // Constant smooth feed rate downward
                 basePosition.y -= blockFeedSpeed * Time.deltaTime;
 
-                // High-frequency mechanical teeth vibration on Y-axis (vertical bite vibration)
-                float microJitterY = Mathf.Sin(Time.time * 75f) * 0.025f;
-                piece.transform.position = new Vector3(basePosition.x, basePosition.y + microJitterY, basePosition.z);
+                // Light micro-jitter on X-axis (random small offset [-0.02f, +0.02f])
+                float microJitterX = Random.Range(-0.02f, 0.02f);
+                piece.transform.position = new Vector3(basePosition.x + microJitterX, basePosition.y, basePosition.z);
 
-                bool spawnedParticleThisFrame = false;
-
-                // A) Shred voxel shards crossing shredderY line and EMERGE FROM BOTTOM MOUTH
+                // A) Shred voxel shards crossing shredderY line & EMERGE FROM BOTTOM MOUTH OF SHREDDER
                 for (int i = 0; i < shardList.Count; i++)
                 {
                     VoxelShard shard = shardList[i];
                     if (shard == null || processedShards.Contains(shard)) continue;
 
-                    if (shard.transform.position.y <= shredderY + 0.15f)
+                    if (shard.transform.position.y <= shredderY)
                     {
                         processedShards.Add(shard);
 
-                        bool isGem = gemShards.Contains(shard);
-                        if (isGem) ActiveGemFlightCount++;
-
-                        // Ejection vector directing DOWNWARDS from bottom mouth of shredder wheels
-                        Vector2 ejectionForce = new Vector2(UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-2.2f, -1.2f)) * shredExplosionForce * (isGem ? 0.4f : 0.8f);
+                        // Position voxel emerging at bottom mouth below shredder wheels
                         Vector2 bottomPos = new Vector2(shard.transform.position.x, bottomMouthY);
+                        Color shardColor = tileColor;
 
-                        // Emit pixelated mini-cube burst, orange sparks, and micro-dust emerging from bottom mouth
-                        if (!spawnedParticleThisFrame)
-                        {
-                            ShredderParticleEffects.SpawnBurst(bottomPos, tileColor, 5, 3, 2);
-                            spawnedParticleThisFrame = true;
-                        }
-
-                        shard.TriggerShred(
+                        // One lightweight grain per rendered voxel. It only simulates
+                        // in the small space below the grinder, then hands off to UI.
+                        ShredderVoxelHandoff.SpawnStream(
                             bottomPos,
-                            ejectionForce,
-                            isGem,
-                            RecycleGemVoxel,
-                            targetUIRectTransform,
-                            targetUISlider,
-                            targetCamera,
-                            gemFlyDuration,
-                            gemFlyEase
-                        );
+                            shardColor,
+                            // Let the grains breathe below the gears before the UI bend.
+                            bottomMouthY - .75f,
+                            LevelProgressManager.SandGrainsPerRenderedVoxel);
+
+                        shard.Recycle();
                     }
                 }
 
-                // B) Continuously emit particles from bottom mouth and erase renderers as they pass shredderY
-                SpriteRenderer[] activeRenderers = piece.GetComponentsInChildren<SpriteRenderer>(true);
+                // B) Erase generic non-voxel renderers crossing shredderY line & emerge from bottom mouth
                 int activeCount = 0;
                 float topY = float.NegativeInfinity;
 
-                foreach (var r in activeRenderers)
+                foreach (var r in pieceRenderers)
                 {
                     if (r == null || !r.enabled || r.gameObject.name.StartsWith("Selected Fill") || r.gameObject.name.StartsWith("White Selection"))
                         continue;
@@ -245,14 +215,17 @@ namespace GravityPuzzle
                     if (r.transform.parent != piece.transform && r.GetComponent<VoxelShard>() != null)
                         continue;
 
-                    if (r.transform.position.y <= shredderY + 0.05f)
+                    if (r.transform.position.y <= shredderY)
                     {
                         r.enabled = false;
-                        if (!spawnedParticleThisFrame)
+
+                        Vector2 bottomPos = new Vector2(r.transform.position.x, bottomMouthY);
+
+                        // Fallback for legacy pieces which have no generated VoxelShards.
+                        if (LevelProgressManager.Instance != null && shardList.Count == 0)
                         {
-                            Vector2 bottomPos = new Vector2(r.transform.position.x, bottomMouthY);
-                            ShredderParticleEffects.SpawnBurst(bottomPos, tileColor, 5, 3, 2);
-                            spawnedParticleThisFrame = true;
+                            Debug.Log($"[Shredder] PuzzlePiece {piece.GetInstanceID()} fallback color=#{ColorUtility.ToHtmlStringRGBA(Opaque(tileColor))}");
+                            ShredderVoxelHandoff.SpawnStream(bottomPos, Opaque(tileColor), bottomMouthY - .75f, 1);
                         }
                     }
                     else
@@ -262,8 +235,8 @@ namespace GravityPuzzle
                     }
                 }
 
-                // Check cleanup condition: top edge of all active renderers passes below shredderY
-                bool topBelowShredder = topY != float.NegativeInfinity && topY <= shredderY - 0.1f;
+                // 4. Clean Object Destruction: destroy immediately as top edge drops below shredderY
+                bool topBelowShredder = topY != float.NegativeInfinity && topY <= shredderY;
                 bool allShardsDone = shardList.Count == 0 || processedShards.Count >= shardList.Count;
 
                 if (topBelowShredder || (allShardsDone && activeCount == 0))
@@ -274,7 +247,6 @@ namespace GravityPuzzle
                 yield return null;
             }
 
-            yield return new WaitForSeconds(0.02f);
             if (piece != null)
             {
                 Destroy(piece.gameObject);
@@ -288,6 +260,8 @@ namespace GravityPuzzle
             Vector2 baseDir = shredForceDirection.sqrMagnitude > 0.01f ? shredForceDirection.normalized : Vector2.down;
             return rotation * baseDir;
         }
+
+        private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);
 
         private void RecycleGemVoxel(GemFlyToUI gem)
         {
@@ -305,67 +279,194 @@ namespace GravityPuzzle
     }
 
     /// <summary>
+    /// A deliberately small and short-lived world-physics phase for a shred voxel.
+    /// It has no collider and exists only below the grinder before its UI hand-off.
+    /// </summary>
+    public sealed class ShredderVoxelHandoff : MonoBehaviour
+    {
+        private static Material unlitMaterial;
+
+        private Rigidbody2D body;
+        private SpriteRenderer spriteRenderer;
+        private float handoffY;
+        private float elapsed;
+        private bool handedOff;
+        private Color voxelColor;
+
+        public static void SpawnStream(Vector2 position, Color color, float handoffY, int grainCount)
+        {
+            for (int i = 0; i < Mathf.Max(1, grainCount); i++)
+            {
+                Vector2 offset = new Vector2(UnityEngine.Random.Range(-.13f, .13f), UnityEngine.Random.Range(-.035f, .035f));
+                GameObject grain = PrototypeBootstrap.CreateVisualBlock(
+                    "Shredder Sand Grain", position + offset,
+                    Vector2.one * UnityEngine.Random.Range(.02f, .04f),
+                    new Color(color.r, color.g, color.b, 1f));
+                grain.AddComponent<ShredderVoxelHandoff>().Initialize(color, handoffY, UnityEngine.Random.Range(0f, .16f));
+            }
+        }
+
+        private float launchDelay;
+        private float physicsElapsed;
+        private bool physicsStarted;
+
+        private void Initialize(Color color, float targetHandoffY, float delay)
+        {
+            voxelColor = new Color(color.r, color.g, color.b, 1f);
+            handoffY = targetHandoffY;
+            launchDelay = delay;
+            spriteRenderer = GetComponent<SpriteRenderer>();
+            spriteRenderer.color = voxelColor;
+            spriteRenderer.maskInteraction = SpriteMaskInteraction.None;
+            spriteRenderer.sortingOrder = 52;
+            if (unlitMaterial == null)
+            {
+                Shader shader = Shader.Find("Sprites/Default");
+                if (shader != null)
+                    unlitMaterial = new Material(shader) { name = "Shredder Voxel Unlit" };
+            }
+            if (unlitMaterial != null)
+                spriteRenderer.sharedMaterial = unlitMaterial;
+
+            body = gameObject.AddComponent<Rigidbody2D>();
+            body.simulated = false;
+            body.gravityScale = .42f;
+            body.velocity = new Vector2(UnityEngine.Random.Range(-.22f, .22f), UnityEngine.Random.Range(-1.35f, -1.0f));
+            body.angularVelocity = UnityEngine.Random.Range(-220f, 220f);
+        }
+
+        private void Update()
+        {
+            if (handedOff)
+                return;
+
+            elapsed += Time.deltaTime;
+            if (!physicsStarted)
+            {
+                if (elapsed < launchDelay)
+                    return;
+
+                physicsStarted = true;
+                body.simulated = true;
+            }
+
+            physicsElapsed += Time.deltaTime;
+            // A hard maximum keeps this cosmetic physics phase tightly confined.
+            if (transform.position.y <= handoffY || physicsElapsed >= .62f)
+                HandOffToUi();
+        }
+
+        private void HandOffToUi()
+        {
+            if (handedOff)
+                return;
+
+            handedOff = true;
+            if (body != null)
+                body.simulated = false;
+            if (spriteRenderer != null)
+                spriteRenderer.enabled = false;
+
+            LevelProgressManager manager = LevelProgressManager.Instance;
+            if (manager != null)
+            {
+                manager.SpawnFlyingVoxel(transform.position, voxelColor, 1, () => Destroy(gameObject));
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+        }
+    }
+
+    /// <summary>
     /// Spawns high-density mini-cubes, subtle orange spark particles, and micro-dust along shredder contact line.
     /// </summary>
     public static class ShredderParticleEffects
     {
-        public static void SpawnBurst(Vector2 contactPosition, Color tileColor, int miniCubeCount = 4, int sparkCount = 2, int dustCount = 1)
+        private static Material unlitParticleMaterial;
+
+        public static void SpawnBurst(Vector2 contactPosition, Color tileColor, int miniCubeCount = 4, int sparkCount = 3, int dustCount = 2)
         {
             // 1. High-density solid-colored square mini-cubes matching tile color
             for (int i = 0; i < miniCubeCount; i++)
             {
-                float size = UnityEngine.Random.Range(0.045f, 0.085f);
-                Color cubeColor = Color.Lerp(tileColor, Color.white, UnityEngine.Random.Range(0f, 0.15f));
+                // Match the visual 3x3 voxels used by every board block. These are
+                // deliberately chunky so they remain readable below the gears.
+                float size = UnityEngine.Random.Range(0.22f, 0.30f);
+                Color cubeColor = new Color(tileColor.r, tileColor.g, tileColor.b, 1f);
                 Vector2 spawnPos = contactPosition + new Vector2(UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.06f, 0.06f));
 
                 GameObject cube = PrototypeBootstrap.CreateVisualBlock("MiniCubeParticle", spawnPos, Vector2.one * size, cubeColor);
-                cube.GetComponent<SpriteRenderer>().sortingOrder = 22;
+                ConfigureParticleRenderer(cube.GetComponent<SpriteRenderer>(), cubeColor, 50);
 
                 Rigidbody2D rb = cube.AddComponent<Rigidbody2D>();
-                rb.gravityScale = 0.35f;
-                rb.velocity = new Vector2(UnityEngine.Random.Range(-1.2f, 1.2f), UnityEngine.Random.Range(-2.6f, -0.8f));
+                rb.gravityScale = 0.9f;
+                rb.velocity = new Vector2(UnityEngine.Random.Range(-1.5f, 1.5f), UnityEngine.Random.Range(-3.4f, -1.5f));
                 rb.angularVelocity = UnityEngine.Random.Range(-540f, 540f);
 
                 FadingParticle particle = cube.AddComponent<FadingParticle>();
-                particle.Init(UnityEngine.Random.Range(0.45f, 0.85f), true);
+                particle.Init(UnityEngine.Random.Range(0.55f, 0.95f), true);
             }
 
-            // 2. Subtle orange spark particles
+            // 2. Smaller same-colour voxel chips. Never introduce an unrelated
+            // orange/grey tint: every emitted debris voxel inherits the piece colour.
             for (int i = 0; i < sparkCount; i++)
             {
-                float size = UnityEngine.Random.Range(0.035f, 0.06f);
-                Color sparkColor = new Color(1.0f, UnityEngine.Random.Range(0.5f, 0.75f), 0.12f, 1.0f); // Vibrant orange/amber
+                float size = UnityEngine.Random.Range(0.075f, 0.14f);
+                Color sparkColor = new Color(tileColor.r, tileColor.g, tileColor.b, 1f);
                 Vector2 spawnPos = contactPosition + new Vector2(UnityEngine.Random.Range(-0.3f, 0.3f), UnityEngine.Random.Range(-0.05f, 0.05f));
 
-                GameObject spark = PrototypeBootstrap.CreateVisualBlock("OrangeSpark", spawnPos, Vector2.one * size, sparkColor);
-                spark.GetComponent<SpriteRenderer>().sortingOrder = 25;
+                GameObject spark = PrototypeBootstrap.CreateVisualBlock("VoxelChip", spawnPos, Vector2.one * size, sparkColor);
+                ConfigureParticleRenderer(spark.GetComponent<SpriteRenderer>(), sparkColor, 51);
 
                 Rigidbody2D rb = spark.AddComponent<Rigidbody2D>();
-                rb.gravityScale = 0.2f;
-                rb.velocity = new Vector2(UnityEngine.Random.Range(-2.0f, 2.0f), UnityEngine.Random.Range(-1.6f, 0.8f));
+                rb.gravityScale = 1.15f;
+                rb.velocity = new Vector2(UnityEngine.Random.Range(-2.8f, 2.8f), UnityEngine.Random.Range(-2.5f, .15f));
                 rb.angularVelocity = UnityEngine.Random.Range(-900f, 900f);
 
                 FadingParticle particle = spark.AddComponent<FadingParticle>();
-                particle.Init(UnityEngine.Random.Range(0.18f, 0.32f), true);
+                particle.Init(UnityEngine.Random.Range(0.36f, 0.62f), true);
             }
 
-            // 3. Micro-dust particles
+            // 3. Fine same-colour voxel sand for a denser mechanical grind.
             for (int i = 0; i < dustCount; i++)
             {
-                float size = UnityEngine.Random.Range(0.07f, 0.13f);
-                Color dustColor = new Color(0.85f, 0.85f, 0.9f, 0.35f); // Soft greyish-white micro dust
+                float size = UnityEngine.Random.Range(0.035f, 0.075f);
+                Color dustColor = new Color(tileColor.r, tileColor.g, tileColor.b, 1f);
                 Vector2 spawnPos = contactPosition + new Vector2(UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.08f, 0.08f));
 
-                GameObject dust = PrototypeBootstrap.CreateVisualBlock("MicroDust", spawnPos, Vector2.one * size, dustColor);
-                dust.GetComponent<SpriteRenderer>().sortingOrder = 18;
+                GameObject dust = PrototypeBootstrap.CreateVisualBlock("VoxelSand", spawnPos, Vector2.one * size, dustColor);
+                ConfigureParticleRenderer(dust.GetComponent<SpriteRenderer>(), dustColor, 49);
 
                 Rigidbody2D rb = dust.AddComponent<Rigidbody2D>();
-                rb.gravityScale = -0.05f; // Gentle upward drift
-                rb.velocity = new Vector2(UnityEngine.Random.Range(-0.4f, 0.4f), UnityEngine.Random.Range(-0.2f, 0.4f));
+                rb.gravityScale = 1.35f;
+                rb.velocity = new Vector2(UnityEngine.Random.Range(-3.2f, 3.2f), UnityEngine.Random.Range(-2.2f, .35f));
 
                 FadingParticle particle = dust.AddComponent<FadingParticle>();
-                particle.Init(UnityEngine.Random.Range(0.4f, 0.7f), false, true);
+                particle.Init(UnityEngine.Random.Range(0.32f, 0.58f), true);
             }
+        }
+
+        private static void ConfigureParticleRenderer(SpriteRenderer renderer, Color color, int sortingOrder)
+        {
+            if (renderer == null)
+                return;
+
+            renderer.color = new Color(color.r, color.g, color.b, 1f);
+            renderer.maskInteraction = SpriteMaskInteraction.None;
+            renderer.sortingLayerID = SortingLayer.NameToID("Default");
+            renderer.sortingOrder = sortingOrder;
+
+            if (unlitParticleMaterial == null)
+            {
+                Shader shader = Shader.Find("Sprites/Default");
+                if (shader != null)
+                    unlitParticleMaterial = new Material(shader) { name = "Shredder Unlit VFX" };
+            }
+
+            if (unlitParticleMaterial != null)
+                renderer.sharedMaterial = unlitParticleMaterial;
         }
     }
 

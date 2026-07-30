@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: Level_3
   m_EditorClassIdentifier: 
   levelName: New Level
+  timeLimit: 60
   boardColumns: 4
-  boardRows: 4
+  boardRows: 7
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
@@ -26,8 +27,14 @@ MonoBehaviour:
   pieces:
   - name: Piece 1
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
-    origin: {x: 10, y: 14}
+    origin: {x: 10, y: 26}
     quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: -10, y: -2}
       type: 0
@@ -95,8 +102,14 @@ MonoBehaviour:
       type: 0
   - name: Piece 2
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-    origin: {x: 8, y: 8}
+    origin: {x: 8, y: 20}
     quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: -8, y: 0}
       type: 0
@@ -230,7 +243,7 @@ MonoBehaviour:
   obstacles:
   - name: Obstacle 1
     usesGridCells: 1
-    gridCell: {x: 0, y: 1}
+    gridCell: {x: 0, y: 4}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}

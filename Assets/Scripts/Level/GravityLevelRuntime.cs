@@ -170,6 +170,9 @@ namespace GravityPuzzle
 
             foreach (PieceDefinition piece in level.pieces)
                 CreatePiece(level, piece);
+
+            // The manager creates its UI fallback when this scene does not provide one.
+            LevelProgressManager.EnsureInstance().InitializeLevelProgress(level);
         }
 
         private static void CreateBoardBackground(GravityLevelDefinition level)
@@ -521,7 +524,7 @@ namespace GravityPuzzle
             body.useFullKinematicContacts = true;
             body.interpolation = RigidbodyInterpolation2D.None;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.constraints = RigidbodyConstraints2D.None; // Do not freeze rotation
             body.sleepMode = RigidbodySleepMode2D.StartAwake;
 
             CompositeCollider2D pieceComposite = piece.AddComponent<CompositeCollider2D>();
@@ -631,6 +634,10 @@ namespace GravityPuzzle
             }
 
             PuzzlePiece puzzlePiece = piece.AddComponent<PuzzlePiece>();
+            // A progress unit is one authored board block (one coarse grid module),
+            // not one fine collision cell or one decorative voxel shard.
+            puzzlePiece.ConfigureProgressUnits(Mathf.Max(1, blockCounts.Count));
+            puzzlePiece.ConfigureVisualColor(definition.color);
             puzzlePiece.ConfigureCollisionGeometry(
                 pieceComposite,
                 collisionCells,

@@ -19,6 +19,10 @@ namespace GravityPuzzle
         public bool IsSelected => isSelected;
         public bool IsBeingShredded => beingShredded;
         public bool IsFrozen { get; private set; }
+        /// <summary>Authored board-block units represented by this draggable piece.</summary>
+        public int ProgressUnits { get; private set; } = 1;
+        /// <summary>Source colour from the authored piece definition.</summary>
+        public Color VisualColor { get; private set; } = Color.white;
         public Bounds CollisionBounds
         {
             get
@@ -143,6 +147,16 @@ namespace GravityPuzzle
                 cellSizes.Add(cells[i].size);
 
             ConfigureCollisionGeometry(composite, cells, cellVisuals, cellSizes);
+        }
+
+        public void ConfigureProgressUnits(int units)
+        {
+            ProgressUnits = Mathf.Max(1, units);
+        }
+
+        public void ConfigureVisualColor(Color color)
+        {
+            VisualColor = new Color(color.r, color.g, color.b, 1f);
         }
 
         private void ConfigureCollisionGeometry(
