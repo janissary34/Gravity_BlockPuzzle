@@ -16,10 +16,8 @@ namespace GravityPuzzle
         internal const float ColliderCornerRadius = .025f;
         private static Sprite squareSprite;
         private static Sprite circleSprite;
-        // Puzzle bodies are moved by our deterministic kinematic solver. Physics
-        // materials remain frictionless because Box2D is used only for queries
-        // and trigger detection, never for mass/friction impulse resolution.
-        private static PhysicsMaterial2D frictionlessMaterial;
+        // This material gives casts/contact resolution a stable, non-bouncy surface.
+        private static PhysicsMaterial2D puzzleContactMaterial;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void RegisterSceneLoader()
@@ -101,27 +99,65 @@ namespace GravityPuzzle
         private static void ConfigurePuzzleColliders()
         {
             EnsurePhysicsMaterials();
+            EnsurePuzzleObstacleCollisionLayers();
+            Physics2D.velocityIterations = Mathf.Max(Physics2D.velocityIterations, 10);
+            Physics2D.positionIterations = Mathf.Max(Physics2D.positionIterations, 10);
 
             foreach (Collider2D sceneCollider in Object.FindObjectsOfType<Collider2D>())
-                sceneCollider.sharedMaterial = frictionlessMaterial;
+                sceneCollider.sharedMaterial = puzzleContactMaterial;
         }
 
         internal static void SetDraggingFriction(PuzzlePiece piece, bool isDragging)
         {
             EnsurePhysicsMaterials();
-            ApplyPieceMaterial(piece, frictionlessMaterial);
+            ApplyPieceMaterial(piece, puzzleContactMaterial);
         }
 
         private static void EnsurePhysicsMaterials()
         {
-            if (frictionlessMaterial == null)
+            if (puzzleContactMaterial == null)
             {
-                frictionlessMaterial = new PhysicsMaterial2D("Puzzle Frictionless")
+                puzzleContactMaterial = new PhysicsMaterial2D("Puzzle Contact")
                 {
-                    friction = 0f,
+                    friction = .4f,
                     bounciness = 0f
                 };
             }
+        }
+
+        private static void EnsurePuzzleObstacleCollisionLayers()
+        {
+            int pieceLayer = LayerMask.NameToLayer("PuzzlePiece");
+            int obstacleLayer = LayerMask.NameToLayer("Obstacle");
+
+            // Projects without named custom layers keep Unity's Default layer; make
+            // that pair explicit as well so a stale matrix cannot disable contacts.
+            if (pieceLayer < 0 || obstacleLayer < 0)
+            {
+                Physics2D.IgnoreLayerCollision(0, 0, false);
+                return;
+            }
+
+            Physics2D.IgnoreLayerCollision(pieceLayer, obstacleLayer, false);
+            foreach (PuzzlePiece piece in Object.FindObjectsOfType<PuzzlePiece>())
+                SetLayerRecursively(piece.gameObject, pieceLayer);
+
+            foreach (Collider2D collider in Object.FindObjectsOfType<Collider2D>())
+            {
+                if (collider.GetComponentInParent<PuzzlePiece>() != null)
+                    continue;
+
+                Rigidbody2D body = collider.GetComponentInParent<Rigidbody2D>();
+                if (body != null && body.bodyType == RigidbodyType2D.Static)
+                    SetLayerRecursively(collider.gameObject, obstacleLayer);
+            }
+        }
+
+        private static void SetLayerRecursively(GameObject target, int layer)
+        {
+            target.layer = layer;
+            foreach (Transform child in target.transform)
+                SetLayerRecursively(child.gameObject, layer);
         }
 
         private static void ApplyPieceMaterial(PuzzlePiece piece, PhysicsMaterial2D material)
@@ -216,7 +252,7 @@ namespace GravityPuzzle
             body.interpolation = RigidbodyInterpolation2D.None;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            body.sleepMode = RigidbodySleepMode2D.StartAwake;
+            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
             piece.AddComponent<PuzzlePiece>();
 
             // The stem, arm, and tip together form a J-shaped hook.

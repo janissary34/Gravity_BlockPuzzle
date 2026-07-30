@@ -179,6 +179,8 @@ namespace GravityPuzzle
             float bottomMouthY = shredderY - 0.65f;
 
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
+            float progressPerGrain = piece.ProgressUnits /
+                                     (float)Mathf.Max(1, shardList.Count * LevelProgressManager.SandGrainsPerRenderedVoxel);
             Vector3 basePosition = piece.transform.position;
             float startingAngle = piece.transform.eulerAngles.z;
             float feedAngularVelocity = Random.Range(-75f, 75f);
@@ -220,9 +222,10 @@ namespace GravityPuzzle
                         ShredderVoxelHandoff.SpawnStream(
                             bottomPos,
                             shardColor,
-                            // Let the grains breathe below the gears before the UI bend.
-                            bottomMouthY - .75f,
-                            LevelProgressManager.SandGrainsPerRenderedVoxel);
+                            // Each grain chooses its own lower bend; no flat hand-off line.
+                            shredderY,
+                            LevelProgressManager.SandGrainsPerRenderedVoxel,
+                            progressPerGrain);
 
                         shard.Recycle();
                     }
@@ -251,7 +254,7 @@ namespace GravityPuzzle
                         if (LevelProgressManager.Instance != null && shardList.Count == 0)
                         {
                             Debug.Log($"[Shredder] PuzzlePiece {piece.GetInstanceID()} fallback color=#{ColorUtility.ToHtmlStringRGBA(Opaque(tileColor))}");
-                            ShredderVoxelHandoff.SpawnStream(bottomPos, Opaque(tileColor), bottomMouthY - .75f, 1);
+                            ShredderVoxelHandoff.SpawnStream(bottomPos, Opaque(tileColor), shredderY, 1, piece.ProgressUnits);
                         }
                     }
                     else
@@ -318,17 +321,23 @@ namespace GravityPuzzle
         private float elapsed;
         private bool handedOff;
         private Color voxelColor;
+        private float progressAmount;
 
-        public static void SpawnStream(Vector2 position, Color color, float handoffY, int grainCount)
+        public static void SpawnStream(Vector2 position, Color color, float shredderY, int grainCount, float progressPerGrain)
         {
             for (int i = 0; i < Mathf.Max(1, grainCount); i++)
             {
                 Vector2 offset = new Vector2(UnityEngine.Random.Range(-.13f, .13f), UnityEngine.Random.Range(-.035f, .035f));
                 GameObject grain = PrototypeBootstrap.CreateVisualBlock(
                     "Shredder Sand Grain", position + offset,
-                    Vector2.one * UnityEngine.Random.Range(.04f, .065f),
+                    Vector2.one * UnityEngine.Random.Range(.08f, .12f),
                     new Color(color.r, color.g, color.b, 1f));
-                grain.AddComponent<ShredderVoxelHandoff>().Initialize(color, handoffY, UnityEngine.Random.Range(0f, .16f));
+                float individualHandoffY = shredderY + UnityEngine.Random.Range(-1.5f, -.8f);
+                grain.AddComponent<ShredderVoxelHandoff>().Initialize(
+                    color,
+                    individualHandoffY,
+                    UnityEngine.Random.Range(0f, .16f),
+                    progressPerGrain);
             }
         }
 
@@ -336,11 +345,12 @@ namespace GravityPuzzle
         private float physicsElapsed;
         private bool physicsStarted;
 
-        private void Initialize(Color color, float targetHandoffY, float delay)
+        private void Initialize(Color color, float targetHandoffY, float delay, float grainProgressAmount)
         {
             voxelColor = new Color(color.r, color.g, color.b, 1f);
             handoffY = targetHandoffY;
             launchDelay = delay;
+            progressAmount = grainProgressAmount;
             spriteRenderer = GetComponent<SpriteRenderer>();
             spriteRenderer.color = voxelColor;
             spriteRenderer.maskInteraction = SpriteMaskInteraction.None;
@@ -396,7 +406,7 @@ namespace GravityPuzzle
             LevelProgressManager manager = LevelProgressManager.Instance;
             if (manager != null)
             {
-                manager.SpawnFlyingVoxel(transform.position, voxelColor, 1, () => Destroy(gameObject));
+                manager.SpawnFlyingVoxel(transform.position, voxelColor, progressAmount, () => Destroy(gameObject));
             }
             else
             {

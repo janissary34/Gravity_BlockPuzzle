@@ -77,6 +77,7 @@ namespace GravityPuzzle
 
         private void FixedUpdate()
         {
+            Physics2D.SyncTransforms();
             // Player movement has priority for this tick. Every other piece then
             // advances under deterministic manual gravity, so holding one piece
             // never freezes the rest of the board and no body receives impulses.
@@ -156,8 +157,7 @@ namespace GravityPuzzle
                     : 0;
 
                 Vector2 completedMove = direction * allowedDistance;
-                body.position += completedMove;
-                Physics2D.SyncTransforms();
+                MoveBody(body, body.position + completedMove);
 
                 remainingMove -= completedMove;
                 if (!foundBlockingHit || allowedDistance >= requestedDistance - MinimumMoveDistance)
@@ -330,7 +330,7 @@ namespace GravityPuzzle
                     else
                     {
                         snappingTargetsX.Remove(pieceId);
-                        body.position = new Vector2(targetX, body.position.y);
+                        MoveBody(body, new Vector2(targetX, body.position.y));
                     }
                 }
                 
@@ -391,8 +391,7 @@ namespace GravityPuzzle
 
             if (allowedDistance >= MinimumMoveDistance)
             {
-                body.position += Vector2.down * allowedDistance;
-                Physics2D.SyncTransforms();
+                MoveBody(body, body.position + Vector2.down * allowedDistance);
             }
 
             body.velocity = Vector2.zero;
@@ -443,10 +442,22 @@ namespace GravityPuzzle
         private static void PrepareKinematicBody(Rigidbody2D body)
         {
             body.bodyType = RigidbodyType2D.Kinematic;
-            body.interpolation = RigidbodyInterpolation2D.None;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
             body.useFullKinematicContacts = true;
+            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
             body.velocity = Vector2.zero;
             body.angularVelocity = 0f;
+        }
+
+        private static void MoveBody(Rigidbody2D body, Vector2 targetPosition)
+        {
+            // This is intentionally a Rigidbody2D position write, never a transform
+            // write. The target has already been swept with Rigidbody2D.Cast and must
+            // be applied immediately so the remaining slide iterations cast from the
+            // new position in this same FixedUpdate.
+            body.position = targetPosition;
+            Physics2D.SyncTransforms();
         }
 
         private void ProcessTouchInput()

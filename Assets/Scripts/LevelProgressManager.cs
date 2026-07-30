@@ -17,7 +17,7 @@ namespace GravityPuzzle
     {
         // One visible 3x3 board voxel becomes this many micro sand grains.
         // The same value is used for the slider denominator and arrivals.
-        public const int SandGrainsPerRenderedVoxel = 8;
+        public const int SandGrainsPerRenderedVoxel = 12;
 
         public static LevelProgressManager Instance { get; private set; }
 
@@ -59,13 +59,13 @@ namespace GravityPuzzle
 
         [Header("Progress State (Read-Only)")]
         [SerializeField] private int totalBlockUnitsInLevel;
-        [SerializeField] private int currentShreddedUnits;
+        [SerializeField] private float currentShreddedUnits;
         private int authoredBlockUnits;
 
         public int TotalBlockUnits => totalBlockUnitsInLevel;
         public int TotalAuthoredBlockUnits => authoredBlockUnits;
-        public int CurrentShreddedUnits => currentShreddedUnits;
-        public bool IsLevelComplete => totalBlockUnitsInLevel > 0 && currentShreddedUnits >= totalBlockUnitsInLevel;
+        public float CurrentShreddedUnits => currentShreddedUnits;
+        public bool IsLevelComplete => totalBlockUnitsInLevel > 0 && currentShreddedUnits >= totalBlockUnitsInLevel - .0001f;
 
         /// <summary>
         /// Event fired when the level is completed (100% capacity reached).
@@ -75,7 +75,7 @@ namespace GravityPuzzle
         /// <summary>
         /// Event fired whenever progress updates: (currentShredded, totalUnits).
         /// </summary>
-        public event Action<int, int> OnProgressChanged;
+        public event Action<float, int> OnProgressChanged;
 
         private Camera mainCamera;
         private Tweener sliderFillTween;
@@ -179,7 +179,7 @@ namespace GravityPuzzle
 
             hasAuthoredLevelTotal = false;
             authoredBlockUnits = 0;
-            totalBlockUnitsInLevel = CountVoxelUnitsInScene();
+            totalBlockUnitsInLevel = CountActiveBlockUnitsInScene();
             ResetProgress();
         }
 
@@ -187,9 +187,9 @@ namespace GravityPuzzle
         {
             EnsureSliderReference();
             hasAuthoredLevelTotal = true;
-            // The runtime has already created every 3x3 voxel grid at this point.
-            // Counting the active VoxelShards is exact, including unusual partial shapes.
-            authoredBlockUnits = CountVoxelUnitsInScene();
+            // Count authored, breakable board blocks only. VoxelShards, background
+            // cells, UI, and pooled objects are visual implementation details.
+            authoredBlockUnits = CountActiveBlockUnitsInScene();
             totalBlockUnitsInLevel = authoredBlockUnits;
             ResetProgress();
             Debug.Log($"[LevelProgress] Initialized maxValue={(progressSlider != null ? progressSlider.maxValue : -1f)}, " +
@@ -198,7 +198,7 @@ namespace GravityPuzzle
 
         private void ResetProgress()
         {
-            currentShreddedUnits = 0;
+            currentShreddedUnits = 0f;
             levelCompletedTriggered = false;
             activeFlyingVoxelCount = 0;
 
@@ -208,7 +208,7 @@ namespace GravityPuzzle
                 progressSlider.minValue = 0f;
                 progressSlider.maxValue = Mathf.Max(1, totalBlockUnitsInLevel);
                 progressSlider.value = 0f;
-                progressSlider.wholeNumbers = true;
+                progressSlider.wholeNumbers = false;
             }
 
             OnProgressChanged?.Invoke(currentShreddedUnits, totalBlockUnitsInLevel);
@@ -220,7 +220,7 @@ namespace GravityPuzzle
         /// </summary>
         /// <param name="startWorldPos">World position where the voxel was shredded.</param>
         /// <param name="voxelColor">Color of the block being shredded.</param>
-        public void SpawnFlyingVoxel(Vector3 startWorldPos, Color voxelColor, int progressAmount = 1, Action onArrival = null)
+        public void SpawnFlyingVoxel(Vector3 startWorldPos, Color voxelColor, float progressAmount, Action onArrival = null)
         {
             if (levelCompletedTriggered)
             {
@@ -268,7 +268,7 @@ namespace GravityPuzzle
             RectTransform voxelRect = flyingVoxel.GetComponent<RectTransform>();
             voxelRect.anchorMin = new Vector2(.5f, .5f);
             voxelRect.anchorMax = new Vector2(.5f, .5f);
-            voxelRect.sizeDelta = Vector2.one * Mathf.Max(10f, voxelSize * 34f);
+            voxelRect.sizeDelta = Vector2.one * Mathf.Max(18f, voxelSize * 58f);
             voxelRect.anchoredPosition = start;
             Image voxelImage = flyingVoxel.GetComponent<Image>();
             voxelImage.sprite = PrototypeBootstrap.GetSquareSprite();
@@ -332,7 +332,7 @@ namespace GravityPuzzle
         /// Fires OnLevelCompleted when 100% is reached.
         /// </summary>
         /// <param name="amount">Number of block units shredded (default 1).</param>
-        public void AddProgress(int amount = 1)
+        public void AddProgress(float amount)
         {
             if (levelCompletedTriggered) return;
 
@@ -341,13 +341,15 @@ namespace GravityPuzzle
             // Safety check: if totalBlockUnits evaluated to 0 on Start (e.g., runtime level load), recalculate now
             if (totalBlockUnitsInLevel <= 0 && !hasAuthoredLevelTotal)
             {
-                totalBlockUnitsInLevel = CountVoxelUnitsInScene();
+                totalBlockUnitsInLevel = CountActiveBlockUnitsInScene();
             }
 
             currentShreddedUnits += amount;
             if (totalBlockUnitsInLevel > 0)
             {
                 currentShreddedUnits = Mathf.Min(currentShreddedUnits, totalBlockUnitsInLevel);
+                if (totalBlockUnitsInLevel - currentShreddedUnits <= .0001f)
+                    currentShreddedUnits = totalBlockUnitsInLevel;
             }
 
             if (progressSlider != null)
@@ -364,13 +366,13 @@ namespace GravityPuzzle
                 sliderFillTween = progressSlider.DOValue(currentShreddedUnits, sliderFillDuration)
                     .SetEase(Ease.OutQuad);
 
-                Debug.Log($"[LevelProgress] AddProgress(+{amount}): value={currentShreddedUnits}/{progressSlider.maxValue}, " +
+                Debug.Log($"[LevelProgress] AddProgress(+{amount:0.###}): value={currentShreddedUnits:0.###}/{progressSlider.maxValue:0.###}, " +
                           $"authored={authoredBlockUnits}.");
             }
 
             OnProgressChanged?.Invoke(currentShreddedUnits, totalBlockUnitsInLevel);
 
-            if (totalBlockUnitsInLevel > 0 && currentShreddedUnits >= totalBlockUnitsInLevel && !levelCompletedTriggered)
+            if (totalBlockUnitsInLevel > 0 && currentShreddedUnits >= totalBlockUnitsInLevel - .0001f && !levelCompletedTriggered)
             {
                 levelCompletedTriggered = true;
                 
@@ -431,12 +433,18 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Counts the total micro-grain population generated from live VoxelShards.
-        /// This is the locked slider denominator so every grain arrival adds one step.
+        /// Counts actual authored board-block units only; backgrounds, voxel meshes,
+        /// UI objects, and pools can never affect gameplay progress.
         /// </summary>
-        private static int CountVoxelUnitsInScene()
+        private static int CountActiveBlockUnitsInScene()
         {
-            return FindObjectsOfType<VoxelShard>().Length * SandGrainsPerRenderedVoxel;
+            int total = 0;
+            foreach (PuzzlePiece piece in FindObjectsOfType<PuzzlePiece>())
+            {
+                if (piece != null && !piece.IsBeingShredded)
+                    total += Mathf.Max(1, piece.ProgressUnits);
+            }
+            return total;
         }
 
         private static int CountAuthoredPuzzlePieces(GravityLevelDefinition level)

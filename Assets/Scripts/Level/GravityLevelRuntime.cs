@@ -527,7 +527,7 @@ namespace GravityPuzzle
             // Pieces stay upright during normal board play; BlockShredder releases
             // rotation only at gear contact, then contains the piece immediately.
             body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            body.sleepMode = RigidbodySleepMode2D.StartAwake;
+            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
 
             CompositeCollider2D pieceComposite = piece.AddComponent<CompositeCollider2D>();
             pieceComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
