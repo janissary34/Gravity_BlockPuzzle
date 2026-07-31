@@ -686,5 +686,35 @@ MonoBehaviour:
     radiusInFineCells: 1.7
     rotationSpeed: 220
     clockwise: 1
+  - name: Shredder 8
+    cell: {x: 3, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 9
+    cell: {x: 6, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 10
+    cell: {x: 11, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 11
+    cell: {x: 14, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 12
+    cell: {x: 18, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 13
+    cell: {x: 20, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
   inactiveBoardCells: []
   inactiveFineCells: []

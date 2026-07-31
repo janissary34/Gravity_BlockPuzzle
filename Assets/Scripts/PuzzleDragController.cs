@@ -27,6 +27,7 @@ namespace GravityPuzzle
         private const float MinimumMoveDistance = .0005f;
         private const float CastContactPadding = .002f;
         private const float VisualContactTolerance = .01f;
+        private const float ShredderCollisionGuardDistance = 1f;
         private const float MinimumBlockingCrossSection = .001f;
         private const float BlockingNormalDotThreshold = -.001f;
         private const float ContactManifoldTolerance = .004f;
@@ -262,7 +263,7 @@ namespace GravityPuzzle
             return true;
         }
 
-        private static float RequiredVisualClearance(
+        private float RequiredVisualClearance(
             PuzzlePiece movingPiece,
             Collider2D hitCollider)
         {
@@ -271,13 +272,35 @@ namespace GravityPuzzle
             if (hitPiece != null && hitPiece != movingPiece)
                 collisionInset += hitPiece.CurrentCollisionInset;
 
-            // Equal-size pieces and openings cannot satisfy positive visual
-            // clearance on both opposing faces at once. Keep a sub-pixel-scale
-            // tolerance inside the per-cell collision skin so exact grid fits do
-            // not lock at their corners, while the colliders still cap how far
-            // any two visuals can overlap.
+            if (IsInShredderApproach(movingPiece) ||
+                (hitPiece != null && IsInShredderApproach(hitPiece)))
+            {
+                // In the final cell before the shredder, preserve the full visual
+                // footprint. This prevents two falling pieces from appearing to
+                // weave together as they enter the physical shredder sequence.
+                return collisionInset + CastContactPadding;
+            }
+
+            // Elsewhere, retain the original fine-grid tolerance so pieces still
+            // fit through exact-size authored openings while being dragged.
             return Mathf.Max(0f, collisionInset - VisualContactTolerance) +
                    CastContactPadding;
+        }
+
+        private static bool IsInShredderApproach(PuzzlePiece piece)
+        {
+            ShredderCatchZone[] zones = Object.FindObjectsOfType<ShredderCatchZone>();
+            for (int i = 0; i < zones.Length; i++)
+            {
+                ShredderCatchZone zone = zones[i];
+                if (zone != null &&
+                    piece.LowestColliderPoint() <= zone.shredY + ShredderCollisionGuardDistance)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void AdvanceManualGravity()

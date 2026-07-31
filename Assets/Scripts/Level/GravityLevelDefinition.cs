@@ -13,10 +13,9 @@ namespace GravityPuzzle
         public const float ReferencePortraitHeight = 812f;
         public const float MinimumTouchTargetPoints = 44f;
         public const float FrameThicknessInCells = .12f;
-        // Visuals always stay on the exact grid. Physics gets a very small,
-        // invisible inset while resting and a little more while the player is
-        // holding a piece. This is the tolerance that lets an N-cell block pass
-        // through an N-cell opening without asking level design for a fake gap.
+        // Collision geometry uses a tiny inset at rest and a larger one while
+        // dragging so pieces can pass through exact-size grid openings. The
+        // matching visual scale is applied by PuzzlePiece.
         public const float RestingPieceCollisionSkinInCells = .005f;
         public const float DraggingPieceCollisionSkinInCells = .055f;
 

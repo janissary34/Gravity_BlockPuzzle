@@ -53,7 +53,7 @@ namespace GravityPuzzle
             }
         }
 
-        public float CurrentCollisionInset => collisionCells == null
+        public float CurrentCollisionInset => collisionCells == null || useFullCollisionGeometry
             ? 0f
             : isSelected
                 ? GravityGridMetrics.DraggingPieceCollisionSkinInCells
@@ -71,6 +71,7 @@ namespace GravityPuzzle
         private Collider2D[] solidColliders;
         private bool selectionVisualsBuilt;
         private bool beingShredded;
+        private bool useFullCollisionGeometry;
         private bool isSelected;
         private bool destructionReported;
         private int frozenUntilDestroyedCount;
@@ -157,6 +158,40 @@ namespace GravityPuzzle
         public void ConfigureVisualColor(Color color)
         {
             VisualColor = new Color(color.r, color.g, color.b, 1f);
+        }
+
+        public void PrepareForShredderPhysics()
+        {
+            useFullCollisionGeometry = true;
+            ApplyCollisionProfile();
+        }
+
+        public void ReleaseCollisionCellsAtOrBelow(float worldY)
+        {
+            if (collisionCells == null)
+                return;
+
+            bool geometryChanged = false;
+            for (int i = 0; i < collisionCells.Count; i++)
+            {
+                BoxCollider2D cell = collisionCells[i];
+                if (cell == null || !cell.enabled || cell.bounds.min.y > worldY)
+                    continue;
+
+                // This physical cell has entered the grinder. Remove only this
+                // lower section; the remaining upper cells stay solid until they
+                // reach the same line on a later physics step.
+                cell.enabled = false;
+                geometryChanged = true;
+            }
+
+            if (!geometryChanged)
+                return;
+
+            if (compositeCollider != null)
+                compositeCollider.GenerateGeometry();
+            CacheSolidColliders();
+            Physics2D.SyncTransforms();
         }
 
         private void ConfigureCollisionGeometry(
@@ -504,9 +539,11 @@ namespace GravityPuzzle
             if (collisionCells == null || fullCollisionCellSizes == null)
                 return;
 
-            float inset = isSelected
-                ? GravityGridMetrics.DraggingPieceCollisionSkinInCells
-                : GravityGridMetrics.RestingPieceCollisionSkinInCells;
+            float inset = useFullCollisionGeometry
+                ? 0f
+                : isSelected
+                    ? GravityGridMetrics.DraggingPieceCollisionSkinInCells
+                    : GravityGridMetrics.RestingPieceCollisionSkinInCells;
 
             // Inset every modular cell around its own centre. Scaling the common
             // root instead would move the cells of concave pieces relative to

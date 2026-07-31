@@ -78,7 +78,9 @@ namespace GravityPuzzle
         private float blockFeedSpeed = 1.6f;
 
         [SerializeField, Tooltip("Brief angular impulse applied when a piece first bites into the gears.")]
-        private float shredderTumbleTorque = 7.5f;
+        private float shredderTumbleTorque = 1.25f;
+
+        private static PhysicsMaterial2D shredderFeedMaterial;
 
         /// <summary>
         /// Attempts to shred an entering PuzzlePiece into Stone and Gem voxels slowly/progressively with high-density particle effects.
@@ -88,16 +90,6 @@ namespace GravityPuzzle
             PuzzlePiece piece = targetCollider.GetComponentInParent<PuzzlePiece>();
             if (piece == null || !piece.TryBeginShredding())
                 return;
-
-            // Lock the piece into the shredder path immediately. Continuous detection
-            // catches high-speed/tumbling pieces before they can leak through intact.
-            Rigidbody2D body = piece.Body;
-            if (body != null)
-            {
-                body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-                body.constraints &= ~RigidbodyConstraints2D.FreezeRotation;
-                body.AddTorque(Random.Range(-shredderTumbleTorque, shredderTumbleTorque), ForceMode2D.Impulse);
-            }
 
             StartCoroutine(FeedPieceIntoShredder(piece, shredderCenter.y));
         }
@@ -131,19 +123,23 @@ namespace GravityPuzzle
 
             EnsureSpriteMask(shredderY);
 
-            // 1. Non-Blocking Trigger setup: disable physical colliders & set Kinematic motion
+            // 1. Release the piece into real physics. Its colliders remain enabled,
+            // so multiple pieces can tumble against each other at the shredder
+            // without visually passing through one another.
             piece.SetSelected(false);
+            piece.PrepareForShredderPhysics();
+            ApplyShredderFeedMaterial(piece);
             Rigidbody2D rb = piece.Body;
             if (rb != null)
             {
-                rb.bodyType = RigidbodyType2D.Kinematic;
-                rb.velocity = Vector2.zero;
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                rb.constraints &= ~RigidbodyConstraints2D.FreezeRotation;
+                rb.velocity = Vector2.down * blockFeedSpeed;
                 rb.angularVelocity = 0f;
+                rb.angularDrag = Mathf.Max(rb.angularDrag, 8f);
+                rb.AddTorque(Random.Range(-shredderTumbleTorque, shredderTumbleTorque), ForceMode2D.Impulse);
             }
-
-            // Disable all physical colliders on the block so it never sits, lingers, or sticks on gear collisions
-            Collider2D[] cols = piece.GetComponentsInChildren<Collider2D>();
-            foreach (var c in cols) c.enabled = false;
 
             // 2. Sprite Masking / Visual Clipping: mask out any portion moving below shredderY
             SpriteRenderer[] pieceRenderers = piece.GetComponentsInChildren<SpriteRenderer>(true);
@@ -181,27 +177,28 @@ namespace GravityPuzzle
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
             float progressPerGrain = piece.ProgressUnits /
                                      (float)Mathf.Max(1, shardList.Count * LevelProgressManager.SandGrainsPerRenderedVoxel);
-            Vector3 basePosition = piece.transform.position;
-            float startingAngle = piece.transform.eulerAngles.z;
-            float feedAngularVelocity = Random.Range(-75f, 75f);
             float maxTime = 4.0f;
             float elapsed = 0f;
 
-            // 3. Smooth Fixed Downward Speed + Light Micro-Jitter on X-axis [-1px, +1px]
+            // 3. The Rigidbody2D now owns position and rotation. The coroutine
+            // only watches the falling voxels and converts them to shred effects.
             while (piece != null && elapsed < maxTime)
             {
                 elapsed += Time.deltaTime;
 
-                // Constant smooth feed rate downward
-                basePosition.y -= blockFeedSpeed * Time.deltaTime;
+                // As the piece crosses the cutter line, release only the lower
+                // collision cells. The part still above the shredder stays solid,
+                // so large pieces cannot merge into one another while being fed.
+                piece.ReleaseCollisionCellsAtOrBelow(shredderY);
 
-                // Light micro-jitter on X-axis (random small offset [-0.02f, +0.02f])
-                float microJitterX = Random.Range(-0.02f, 0.02f);
-                piece.transform.position = new Vector3(basePosition.x + microJitterX, basePosition.y, basePosition.z);
-                // After colliders are disabled, retain a small visual tumble so the
-                // feed does not look mechanically frozen while remaining contained.
-                feedAngularVelocity = Mathf.Lerp(feedAngularVelocity, 0f, Time.deltaTime * 1.8f);
-                piece.transform.rotation = Quaternion.Euler(0f, 0f, startingAngle + feedAngularVelocity * elapsed);
+                if (rb != null)
+                {
+                    // Keep the feed moving and allow a gentle wobble without the
+                    // violent free-spin caused by repeated grinder contacts.
+                    if (rb.velocity.y > -blockFeedSpeed)
+                        rb.velocity = new Vector2(rb.velocity.x, -blockFeedSpeed);
+                    rb.angularVelocity = Mathf.Clamp(rb.angularVelocity, -55f, 55f);
+                }
 
                 // A) Shred voxel shards crossing shredderY line & EMERGE FROM BOTTOM MOUTH OF SHREDDER
                 for (int i = 0; i < shardList.Count; i++)
@@ -291,6 +288,25 @@ namespace GravityPuzzle
         }
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);
+
+        private static void ApplyShredderFeedMaterial(PuzzlePiece piece)
+        {
+            if (shredderFeedMaterial == null)
+            {
+                shredderFeedMaterial = new PhysicsMaterial2D("Shredder Feed")
+                {
+                    friction = 0f,
+                    bounciness = 0f
+                };
+            }
+
+            Collider2D[] colliders = piece.GetComponentsInChildren<Collider2D>();
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                if (colliders[i] != null)
+                    colliders[i].sharedMaterial = shredderFeedMaterial;
+            }
+        }
 
         private void RecycleGemVoxel(GemFlyToUI gem)
         {
