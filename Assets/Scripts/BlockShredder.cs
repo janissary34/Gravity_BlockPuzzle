@@ -82,6 +82,21 @@ namespace GravityPuzzle
 
         private static PhysicsMaterial2D shredderFeedMaterial;
 
+        // The trigger has already accepted this piece for shredding. Keep it from
+        // catching on the shredder frame or another piece while it is fed down.
+        // Normal board and obstacle collisions are untouched until that point.
+        private static void DisableCapturedPieceCollisions(PuzzlePiece piece)
+        {
+            Collider2D[] colliders = piece.GetComponentsInChildren<Collider2D>(true);
+            foreach (Collider2D collider in colliders)
+            {
+                if (collider != null)
+                    collider.enabled = false;
+            }
+
+            Physics2D.SyncTransforms();
+        }
+
         /// <summary>
         /// Attempts to shred an entering PuzzlePiece into Stone and Gem voxels slowly/progressively with high-density particle effects.
         /// </summary>
@@ -123,11 +138,12 @@ namespace GravityPuzzle
 
             EnsureSpriteMask(shredderY);
 
-            // 1. Release the piece into real physics. Its colliders remain enabled,
-            // so multiple pieces can tumble against each other at the shredder
-            // without visually passing through one another.
+            // 1. Release the piece into physics after removing its solid collision
+            // geometry. A large shape can otherwise wedge against the shredder
+            // frame before the cutter has a chance to consume it.
             piece.SetSelected(false);
             piece.PrepareForShredderPhysics();
+            DisableCapturedPieceCollisions(piece);
             ApplyShredderFeedMaterial(piece);
             Rigidbody2D rb = piece.Body;
             if (rb != null)
