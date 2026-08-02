@@ -125,6 +125,24 @@ namespace GravityPuzzle
                 if (progressSlider == null)
                     progressSlider = CreateRuntimeProgressSlider();
             }
+
+            if (progressSlider != null)
+            {
+                // Progress is game state, not player input. Do not use
+                // interactable=false here: Unity tints disabled sliders and
+                // makes the handle look faded. Block pointer input separately
+                // while leaving the display in its normal visual state.
+                progressSlider.interactable = true;
+                CanvasGroup inputBlocker = progressSlider.GetComponent<CanvasGroup>();
+                if (inputBlocker == null)
+                    inputBlocker = progressSlider.gameObject.AddComponent<CanvasGroup>();
+                inputBlocker.alpha = 1f;
+                inputBlocker.interactable = true;
+                inputBlocker.blocksRaycasts = false;
+                Navigation navigation = progressSlider.navigation;
+                navigation.mode = Navigation.Mode.None;
+                progressSlider.navigation = navigation;
+            }
         }
 
         private static Slider CreateRuntimeProgressSlider()
@@ -277,17 +295,18 @@ namespace GravityPuzzle
 
             activeFlyingVoxelCount++;
 
-            // Physics has already ended below the grinder. This is now a pure,
-            // smooth UI tween from the exact world hand-off position to the bar.
-            // The control point gives the stream a generous lower bend before it
-            // funnels upward. EaseInCubic supplies the slow-to-fast launch.
-            Vector2 control = Vector2.Lerp(start, target, .42f) + Vector2.up * Mathf.Max(115f, voxelJumpPower * 220f);
+            // Continue the real free-fall motion for a short distance in UI
+            // space, then curve upward toward the bar. The Bezier's first
+            // tangent points down, so there is no abrupt stop-and-go corner.
+            float curveDrop = Mathf.Max(42f, voxelJumpPower * 85f);
+            Vector2 control = start + new Vector2(
+                UnityEngine.Random.Range(-28f, 28f),
+                -curveDrop);
             float flightDuration = voxelFlyDuration + UnityEngine.Random.Range(-.08f, .12f);
-            Sequence flightSequence = DOTween.Sequence();
-            // A tiny gathering pause at the lower bend makes the direction change read.
-            flightSequence.AppendInterval(UnityEngine.Random.Range(.07f, .16f));
+            Sequence flightSequence = DOTween.Sequence()
+                .SetDelay(UnityEngine.Random.Range(0f, .12f));
             flightSequence.Append(DOVirtual.Float(0f, 1f, flightDuration, progress =>
-                voxelRect.anchoredPosition = QuadraticBezier(start, control, target, progress)).SetEase(Ease.InCubic));
+                voxelRect.anchoredPosition = QuadraticBezier(start, control, target, progress)).SetEase(Ease.InOutSine));
             flightSequence.Join(voxelRect.DORotate(new Vector3(0f, 0f, UnityEngine.Random.Range(-160f, 160f)), flightDuration, RotateMode.FastBeyond360));
             flightSequence.OnComplete(() =>
             {

@@ -187,8 +187,10 @@ namespace GravityPuzzle
                 }
             }
 
-            // Bottom exit mouth where shredded voxels, sparks, and mini-cubes emerge (below shredder wheels)
-            float bottomMouthY = shredderY - 0.65f;
+            // Emit at the narrow seam directly beneath the rotating teeth. The
+            // grains then fall naturally from the place where the mesh is cut,
+            // instead of materialising lower down in open space.
+            float grinderExitSeamY = shredderY - .06f;
 
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
             float progressPerGrain = piece.ProgressUnits /
@@ -216,7 +218,7 @@ namespace GravityPuzzle
                     rb.angularVelocity = Mathf.Clamp(rb.angularVelocity, -55f, 55f);
                 }
 
-                // A) Shred voxel shards crossing shredderY line & EMERGE FROM BOTTOM MOUTH OF SHREDDER
+                // A) Shred voxel shards crossing the cutter line and exit at the gear seam.
                 for (int i = 0; i < shardList.Count; i++)
                 {
                     VoxelShard shard = shardList[i];
@@ -226,17 +228,16 @@ namespace GravityPuzzle
                     {
                         processedShards.Add(shard);
 
-                        // Position voxel emerging at bottom mouth below shredder wheels
-                        Vector2 bottomPos = new Vector2(shard.transform.position.x, bottomMouthY);
+                        Vector2 exitSeamPosition = new Vector2(
+                            shard.transform.position.x,
+                            grinderExitSeamY);
                         Color shardColor = tileColor;
 
                         // One lightweight grain per rendered voxel. It only simulates
                         // in the small space below the grinder, then hands off to UI.
                         ShredderVoxelHandoff.SpawnStream(
-                            bottomPos,
+                            exitSeamPosition,
                             shardColor,
-                            // Each grain chooses its own lower bend; no flat hand-off line.
-                            shredderY,
                             LevelProgressManager.SandGrainsPerRenderedVoxel,
                             progressPerGrain);
 
@@ -244,7 +245,7 @@ namespace GravityPuzzle
                     }
                 }
 
-                // B) Erase generic non-voxel renderers crossing shredderY line & emerge from bottom mouth
+                // B) Erase generic renderers crossing the cutter line and use the same seam.
                 int activeCount = 0;
                 float topY = float.NegativeInfinity;
 
@@ -261,13 +262,19 @@ namespace GravityPuzzle
                     {
                         r.enabled = false;
 
-                        Vector2 bottomPos = new Vector2(r.transform.position.x, bottomMouthY);
+                        Vector2 exitSeamPosition = new Vector2(
+                            r.transform.position.x,
+                            grinderExitSeamY);
 
                         // Fallback for legacy pieces which have no generated VoxelShards.
                         if (LevelProgressManager.Instance != null && shardList.Count == 0)
                         {
                             Debug.Log($"[Shredder] PuzzlePiece {piece.GetInstanceID()} fallback color=#{ColorUtility.ToHtmlStringRGBA(Opaque(tileColor))}");
-                            ShredderVoxelHandoff.SpawnStream(bottomPos, Opaque(tileColor), shredderY, 1, piece.ProgressUnits);
+                            ShredderVoxelHandoff.SpawnStream(
+                                exitSeamPosition,
+                                Opaque(tileColor),
+                                1,
+                                piece.ProgressUnits);
                         }
                     }
                     else
@@ -355,20 +362,26 @@ namespace GravityPuzzle
         private Color voxelColor;
         private float progressAmount;
 
-        public static void SpawnStream(Vector2 position, Color color, float shredderY, int grainCount, float progressPerGrain)
+        public static void SpawnStream(Vector2 position, Color color, int grainCount, float progressPerGrain)
         {
             for (int i = 0; i < Mathf.Max(1, grainCount); i++)
             {
-                Vector2 offset = new Vector2(UnityEngine.Random.Range(-.13f, .13f), UnityEngine.Random.Range(-.035f, .035f));
+                // Keep the spawn point on the grinder seam. A small horizontal
+                // variation spreads grains across the tooth that cut the block,
+                // but never creates a second artificial vertical spawn line.
+                Vector2 offset = new Vector2(UnityEngine.Random.Range(-.13f, .13f), 0f);
                 GameObject grain = PrototypeBootstrap.CreateVisualBlock(
                     "Shredder Sand Grain", position + offset,
                     Vector2.one * UnityEngine.Random.Range(.08f, .12f),
                     new Color(color.r, color.g, color.b, 1f));
-                float individualHandoffY = shredderY + UnityEngine.Random.Range(-1.5f, -.8f);
+                // Each grain falls to its own depth before transitioning to the
+                // UI flight. This removes the old invisible flat landing line.
+                float dropDepth = UnityEngine.Random.Range(-1.2f, -.5f);
+                float individualHandoffY = position.y + dropDepth;
                 grain.AddComponent<ShredderVoxelHandoff>().Initialize(
                     color,
                     individualHandoffY,
-                    UnityEngine.Random.Range(0f, .16f),
+                    UnityEngine.Random.Range(0f, .12f),
                     progressPerGrain);
             }
         }
@@ -386,7 +399,9 @@ namespace GravityPuzzle
             spriteRenderer = GetComponent<SpriteRenderer>();
             spriteRenderer.color = voxelColor;
             spriteRenderer.maskInteraction = SpriteMaskInteraction.None;
-            spriteRenderer.sortingOrder = 52;
+            // Shredder disc/teeth render at 25–27. Keep the falling voxel
+            // stream below that layer so it visibly travels behind the gears.
+            spriteRenderer.sortingOrder = 4;
             if (unlitMaterial == null)
             {
                 Shader shader = Shader.Find("Sprites/Default");
@@ -419,8 +434,9 @@ namespace GravityPuzzle
             }
 
             physicsElapsed += Time.deltaTime;
-            // A hard maximum keeps this cosmetic physics phase tightly confined.
-            if (transform.position.y <= handoffY || physicsElapsed >= .62f)
+            // The timeout is only a safety net; the randomized handoff depth is
+            // what determines where each voxel begins its upward UI curve.
+            if (transform.position.y <= handoffY || physicsElapsed >= 1.25f)
                 HandOffToUi();
         }
 
@@ -466,7 +482,7 @@ namespace GravityPuzzle
                 Vector2 spawnPos = contactPosition + new Vector2(UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.06f, 0.06f));
 
                 GameObject cube = PrototypeBootstrap.CreateVisualBlock("MiniCubeParticle", spawnPos, Vector2.one * size, cubeColor);
-                ConfigureParticleRenderer(cube.GetComponent<SpriteRenderer>(), cubeColor, 50);
+                ConfigureParticleRenderer(cube.GetComponent<SpriteRenderer>(), cubeColor, 22);
 
                 Rigidbody2D rb = cube.AddComponent<Rigidbody2D>();
                 rb.gravityScale = 0.9f;
@@ -486,7 +502,7 @@ namespace GravityPuzzle
                 Vector2 spawnPos = contactPosition + new Vector2(UnityEngine.Random.Range(-0.3f, 0.3f), UnityEngine.Random.Range(-0.05f, 0.05f));
 
                 GameObject spark = PrototypeBootstrap.CreateVisualBlock("VoxelChip", spawnPos, Vector2.one * size, sparkColor);
-                ConfigureParticleRenderer(spark.GetComponent<SpriteRenderer>(), sparkColor, 51);
+                ConfigureParticleRenderer(spark.GetComponent<SpriteRenderer>(), sparkColor, 23);
 
                 Rigidbody2D rb = spark.AddComponent<Rigidbody2D>();
                 rb.gravityScale = 1.15f;
@@ -505,7 +521,7 @@ namespace GravityPuzzle
                 Vector2 spawnPos = contactPosition + new Vector2(UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.08f, 0.08f));
 
                 GameObject dust = PrototypeBootstrap.CreateVisualBlock("VoxelSand", spawnPos, Vector2.one * size, dustColor);
-                ConfigureParticleRenderer(dust.GetComponent<SpriteRenderer>(), dustColor, 49);
+                ConfigureParticleRenderer(dust.GetComponent<SpriteRenderer>(), dustColor, 21);
 
                 Rigidbody2D rb = dust.AddComponent<Rigidbody2D>();
                 rb.gravityScale = 1.35f;

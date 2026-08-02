@@ -112,7 +112,9 @@ namespace GravityPuzzle
 
         public void SetSelected(bool isSelected)
         {
-            if (isSelected && IsFrozen)
+            // A piece is committed to the shredder as soon as it enters the
+            // catch zone. It must not regain drag selection during the feed.
+            if (isSelected && (IsFrozen || IsBeingShredded))
                 return;
 
             this.isSelected = isSelected;
@@ -569,6 +571,7 @@ namespace GravityPuzzle
                 return false;
 
             beingShredded = true;
+            SetSelected(false);
             ReportDestroyed();
             return true;
         }

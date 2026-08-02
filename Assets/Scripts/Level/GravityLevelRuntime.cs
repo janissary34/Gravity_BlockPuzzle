@@ -173,6 +173,7 @@ namespace GravityPuzzle
 
             // The manager creates its UI fallback when this scene does not provide one.
             LevelProgressManager.EnsureInstance().InitializeLevelProgress(level);
+            SettingsPanelButton.EnsureConnected();
         }
 
         private static void CreateBoardBackground(GravityLevelDefinition level)
@@ -405,23 +406,31 @@ namespace GravityPuzzle
             if (level.shredders != null && level.shredders.Count > 0)
             {
                 float largestRadius = 0f;
+                float leftEdge = float.PositiveInfinity;
+                float rightEdge = float.NegativeInfinity;
+                float highestShredderTop = float.NegativeInfinity;
                 foreach (ShredderDefinition definition in level.shredders)
                 {
                     float authoredRadius = definition.radiusInFineCells / level.subdivisions;
                     largestRadius = Mathf.Max(largestRadius, authoredRadius);
+                    Vector2 position = CellWorldPosition(level, definition.cell);
+                    leftEdge = Mathf.Min(leftEdge, position.x - authoredRadius);
+                    rightEdge = Mathf.Max(rightEdge, position.x + authoredRadius);
+                    highestShredderTop = Mathf.Max(highestShredderTop, position.y + authoredRadius);
                     float authoredSpeed = definition.clockwise
                         ? -definition.rotationSpeed
                         : definition.rotationSpeed;
                     CreateShredder(
                         definition.name,
-                        CellWorldPosition(level, definition.cell),
+                        position,
                         authoredRadius,
                         authoredSpeed);
                 }
 
                 CreateShredderCatchZone(
-                    halfHeight,
-                    exitWidth,
+                    leftEdge,
+                    rightEdge,
+                    highestShredderTop,
                     Mathf.Max(.2f, largestRadius));
                 return;
             }
@@ -445,7 +454,11 @@ namespace GravityPuzzle
                     level.shredderRotationSpeed * direction);
             }
 
-            CreateShredderCatchZone(halfHeight, exitWidth, radius);
+            CreateShredderCatchZone(
+                startX - radius,
+                startX + (count - 1) * spacing + radius,
+                y + radius,
+                radius);
         }
 
         private static void CreateShredder(string name, Vector2 position, float radius, float speed)
@@ -456,14 +469,20 @@ namespace GravityPuzzle
             wheel.Build(radius, speed);
         }
 
-        private static void CreateShredderCatchZone(float halfHeight, float exitWidth, float radius)
+        private static void CreateShredderCatchZone(
+            float leftEdge,
+            float rightEdge,
+            float topY,
+            float radius)
         {
             GameObject catchZone = new GameObject("Shredder Catch Zone");
             float thickness = 10f;
-            float topY = -halfHeight - radius * .5f;
-            catchZone.transform.position = new Vector2(0f, topY - thickness * .5f);
+            float width = Mathf.Max(radius * 2f, rightEdge - leftEdge + radius * .5f);
+            catchZone.transform.position = new Vector2(
+                (leftEdge + rightEdge) * .5f,
+                topY - thickness * .5f);
             BoxCollider2D catchTrigger = catchZone.AddComponent<BoxCollider2D>();
-            catchTrigger.size = new Vector2(exitWidth + 2f, thickness);
+            catchTrigger.size = new Vector2(width, thickness);
             catchTrigger.isTrigger = true;
             ShredderCatchZone zone = catchZone.AddComponent<ShredderCatchZone>();
             zone.shredY = topY;

@@ -21,6 +21,7 @@ namespace GravityPuzzle
         private readonly Dictionary<int, float> snappingTargetsX = new Dictionary<int, float>();
         private readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
         private readonly Collider2D[] selectionHits = new Collider2D[32];
+        private readonly Collider2D[] snapOverlapHits = new Collider2D[64];
         private const float MaximumDragSpeed = 10f;
         private const float MaximumFallSpeed = 8f;
         private const int MaximumSlideIterations = 4;
@@ -50,6 +51,15 @@ namespace GravityPuzzle
 
         private void Update()
         {
+            // The shredder can capture a piece while it is still held. Drop the
+            // drag controller's reference immediately so it cannot move the
+            // piece again or queue a release snap during the shred animation.
+            if (selectedPiece != null && selectedPiece.IsBeingShredded)
+            {
+                selectedPiece = null;
+                activeFingerId = -1;
+            }
+
             if (HammerBooster.IsTargeting)
             {
                 if (selectedPiece != null)
@@ -82,7 +92,7 @@ namespace GravityPuzzle
             // Player movement has priority for this tick. Every other piece then
             // advances under deterministic manual gravity, so holding one piece
             // never freezes the rest of the board and no body receives impulses.
-            if (selectedPiece != null && selectedPiece.Body != null)
+            if (selectedPiece != null && !selectedPiece.IsBeingShredded && selectedPiece.Body != null)
             {
                 Rigidbody2D body = selectedPiece.Body;
                 PrepareKinematicBody(body);
@@ -281,8 +291,24 @@ namespace GravityPuzzle
                 return collisionInset + CastContactPadding;
             }
 
-            // Elsewhere, retain the original fine-grid tolerance so pieces still
-            // fit through exact-size authored openings while being dragged.
+            if (hitPiece == null)
+            {
+                // Obstacles and the board frame must use the full footprint.
+                // The small visual overlap tolerated between moving pieces would
+                // otherwise let a dragged piece enter an obstacle before release.
+                return collisionInset + CastContactPadding;
+            }
+
+            if (movingPiece.IsSelected || hitPiece.IsSelected)
+            {
+                // A held piece must keep its complete visible footprint. The
+                // old fine-grid tolerance let the pointer push two pieces into
+                // each other, which made their voxel artwork visibly intersect.
+                return collisionInset + CastContactPadding;
+            }
+
+            // Retain the original fine-grid tolerance only between movable pieces,
+            // so they can still pass through exact-size authored openings.
             return Mathf.Max(0f, collisionInset - VisualContactTolerance) +
                    CastContactPadding;
         }
@@ -353,7 +379,8 @@ namespace GravityPuzzle
                     else
                     {
                         snappingTargetsX.Remove(pieceId);
-                        MoveBody(body, new Vector2(targetX, body.position.y));
+                        if (CanOccupySnapPosition(piece, targetX))
+                            MoveBody(body, new Vector2(targetX, body.position.y));
                     }
                 }
                 
@@ -483,6 +510,48 @@ namespace GravityPuzzle
             Physics2D.SyncTransforms();
         }
 
+        private bool CanOccupySnapPosition(PuzzlePiece piece, float targetX)
+        {
+            Rigidbody2D body = piece.Body;
+            Vector2 originalPosition = body.position;
+            if (Mathf.Abs(originalPosition.x - targetX) > .0001f)
+            {
+                body.position = new Vector2(targetX, originalPosition.y);
+                Physics2D.SyncTransforms();
+            }
+
+            bool overlapsSolid = false;
+            Collider2D[] pieceColliders = piece.GetComponentsInChildren<Collider2D>(true);
+            for (int i = 0; i < pieceColliders.Length && !overlapsSolid; i++)
+            {
+                Collider2D pieceCollider = pieceColliders[i];
+                if (pieceCollider == null || !pieceCollider.enabled || pieceCollider.isTrigger)
+                    continue;
+
+                int overlapCount = pieceCollider.OverlapCollider(
+                    solidContactFilter,
+                    snapOverlapHits);
+                for (int overlapIndex = 0; overlapIndex < overlapCount; overlapIndex++)
+                {
+                    Collider2D other = snapOverlapHits[overlapIndex];
+                    if (other == null || other.isTrigger ||
+                        other.GetComponentInParent<PuzzlePiece>() == piece)
+                        continue;
+
+                    overlapsSolid = true;
+                    break;
+                }
+            }
+
+            if (body.position != originalPosition)
+            {
+                body.position = originalPosition;
+                Physics2D.SyncTransforms();
+            }
+
+            return !overlapsSolid;
+        }
+
         private void ProcessTouchInput()
         {
             Touch touch = FindActiveTouch();
@@ -552,7 +621,7 @@ namespace GravityPuzzle
             {
                 Collider2D hit = selectionHits[i];
                 piece = hit.GetComponentInParent<PuzzlePiece>();
-                if (piece != null && !piece.IsFrozen)
+                if (piece != null && !piece.IsFrozen && !piece.IsBeingShredded)
                     break;
                 piece = null;
             }
@@ -565,7 +634,7 @@ namespace GravityPuzzle
                 {
                     Collider2D hit = selectionHits[i];
                     PuzzlePiece candidate = hit.GetComponentInParent<PuzzlePiece>();
-                    if (candidate == null || candidate.IsFrozen)
+                    if (candidate == null || candidate.IsFrozen || candidate.IsBeingShredded)
                         continue;
 
                     float distance = Vector2.SqrMagnitude(hit.ClosestPoint(pointerPosition) - pointerPosition);
@@ -635,7 +704,11 @@ namespace GravityPuzzle
             float offsetFromStart = currentX - startX;
             float snappedX = startX + Mathf.Round(offsetFromStart); // Round to nearest 1.0
             
-            // Set the final target for the snap animation
+            // Always queue the release snap. MoveSelectedBody sweeps the piece
+            // toward this target, so obstacles still stop it at the nearest legal
+            // position instead of preventing grid alignment altogether. Checking
+            // overlaps here rejects normal resting contacts with a shelf/piece and
+            // was leaving released pieces at arbitrary X coordinates.
             snappingTargetsX[pieceId] = snappedX;
 
             selectedPiece = null;
