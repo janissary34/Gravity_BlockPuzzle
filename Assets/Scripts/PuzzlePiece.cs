@@ -11,6 +11,29 @@ namespace GravityPuzzle
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class PuzzlePiece : MonoBehaviour
     {
+        public readonly struct RemovedCell
+        {
+            public readonly Vector2 worldPosition;
+            public readonly Vector2 size;
+            public readonly Color color;
+            public readonly float progressUnits;
+            public readonly int renderedVoxelCount;
+
+            public RemovedCell(
+                Vector2 worldPosition,
+                Vector2 size,
+                Color color,
+                float progressUnits,
+                int renderedVoxelCount)
+            {
+                this.worldPosition = worldPosition;
+                this.size = size;
+                this.color = color;
+                this.progressUnits = progressUnits;
+                this.renderedVoxelCount = renderedVoxelCount;
+            }
+        }
+
         private const float RuntimeIceCounterFontScale = .32f;
         private static readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
 
@@ -21,6 +44,8 @@ namespace GravityPuzzle
         public bool IsFrozen { get; private set; }
         /// <summary>Authored board-block units represented by this draggable piece.</summary>
         public int ProgressUnits { get; private set; } = 1;
+        /// <summary>Unclaimed progress remaining after cell-level booster hits.</summary>
+        public float RemainingProgressUnits { get; private set; } = 1f;
         /// <summary>Source colour from the authored piece definition.</summary>
         public Color VisualColor { get; private set; } = Color.white;
         public Bounds CollisionBounds
@@ -155,6 +180,12 @@ namespace GravityPuzzle
         public void ConfigureProgressUnits(int units)
         {
             ProgressUnits = Mathf.Max(1, units);
+            RemainingProgressUnits = ProgressUnits;
+        }
+
+        public void ConfigureRemainingProgress(float units)
+        {
+            RemainingProgressUnits = Mathf.Max(0f, units);
         }
 
         public void ConfigureVisualColor(Color color)
@@ -269,6 +300,16 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryRemoveCellAt(Vector2 worldPosition)
         {
+            return TryRemoveCellAt(worldPosition, out _);
+        }
+
+        /// <summary>
+        /// Removes a cell and returns its exact visual/progress payload for a
+        /// booster impact or another effect that must preserve the voxel reward.
+        /// </summary>
+        public bool TryRemoveCellAt(Vector2 worldPosition, out RemovedCell removedCell)
+        {
+            removedCell = default;
             if (beingShredded || collisionCells == null || collisionCellVisuals == null)
                 return false;
 
@@ -290,6 +331,18 @@ namespace GravityPuzzle
 
             if (targetIndex < 0)
                 return false;
+
+            SpriteRenderer targetVisual = collisionCellVisuals[targetIndex];
+            int cellCountBeforeRemoval = Mathf.Max(1, collisionCellVisuals.Count);
+            removedCell = new RemovedCell(
+                targetVisual != null ? (Vector2)targetVisual.bounds.center : worldPosition,
+                targetVisual != null ? (Vector2)targetVisual.bounds.size : Vector2.one,
+                VisualColor,
+                RemainingProgressUnits / cellCountBeforeRemoval,
+                targetVisual != null
+                    ? Mathf.Max(1, targetVisual.GetComponentsInChildren<VoxelShard>(true).Length)
+                    : 1);
+            RemainingProgressUnits = Mathf.Max(0f, RemainingProgressUnits - removedCell.progressUnits);
 
             if (isSelected)
                 SetSelected(false);
@@ -354,10 +407,17 @@ namespace GravityPuzzle
             components[0] = largest;
 
             Transform sourceCollisionRoot = collisionCells[0].transform.parent;
+            int totalCellCount = collisionCells.Count;
+            float remainingBeforeSplit = RemainingProgressUnits;
             List<int> movedIndices = new List<int>();
             for (int componentIndex = 1; componentIndex < components.Count; componentIndex++)
             {
-                CreateIndependentPiece(components[componentIndex], sourceCollisionRoot, componentIndex);
+                float componentProgress = remainingBeforeSplit * components[componentIndex].Count / totalCellCount;
+                CreateIndependentPiece(
+                    components[componentIndex],
+                    sourceCollisionRoot,
+                    componentIndex,
+                    componentProgress);
                 movedIndices.AddRange(components[componentIndex]);
             }
 
@@ -369,6 +429,7 @@ namespace GravityPuzzle
                 collisionCellVisuals.RemoveAt(sourceIndex);
                 fullCollisionCellSizes.RemoveAt(sourceIndex);
             }
+            RemainingProgressUnits = remainingBeforeSplit * collisionCells.Count / totalCellCount;
 
             if (compositeCollider != null)
                 compositeCollider.GenerateGeometry();
@@ -437,7 +498,8 @@ namespace GravityPuzzle
         private void CreateIndependentPiece(
             List<int> component,
             Transform sourceCollisionRoot,
-            int splitNumber)
+            int splitNumber,
+            float remainingProgress)
         {
             GameObject splitObject = new GameObject($"{name} - Split {splitNumber}");
             splitObject.transform.SetParent(transform.parent, false);
@@ -488,6 +550,7 @@ namespace GravityPuzzle
                 splitCells,
                 splitVisuals,
                 splitSizes);
+            splitPiece.ConfigureRemainingProgress(remainingProgress);
             splitPiece.ConfigureFreeze(
                 frozenUntilDestroyedCount,
                 iceCounterFontSize,

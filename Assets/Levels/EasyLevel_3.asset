@@ -29,6 +29,12 @@ MonoBehaviour:
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 14}
     quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: -2, y: 2}
       type: 0
@@ -130,6 +136,12 @@ MonoBehaviour:
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: -4, y: 8}
       type: 0
@@ -231,6 +243,12 @@ MonoBehaviour:
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: 8, y: 4}
       type: 0
@@ -268,6 +286,12 @@ MonoBehaviour:
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: 4, y: 0}
       type: 0
@@ -337,6 +361,12 @@ MonoBehaviour:
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: -8, y: 0}
       type: 0
@@ -438,6 +468,12 @@ MonoBehaviour:
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: -12, y: 4}
       type: 0
@@ -507,6 +543,12 @@ MonoBehaviour:
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: -12, y: 8}
       type: 0

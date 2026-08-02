@@ -193,7 +193,7 @@ namespace GravityPuzzle
             float grinderExitSeamY = shredderY - .06f;
 
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
-            float progressPerGrain = piece.ProgressUnits /
+            float progressPerGrain = piece.RemainingProgressUnits /
                                      (float)Mathf.Max(1, shardList.Count * LevelProgressManager.SandGrainsPerRenderedVoxel);
             float maxTime = 4.0f;
             float elapsed = 0f;
@@ -274,7 +274,7 @@ namespace GravityPuzzle
                                 exitSeamPosition,
                                 Opaque(tileColor),
                                 1,
-                                piece.ProgressUnits);
+                                piece.RemainingProgressUnits);
                         }
                     }
                     else

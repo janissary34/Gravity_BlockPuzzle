@@ -2978,6 +2978,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   boosterButton: {fileID: 1735735409}
+  hammerVisualPrefab: {fileID: 4589897246359763626, guid: 1fa1d15cbe2b74e2887c23cb66b70f43, type: 3}
+  impactDuration: 0.18
+  hammerHeight: 1.25
+  popScaleMultiplier: 1.7
+  hammerHeadLocalOffset: {x: 0, y: 0.45}
+  hammerSortingOrder: 100
+  hammerHoverHeightOffset: 0.85
 --- !u!114 &1735735409
 MonoBehaviour:
   m_ObjectHideFlags: 0
