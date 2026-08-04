@@ -24,6 +24,8 @@ MonoBehaviour:
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
+  shredlenmeHizi: 0.7
+  titremeMiktari: 0.045
   pieces:
   - name: Piece 1
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
@@ -36,38 +38,6 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     cells:
-    - localCell: {x: -10, y: 14}
-      type: 0
-    - localCell: {x: -9, y: 14}
-      type: 0
-    - localCell: {x: -8, y: 14}
-      type: 0
-    - localCell: {x: -7, y: 14}
-      type: 0
-    - localCell: {x: -10, y: 15}
-      type: 0
-    - localCell: {x: -9, y: 15}
-      type: 0
-    - localCell: {x: -8, y: 15}
-      type: 0
-    - localCell: {x: -7, y: 15}
-      type: 0
-    - localCell: {x: -10, y: 16}
-      type: 0
-    - localCell: {x: -9, y: 16}
-      type: 0
-    - localCell: {x: -8, y: 16}
-      type: 0
-    - localCell: {x: -7, y: 16}
-      type: 0
-    - localCell: {x: -10, y: 17}
-      type: 0
-    - localCell: {x: -9, y: 17}
-      type: 0
-    - localCell: {x: -8, y: 17}
-      type: 0
-    - localCell: {x: -7, y: 17}
-      type: 0
     - localCell: {x: -10, y: 10}
       type: 0
     - localCell: {x: -9, y: 10}

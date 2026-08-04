@@ -2755,9 +2755,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   boosterButton: {fileID: 1705634639}
-  rocketVisualPrefab: {fileID: 0}
-  launchSpeed: 22
-  rocketSortingOrder: 150
+  rocketVisualPrefab: {fileID: 4589897246359763626, guid: 12d907748e4f84b8585c8cc374be6014, type: 3}
+  launchDuration: 0.55
+  rocketScale: {x: 1, y: 1, z: 1}
+  rocketSortingOrder: 1000
 --- !u!1 &1709589581
 GameObject:
   m_ObjectHideFlags: 0
