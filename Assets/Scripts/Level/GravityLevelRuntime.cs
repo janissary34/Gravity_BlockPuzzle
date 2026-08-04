@@ -813,11 +813,6 @@ namespace GravityPuzzle
                 tooth.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
                 tooth.GetComponent<SpriteRenderer>().sortingOrder = 26; // In front of feeding blocks
             }
-
-            if (gameObject.GetComponent<BlockShredder>() == null)
-            {
-                gameObject.AddComponent<BlockShredder>();
-            }
         }
 
         private void Update()
@@ -832,7 +827,7 @@ namespace GravityPuzzle
 
         internal static void TryShred(Collider2D other, Vector2 shredderCentre)
         {
-            BlockShredder shredder = UnityEngine.Object.FindObjectOfType<BlockShredder>();
+            BlockShredder shredder = BlockShredder.Instance ?? UnityEngine.Object.FindObjectOfType<BlockShredder>();
             if (shredder != null)
             {
                 shredder.TryShredBlock(other, shredderCentre);

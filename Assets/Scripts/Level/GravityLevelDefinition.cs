@@ -61,6 +61,13 @@ namespace GravityPuzzle
         [Range(.2f, .65f)] public float shredderRadius = .42f;
         [Min(0f)] public float shredderRotationSpeed = 220f;
 
+        [Header("Öğütme Ayarları (Tuning)")]
+        [Tooltip("Bloğun öğütücüye çekilme ve inme hızı (birim/saniye). Varsayılan: 0.7")]
+        public float shredlenmeHizi = 0.7f;
+
+        [Tooltip("Öğütülme esnasındaki mekanik titreme/sarsıntı genliği. Varsayılan: 0.045")]
+        public float titremeMiktari = 0.045f;
+
         public List<PieceDefinition> pieces = new List<PieceDefinition>();
         public List<PinDefinition> pins = new List<PinDefinition>();
         public List<ObstacleDefinition> obstacles = new List<ObstacleDefinition>();

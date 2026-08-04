@@ -385,7 +385,9 @@ MonoBehaviour:
   targetCamera: {fileID: 423769077}
   gemFlyDuration: 1.1
   gemFlyEase: 26
-  blockFeedSpeed: 1.6
+  shredlenmeHizi: 2
+  titremeMiktari: 0.045
+  shredderTremorFrequency: 55
   shredderTumbleTorque: 7.5
 --- !u!4 &254861992
 Transform:
@@ -2440,7 +2442,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Time
+  m_text: 'Rocket
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0161d805a3764c089bef00bfe00793f5, type: 2}
   m_sharedMaterial: {fileID: 2147374, guid: 0161d805a3764c089bef00bfe00793f5, type: 2}
@@ -2602,10 +2606,10 @@ GameObject:
   - component: {fileID: 1705634641}
   - component: {fileID: 1705634640}
   - component: {fileID: 1705634639}
-  - component: {fileID: 1705634638}
   - component: {fileID: 1705634637}
+  - component: {fileID: 1705634642}
   m_Layer: 5
-  m_Name: Freeze_timer_booster_btn (1)
+  m_Name: rocket_booster_btn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2656,20 +2660,6 @@ MonoBehaviour:
   maxRotationAngle: 5
   rotationVibrato: 8
   ignoreTimeScale: 1
---- !u!114 &1705634638
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1705634635}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b8c59fce356774c25bba03f0620fa3b5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  boosterButton: {fileID: 1705634639}
-  freezeDuration: 5
 --- !u!114 &1705634639
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2752,6 +2742,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1705634635}
   m_CullTransparentMesh: 1
+--- !u!114 &1705634642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1705634635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b254196a8bbe48ca910bebcdbf1eef9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  boosterButton: {fileID: 1705634639}
+  rocketVisualPrefab: {fileID: 0}
+  launchSpeed: 22
+  rocketSortingOrder: 150
 --- !u!1 &1709589581
 GameObject:
   m_ObjectHideFlags: 0
@@ -3522,7 +3528,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -37.994507, y: 74.85278}
+  m_AnchoredPosition: {x: -37.994507, y: 199}
   m_SizeDelta: {x: -401.6566, y: -1760.8763}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1863261120

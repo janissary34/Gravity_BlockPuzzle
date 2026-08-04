@@ -24,6 +24,8 @@ MonoBehaviour:
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
+  shredlenmeHizi: 0.7
+  titremeMiktari: 0.045
   pieces:
   - name: Piece 1
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
@@ -743,5 +745,40 @@ MonoBehaviour:
     radiusInFineCells: 1.7
     rotationSpeed: 220
     clockwise: 0
+  - name: Shredder 7
+    cell: {x: 3, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 8
+    cell: {x: 7, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 9
+    cell: {x: 11, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 10
+    cell: {x: 15, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 11
+    cell: {x: 19, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 12
+    cell: {x: 23, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 13
+    cell: {x: 26, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
   inactiveBoardCells: []
   inactiveFineCells: []

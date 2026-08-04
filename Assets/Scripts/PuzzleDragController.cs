@@ -60,7 +60,7 @@ namespace GravityPuzzle
                 activeFingerId = -1;
             }
 
-            if (HammerBooster.IsTargeting)
+            if (HammerBooster.IsTargeting || RocketBooster.IsTargeting)
             {
                 if (selectedPiece != null)
                 {

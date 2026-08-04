@@ -44,6 +44,7 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("DOTween Ease curve for Gem flight to UI.")]
         private Ease gemFlyEase = Ease.InBack;
 
+        public static BlockShredder Instance { get; private set; }
         public static int ActiveGemFlightCount { get; private set; }
         public static bool HasActiveGemFlights => ActiveGemFlightCount > 0;
 
@@ -51,6 +52,24 @@ namespace GravityPuzzle
         private static void ResetGemFlightCount()
         {
             ActiveGemFlightCount = 0;
+        }
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+            Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
         }
 
         private void Start()
@@ -74,13 +93,26 @@ namespace GravityPuzzle
             TryShredBlock(other, transform.position);
         }
 
-        [SerializeField, Tooltip("Speed (units/sec) at which blocks physically descend into the shredder.")]
-        private float blockFeedSpeed = 1.6f;
+        [Header("Öğütme Ayarları (Tuning)")]
+        [SerializeField, Tooltip("Shredlenme Hızı: Bloğun öğütücüye çekilme ve inme hızı (birim/saniye). Varsayılan: 0.7")]
+        private float shredlenmeHizi = 0.7f;
+
+        [SerializeField, Tooltip("Titreme Miktarı: Öğütülme esnasındaki mekanik titreme/sarsıntı genliği. Varsayılan: 0.045")]
+        private float titremeMiktari = 0.045f;
+
+        [SerializeField, Tooltip("Frequency (Hz) of mechanical grinding tremor oscillation.")]
+        private float shredderTremorFrequency = 55f;
 
         [SerializeField, Tooltip("Brief angular impulse applied when a piece first bites into the gears.")]
         private float shredderTumbleTorque = 1.25f;
 
         private static PhysicsMaterial2D shredderFeedMaterial;
+
+        public void Configure(float feedSpeed, float tremorIntensity)
+        {
+            if (feedSpeed > 0f) shredlenmeHizi = feedSpeed;
+            if (tremorIntensity >= 0f) titremeMiktari = tremorIntensity;
+        }
 
         // The trigger has already accepted this piece for shredding. Keep it from
         // catching on the shredder frame or another piece while it is fed down.
@@ -150,11 +182,13 @@ namespace GravityPuzzle
             {
                 rb.bodyType = RigidbodyType2D.Dynamic;
                 rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-                rb.constraints &= ~RigidbodyConstraints2D.FreezeRotation;
-                rb.velocity = Vector2.down * blockFeedSpeed;
-                rb.angularVelocity = 0f;
-                rb.angularDrag = Mathf.Max(rb.angularDrag, 8f);
-                rb.AddTorque(Random.Range(-shredderTumbleTorque, shredderTumbleTorque), ForceMode2D.Impulse);
+                rb.constraints = RigidbodyConstraints2D.None;
+                rb.velocity = Vector2.down * shredlenmeHizi;
+                rb.angularDrag = 6f;
+
+                // Apply a gentle initial tilt angle (-15 to +15 deg/sec)
+                float gentleTilt = Random.Range(0, 2) == 0 ? Random.Range(-15f, -6f) : Random.Range(6f, 15f);
+                rb.angularVelocity = gentleTilt;
             }
 
             // 2. Sprite Masking / Visual Clipping: mask out any portion moving below shredderY
@@ -211,11 +245,17 @@ namespace GravityPuzzle
 
                 if (rb != null)
                 {
-                    // Keep the feed moving and allow a gentle wobble without the
-                    // violent free-spin caused by repeated grinder contacts.
-                    if (rb.velocity.y > -blockFeedSpeed)
-                        rb.velocity = new Vector2(rb.velocity.x, -blockFeedSpeed);
-                    rb.angularVelocity = Mathf.Clamp(rb.angularVelocity, -55f, 55f);
+                    // Apply continuous high-frequency horizontal tremor
+                    float tremorX = Mathf.Sin(Time.time * shredderTremorFrequency) * titremeMiktari;
+                    rb.velocity = new Vector2(tremorX, -shredlenmeHizi);
+
+                    // Gentle tilt constraint: Clamp rotation angle to stay within a natural slight tilt (-18° to +18°)
+                    float currentAngle = Mathf.DeltaAngle(0f, rb.rotation);
+                    if (Mathf.Abs(currentAngle) > 18f)
+                    {
+                        rb.angularVelocity *= 0.5f;
+                        rb.rotation = Mathf.Clamp(currentAngle, -18f, 18f);
+                    }
                 }
 
                 // A) Shred voxel shards crossing the cutter line and exit at the gear seam.
