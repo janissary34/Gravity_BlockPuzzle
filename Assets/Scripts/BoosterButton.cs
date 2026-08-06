@@ -105,23 +105,42 @@ namespace GravityPuzzle
                 return;
             }
 
-            // Trigger active RocketBooster if present (count will decrement when launch animation completes)
-            RocketBooster rocket = GetComponent<RocketBooster>() ?? Object.FindObjectOfType<RocketBooster>();
-            if (rocket != null)
+            string objName = gameObject.name.ToLower();
+
+            // 1. Trigger RocketBooster only if this button is attached to or named for Rocket Booster
+            RocketBooster rocket = GetComponent<RocketBooster>();
+            if (rocket == null && (objName.Contains("rocket") || objName.Contains("booster_btn")))
+            {
+                rocket = Object.FindObjectOfType<RocketBooster>();
+            }
+
+            if (rocket != null && (GetComponent<RocketBooster>() != null || objName.Contains("rocket")))
             {
                 rocket.ActivateRocketBooster();
             }
 
-            HammerBooster hammer = GetComponent<HammerBooster>() ?? Object.FindObjectOfType<HammerBooster>();
-            if (hammer != null && gameObject.name.ToLower().Contains("hammer"))
+            // 2. Trigger HammerBooster only if this button is attached to or named for Hammer Booster
+            HammerBooster hammer = GetComponent<HammerBooster>();
+            if (hammer == null && objName.Contains("hammer"))
+            {
+                hammer = Object.FindObjectOfType<HammerBooster>();
+            }
+
+            if (hammer != null && (GetComponent<HammerBooster>() != null || objName.Contains("hammer")))
             {
                 hammer.ActivateHammerBooster();
             }
 
-            FreezeTimerBooster freeze = GetComponent<FreezeTimerBooster>() ?? Object.FindObjectOfType<FreezeTimerBooster>();
-            if (freeze != null && gameObject.name.ToLower().Contains("freeze"))
+            // 3. Trigger TimerBooster only if this button is attached to or named for Timer Booster
+            TimerBooster timer = GetComponent<TimerBooster>();
+            if (timer == null && (objName.Contains("time") || objName.Contains("timer")))
             {
-                freeze.ActivateFreezeBooster();
+                timer = Object.FindObjectOfType<TimerBooster>();
+            }
+
+            if (timer != null && (GetComponent<TimerBooster>() != null || objName.Contains("time") || objName.Contains("timer")))
+            {
+                timer.PlayTimerBoosterSequence();
             }
 
             onBoosterClicked?.Invoke();

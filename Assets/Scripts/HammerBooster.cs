@@ -221,7 +221,27 @@ namespace GravityPuzzle
             {
                 Destroy(hammer);
                 impactInProgress = false;
+                GetHammerBoosterButton()?.TryConsumeUse();
             });
+        }
+
+        private BoosterButton GetHammerBoosterButton()
+        {
+            if (boosterButton != null)
+            {
+                var b = boosterButton.GetComponent<BoosterButton>();
+                if (b != null) return b;
+            }
+
+            BoosterButton[] allButtons = Object.FindObjectsOfType<BoosterButton>();
+            foreach (var b in allButtons)
+            {
+                if (b != null && b.gameObject.name.ToLower().Contains("hammer"))
+                {
+                    return b;
+                }
+            }
+            return null;
         }
 
         private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)

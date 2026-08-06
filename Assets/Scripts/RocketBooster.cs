@@ -39,6 +39,12 @@ namespace GravityPuzzle
         [Tooltip("Optional rocket visual prefab. A runtime procedurally generated rocket is used when omitted.")]
         [SerializeField] private GameObject rocketVisualPrefab;
 
+        [SerializeField, Tooltip("Duration in seconds for rocket to travel from bottom off-screen to piece center.")]
+        private float entranceDuration = 0.75f;
+
+        [SerializeField, Tooltip("Pause duration in seconds at piece center before blasting off.")]
+        private float piecePauseDuration = 1.0f;
+
         [SerializeField, Tooltip("Rocket launch animation duration in seconds.")]
         private float launchDuration = 0.55f;
 
@@ -228,27 +234,46 @@ namespace GravityPuzzle
             piece.PrepareForShredderPhysics();
 
             Camera camera = Camera.main;
-            Vector3 piecePos = piece.transform.position;
+            Vector3 piecePos = GetPieceCenter(piece);
 
-            // 1. Spawn Rocket Visual directly under piece
+            float camY = camera != null ? camera.transform.position.y : 0f;
+            float camOrtho = camera != null ? camera.orthographicSize : 10f;
+            float offscreenBottomY = camY - camOrtho - 6f;
+
+            Vector3 startPos = new Vector3(piecePos.x, offscreenBottomY, -3f);
+            Vector3 centerPos = new Vector3(piecePos.x, piecePos.y, -3f);
+
+            // 1. Spawn Rocket Visual at off-screen bottom position
             GameObject rocket = CreateRocketVisual();
-            rocket.transform.position = new Vector3(piecePos.x, piecePos.y - 0.7f, -3f);
+            rocket.transform.position = startPos;
             rocket.transform.rotation = Quaternion.identity;
             SetSortingOrder(rocket, rocketSortingOrder);
 
-            // 2. Attach piece transform to rocket so it moves WITH rocket
+            // 2. Animate rocket from screen bottom up to piece center (entranceDuration)
+            Tween entranceTween = rocket.transform.DOMove(centerPos, entranceDuration).SetEase(Ease.OutCubic);
+            yield return entranceTween.WaitForCompletion();
+
+            if (rocket == null || piece == null)
+            {
+                if (rocket != null) Destroy(rocket);
+                launchInProgress = false;
+                yield break;
+            }
+
+            // 3. Attach piece transform to rocket at piece center
             piece.transform.SetParent(rocket.transform, true);
 
-            // 3. Engine ignition micro-shake & rumbling
+            // 4. Pause at piece center for piecePauseDuration (with engine ignition micro-rumble)
             Vector3 initialPos = rocket.transform.position;
-            float rumbleTime = 0.22f;
             float elapsed = 0f;
-            while (piece != null && rocket != null && elapsed < rumbleTime)
+            while (piece != null && rocket != null && elapsed < piecePauseDuration)
             {
                 elapsed += Time.deltaTime;
-                rocket.transform.position = initialPos + new Vector3(Random.Range(-0.08f, 0.08f), Random.Range(-0.04f, 0.04f), 0f);
+                rocket.transform.position = initialPos + new Vector3(Random.Range(-0.06f, 0.06f), Random.Range(-0.03f, 0.03f), 0f);
                 yield return null;
             }
+
+            if (rocket != null) rocket.transform.position = initialPos;
 
             if (rocket == null)
             {
@@ -256,17 +281,17 @@ namespace GravityPuzzle
                 yield break;
             }
 
-            // 4. BLAST OFF! Launch rocket + piece into the sky
+            // 5. BLAST OFF! Launch rocket + piece into the sky
             Color pieceColor = piece.VisualColor;
-            float targetY = camera != null ? camera.transform.position.y + camera.orthographicSize + 7f : piecePos.y + 17f;
+            float targetY = camY + camOrtho + 7f;
 
             ShredderParticleEffects.SpawnBurst(rocket.transform.position, pieceColor, 25, 14, 10);
 
             Tween launchTween = rocket.transform.DOMoveY(targetY, launchDuration).SetEase(Ease.InQuad);
             yield return launchTween.WaitForCompletion();
 
-            // 5. Rocket launch animation finished! Decrement count now
-            BoosterButton targetButton = boosterButtonRef ?? GetComponent<BoosterButton>() ?? Object.FindObjectOfType<BoosterButton>();
+            // 6. Rocket launch animation finished! Decrement count now
+            BoosterButton targetButton = GetRocketBoosterButton();
             if (targetButton != null)
             {
                 targetButton.TryConsumeUse();
@@ -278,7 +303,7 @@ namespace GravityPuzzle
                 UpdateCountUI();
             }
 
-            // 6. Award progress & despawn
+            // 7. Award progress & despawn
             if (LevelProgressManager.Instance != null && piece != null)
             {
                 int grainCount = 10;
@@ -301,7 +326,44 @@ namespace GravityPuzzle
                 Destroy(rocket);
             }
 
+            activeBooster = null;
             launchInProgress = false;
+            RefreshButtonState();
+        }
+
+        private Vector3 GetPieceCenter(PuzzlePiece piece)
+        {
+            if (piece == null) return Vector3.zero;
+
+            SpriteRenderer[] renderers = piece.GetComponentsInChildren<SpriteRenderer>();
+            if (renderers != null && renderers.Length > 0)
+            {
+                Bounds bounds = renderers[0].bounds;
+                for (int i = 1; i < renderers.Length; i++)
+                {
+                    if (renderers[i] != null && renderers[i].enabled)
+                    {
+                        bounds.Encapsulate(renderers[i].bounds);
+                    }
+                }
+                return bounds.center;
+            }
+
+            Collider2D[] colliders = piece.GetComponentsInChildren<Collider2D>();
+            if (colliders != null && colliders.Length > 0)
+            {
+                Bounds bounds = colliders[0].bounds;
+                for (int i = 1; i < colliders.Length; i++)
+                {
+                    if (colliders[i] != null && colliders[i].enabled)
+                    {
+                        bounds.Encapsulate(colliders[i].bounds);
+                    }
+                }
+                return bounds.center;
+            }
+
+            return piece.transform.position;
         }
 
         private GameObject CreateRocketVisual()
@@ -378,7 +440,7 @@ namespace GravityPuzzle
         {
             if (boosterButtonRef == null)
             {
-                boosterButtonRef = GetComponent<BoosterButton>() ?? GetComponentInChildren<BoosterButton>();
+                boosterButtonRef = GetRocketBoosterButton();
             }
 
             if (boosterButton == null)
@@ -394,6 +456,27 @@ namespace GravityPuzzle
                     countUiText = GetComponentInChildren<Text>(true);
                 }
             }
+        }
+
+        private BoosterButton GetRocketBoosterButton()
+        {
+            if (boosterButtonRef != null) return boosterButtonRef;
+
+            boosterButtonRef = GetComponent<BoosterButton>();
+            if (boosterButtonRef != null) return boosterButtonRef;
+
+            BoosterButton[] allButtons = Object.FindObjectsOfType<BoosterButton>();
+            foreach (var b in allButtons)
+            {
+                if (b != null && b.gameObject.name.ToLower().Contains("rocket"))
+                {
+                    boosterButtonRef = b;
+                    return b;
+                }
+            }
+
+            if (allButtons.Length > 0) boosterButtonRef = allButtons[0];
+            return boosterButtonRef;
         }
 
         public void UpdateCountUI()

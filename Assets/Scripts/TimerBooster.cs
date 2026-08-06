@@ -9,9 +9,9 @@ namespace GravityPuzzle
     /// <summary>
     /// Timer Booster sequence controller.
     /// Animates timer_obj from screen bottom at native scale to screen center,
-    /// pauses for 1 second while performing a DOFillAmount freeze transition on frozenClockImage,
-    /// and flies strictly vertically to timer_txt's location at the SAME speed,
-    /// deactivating immediately via SetActive(false) upon arrival and freezing the timer for 8 seconds.
+    /// pauses for 1 second while performing a 360-degree DOFillAmount freeze transition on frozenClockImage,
+    /// flies strictly vertically to timer_txt's location, triggers a blue particle explosion VFX on arrival,
+    /// deactivates timer_obj upon arrival, and freezes the timer for 8 seconds.
     /// Uses direct Inspector assigned references only.
     /// </summary>
     public class TimerBooster : MonoBehaviour
@@ -25,6 +25,10 @@ namespace GravityPuzzle
 
         [Tooltip("Optional UI Button to trigger the Timer Booster.")]
         [SerializeField] private Button boosterButton;
+
+        [Header("Visual Effects (VFX)")]
+        [Tooltip("Blue particle explosion VFX system triggered when clock arrives at timer_txt.")]
+        [SerializeField] private ParticleSystem blueParticleVFX;
 
         [Header("Clock Freeze Visual Animation")]
         [Tooltip("Base clock UI Image.")]
@@ -132,6 +136,31 @@ namespace GravityPuzzle
 
             // Bring timer_obj to front of Canvas hierarchy so it is rendered on top of all panels
             timer_obj.transform.SetAsLastSibling();
+
+            // Force Canvas sorting order to 30000 so clock renders ON TOP of all puzzle blocks and boards
+            Canvas objCanvas = timer_obj.GetComponent<Canvas>();
+            if (objCanvas == null)
+            {
+                objCanvas = timer_obj.gameObject.AddComponent<Canvas>();
+            }
+            objCanvas.overrideSorting = true;
+            objCanvas.sortingOrder = 30000;
+
+            GraphicRaycaster raycaster = timer_obj.GetComponent<GraphicRaycaster>();
+            if (raycaster == null && timer_obj.GetComponentInParent<Canvas>() != null)
+            {
+                timer_obj.gameObject.AddComponent<GraphicRaycaster>();
+            }
+
+            // Force SpriteRenderer sorting order to 30000 if timer_obj uses SpriteRenderers
+            SpriteRenderer[] srs = timer_obj.GetComponentsInChildren<SpriteRenderer>(true);
+            foreach (var sr in srs)
+            {
+                if (sr != null)
+                {
+                    sr.sortingOrder = 30000;
+                }
+            }
 
             if (originalScale.sqrMagnitude < 0.0001f)
             {
@@ -248,7 +277,67 @@ namespace GravityPuzzle
             // Step 3: Move timer_obj directly to exact World position of timer_txt (0.5s Ease.InQuad)
             seq.Append(timer_obj.transform.DOMove(timer_txt.position, 0.5f).SetEase(Ease.InQuad));
 
-            // Do NOT call timer_obj.SetActive(false) until the movement tween officially finishes inside .OnComplete()
+            // Step 4: Arrival Event (Particle Burst + Deactivate)
+            seq.AppendCallback(() =>
+            {
+                if (blueParticleVFX != null)
+                {
+                    ParticleSystem vfxInstance = blueParticleVFX;
+                    bool isPrefabAsset = !blueParticleVFX.gameObject.scene.IsValid();
+
+                    if (isPrefabAsset)
+                    {
+                        // Dynamically instantiate prefab if assigned from Project window
+                        vfxInstance = Instantiate(blueParticleVFX);
+                    }
+
+                    RectTransform vfxRect = vfxInstance.GetComponent<RectTransform>();
+                    if (vfxRect != null)
+                    {
+                        // Position in UI Canvas Space
+                        Vector3 targetAnchored = GetTargetAnchoredPosition(vfxRect, timer_txt);
+                        vfxRect.anchoredPosition = targetAnchored;
+                    }
+                    else
+                    {
+                        // Position in Camera World Space
+                        Vector3 vfxWorldPos = GetTargetWorldPosition(timer_txt, timer_obj.transform);
+                        vfxInstance.transform.position = vfxWorldPos;
+                    }
+
+                    // Ensure scale is native Vector3.one
+                    if (vfxInstance.transform.localScale.sqrMagnitude < 0.0001f)
+                    {
+                        vfxInstance.transform.localScale = Vector3.one;
+                    }
+
+                    // Force active and play
+                    vfxInstance.gameObject.SetActive(true);
+
+                    // Force sorting order so particles render ON TOP of UI Canvas elements
+                    ParticleSystemRenderer psr = vfxInstance.GetComponent<ParticleSystemRenderer>();
+                    if (psr != null)
+                    {
+                        psr.sortingOrder = 30000;
+                    }
+
+                    Canvas c = vfxInstance.GetComponent<Canvas>();
+                    if (c != null)
+                    {
+                        c.overrideSorting = true;
+                        c.sortingOrder = 30000;
+                    }
+
+                    vfxInstance.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    vfxInstance.Play(true);
+
+                    if (isPrefabAsset)
+                    {
+                        Destroy(vfxInstance.gameObject, 3.5f);
+                    }
+                }
+            });
+
             seq.OnComplete(() =>
             {
                 timer_obj.SetActive(false);
@@ -309,6 +398,8 @@ namespace GravityPuzzle
 
         private void OnSequenceCompleted()
         {
+            GetTimerBoosterButton()?.TryConsumeUse();
+
             // Freeze timer for 8 seconds
             FreezeTimerBooster freeze = GetComponent<FreezeTimerBooster>() ?? Object.FindObjectOfType<FreezeTimerBooster>();
             if (freeze != null)
@@ -325,6 +416,25 @@ namespace GravityPuzzle
                     freezeRoutine = StartCoroutine(FreezeTimerRoutine(activeBoard, freezeDuration));
                 }
             }
+        }
+
+        private BoosterButton GetTimerBoosterButton()
+        {
+            if (boosterButton != null)
+            {
+                var b = boosterButton.GetComponent<BoosterButton>();
+                if (b != null) return b;
+            }
+
+            BoosterButton[] allButtons = Object.FindObjectsOfType<BoosterButton>();
+            foreach (var b in allButtons)
+            {
+                if (b != null && (b.gameObject.name.ToLower().Contains("time") || b.gameObject.name.ToLower().Contains("timer")))
+                {
+                    return b;
+                }
+            }
+            return null;
         }
 
         private IEnumerator FreezeTimerRoutine(PrototypeBoard targetBoard, float duration)
