@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -8,78 +9,81 @@ using UnityEngine.UI;
 namespace GravityPuzzle
 {
     /// <summary>
-    /// Rocket Booster: Press the UI button to enter targeting mode,
-    /// then tap any visible piece. A rocket attaches and launches the ENTIRE piece
-    /// into the sky, completely destroying it and awarding progress.
+    /// Rocket Booster component.
+    /// Works seamlessly with BoosterButton component or standalone.
+    /// Manages piece selection and launching a rocket to destroy the piece.
     /// </summary>
     public sealed class RocketBooster : MonoBehaviour
     {
         public static bool IsTargeting =>
             activeBooster != null || Time.frameCount <= suppressGameplayThroughFrame;
 
-        [Header("Rocket Booster")]
-        [Tooltip("Optional. Assign a Button to wire its click automatically. If unassigned, searches for 'rocket_booster_btn'.")]
-        public Button boosterButton;
+        [Header("UI References (Assign in Inspector)")]
+        [Tooltip("Optional BoosterButton component reference. Auto-found if null.")]
+        [SerializeField] private BoosterButton boosterButtonRef;
 
+        [Tooltip("The UI Button that activates this Rocket Booster.")]
+        [SerializeField] private Button boosterButton;
+
+        [Tooltip("Text component displaying remaining booster count (TextMeshPro).")]
+        [SerializeField] private TextMeshProUGUI countTmpText;
+
+        [Tooltip("Alternative Text component displaying remaining booster count (Legacy UI Text).")]
+        [SerializeField] private Text countUiText;
+
+        [Header("Booster Count Settings")]
+        [SerializeField, Tooltip("Starting count for rocket booster.")]
+        private int initialCount = 3;
+
+        [Header("Rocket Visual & Launch Settings")]
         [Tooltip("Optional rocket visual prefab. A runtime procedurally generated rocket is used when omitted.")]
         [SerializeField] private GameObject rocketVisualPrefab;
 
-        [SerializeField, Tooltip("Rocket launch speed duration in seconds.")]
+        [SerializeField, Tooltip("Rocket launch animation duration in seconds.")]
         private float launchDuration = 0.55f;
 
-        [SerializeField, Tooltip("Roket Boyutu (Scale multiplier).")]
+        [SerializeField, Tooltip("Rocket scale multiplier.")]
         private Vector3 rocketScale = Vector3.one;
 
-        [SerializeField] private int rocketSortingOrder = 30000;
+        [SerializeField, Tooltip("Sorting order for rocket renderers.")]
+        private int rocketSortingOrder = 30000;
 
         private static RocketBooster activeBooster;
         private static int suppressGameplayThroughFrame = -1;
         private PrototypeBoard boundBoard;
         private CanvasGroup buttonCanvasGroup;
         private bool launchInProgress;
+        private int remainingCount = 3;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetActiveBooster()
+        public int RemainingCount => boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+
+        private void Awake()
         {
-            activeBooster = null;
-            suppressGameplayThroughFrame = -1;
-        }
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void AutoAttachToScene()
-        {
-            if (Object.FindObjectOfType<RocketBooster>() != null)
-                return;
-
-            GameObject mgr = GameObject.Find("ProgressManagerObject");
-            if (mgr == null)
-            {
-                mgr = new GameObject("RocketBoosterManager");
-            }
-
-            mgr.AddComponent<RocketBooster>();
+            remainingCount = initialCount;
+            EnsureReferences();
         }
 
         private void OnEnable()
         {
-            FindAndWireButton();
-            if (boosterButton != null)
+            EnsureReferences();
+            if (boosterButtonRef != null)
+            {
+                boosterButtonRef.onBoosterClicked.RemoveListener(ActivateRocketBooster);
+                boosterButtonRef.onBoosterClicked.AddListener(ActivateRocketBooster);
+            }
+            else if (boosterButton != null)
             {
                 boosterButton.onClick.RemoveListener(ActivateRocketBooster);
                 boosterButton.onClick.AddListener(ActivateRocketBooster);
             }
 
             SynchronizeLevel();
+            UpdateCountUI();
             RefreshButtonState();
         }
 
         private void Update()
         {
-            if (boosterButton == null)
-            {
-                FindAndWireButton();
-            }
-
             if (PrototypeBoard.Active != null && PrototypeBoard.Active != boundBoard)
             {
                 SynchronizeLevel();
@@ -95,6 +99,10 @@ namespace GravityPuzzle
 
         private void OnDisable()
         {
+            if (boosterButtonRef != null)
+            {
+                boosterButtonRef.onBoosterClicked.RemoveListener(ActivateRocketBooster);
+            }
             if (boosterButton != null)
             {
                 boosterButton.onClick.RemoveListener(ActivateRocketBooster);
@@ -106,14 +114,16 @@ namespace GravityPuzzle
         public void ActivateRocketBooster()
         {
             SynchronizeLevel();
-            if (boundBoard == null || !boundBoard.IsLevelRunning ||
-                LevelTimerUI.IsGameOver || IsTargeting)
+            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+            if (currentUses <= 0 || LevelTimerUI.IsGameOver)
             {
+                Debug.LogWarning($"[RocketBooster] Cannot activate: currentUses={currentUses}, IsGameOver={LevelTimerUI.IsGameOver}");
                 RefreshButtonState();
                 return;
             }
 
             activeBooster = this;
+            Debug.Log($"[RocketBooster] Activated! Tap any piece to launch rocket (Remaining Uses: {currentUses})");
             RefreshButtonState();
         }
 
@@ -129,7 +139,8 @@ namespace GravityPuzzle
 
         private void ProcessTargetInput()
         {
-            if (boundBoard == null || !boundBoard.IsLevelRunning || LevelTimerUI.IsGameOver)
+            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+            if (LevelTimerUI.IsGameOver || currentUses <= 0)
             {
                 CancelRocketSelection();
                 return;
@@ -165,6 +176,7 @@ namespace GravityPuzzle
                 if (piece == null || piece.IsBeingShredded || !TryStartRocketImpact(piece, worldPosition))
                     continue;
 
+                Debug.Log($"[RocketBooster] Target tap hit piece: {piece.name}");
                 boundBoard?.StartTimer();
                 activeBooster = null;
                 suppressGameplayThroughFrame = Time.frameCount;
@@ -186,8 +198,17 @@ namespace GravityPuzzle
                 }
             }
 
-            if (!belongsToPiece || launchInProgress)
+            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+            if (!belongsToPiece || launchInProgress || currentUses <= 0)
                 return false;
+
+            // Decrement remaining count if standalone
+            if (boosterButtonRef == null)
+            {
+                remainingCount--;
+                if (remainingCount < 0) remainingCount = 0;
+                UpdateCountUI();
+            }
 
             launchInProgress = true;
             StartCoroutine(PlayRocketLaunchSequence(piece));
@@ -202,7 +223,6 @@ namespace GravityPuzzle
                 yield break;
             }
 
-            // Flag piece as being shredded/destroyed so gravity and drag ignore it
             piece.TryBeginShredding();
             piece.SetSelected(false);
             piece.PrepareForShredderPhysics();
@@ -210,7 +230,7 @@ namespace GravityPuzzle
             Camera camera = Camera.main;
             Vector3 piecePos = piece.transform.position;
 
-            // 1. Spawn Rocket Visual directly under piece with high visibility
+            // 1. Spawn Rocket Visual directly under piece
             GameObject rocket = CreateRocketVisual();
             rocket.transform.position = new Vector3(piecePos.x, piecePos.y - 0.7f, -3f);
             rocket.transform.rotation = Quaternion.identity;
@@ -245,7 +265,20 @@ namespace GravityPuzzle
             Tween launchTween = rocket.transform.DOMoveY(targetY, launchDuration).SetEase(Ease.InQuad);
             yield return launchTween.WaitForCompletion();
 
-            // 5. Award progress & despawn
+            // 5. Rocket launch animation finished! Decrement count now
+            BoosterButton targetButton = boosterButtonRef ?? GetComponent<BoosterButton>() ?? Object.FindObjectOfType<BoosterButton>();
+            if (targetButton != null)
+            {
+                targetButton.TryConsumeUse();
+            }
+            else
+            {
+                remainingCount--;
+                if (remainingCount < 0) remainingCount = 0;
+                UpdateCountUI();
+            }
+
+            // 6. Award progress & despawn
             if (LevelProgressManager.Instance != null && piece != null)
             {
                 int grainCount = 10;
@@ -341,22 +374,44 @@ namespace GravityPuzzle
             }
         }
 
-        private void FindAndWireButton()
+        private void EnsureReferences()
         {
-            if (boosterButton != null) return;
-
-            Button[] buttons = Resources.FindObjectsOfTypeAll<Button>();
-            foreach (Button b in buttons)
+            if (boosterButtonRef == null)
             {
-                if (b == null) continue;
-                string name = b.gameObject.name.ToLower();
-                if (name.Contains("rocketbooster") || name.Contains("rocket_btn") || name.Contains("rocket"))
+                boosterButtonRef = GetComponent<BoosterButton>() ?? GetComponentInChildren<BoosterButton>();
+            }
+
+            if (boosterButton == null)
+            {
+                boosterButton = GetComponent<Button>();
+            }
+
+            if (countTmpText == null && countUiText == null)
+            {
+                countTmpText = GetComponentInChildren<TextMeshProUGUI>(true);
+                if (countTmpText == null)
                 {
-                    boosterButton = b;
-                    boosterButton.onClick.RemoveListener(ActivateRocketBooster);
-                    boosterButton.onClick.AddListener(ActivateRocketBooster);
-                    break;
+                    countUiText = GetComponentInChildren<Text>(true);
                 }
+            }
+        }
+
+        public void UpdateCountUI()
+        {
+            if (boosterButtonRef != null)
+            {
+                boosterButtonRef.UpdateCountUI();
+                return;
+            }
+
+            string countStr = remainingCount.ToString();
+            if (countTmpText != null)
+            {
+                countTmpText.text = countStr;
+            }
+            if (countUiText != null)
+            {
+                countUiText.text = countStr;
             }
         }
 
@@ -368,11 +423,26 @@ namespace GravityPuzzle
 
             CancelRocketSelection();
             boundBoard = activeBoard;
+            if (boosterButtonRef != null)
+            {
+                boosterButtonRef.ResetCount(initialCount);
+            }
+            else
+            {
+                remainingCount = initialCount;
+                UpdateCountUI();
+            }
             RefreshButtonState();
         }
 
         private void RefreshButtonState()
         {
+            if (boosterButtonRef != null)
+            {
+                boosterButtonRef.RefreshButtonState();
+                return;
+            }
+
             if (boosterButton == null)
                 return;
 
@@ -384,14 +454,13 @@ namespace GravityPuzzle
             }
 
             bool visible = true;
-            buttonCanvasGroup.alpha = visible ? 1f : 0f;
+            buttonCanvasGroup.alpha = visible ? 1f : 0.4f;
             buttonCanvasGroup.interactable = visible;
             buttonCanvasGroup.blocksRaycasts = visible;
             boosterButton.interactable =
                 visible &&
+                remainingCount > 0 &&
                 activeBooster != this &&
-                boundBoard != null &&
-                boundBoard.IsLevelRunning &&
                 !LevelTimerUI.IsGameOver;
         }
 

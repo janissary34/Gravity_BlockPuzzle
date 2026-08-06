@@ -703,6 +703,14 @@ namespace GravityPuzzle
             }
         }
 
+        public void AddTime(float seconds)
+        {
+            if (seconds > 0f && TimeLimit > 0f)
+            {
+                TimeRemaining += seconds;
+            }
+        }
+
         /// <summary>
         /// Adds an owner-specific timer pause. Multiple systems may pause the
         /// timer safely; it resumes only after every owner releases its pause.
