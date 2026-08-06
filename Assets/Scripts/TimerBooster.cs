@@ -8,24 +8,36 @@ namespace GravityPuzzle
 {
     /// <summary>
     /// Timer Booster sequence controller.
-    /// Animates timer_obj from screen bottom at native scale to a position lower than screen center,
-    /// pauses for 1 second, and flies strictly vertically to timer_txt's location at the SAME speed,
+    /// Animates timer_obj from screen bottom at native scale to screen center,
+    /// pauses for 1 second while performing a DOFillAmount freeze transition on frozenClockImage,
+    /// and flies strictly vertically to timer_txt's location at the SAME speed,
     /// deactivating immediately via SetActive(false) upon arrival and freezing the timer for 8 seconds.
+    /// Uses direct Inspector assigned references only.
     /// </summary>
     public class TimerBooster : MonoBehaviour
     {
-        [Header("UI & Animation References")]
+        [Header("UI & Animation References (Assign in Inspector)")]
         [Tooltip("The floating timer visual object that animates from bottom to center, then to timer_txt.")]
         [SerializeField] private GameObject timer_obj;
 
-        [Tooltip("Target UI transform for timer text (e.g. timer_txt or time_txt element).")]
+        [Tooltip("Target UI transform for timer text.")]
         [SerializeField] private Transform timer_txt;
-
-        [Tooltip("Alternative reference name for target UI transform.")]
-        [SerializeField] private Transform time_txt;
 
         [Tooltip("Optional UI Button to trigger the Timer Booster.")]
         [SerializeField] private Button boosterButton;
+
+        [Header("Clock Freeze Visual Animation")]
+        [Tooltip("Base clock UI Image.")]
+        [SerializeField] private Image baseClockImage;
+
+        [Tooltip("Frozen clock overlay UI Image set to Image Type: Filled.")]
+        [SerializeField] private Image frozenClockImage;
+
+        [SerializeField, Tooltip("360 degree radial fill duration in seconds (increase value to make fill slower).")]
+        private float freezeFillDuration = 1.2f;
+
+        [SerializeField, Tooltip("Easing style for 360 degree radial fill animation.")]
+        private Ease fillEase = Ease.Linear;
 
         [Header("Animation Speed & Easing Settings")]
         [SerializeField, Tooltip("Duration in seconds for timer_obj to travel from bottom off-screen to center.")]
@@ -34,8 +46,8 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Pause duration in seconds at the pause position.")]
         private float centerPauseDuration = 1.0f;
 
-        [SerializeField, Tooltip("Vertical Y offset for pause position (negative = lower down on screen).")]
-        private float centerOffsetY = -150f;
+        [SerializeField, Tooltip("Vertical Y offset from screen center for pause position (e.g. 0 = exact center, -150 = lower).")]
+        private float centerOffsetY = 0f;
 
         [SerializeField, Tooltip("Duration in seconds to fly from pause position to timer_txt (matches entranceDuration).")]
         private float flyToTextDuration = 0.85f;
@@ -45,9 +57,6 @@ namespace GravityPuzzle
         private float freezeDuration = 8.0f;
 
         private Vector3 originalScale = Vector3.one;
-        private Vector3 homeAnchoredPos;
-        private Vector3 homeWorldPos;
-        private bool homeCaptured;
         private Sequence activeSequence;
         private Coroutine freezeRoutine;
 
@@ -56,19 +65,18 @@ namespace GravityPuzzle
             if (timer_obj != null)
             {
                 originalScale = timer_obj.transform.localScale;
-
-                RectTransform rt = timer_obj.GetComponent<RectTransform>();
-                if (rt != null)
+                if (originalScale.sqrMagnitude < 0.0001f)
                 {
-                    homeAnchoredPos = rt.anchoredPosition;
+                    originalScale = Vector3.one;
                 }
-                homeWorldPos = timer_obj.transform.position;
-                homeCaptured = true;
 
                 timer_obj.SetActive(false);
             }
 
-            FindAutoReferences();
+            if (frozenClockImage != null)
+            {
+                frozenClockImage.fillAmount = 0f;
+            }
         }
 
         private void OnEnable()
@@ -97,37 +105,10 @@ namespace GravityPuzzle
                 StopCoroutine(freezeRoutine);
                 freezeRoutine = null;
             }
-        }
 
-        private void FindAutoReferences()
-        {
-            if (timer_obj == null)
+            if (frozenClockImage != null)
             {
-                Transform tObj = transform.Find("timer_obj") ?? transform.Find("Timer_obj") ?? transform.Find("TimerObj");
-                if (tObj != null)
-                {
-                    timer_obj = tObj.gameObject;
-                    originalScale = timer_obj.transform.localScale;
-                }
-            }
-
-            if (timer_txt == null && time_txt != null)
-            {
-                timer_txt = time_txt;
-            }
-
-            if (timer_txt == null)
-            {
-                GameObject timerTxtObj = GameObject.Find("timer_txt") ?? GameObject.Find("Timer_txt") ?? GameObject.Find("time_txt") ?? GameObject.Find("Time_txt") ?? GameObject.Find("Timer");
-                if (timerTxtObj != null)
-                {
-                    timer_txt = timerTxtObj.transform;
-                }
-            }
-
-            if (boosterButton == null)
-            {
-                boosterButton = GetComponent<Button>();
+                frozenClockImage.fillAmount = 0f;
             }
         }
 
@@ -136,13 +117,9 @@ namespace GravityPuzzle
         /// </summary>
         public void PlayTimerBoosterSequence()
         {
-            FindAutoReferences();
-
-            Transform targetTextTransform = timer_txt ?? time_txt;
-
-            if (timer_obj == null || targetTextTransform == null)
+            if (timer_obj == null || timer_txt == null)
             {
-                Debug.LogWarning("[TimerBooster] Cannot play sequence: timer_obj or timer_txt reference is missing.");
+                Debug.LogWarning("[TimerBooster] Cannot play sequence: timer_obj or timer_txt reference is missing in Inspector.");
                 return;
             }
 
@@ -153,6 +130,47 @@ namespace GravityPuzzle
 
             Canvas.ForceUpdateCanvases();
 
+            // Bring timer_obj to front of Canvas hierarchy so it is rendered on top of all panels
+            timer_obj.transform.SetAsLastSibling();
+
+            if (originalScale.sqrMagnitude < 0.0001f)
+            {
+                originalScale = Vector3.one;
+            }
+
+            // Ensure timer_obj and ALL its child Images (like baseClockImage) are fully active, enabled, and visible (opacity = 1)
+            timer_obj.SetActive(true);
+
+            Image[] allImages = timer_obj.GetComponentsInChildren<Image>(true);
+            foreach (var img in allImages)
+            {
+                if (img == null) continue;
+                img.gameObject.SetActive(true);
+                img.enabled = true;
+
+                // Restore alpha opacity if transparent
+                Color c = img.color;
+                if (c.a < 0.05f)
+                {
+                    c.a = 1f;
+                    img.color = c;
+                }
+
+                // Make sure non-frozen base images are 100% filled and visible
+                if (img != frozenClockImage && img.type == Image.Type.Filled)
+                {
+                    img.fillAmount = 1f;
+                }
+            }
+
+            // Reset only frozenClockImage overlay to fillAmount = 0
+            if (frozenClockImage != null)
+            {
+                frozenClockImage.type = Image.Type.Filled;
+                frozenClockImage.fillAmount = 0f;
+                frozenClockImage.gameObject.SetActive(true);
+            }
+
             Camera cam = Camera.main;
             Vector3 centerPos = Vector3.zero;
             float offscreenOffsetY = 8f;
@@ -160,34 +178,33 @@ namespace GravityPuzzle
             RectTransform rectTransform = timer_obj.GetComponent<RectTransform>();
             if (rectTransform != null)
             {
-                // UI Canvas Space: Lock X to home position, apply lower centerOffsetY
-                float fixedX = homeCaptured ? homeAnchoredPos.x : rectTransform.anchoredPosition.x;
+                // UI Canvas Space: Screen Center at (0, centerOffsetY)
                 Canvas canvas = timer_obj.GetComponentInParent<Canvas>();
                 float canvasHeight = canvas != null ? canvas.GetComponent<RectTransform>().rect.height : Screen.height;
-                offscreenOffsetY = canvasHeight > 0 ? canvasHeight * 0.8f : 800f;
-                float baseY = homeCaptured ? homeAnchoredPos.y : rectTransform.anchoredPosition.y;
-                centerPos = new Vector3(fixedX, baseY + centerOffsetY, 0f);
+                if (canvasHeight <= 0) canvasHeight = 1920f;
+
+                offscreenOffsetY = canvasHeight * 0.7f;
+                centerPos = new Vector3(0f, centerOffsetY, 0f);
             }
             else
             {
-                // World Space: Lock X to home position, apply lower centerOffsetY
-                float fixedWorldX = homeCaptured ? homeWorldPos.x : timer_obj.transform.position.x;
+                // World Space: Screen Center at (0, centerOffsetY)
                 float worldOffsetY = centerOffsetY * 0.01f;
                 if (cam != null)
                 {
-                    centerPos = new Vector3(fixedWorldX, cam.transform.position.y + worldOffsetY, 0f);
+                    centerPos = new Vector3(0f, cam.transform.position.y + worldOffsetY, 0f);
                     offscreenOffsetY = cam.orthographicSize + 4f;
                 }
                 else
                 {
-                    centerPos = new Vector3(fixedWorldX, worldOffsetY, 0f);
+                    centerPos = new Vector3(0f, worldOffsetY, 0f);
                     offscreenOffsetY = 10f;
                 }
             }
 
             Vector3 startPos = centerPos + new Vector3(0f, -offscreenOffsetY, 0f);
 
-            // Step 1: Bottom Entrance (Native Scale, Zero Rotation, Fixed X)
+            // Step 1: Initial Reset (Reset rotation & scale)
             timer_obj.transform.rotation = Quaternion.identity;
             timer_obj.transform.localScale = originalScale;
             if (rectTransform != null)
@@ -198,12 +215,11 @@ namespace GravityPuzzle
             {
                 timer_obj.transform.position = startPos;
             }
-            timer_obj.SetActive(true);
 
             Sequence seq = DOTween.Sequence().SetLink(timer_obj);
             activeSequence = seq;
 
-            // Step 1: Move from bottom off-screen to lower center position smoothly (0.85s)
+            // Step 1: Move from bottom off-screen to screen center position smoothly (0.85s)
             if (rectTransform != null)
             {
                 seq.Append(rectTransform.DOAnchorPos(centerPos, entranceDuration).SetEase(Ease.OutCubic));
@@ -213,47 +229,33 @@ namespace GravityPuzzle
                 seq.Append(timer_obj.transform.DOMove(centerPos, entranceDuration).SetEase(Ease.OutCubic));
             }
 
-            // Step 2: Pause at lower position (1.0s)
-            seq.AppendInterval(centerPauseDuration);
-
-            // Step 3: Move to timer_txt Y position keeping X strictly FIXED
-            float halfHeight = 0f;
-            if (rectTransform != null)
+            // Step 2: Pause at center & animate 360 degree radial fill over freezeFillDuration
+            if (frozenClockImage != null)
             {
-                halfHeight = rectTransform.rect.height * 0.5f;
-            }
-            else
-            {
-                SpriteRenderer sr = timer_obj.GetComponentInChildren<SpriteRenderer>();
-                if (sr != null)
+                frozenClockImage.type = Image.Type.Filled;
+                seq.Append(frozenClockImage.DOFillAmount(1f, freezeFillDuration).SetEase(fillEase));
+                float remainingPause = Mathf.Max(0f, centerPauseDuration - freezeFillDuration);
+                if (remainingPause > 0f)
                 {
-                    halfHeight = sr.bounds.extents.y;
+                    seq.AppendInterval(remainingPause);
                 }
             }
-
-            if (rectTransform != null)
-            {
-                float fixedX = homeCaptured ? homeAnchoredPos.x : rectTransform.anchoredPosition.x;
-                Vector3 targetAnchored = GetTargetAnchoredPosition(rectTransform, targetTextTransform);
-                targetAnchored.x = fixedX; // Keep X strictly fixed
-                targetAnchored.y -= halfHeight;
-                Debug.Log($"[TimerBooster] Vertical UI Flight: center={centerPos} -> topEdgeTargetAnchored={targetAnchored}");
-                seq.Append(rectTransform.DOAnchorPos(targetAnchored, flyToTextDuration).SetEase(Ease.OutCubic));
-            }
             else
             {
-                float fixedWorldX = homeCaptured ? homeWorldPos.x : timer_obj.transform.position.x;
-                Vector3 targetWorld = GetTargetWorldPosition(targetTextTransform, timer_obj.transform);
-                targetWorld.x = fixedWorldX; // Keep X strictly fixed
-                targetWorld.y -= halfHeight;
-                Debug.Log($"[TimerBooster] Vertical World Flight: center={centerPos} -> topEdgeTargetWorld={targetWorld}");
-                seq.Append(timer_obj.transform.DOMove(targetWorld, flyToTextDuration).SetEase(Ease.OutCubic));
+                seq.AppendInterval(centerPauseDuration);
             }
 
-            // Immediately deactivate timer_obj when it reaches timer_txt
+            // Step 3: Move timer_obj directly to exact World position of timer_txt (0.5s Ease.InQuad)
+            seq.Append(timer_obj.transform.DOMove(timer_txt.position, 0.5f).SetEase(Ease.InQuad));
+
+            // Do NOT call timer_obj.SetActive(false) until the movement tween officially finishes inside .OnComplete()
             seq.OnComplete(() =>
             {
                 timer_obj.SetActive(false);
+                if (frozenClockImage != null)
+                {
+                    frozenClockImage.fillAmount = 0f;
+                }
                 OnSequenceCompleted();
             });
         }
