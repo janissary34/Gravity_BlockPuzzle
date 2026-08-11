@@ -129,10 +129,103 @@ namespace GravityPuzzle
             activePieces.Remove(this);
         }
 
+        private List<Vector2Int> cachedActiveVoxelOffsets;
+        private Transform cachedFirstActiveVoxel;
+
+        public void InvalidateVoxelCache()
+        {
+            cachedActiveVoxelOffsets = null;
+            cachedFirstActiveVoxel = null;
+        }
+
+        public List<Vector2Int> GetActiveVoxelOffsets()
+        {
+            if (cachedActiveVoxelOffsets != null)
+                return cachedActiveVoxelOffsets;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            float size = 1f;
+            if (level != null && level.subdivisions > 0)
+                size = 1f / level.subdivisions;
+
+            cachedActiveVoxelOffsets = new List<Vector2Int>();
+            foreach (Transform child in transform)
+            {
+                if (child.gameObject.activeSelf)
+                {
+                    string n = child.name;
+                    if (n.Contains("Overlay") || 
+                        n.Contains("Selection") || 
+                        n.Contains("Collision Geometry") ||
+                        n.Contains("Outline") ||
+                        n.Contains("Ice") ||
+                        n.Contains("Border") ||
+                        n.Contains("Count")) 
+                        continue;
+
+                    int localX = Mathf.RoundToInt(child.localPosition.x / size);
+                    int localY = Mathf.RoundToInt(child.localPosition.y / size);
+                    Vector2Int cell = new Vector2Int(localX, localY);
+                    if (!cachedActiveVoxelOffsets.Contains(cell))
+                        cachedActiveVoxelOffsets.Add(cell);
+                }
+            }
+
+            if (cachedActiveVoxelOffsets.Count == 0)
+            {
+                if (solidColliders == null) CacheSolidColliders();
+                if (solidColliders != null && solidColliders.Length > 0)
+                {
+                    for (int i = 0; i < solidColliders.Length; i++)
+                    {
+                        if (solidColliders[i] != null && solidColliders[i].enabled && solidColliders[i].gameObject.activeInHierarchy)
+                        {
+                            Vector2 localPos = solidColliders[i].transform.localPosition;
+                            int x = Mathf.RoundToInt(localPos.x / size);
+                            int y = Mathf.RoundToInt(localPos.y / size);
+                            Vector2Int cell = new Vector2Int(x, y);
+                            if (!cachedActiveVoxelOffsets.Contains(cell))
+                                cachedActiveVoxelOffsets.Add(cell);
+                        }
+                    }
+                }
+            }
+
+            if (cachedActiveVoxelOffsets.Count == 0)
+                cachedActiveVoxelOffsets.Add(Vector2Int.zero);
+
+            return cachedActiveVoxelOffsets;
+        }
+
+        public Transform GetFirstActiveVoxelTransform()
+        {
+            if (cachedFirstActiveVoxel != null && cachedFirstActiveVoxel.gameObject.activeSelf)
+                return cachedFirstActiveVoxel;
+
+            foreach (Transform child in transform)
+            {
+                if (child.gameObject.activeSelf)
+                {
+                    string n = child.name;
+                    if (n.Contains("Overlay") || 
+                        n.Contains("Selection") || 
+                        n.Contains("Collision Geometry") ||
+                        n.Contains("Outline") ||
+                        n.Contains("Ice") ||
+                        n.Contains("Border") ||
+                        n.Contains("Count")) 
+                        continue;
+
+                    cachedFirstActiveVoxel = child;
+                    return child;
+                }
+            }
+            return transform;
+        }
+
         private void Start()
         {
             CacheSolidColliders();
-            BuildSelectionVisuals();
         }
 
         public void SetSelected(bool isSelected)
@@ -143,26 +236,22 @@ namespace GravityPuzzle
                 return;
 
             this.isSelected = isSelected;
-
             ApplyCollisionProfile();
-
-            // Script recompiles during Play Mode can clear these runtime lists while
-            // leaving the generated outline objects alive. Rebuild/reconnect them
-            // at the moment of selection so the highlight can never disappear.
-            BuildSelectionVisuals();
 
             // Resting pieces grip one another. During a drag, contact friction is
             // removed temporarily so adjacent pieces cannot jam against each other.
             PrototypeBootstrap.SetDraggingFriction(this, isSelected);
 
-            foreach (SpriteRenderer renderer in normalRenderers)
-                renderer.enabled = !isSelected;
-
-            foreach (SpriteRenderer renderer in selectedRenderers)
-                renderer.enabled = isSelected;
-
-            foreach (SpriteRenderer renderer in outlineRenderers)
-                renderer.enabled = isSelected;
+            LineRenderer outline = GetComponent<LineRenderer>();
+            if (outline != null)
+            {
+                outline.startWidth = isSelected ? 0.08f : 0.05f;
+                outline.endWidth = isSelected ? 0.08f : 0.05f;
+                Color outlineColor = isSelected ? Color.white : Color.black;
+                outline.startColor = outlineColor;
+                outline.endColor = outlineColor;
+                outline.sortingOrder = isSelected ? 20 : 10;
+            }
         }
 
         public void ConfigureCollisionGeometry(
@@ -224,6 +313,7 @@ namespace GravityPuzzle
             if (compositeCollider != null)
                 compositeCollider.GenerateGeometry();
             CacheSolidColliders();
+            InvalidateVoxelCache();
             Physics2D.SyncTransforms();
         }
 
@@ -238,7 +328,6 @@ namespace GravityPuzzle
             collisionCellVisuals = new List<SpriteRenderer>(cellVisuals);
             fullCollisionCellSizes = new List<Vector2>(cellSizes);
 
-            EnsureBlockBorders();
             ApplyCollisionProfile();
             CacheSolidColliders();
         }
@@ -367,6 +456,7 @@ namespace GravityPuzzle
             if (compositeCollider != null)
                 compositeCollider.GenerateGeometry();
             CacheSolidColliders();
+            InvalidateVoxelCache();
 
             // Avoid leaving the original silhouette around a modified piece.
             LineRenderer perimeter = GetComponent<LineRenderer>();
@@ -707,58 +797,6 @@ namespace GravityPuzzle
             iceCounterText.ForceMeshUpdate();
         }
 
-        private void EnsureBlockBorders()
-        {
-            if (collisionCellVisuals == null)
-                return;
-
-            for (int i = 0; i < collisionCellVisuals.Count; i++)
-            {
-                SpriteRenderer source = collisionCellVisuals[i];
-                if (source == null || source.transform.Find("Block Border Top") != null)
-                    continue;
-
-                Vector2 fullSize = i < fullCollisionCellSizes.Count
-                    ? fullCollisionCellSizes[i]
-                    : (Vector2)source.bounds.size;
-                float thickness = Mathf.Min(.025f, Mathf.Min(fullSize.x, fullSize.y) * .18f);
-                float horizontalRatio = thickness / Mathf.Max(fullSize.y, .001f);
-                float verticalRatio = thickness / Mathf.Max(fullSize.x, .001f);
-
-                CreateBorderStrip(source, "Block Border Top",
-                    new Vector2(0f, .5f - horizontalRatio * .5f),
-                    new Vector2(1f, horizontalRatio));
-                CreateBorderStrip(source, "Block Border Bottom",
-                    new Vector2(0f, -.5f + horizontalRatio * .5f),
-                    new Vector2(1f, horizontalRatio));
-                CreateBorderStrip(source, "Block Border Left",
-                    new Vector2(-.5f + verticalRatio * .5f, 0f),
-                    new Vector2(verticalRatio, 1f));
-                CreateBorderStrip(source, "Block Border Right",
-                    new Vector2(.5f - verticalRatio * .5f, 0f),
-                    new Vector2(verticalRatio, 1f));
-            }
-        }
-
-        private static void CreateBorderStrip(
-            SpriteRenderer source,
-            string stripName,
-            Vector2 localPosition,
-            Vector2 localScale)
-        {
-            GameObject strip = new GameObject(stripName);
-            strip.transform.SetParent(source.transform, false);
-            strip.transform.localPosition = localPosition;
-            strip.transform.localRotation = Quaternion.identity;
-            strip.transform.localScale = new Vector3(localScale.x, localScale.y, 1f);
-
-            SpriteRenderer renderer = strip.AddComponent<SpriteRenderer>();
-            renderer.sprite = source.sprite;
-            renderer.color = Color.black;
-            renderer.sortingLayerID = source.sortingLayerID;
-            renderer.sortingOrder = source.sortingOrder + 8;
-        }
-
         private void CreateIceLayer(
             SpriteRenderer source,
             string layerName,
@@ -825,124 +863,6 @@ namespace GravityPuzzle
         private void CacheSolidColliders()
         {
             solidColliders = GetComponentsInChildren<Collider2D>();
-        }
-
-        private void BuildSelectionVisuals()
-        {
-            if (selectionVisualsBuilt && normalRenderers.Count > 0)
-                return;
-
-            normalRenderers.Clear();
-            selectedRenderers.Clear();
-            outlineRenderers.Clear();
-
-            selectionVisualsRoot = transform.Find("Selection Visuals");
-            if (selectionVisualsRoot == null)
-            {
-                GameObject visualRoot = new GameObject("Selection Visuals");
-                visualRoot.transform.SetParent(transform, false);
-                selectionVisualsRoot = visualRoot.transform;
-            }
-
-            SpriteRenderer[] pieceRenderers = GetComponentsInChildren<SpriteRenderer>(true);
-
-            int visualIndex = 0;
-            foreach (SpriteRenderer original in pieceRenderers)
-            {
-                if (original.transform.IsChildOf(selectionVisualsRoot) ||
-                    original.gameObject.name.StartsWith("Ice ") ||
-                    original.gameObject.name.StartsWith("Block Border"))
-                    continue;
-
-                normalRenderers.Add(original);
-
-                // Draw the selection border inside the exact modular silhouette.
-                // An outside outline makes an N-cell piece look larger than the
-                // N-cell opening it is meant to fit through.
-                SpriteRenderer selectedFill = FindOrCreateVisualCopy(
-                    original, $"Selected Fill {visualIndex}", InsetScale(original, .025f),
-                    original.color, original.sortingOrder + 2);
-
-                // The white copy keeps the original, exact footprint. A slightly
-                // inset coloured fill reveals it as an internal selection border.
-                SpriteRenderer outline = FindOrCreateVisualCopy(
-                    original, $"White Selection Outline {visualIndex}", Vector3.one,
-                    Color.white, original.sortingOrder + 1);
-
-                selectedRenderers.Add(selectedFill);
-                outlineRenderers.Add(outline);
-                visualIndex++;
-            }
-
-            selectionVisualsBuilt = true;
-        }
-
-        private SpriteRenderer FindOrCreateVisualCopy(
-            SpriteRenderer source,
-            string objectName,
-            Vector3 scale,
-            Color color,
-            int sortingOrder)
-        {
-            Transform existing = selectionVisualsRoot.Find(objectName);
-            SpriteRenderer renderer = existing != null
-                ? existing.GetComponent<SpriteRenderer>()
-                : null;
-
-            if (renderer == null)
-                return CreateVisualCopy(source, objectName, scale, color, sortingOrder);
-
-            renderer.sprite = source.sprite;
-            renderer.color = color;
-            renderer.sortingLayerID = source.sortingLayerID;
-            renderer.sortingOrder = sortingOrder;
-            MatchSourceTransform(renderer.transform, source.transform, scale);
-            renderer.enabled = false;
-            return renderer;
-        }
-
-        private SpriteRenderer CreateVisualCopy(
-            SpriteRenderer source,
-            string objectName,
-            Vector3 scale,
-            Color color,
-            int sortingOrder)
-        {
-            GameObject copy = new GameObject(objectName);
-            copy.transform.SetParent(selectionVisualsRoot, false);
-            MatchSourceTransform(copy.transform, source.transform, scale);
-
-            SpriteRenderer renderer = copy.AddComponent<SpriteRenderer>();
-            renderer.sprite = source.sprite;
-            renderer.color = color;
-            renderer.sortingLayerID = source.sortingLayerID;
-            renderer.sortingOrder = sortingOrder;
-            renderer.enabled = false;
-            return renderer;
-        }
-
-        private void MatchSourceTransform(Transform copy, Transform source, Vector3 expansionScale)
-        {
-            copy.localPosition = selectionVisualsRoot.InverseTransformPoint(source.position);
-            copy.localRotation = Quaternion.Inverse(selectionVisualsRoot.rotation) * source.rotation;
-
-            Vector3 sourceWorldScale = source.lossyScale;
-            Vector3 rootWorldScale = selectionVisualsRoot.lossyScale;
-            copy.localScale = new Vector3(
-                sourceWorldScale.x * expansionScale.x / Mathf.Max(rootWorldScale.x, .001f),
-                sourceWorldScale.y * expansionScale.y / Mathf.Max(rootWorldScale.y, .001f),
-                sourceWorldScale.z / Mathf.Max(rootWorldScale.z, .001f));
-        }
-
-        private static Vector3 InsetScale(SpriteRenderer source, float worldInsetPerSide)
-        {
-            float width = Mathf.Max(source.transform.lossyScale.x, .001f);
-            float height = Mathf.Max(source.transform.lossyScale.y, .001f);
-
-            return new Vector3(
-                Mathf.Max(.1f, 1f - (worldInsetPerSide * 2f / width)),
-                Mathf.Max(.1f, 1f - (worldInsetPerSide * 2f / height)),
-                1f);
         }
     }
 }

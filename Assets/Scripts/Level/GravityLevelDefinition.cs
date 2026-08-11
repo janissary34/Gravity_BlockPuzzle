@@ -33,11 +33,31 @@ namespace GravityPuzzle
             float safeWidthFraction = 1f,
             float safeHeightFraction = 1f)
         {
+            return CameraSize(
+                columns,
+                rows,
+                aspect,
+                safeWidthFraction,
+                safeHeightFraction,
+                BoardViewportWidth,
+                BoardViewportHeight);
+        }
+
+        public static float CameraSize(
+            int columns,
+            int rows,
+            float aspect,
+            float safeWidthFraction,
+            float safeHeightFraction,
+            float viewportWidth,
+            float viewportHeight)
+        {
             float widthLimited = columns * .5f /
-                                 (Mathf.Max(.25f, aspect) * BoardViewportWidth *
+                                 (Mathf.Max(.25f, aspect) * Mathf.Clamp(viewportWidth, .1f, 1f) *
                                   Mathf.Clamp(safeWidthFraction, .5f, 1f));
             float heightLimited = rows * .5f /
-                                  (BoardViewportHeight * Mathf.Clamp(safeHeightFraction, .5f, 1f));
+                                  (Mathf.Clamp(viewportHeight, .1f, 1f) *
+                                   Mathf.Clamp(safeHeightFraction, .5f, 1f));
             return Mathf.Max(widthLimited, heightLimited);
         }
     }
@@ -54,6 +74,15 @@ namespace GravityPuzzle
         public Color backgroundColor = new Color(.06f, .07f, .14f);
         public Color frameColor = new Color(.16f, .18f, .32f);
         [Min(.1f)] public float gravityScale = 1.5f;
+
+        [Header("Camera Framing")]
+        [Tooltip("If disabled, the level uses Fixed Camera Size instead of fitting the camera from board dimensions.")]
+        public bool useAutomaticCameraFit = true;
+        [Min(.1f)] public float fixedCameraSize = 6f;
+        [Range(.1f, 1f)] public float cameraViewportWidth = GravityGridMetrics.BoardViewportWidth;
+        [Range(.1f, 1f)] public float cameraViewportHeight = GravityGridMetrics.BoardViewportHeight;
+        [Tooltip("Enable only if the camera should react to the current device safe area. Off keeps editor/simulator framing stable across machines.")]
+        public bool useRuntimeSafeAreaForCameraFit;
 
         [Header("Bottom Exit & Shredders")]
         [Min(1f)] public float exitWidth = 3f;

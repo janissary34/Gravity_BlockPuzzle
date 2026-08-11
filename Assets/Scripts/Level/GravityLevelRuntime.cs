@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using GravityPuzzle.Core.Grid;
+using GravityPuzzle.Gameplay.Gravity;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -16,6 +18,7 @@ namespace GravityPuzzle
         private static int currentLevelIndex = -1;
         private static bool levelSequenceInitialized;
         private static bool previewLaunchRequested;
+        private static Material sharedOutlineMaterial;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetLevelSequence()
@@ -140,12 +143,7 @@ namespace GravityPuzzle
         public static void Build(GravityLevelDefinition level)
         {
             float halfHeight = level.boardRows * .5f;
-            float cameraSize = GravityGridMetrics.CameraSize(
-                level.boardColumns,
-                level.boardRows,
-                CameraAspect(),
-                SafeAreaWidthFraction(),
-                SafeAreaHeightFraction());
+            float cameraSize = ResolveCameraSize(level);
             PrototypeBootstrap.ConfigureCamera(cameraSize, level.backgroundColor);
 
             GameObject board = new GameObject($"Level - {level.levelName}");
@@ -153,6 +151,7 @@ namespace GravityPuzzle
             boardState.SetRemovalHeight(-halfHeight - 15f);
             boardState.SetTimeLimit(level.timeLimit);
             boardState.EnableSequentialLevels();
+            boardState.InitializeBoardSnapshot(LevelBoardSnapshotBuilder.Build(level));
             board.AddComponent<PuzzleDragController>();
 
             float frameThickness = GravityGridMetrics.FrameThicknessInCells;
@@ -171,9 +170,44 @@ namespace GravityPuzzle
             foreach (PieceDefinition piece in level.pieces)
                 CreatePiece(level, piece);
 
+            ValidateLevelSnapshotRuntimeState(level, boardState);
+
             // The manager creates its UI fallback when this scene does not provide one.
             LevelProgressManager.EnsureInstance().InitializeLevelProgress(level);
             SettingsPanelButton.EnsureConnected();
+        }
+
+        private static float ResolveCameraSize(GravityLevelDefinition level)
+        {
+            if (!level.useAutomaticCameraFit)
+                return level.fixedCameraSize;
+
+            float safeWidthFraction = level.useRuntimeSafeAreaForCameraFit
+                ? SafeAreaWidthFraction()
+                : 1f;
+            float safeHeightFraction = level.useRuntimeSafeAreaForCameraFit
+                ? SafeAreaHeightFraction()
+                : 1f;
+
+            return GravityGridMetrics.CameraSize(
+                level.boardColumns,
+                level.boardRows,
+                CameraAspect(),
+                safeWidthFraction,
+                safeHeightFraction,
+                level.cameraViewportWidth,
+                level.cameraViewportHeight);
+        }
+
+        private static void ValidateLevelSnapshotRuntimeState(
+            GravityLevelDefinition level,
+            PrototypeBoard boardState)
+        {
+            LevelBoardSnapshotRuntimeValidator.Validate(
+                level,
+                boardState.BoardSnapshot,
+                PuzzlePiece.ActivePieces,
+                boardState);
         }
 
         private static void CreateBoardBackground(GravityLevelDefinition level)
@@ -626,19 +660,27 @@ namespace GravityPuzzle
 
             pieceComposite.GenerateGeometry();
 
-            // Draw a unified outline around the outer perimeter of the shape
+            // Draw a crisp black strip around the outer perimeter of the shape to separate pieces visually
             LineRenderer outline = piece.AddComponent<LineRenderer>();
             outline.useWorldSpace = false;
             outline.loop = true;
-            outline.startWidth = 0.08f;
-            outline.endWidth = 0.08f;
+            outline.startWidth = 0.05f;
+            outline.endWidth = 0.05f;
             outline.numCornerVertices = 4;
             outline.numCapVertices = 4;
-            outline.sortingOrder = -1; // Draw just behind the colored blocks
+            outline.sortingOrder = 10; // Draw on top of blocks to clearly separate adjacent pieces
             
-            // Standard sprite material so it matches the 2D lighting/rendering
-            outline.material = new Material(Shader.Find("Sprites/Default"));
-            Color outlineColor = new Color(0.12f, 0.12f, 0.15f, 1f);
+            // Standard shared sprite material so all pieces batch together
+            if (sharedOutlineMaterial == null)
+            {
+                Shader shader = Shader.Find("Sprites/Default");
+                if (shader != null)
+                    sharedOutlineMaterial = new Material(shader) { name = "Shared Outline Material" };
+            }
+            if (sharedOutlineMaterial != null)
+                outline.sharedMaterial = sharedOutlineMaterial;
+
+            Color outlineColor = Color.black;
             outline.startColor = outlineColor;
             outline.endColor = outlineColor;
 
@@ -888,7 +930,20 @@ namespace GravityPuzzle
 
     public sealed class ShredderCatchZone : MonoBehaviour
     {
+        public static readonly List<ShredderCatchZone> ActiveZones = new List<ShredderCatchZone>();
+
         public float shredY;
+
+        private void OnEnable()
+        {
+            if (!ActiveZones.Contains(this))
+                ActiveZones.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            ActiveZones.Remove(this);
+        }
 
         private void OnTriggerEnter2D(Collider2D other)
         {

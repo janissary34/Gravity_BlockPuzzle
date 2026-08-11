@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using GravityPuzzle.Core.Grid;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -662,6 +663,7 @@ namespace GravityPuzzle
         public bool IsTimerActive => TimeLimit > 0f && IsTimerStarted && !boardCleared && !boardFailed;
         public bool IsTimerPaused => timerPauseOwners.Count > 0;
         public bool IsLevelRunning => !boardCleared && !boardFailed;
+        public LevelBoardSnapshot BoardSnapshot { get; private set; }
 
         private void OnEnable()
         {
@@ -683,6 +685,13 @@ namespace GravityPuzzle
             timerPauseOwners.Clear();
         }
 
+        // Phase 2 keeps this snapshot parallel to the legacy physics runtime.
+        // A later phase will make it the sole gameplay authority.
+        public void InitializeBoardSnapshot(LevelBoardSnapshot snapshot)
+        {
+            BoardSnapshot = snapshot;
+        }
+
         public void StartTimer()
         {
             IsTimerStarted = true;
@@ -694,6 +703,7 @@ namespace GravityPuzzle
                 return;
 
             DestroyedPieceCount++;
+            PuzzleDragController.WakeUpGravity();
             IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
             for (int i = 0; i < pieces.Count; i++)
             {

@@ -24,10 +24,12 @@ MonoBehaviour:
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
+  shredlenmeHizi: 0.7
+  titremeMiktari: 0.045
   pieces:
   - name: Piece 1
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
-    origin: {x: 10, y: 22}
+    origin: {x: 22, y: 18}
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
@@ -102,7 +104,7 @@ MonoBehaviour:
       type: 0
   - name: Piece 2
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-    origin: {x: 10, y: 18}
+    origin: {x: -4, y: 18}
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
@@ -111,70 +113,6 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     cells:
-    - localCell: {x: 2, y: 6}
-      type: 0
-    - localCell: {x: 3, y: 6}
-      type: 0
-    - localCell: {x: 4, y: 6}
-      type: 0
-    - localCell: {x: 5, y: 6}
-      type: 0
-    - localCell: {x: 2, y: 7}
-      type: 0
-    - localCell: {x: 3, y: 7}
-      type: 0
-    - localCell: {x: 4, y: 7}
-      type: 0
-    - localCell: {x: 5, y: 7}
-      type: 0
-    - localCell: {x: 2, y: 8}
-      type: 0
-    - localCell: {x: 3, y: 8}
-      type: 0
-    - localCell: {x: 4, y: 8}
-      type: 0
-    - localCell: {x: 5, y: 8}
-      type: 0
-    - localCell: {x: 2, y: 9}
-      type: 0
-    - localCell: {x: 3, y: 9}
-      type: 0
-    - localCell: {x: 4, y: 9}
-      type: 0
-    - localCell: {x: 5, y: 9}
-      type: 0
-    - localCell: {x: 6, y: 6}
-      type: 0
-    - localCell: {x: 7, y: 6}
-      type: 0
-    - localCell: {x: 8, y: 6}
-      type: 0
-    - localCell: {x: 9, y: 6}
-      type: 0
-    - localCell: {x: 6, y: 7}
-      type: 0
-    - localCell: {x: 7, y: 7}
-      type: 0
-    - localCell: {x: 8, y: 7}
-      type: 0
-    - localCell: {x: 9, y: 7}
-      type: 0
-    - localCell: {x: 6, y: 8}
-      type: 0
-    - localCell: {x: 7, y: 8}
-      type: 0
-    - localCell: {x: 8, y: 8}
-      type: 0
-    - localCell: {x: 9, y: 8}
-      type: 0
-    - localCell: {x: 6, y: 9}
-      type: 0
-    - localCell: {x: 7, y: 9}
-      type: 0
-    - localCell: {x: 8, y: 9}
-      type: 0
-    - localCell: {x: 9, y: 9}
-      type: 0
     - localCell: {x: 6, y: 2}
       type: 0
     - localCell: {x: 7, y: 2}
@@ -207,11 +145,75 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 9, y: 5}
       type: 0
+    - localCell: {x: 2, y: 2}
+      type: 0
+    - localCell: {x: 3, y: 2}
+      type: 0
+    - localCell: {x: 4, y: 2}
+      type: 0
+    - localCell: {x: 5, y: 2}
+      type: 0
+    - localCell: {x: 2, y: 3}
+      type: 0
+    - localCell: {x: 3, y: 3}
+      type: 0
+    - localCell: {x: 4, y: 3}
+      type: 0
+    - localCell: {x: 5, y: 3}
+      type: 0
+    - localCell: {x: 2, y: 4}
+      type: 0
+    - localCell: {x: 3, y: 4}
+      type: 0
+    - localCell: {x: 4, y: 4}
+      type: 0
+    - localCell: {x: 5, y: 4}
+      type: 0
+    - localCell: {x: 2, y: 5}
+      type: 0
+    - localCell: {x: 3, y: 5}
+      type: 0
+    - localCell: {x: 4, y: 5}
+      type: 0
+    - localCell: {x: 5, y: 5}
+      type: 0
+    - localCell: {x: 2, y: 6}
+      type: 0
+    - localCell: {x: 3, y: 6}
+      type: 0
+    - localCell: {x: 4, y: 6}
+      type: 0
+    - localCell: {x: 5, y: 6}
+      type: 0
+    - localCell: {x: 2, y: 7}
+      type: 0
+    - localCell: {x: 3, y: 7}
+      type: 0
+    - localCell: {x: 4, y: 7}
+      type: 0
+    - localCell: {x: 5, y: 7}
+      type: 0
+    - localCell: {x: 2, y: 8}
+      type: 0
+    - localCell: {x: 3, y: 8}
+      type: 0
+    - localCell: {x: 4, y: 8}
+      type: 0
+    - localCell: {x: 5, y: 8}
+      type: 0
+    - localCell: {x: 2, y: 9}
+      type: 0
+    - localCell: {x: 3, y: 9}
+      type: 0
+    - localCell: {x: 4, y: 9}
+      type: 0
+    - localCell: {x: 5, y: 9}
+      type: 0
   pins: []
   obstacles:
   - name: Obstacle 1
     usesGridCells: 1
-    gridCell: {x: 0, y: 5}
+    gridCell: {x: 0, y: 4}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -219,7 +221,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 2
     usesGridCells: 1
-    gridCell: {x: 1, y: 5}
+    gridCell: {x: 1, y: 4}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}

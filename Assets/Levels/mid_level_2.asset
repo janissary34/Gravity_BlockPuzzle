@@ -24,6 +24,8 @@ MonoBehaviour:
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
+  shredlenmeHizi: 0.7
+  titremeMiktari: 0.045
   pieces:
   - name: Piece 1
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
@@ -603,23 +605,7 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 9, y: 1}
       type: 0
-  pins:
-  - name: Pin 1
-    cell: {x: 19, y: 8}
-    radiusInFineCells: 0.45
-    color: {r: 1, g: 0.74, b: 0.12, a: 1}
-  - name: Pin 2
-    cell: {x: 19, y: 9}
-    radiusInFineCells: 0.45
-    color: {r: 1, g: 0.74, b: 0.12, a: 1}
-  - name: Pin 3
-    cell: {x: 19, y: 10}
-    radiusInFineCells: 0.45
-    color: {r: 1, g: 0.74, b: 0.12, a: 1}
-  - name: Pin 4
-    cell: {x: 19, y: 11}
-    radiusInFineCells: 0.45
-    color: {r: 1, g: 0.74, b: 0.12, a: 1}
+  pins: []
   obstacles:
   - name: Obstacle 1
     usesGridCells: 1
@@ -842,6 +828,30 @@ MonoBehaviour:
     gridCell: {x: 0, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 11}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 29
+    usesGridCells: 1
+    gridCell: {x: 4, y: 2}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 30
+    usesGridCells: 1
+    gridCell: {x: 4, y: 1}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 31
+    usesGridCells: 1
+    gridCell: {x: 4, y: 0}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}

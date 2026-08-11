@@ -4,7 +4,7 @@ using System;
 
 namespace GravityPuzzle
 {
-    [RequireComponent(typeof(SpriteRenderer), typeof(Rigidbody2D), typeof(BoxCollider2D))]
+    [RequireComponent(typeof(SpriteRenderer))]
     public class VoxelShard : MonoBehaviour
     {
         private SpriteRenderer spriteRenderer;
@@ -15,23 +15,19 @@ namespace GravityPuzzle
         private void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
-            rb = GetComponent<Rigidbody2D>();
-            col = GetComponent<BoxCollider2D>();
-            
-            gemFly = GetComponent<GemFlyToUI>();
-            if (gemFly == null) gemFly = gameObject.AddComponent<GemFlyToUI>();
         }
 
         public void InitializeIntact(Color color, Vector2 size, Sprite sprite)
         {
+            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
             spriteRenderer.color = color;
             spriteRenderer.sprite = sprite;
             spriteRenderer.sortingOrder = 5; 
             transform.localScale = new Vector3(size.x, size.y, 1f);
             transform.localRotation = Quaternion.identity;
             
-            rb.simulated = false;
-            col.enabled = false;
+            if (rb != null) rb.simulated = false;
+            if (col != null) col.enabled = false;
             gameObject.SetActive(true);
         }
 
@@ -41,11 +37,13 @@ namespace GravityPuzzle
             if (spriteRenderer != null)
                 spriteRenderer.maskInteraction = SpriteMaskInteraction.None;
 
+            if (col == null) col = gameObject.AddComponent<BoxCollider2D>();
             col.enabled = true;
             col.size = Vector2.one; 
             
             if (isGem)
             {
+                if (gemFly == null) gemFly = gameObject.AddComponent<GemFlyToUI>();
                 spriteRenderer.sortingOrder = 4; // Behind shredder disc
                 gemFly.Launch(
                     transform.position,
@@ -63,6 +61,7 @@ namespace GravityPuzzle
             }
             else
             {
+                if (rb == null) rb = gameObject.AddComponent<Rigidbody2D>();
                 spriteRenderer.sortingOrder = 4; // Behind shredder disc
                 rb.simulated = true;
                 rb.bodyType = RigidbodyType2D.Dynamic;

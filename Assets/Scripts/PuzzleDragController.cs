@@ -40,8 +40,18 @@ namespace GravityPuzzle
         // to guarantee it always snaps perfectly on its specific fine-cell alignment
         private readonly Dictionary<int, float> pieceStartingX = new Dictionary<int, float>();
 
+        public static PuzzleDragController Instance { get; private set; }
+        private bool hasMovingPieces = true;
+
+        public static void WakeUpGravity()
+        {
+            if (Instance != null)
+                Instance.hasMovingPieces = true;
+        }
+
         private void Awake()
         {
+            Instance = this;
             gameCamera = Camera.main;
             
             solidContactFilter = new ContactFilter2D();
@@ -315,8 +325,8 @@ namespace GravityPuzzle
 
         private static bool IsInShredderApproach(PuzzlePiece piece)
         {
-            ShredderCatchZone[] zones = Object.FindObjectsOfType<ShredderCatchZone>();
-            for (int i = 0; i < zones.Length; i++)
+            List<ShredderCatchZone> zones = ShredderCatchZone.ActiveZones;
+            for (int i = 0; i < zones.Count; i++)
             {
                 ShredderCatchZone zone = zones[i];
                 if (zone != null &&
@@ -331,8 +341,13 @@ namespace GravityPuzzle
 
         private void AdvanceManualGravity()
         {
+            if (selectedPiece == null && snappingTargetsX.Count == 0 && !hasMovingPieces)
+                return;
+
             RefreshActivePieces();
             activePieces.Sort(CompareGravityOrder);
+
+            bool anyPieceMoved = false;
 
             foreach (PuzzlePiece piece in activePieces)
             {
@@ -364,6 +379,7 @@ namespace GravityPuzzle
                     {
                         float moveX = Mathf.MoveTowards(currentX, targetX, 20f * Time.fixedDeltaTime) - currentX;
                         MoveSelectedBody(piece, new Vector2(moveX, 0f));
+                        anyPieceMoved = true;
                         
                         if (Mathf.Abs(body.position.x - currentX) < 0.0001f)
                         {
@@ -380,12 +396,23 @@ namespace GravityPuzzle
                     {
                         snappingTargetsX.Remove(pieceId);
                         if (CanOccupySnapPosition(piece, targetX))
+                        {
                             MoveBody(body, new Vector2(targetX, body.position.y));
+                            anyPieceMoved = true;
+                        }
                     }
                 }
                 
                 bool grounded = MovePieceDown(piece, requestedDistance);
+                if (!grounded && requestedDistance >= MinimumMoveDistance)
+                    anyPieceMoved = true;
+
                 fallingSpeeds[pieceId] = grounded ? 0f : fallingSpeed;
+            }
+
+            if (!anyPieceMoved && selectedPiece == null && snappingTargetsX.Count == 0)
+            {
+                hasMovingPieces = false;
             }
         }
 
@@ -683,6 +710,7 @@ namespace GravityPuzzle
             snappingTargetsX.Remove(pieceId);
             grabOffset = body.position - pointerPosition;
             dragTarget = body.position;
+            hasMovingPieces = true;
         }
 
         private void ReleasePiece()
@@ -712,6 +740,7 @@ namespace GravityPuzzle
             snappingTargetsX[pieceId] = snappedX;
 
             selectedPiece = null;
+            hasMovingPieces = true;
         }
 
         private Vector2 PointerWorldPosition(Vector2 screenPoint)
