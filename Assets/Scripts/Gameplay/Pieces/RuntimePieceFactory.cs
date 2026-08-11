@@ -5,6 +5,11 @@ namespace GravityPuzzle.Gameplay.Pieces
 {
     public static class RuntimePieceFactory
     {
+        private const string CollisionGeometryRootName = "Collision Geometry";
+        private const string GridBlockName = "Grid Block";
+        private const string BlockCellName = "Block Cell";
+        private const string HookCellName = "Hook Cell";
+
         private static Material sharedOutlineMaterial;
         private static IRuntimePieceRootProvider rootProvider = new GeneratedRuntimePieceRootProvider();
 
@@ -27,9 +32,43 @@ namespace GravityPuzzle.Gameplay.Pieces
         {
             RuntimePieceRoot root = rootProvider.Create(definition.name);
             GameObject piece = root.GameObject;
-            piece.transform.position = CellWorldPosition(level, definition.origin);
+            PrepareRoot(piece.transform, level, definition);
+            ConfigureBody(root.Body, level);
+            ConfigureComposite(root.CompositeCollider);
 
-            Rigidbody2D body = root.Body;
+            PieceRuntimeContent content = BuildRuntimeContent(
+                piece.transform,
+                level,
+                definition);
+
+            root.CompositeCollider.GenerateGeometry();
+            ConfigureOutline(root.Outline, root.CompositeCollider);
+
+            PuzzlePiece puzzlePiece = root.Piece;
+            ApplyPieceSetup(
+                puzzlePiece,
+                sourcePieceId,
+                definition,
+                root.CompositeCollider,
+                content);
+
+            return puzzlePiece;
+        }
+
+        private static void PrepareRoot(
+            Transform pieceTransform,
+            GravityLevelDefinition level,
+            PieceDefinition definition)
+        {
+            pieceTransform.position = CellWorldPosition(level, definition.origin);
+            pieceTransform.rotation = Quaternion.identity;
+            pieceTransform.localScale = Vector3.one;
+            ClearGeneratedContent(pieceTransform);
+        }
+
+        private static void ConfigureBody(Rigidbody2D body, GravityLevelDefinition level)
+        {
+            body.simulated = true;
             body.gravityScale = level.gravityScale;
             body.mass = 1f;
             body.bodyType = RigidbodyType2D.Kinematic;
@@ -38,19 +77,53 @@ namespace GravityPuzzle.Gameplay.Pieces
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             body.constraints = RigidbodyConstraints2D.FreezeRotation;
             body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+            body.velocity = Vector2.zero;
+            body.angularVelocity = 0f;
+            body.rotation = 0f;
+        }
 
-            CompositeCollider2D pieceComposite = root.CompositeCollider;
+        private static void ConfigureComposite(CompositeCollider2D pieceComposite)
+        {
+            pieceComposite.enabled = true;
             pieceComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
             pieceComposite.generationType = CompositeCollider2D.GenerationType.Synchronous;
             pieceComposite.edgeRadius = 0f;
+        }
 
+        private static void ApplyPieceSetup(
+            PuzzlePiece puzzlePiece,
+            int sourcePieceId,
+            PieceDefinition definition,
+            CompositeCollider2D pieceComposite,
+            PieceRuntimeContent content)
+        {
+            puzzlePiece.Configure(new PieceRuntimeSetup(
+                sourcePieceId,
+                Mathf.Max(1, content.ProgressUnits),
+                definition.color,
+                pieceComposite,
+                content.CollisionCells,
+                content.CollisionCellVisuals,
+                definition.frozenMoveCount,
+                definition.iceCounterFontSize,
+                definition.iceCounterTextColor,
+                definition.iceCounterOutlineColor,
+                definition.iceCounterOutlineWidth,
+                definition.iceCounterOffset));
+        }
+
+        private static PieceRuntimeContent BuildRuntimeContent(
+            Transform pieceTransform,
+            GravityLevelDefinition level,
+            PieceDefinition definition)
+        {
             float fineCellSize = 1f / level.subdivisions;
             List<PiecePartGeometry> parts = BuildPartGeometry(level, definition, fineCellSize, out int progressUnits);
             GetPiecePartBounds(parts, out Vector2 minimum, out Vector2 maximum);
             Vector2 collisionCentre = (minimum + maximum) * .5f;
 
-            GameObject collisionRootObject = new GameObject("Collision Geometry");
-            collisionRootObject.transform.SetParent(piece.transform, false);
+            GameObject collisionRootObject = new GameObject(CollisionGeometryRootName);
+            collisionRootObject.transform.SetParent(pieceTransform, false);
             collisionRootObject.transform.localPosition = collisionCentre;
 
             List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(parts.Count);
@@ -58,7 +131,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             for (int index = 0; index < parts.Count; index++)
             {
                 collisionCells.Add(CreatePiecePart(
-                    piece.transform,
+                    pieceTransform,
                     collisionRootObject.transform,
                     collisionCentre,
                     parts[index],
@@ -67,25 +140,31 @@ namespace GravityPuzzle.Gameplay.Pieces
                 collisionCellVisuals.Add(cellVisual);
             }
 
-            pieceComposite.GenerateGeometry();
-            ConfigureOutline(root.Outline, pieceComposite);
-
-            PuzzlePiece puzzlePiece = root.Piece;
-            puzzlePiece.Configure(new PieceRuntimeSetup(
-                sourcePieceId,
-                Mathf.Max(1, progressUnits),
-                definition.color,
-                pieceComposite,
+            return new PieceRuntimeContent(
+                progressUnits,
                 collisionCells,
-                collisionCellVisuals,
-                definition.frozenMoveCount,
-                definition.iceCounterFontSize,
-                definition.iceCounterTextColor,
-                definition.iceCounterOutlineColor,
-                definition.iceCounterOutlineWidth,
-                definition.iceCounterOffset));
+                collisionCellVisuals);
+        }
 
-            return puzzlePiece;
+        private static void ClearGeneratedContent(Transform pieceTransform)
+        {
+            for (int childIndex = pieceTransform.childCount - 1; childIndex >= 0; childIndex--)
+            {
+                Transform child = pieceTransform.GetChild(childIndex);
+                if (!IsGeneratedContentRoot(child.name))
+                    continue;
+
+                child.gameObject.SetActive(false);
+                Object.Destroy(child.gameObject);
+            }
+        }
+
+        private static bool IsGeneratedContentRoot(string objectName)
+        {
+            return objectName == CollisionGeometryRootName ||
+                   objectName == GridBlockName ||
+                   objectName == BlockCellName ||
+                   objectName == HookCellName;
         }
 
         private static List<PiecePartGeometry> BuildPartGeometry(
@@ -123,7 +202,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 Vector2 localPosition =
                     GridCellWorldPosition(level, blockCount.Key) -
                     CellWorldPosition(level, definition.origin);
-                parts.Add(new PiecePartGeometry("Grid Block", localPosition, Vector2.one));
+                parts.Add(new PiecePartGeometry(GridBlockName, localPosition, Vector2.one));
             }
 
             for (int index = 0; index < definition.cells.Count; index++)
@@ -138,7 +217,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                     continue;
 
                 Vector2 localPosition = (Vector2)rotated * fineCellSize;
-                string partName = cell.type == PieceCellType.Hook ? "Hook Cell" : "Block Cell";
+                string partName = cell.type == PieceCellType.Hook ? HookCellName : BlockCellName;
                 parts.Add(new PiecePartGeometry(
                     partName,
                     localPosition,
@@ -151,8 +230,10 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         private static void ConfigureOutline(LineRenderer outline, CompositeCollider2D pieceComposite)
         {
+            outline.enabled = true;
             outline.useWorldSpace = false;
             outline.loop = true;
+            outline.positionCount = 0;
             outline.startWidth = 0.05f;
             outline.endWidth = 0.05f;
             outline.numCornerVertices = 4;
@@ -262,6 +343,23 @@ namespace GravityPuzzle.Gameplay.Pieces
             public string Name { get; }
             public Vector2 LocalPosition { get; }
             public Vector2 Size { get; }
+        }
+
+        private readonly struct PieceRuntimeContent
+        {
+            public PieceRuntimeContent(
+                int progressUnits,
+                List<BoxCollider2D> collisionCells,
+                List<SpriteRenderer> collisionCellVisuals)
+            {
+                ProgressUnits = progressUnits;
+                CollisionCells = collisionCells;
+                CollisionCellVisuals = collisionCellVisuals;
+            }
+
+            public int ProgressUnits { get; }
+            public List<BoxCollider2D> CollisionCells { get; }
+            public List<SpriteRenderer> CollisionCellVisuals { get; }
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GravityPuzzle.Bootstrap;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
@@ -152,6 +153,7 @@ namespace GravityPuzzle
             boardState.SetTimeLimit(level.timeLimit);
             boardState.EnableSequentialLevels();
             boardState.InitializeBoardSnapshot(LevelBoardSnapshotBuilder.Build(level));
+            board.AddComponent<RuntimePieceFactoryBootstrap>();
             board.AddComponent<PuzzleDragController>();
 
             float frameThickness = GravityGridMetrics.FrameThicknessInCells;
