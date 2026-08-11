@@ -20,6 +20,11 @@ MonoBehaviour:
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   gravityScale: 1.5
+  useAutomaticCameraFit: 1
+  fixedCameraSize: 6
+  cameraViewportWidth: 0.88
+  cameraViewportHeight: 0.7
+  useRuntimeSafeAreaForCameraFit: 0
   exitWidth: 2
   shredderCount: 2
   shredderRadius: 0.42
@@ -104,7 +109,7 @@ MonoBehaviour:
       type: 0
   - name: Piece 2
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-    origin: {x: -4, y: 18}
+    origin: {x: -2, y: 18}
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36

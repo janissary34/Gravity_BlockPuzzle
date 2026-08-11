@@ -143,7 +143,7 @@ namespace GravityPuzzle
         public static void Build(GravityLevelDefinition level)
         {
             float halfHeight = level.boardRows * .5f;
-            float cameraSize = ResolveCameraSize(level);
+            float cameraSize = 10f;
             PrototypeBootstrap.ConfigureCamera(cameraSize, level.backgroundColor);
 
             GameObject board = new GameObject($"Level - {level.levelName}");
