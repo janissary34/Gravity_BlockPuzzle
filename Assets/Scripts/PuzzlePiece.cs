@@ -1,7 +1,9 @@
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 using TMPro;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Infrastructure.Pooling;
 
 namespace GravityPuzzle
 {
@@ -9,8 +11,8 @@ namespace GravityPuzzle
     /// Identifies the root of one complete movable puzzle piece.
     /// Its child colliders form the body and the smaller hook geometry.
     /// </summary>
-    [RequireComponent(typeof(Rigidbody2D))]
-    public sealed class PuzzlePiece : MonoBehaviour
+    [RequireComponent(typeof(Rigidbody2D), typeof(CompositeCollider2D), typeof(LineRenderer))]
+    public sealed class PuzzlePiece : MonoBehaviour, IPoolable
     {
         public readonly struct RemovedCell
         {
@@ -40,6 +42,8 @@ namespace GravityPuzzle
 
         public static IReadOnlyList<PuzzlePiece> ActivePieces => activePieces;
         public Rigidbody2D Body { get; private set; }
+        public CompositeCollider2D CompositeCollider => compositeCollider;
+        public LineRenderer Outline => rootOutline;
         public bool IsSelected => isSelected;
         public bool IsBeingShredded => beingShredded;
         public bool IsFrozen { get; private set; }
@@ -92,6 +96,7 @@ namespace GravityPuzzle
         private readonly List<SpriteRenderer> iceRenderers = new List<SpriteRenderer>();
         private Transform selectionVisualsRoot;
         private CompositeCollider2D compositeCollider;
+        private LineRenderer rootOutline;
         private List<BoxCollider2D> collisionCells;
         private List<Vector2> fullCollisionCellSizes;
         private List<SpriteRenderer> collisionCellVisuals;
@@ -103,6 +108,7 @@ namespace GravityPuzzle
         private bool destructionReported;
         private int frozenUntilDestroyedCount;
         private TextMeshPro iceCounterText;
+        private Action<PuzzlePiece> returnToPool;
         private float iceCounterFontSize = 36f;
         private Color iceCounterTextColor = Color.black;
         private Color iceCounterOutlineColor = Color.white;
@@ -118,6 +124,8 @@ namespace GravityPuzzle
         private void Awake()
         {
             Body = GetComponent<Rigidbody2D>();
+            compositeCollider = GetComponent<CompositeCollider2D>();
+            rootOutline = GetComponent<LineRenderer>();
         }
 
         private void OnEnable()
@@ -132,6 +140,51 @@ namespace GravityPuzzle
         }
 
         private void OnDestroy()
+        {
+            MarkDespawnedInBoard();
+        }
+
+        public void OnSpawn()
+        {
+            beingShredded = false;
+            destructionReported = false;
+            useFullCollisionGeometry = false;
+            isSelected = false;
+            IsFrozen = false;
+            SourcePieceId = -1;
+            if (rootOutline != null)
+                rootOutline.enabled = true;
+            if (compositeCollider != null)
+                compositeCollider.enabled = true;
+            InvalidateVoxelCache();
+        }
+
+        public void OnDespawn()
+        {
+            isSelected = false;
+            returnToPool = null;
+            InvalidateVoxelCache();
+        }
+
+        public void ConfigurePoolReturn(Action<PuzzlePiece> returnHandler)
+        {
+            returnToPool = returnHandler;
+        }
+
+        public void ReleaseInstance()
+        {
+            MarkDespawnedInBoard();
+
+            if (returnToPool != null)
+            {
+                returnToPool(this);
+                return;
+            }
+
+            Destroy(gameObject);
+        }
+
+        private void MarkDespawnedInBoard()
         {
             if (beingShredded || destructionReported)
                 PrototypeBoard.Active?.TrySetPieceState(this, PieceState.Despawned);
@@ -250,15 +303,14 @@ namespace GravityPuzzle
             // removed temporarily so adjacent pieces cannot jam against each other.
             PrototypeBootstrap.SetDraggingFriction(this, isSelected);
 
-            LineRenderer outline = GetComponent<LineRenderer>();
-            if (outline != null)
+            if (rootOutline != null)
             {
-                outline.startWidth = isSelected ? 0.08f : 0.05f;
-                outline.endWidth = isSelected ? 0.08f : 0.05f;
+                rootOutline.startWidth = isSelected ? 0.08f : 0.05f;
+                rootOutline.endWidth = isSelected ? 0.08f : 0.05f;
                 Color outlineColor = isSelected ? Color.white : Color.black;
-                outline.startColor = outlineColor;
-                outline.endColor = outlineColor;
-                outline.sortingOrder = isSelected ? 20 : 10;
+                rootOutline.startColor = outlineColor;
+                rootOutline.endColor = outlineColor;
+                rootOutline.sortingOrder = isSelected ? 20 : 10;
             }
         }
 
@@ -276,6 +328,7 @@ namespace GravityPuzzle
 
         public void Configure(PieceRuntimeSetup setup)
         {
+            PrepareForRuntimeSetup();
             ConfigureSourcePieceId(setup.SourcePieceId);
             ConfigureProgressUnits(setup.ProgressUnits);
             ConfigureVisualColor(setup.VisualColor);
@@ -290,6 +343,23 @@ namespace GravityPuzzle
                 setup.IceCounterOutlineColor,
                 setup.IceCounterOutlineWidth,
                 setup.IceCounterOffset);
+        }
+
+        private void PrepareForRuntimeSetup()
+        {
+            normalRenderers.Clear();
+            selectedRenderers.Clear();
+            outlineRenderers.Clear();
+            iceRenderers.Clear();
+            selectionVisualsRoot = null;
+            selectionVisualsBuilt = false;
+            iceCounterText = null;
+            beingShredded = false;
+            destructionReported = false;
+            useFullCollisionGeometry = false;
+            isSelected = false;
+            IsFrozen = false;
+            InvalidateVoxelCache();
         }
 
         public void ConfigureProgressUnits(int units)
@@ -490,14 +560,13 @@ namespace GravityPuzzle
             InvalidateVoxelCache();
 
             // Avoid leaving the original silhouette around a modified piece.
-            LineRenderer perimeter = GetComponent<LineRenderer>();
-            if (perimeter != null)
-                perimeter.enabled = false;
+            if (rootOutline != null)
+                rootOutline.enabled = false;
 
             if (collisionCells.Count == 0)
             {
                 ReportDestroyed();
-                Destroy(gameObject);
+                ReleaseInstance();
             }
             else
             {

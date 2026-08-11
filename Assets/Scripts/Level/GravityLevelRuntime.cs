@@ -665,7 +665,7 @@ namespace GravityPuzzle
 
             Vector2 contactPoint = other.ClosestPoint(shredderCentre);
             CreateFragments(piece, contactPoint);
-            Destroy(piece.gameObject);
+            piece.ReleaseInstance();
         }
 
         private static void CreateFragments(PuzzlePiece piece, Vector2 contactPoint)

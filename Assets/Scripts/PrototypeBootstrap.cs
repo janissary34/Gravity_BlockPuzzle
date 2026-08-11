@@ -826,7 +826,7 @@ namespace GravityPuzzle
                 if (piece.transform.position.y < removalHeight)
                 {
                     piece.ReportDestroyed();
-                    Object.Destroy(piece.gameObject);
+                    piece.ReleaseInstance();
                 }
             }
 

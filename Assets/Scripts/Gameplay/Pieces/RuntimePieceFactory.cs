@@ -6,16 +6,30 @@ namespace GravityPuzzle.Gameplay.Pieces
     public static class RuntimePieceFactory
     {
         private static Material sharedOutlineMaterial;
+        private static IRuntimePieceRootProvider rootProvider = new GeneratedRuntimePieceRootProvider();
+
+        public static void SetRootProvider(IRuntimePieceRootProvider provider)
+        {
+            rootProvider = provider ?? new GeneratedRuntimePieceRootProvider();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetRootProvider()
+        {
+            rootProvider = new GeneratedRuntimePieceRootProvider();
+            sharedOutlineMaterial = null;
+        }
 
         public static PuzzlePiece Create(
             GravityLevelDefinition level,
             PieceDefinition definition,
             int sourcePieceId)
         {
-            GameObject piece = new GameObject(definition.name);
+            RuntimePieceRoot root = rootProvider.Create(definition.name);
+            GameObject piece = root.GameObject;
             piece.transform.position = CellWorldPosition(level, definition.origin);
 
-            Rigidbody2D body = piece.AddComponent<Rigidbody2D>();
+            Rigidbody2D body = root.Body;
             body.gravityScale = level.gravityScale;
             body.mass = 1f;
             body.bodyType = RigidbodyType2D.Kinematic;
@@ -25,7 +39,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             body.constraints = RigidbodyConstraints2D.FreezeRotation;
             body.sleepMode = RigidbodySleepMode2D.NeverSleep;
 
-            CompositeCollider2D pieceComposite = piece.AddComponent<CompositeCollider2D>();
+            CompositeCollider2D pieceComposite = root.CompositeCollider;
             pieceComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
             pieceComposite.generationType = CompositeCollider2D.GenerationType.Synchronous;
             pieceComposite.edgeRadius = 0f;
@@ -54,9 +68,9 @@ namespace GravityPuzzle.Gameplay.Pieces
             }
 
             pieceComposite.GenerateGeometry();
-            ConfigureOutline(piece, pieceComposite);
+            ConfigureOutline(root.Outline, pieceComposite);
 
-            PuzzlePiece puzzlePiece = piece.AddComponent<PuzzlePiece>();
+            PuzzlePiece puzzlePiece = root.Piece;
             puzzlePiece.Configure(new PieceRuntimeSetup(
                 sourcePieceId,
                 Mathf.Max(1, progressUnits),
@@ -135,9 +149,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             return parts;
         }
 
-        private static void ConfigureOutline(GameObject piece, CompositeCollider2D pieceComposite)
+        private static void ConfigureOutline(LineRenderer outline, CompositeCollider2D pieceComposite)
         {
-            LineRenderer outline = piece.AddComponent<LineRenderer>();
             outline.useWorldSpace = false;
             outline.loop = true;
             outline.startWidth = 0.05f;

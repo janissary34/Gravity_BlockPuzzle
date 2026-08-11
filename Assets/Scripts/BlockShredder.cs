@@ -338,7 +338,7 @@ namespace GravityPuzzle
 
             if (piece != null)
             {
-                Destroy(piece.gameObject);
+                piece.ReleaseInstance();
             }
         }
 
