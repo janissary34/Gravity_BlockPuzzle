@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
+using GravityPuzzle.Gameplay.Pieces;
 
 namespace GravityPuzzle
 {
@@ -42,6 +43,7 @@ namespace GravityPuzzle
         public bool IsSelected => isSelected;
         public bool IsBeingShredded => beingShredded;
         public bool IsFrozen { get; private set; }
+        public int SourcePieceId { get; private set; } = -1;
         /// <summary>Authored board-block units represented by this draggable piece.</summary>
         public int ProgressUnits { get; private set; } = 1;
         /// <summary>Unclaimed progress remaining after cell-level booster hits.</summary>
@@ -127,6 +129,12 @@ namespace GravityPuzzle
         private void OnDisable()
         {
             activePieces.Remove(this);
+        }
+
+        private void OnDestroy()
+        {
+            if (beingShredded || destructionReported)
+                PrototypeBoard.Active?.TrySetPieceState(this, PieceState.Despawned);
         }
 
         private List<Vector2Int> cachedActiveVoxelOffsets;
@@ -266,10 +274,33 @@ namespace GravityPuzzle
             ConfigureCollisionGeometry(composite, cells, cellVisuals, cellSizes);
         }
 
+        public void Configure(PieceRuntimeSetup setup)
+        {
+            ConfigureSourcePieceId(setup.SourcePieceId);
+            ConfigureProgressUnits(setup.ProgressUnits);
+            ConfigureVisualColor(setup.VisualColor);
+            ConfigureCollisionGeometry(
+                setup.CompositeCollider,
+                setup.CollisionCells,
+                setup.CollisionCellVisuals);
+            ConfigureFreeze(
+                setup.FrozenMoveCount,
+                setup.IceCounterFontSize,
+                setup.IceCounterTextColor,
+                setup.IceCounterOutlineColor,
+                setup.IceCounterOutlineWidth,
+                setup.IceCounterOffset);
+        }
+
         public void ConfigureProgressUnits(int units)
         {
             ProgressUnits = Mathf.Max(1, units);
             RemainingProgressUnits = ProgressUnits;
+        }
+
+        public void ConfigureSourcePieceId(int sourcePieceId)
+        {
+            SourcePieceId = sourcePieceId;
         }
 
         public void ConfigureRemainingProgress(float units)

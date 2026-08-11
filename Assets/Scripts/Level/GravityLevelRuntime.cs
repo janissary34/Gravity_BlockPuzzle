@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Gravity;
+using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -18,7 +19,6 @@ namespace GravityPuzzle
         private static int currentLevelIndex = -1;
         private static bool levelSequenceInitialized;
         private static bool previewLaunchRequested;
-        private static Material sharedOutlineMaterial;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetLevelSequence()
@@ -167,8 +167,8 @@ namespace GravityPuzzle
             foreach (PinDefinition pin in level.pins)
                 CreatePin(level, pin);
 
-            foreach (PieceDefinition piece in level.pieces)
-                CreatePiece(level, piece);
+            for (int pieceIndex = 0; pieceIndex < level.pieces.Count; pieceIndex++)
+                RuntimePieceFactory.Create(level, level.pieces[pieceIndex], pieceIndex);
 
             ValidateLevelSnapshotRuntimeState(level, boardState);
 
@@ -563,223 +563,6 @@ namespace GravityPuzzle
                 CellWorldPosition(level, pin.cell),
                 pin.radiusInFineCells / level.subdivisions,
                 pin.color);
-        }
-
-        private static void CreatePiece(GravityLevelDefinition level, PieceDefinition definition)
-        {
-            GameObject piece = new GameObject(definition.name);
-            piece.transform.position = CellWorldPosition(level, definition.origin);
-
-            Rigidbody2D body = piece.AddComponent<Rigidbody2D>();
-            body.gravityScale = level.gravityScale;
-            body.mass = 1f;
-            body.bodyType = RigidbodyType2D.Kinematic;
-            body.useFullKinematicContacts = true;
-            body.interpolation = RigidbodyInterpolation2D.None;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            // Pieces stay upright during normal board play; BlockShredder releases
-            // rotation only at gear contact, then contains the piece immediately.
-            body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-
-            CompositeCollider2D pieceComposite = piece.AddComponent<CompositeCollider2D>();
-            pieceComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
-            pieceComposite.generationType = CompositeCollider2D.GenerationType.Synchronous;
-            pieceComposite.edgeRadius = 0f;
-
-            float fineCellSize = 1f / level.subdivisions;
-
-            List<PiecePartGeometry> parts = new List<PiecePartGeometry>();
-            Dictionary<Vector2Int, int> blockCounts = new Dictionary<Vector2Int, int>();
-            foreach (PieceCellDefinition cell in definition.cells)
-            {
-                Vector2Int rotated = QuarterTurnUtility.Rotate(cell.localCell, definition.quarterTurns);
-                if (cell.type != PieceCellType.Block)
-                    continue;
-
-                Vector2Int absolute = definition.origin + rotated;
-                Vector2Int gridCell = new Vector2Int(
-                    Mathf.FloorToInt((float)absolute.x / level.subdivisions),
-                    Mathf.FloorToInt((float)absolute.y / level.subdivisions));
-                blockCounts.TryGetValue(gridCell, out int count);
-                blockCounts[gridCell] = count + 1;
-            }
-
-            HashSet<Vector2Int> completeModules = new HashSet<Vector2Int>();
-            int cellsPerModule = level.subdivisions * level.subdivisions;
-            foreach (KeyValuePair<Vector2Int, int> blockCount in blockCounts)
-            {
-                if (blockCount.Value != cellsPerModule)
-                    continue;
-
-                completeModules.Add(blockCount.Key);
-                Vector2 localPosition =
-                    GridCellWorldPosition(level, blockCount.Key) -
-                    CellWorldPosition(level, definition.origin);
-                parts.Add(new PiecePartGeometry("Grid Block", localPosition, Vector2.one));
-            }
-
-            foreach (PieceCellDefinition cell in definition.cells)
-            {
-                Vector2Int rotated = QuarterTurnUtility.Rotate(cell.localCell, definition.quarterTurns);
-                Vector2Int absolute = definition.origin + rotated;
-                Vector2Int gridCell = new Vector2Int(
-                    Mathf.FloorToInt((float)absolute.x / level.subdivisions),
-                    Mathf.FloorToInt((float)absolute.y / level.subdivisions));
-                if (cell.type == PieceCellType.Block && completeModules.Contains(gridCell))
-                    continue;
-
-                Vector2 localPosition = (Vector2)rotated * fineCellSize;
-                string partName = cell.type == PieceCellType.Hook ? "Hook Cell" : "Block Cell";
-                parts.Add(new PiecePartGeometry(
-                    partName,
-                    localPosition,
-                    Vector2.one * fineCellSize));
-            }
-
-            GetPiecePartBounds(parts, out Vector2 minimum, out Vector2 maximum);
-            Vector2 collisionCentre = (minimum + maximum) * .5f;
-
-            GameObject collisionRootObject = new GameObject("Collision Geometry");
-            collisionRootObject.transform.SetParent(piece.transform, false);
-            collisionRootObject.transform.localPosition = collisionCentre;
-
-            List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(parts.Count);
-            List<SpriteRenderer> collisionCellVisuals = new List<SpriteRenderer>(parts.Count);
-            foreach (PiecePartGeometry part in parts)
-            {
-                collisionCells.Add(CreatePiecePart(
-                    piece.transform,
-                    collisionRootObject.transform,
-                    collisionCentre,
-                    part,
-                    definition.color,
-                    out SpriteRenderer cellVisual));
-                collisionCellVisuals.Add(cellVisual);
-            }
-
-            pieceComposite.GenerateGeometry();
-
-            // Draw a crisp black strip around the outer perimeter of the shape to separate pieces visually
-            LineRenderer outline = piece.AddComponent<LineRenderer>();
-            outline.useWorldSpace = false;
-            outline.loop = true;
-            outline.startWidth = 0.05f;
-            outline.endWidth = 0.05f;
-            outline.numCornerVertices = 4;
-            outline.numCapVertices = 4;
-            outline.sortingOrder = 10; // Draw on top of blocks to clearly separate adjacent pieces
-            
-            // Standard shared sprite material so all pieces batch together
-            if (sharedOutlineMaterial == null)
-            {
-                Shader shader = Shader.Find("Sprites/Default");
-                if (shader != null)
-                    sharedOutlineMaterial = new Material(shader) { name = "Shared Outline Material" };
-            }
-            if (sharedOutlineMaterial != null)
-                outline.sharedMaterial = sharedOutlineMaterial;
-
-            Color outlineColor = Color.black;
-            outline.startColor = outlineColor;
-            outline.endColor = outlineColor;
-
-            if (pieceComposite.pathCount > 0)
-            {
-                int pointCount = pieceComposite.GetPathPointCount(0);
-                outline.positionCount = pointCount;
-                Vector2[] path = new Vector2[pointCount];
-                pieceComposite.GetPath(0, path);
-                for (int i = 0; i < pointCount; i++)
-                {
-                    outline.SetPosition(i, new Vector3(path[i].x, path[i].y, 0f));
-                }
-            }
-
-            PuzzlePiece puzzlePiece = piece.AddComponent<PuzzlePiece>();
-            // A progress unit is one authored board block (one coarse grid module),
-            // not one fine collision cell or one decorative voxel shard.
-            puzzlePiece.ConfigureProgressUnits(Mathf.Max(1, blockCounts.Count));
-            puzzlePiece.ConfigureVisualColor(definition.color);
-            puzzlePiece.ConfigureCollisionGeometry(
-                pieceComposite,
-                collisionCells,
-                collisionCellVisuals);
-            puzzlePiece.ConfigureFreeze(
-                definition.frozenMoveCount,
-                definition.iceCounterFontSize,
-                definition.iceCounterTextColor,
-                definition.iceCounterOutlineColor,
-                definition.iceCounterOutlineWidth,
-                definition.iceCounterOffset);
-        }
-
-        private static BoxCollider2D CreatePiecePart(
-            Transform visualParent,
-            Transform collisionRoot,
-            Vector2 collisionCentre,
-            PiecePartGeometry part,
-            Color color,
-            out SpriteRenderer cellVisual)
-        {
-            GameObject visual = new GameObject(part.name);
-            visual.transform.SetParent(visualParent, false);
-            visual.transform.localPosition = part.localPosition;
-            
-            // Add a disabled SpriteRenderer to satisfy PuzzlePiece's internal logic
-            cellVisual = visual.AddComponent<SpriteRenderer>();
-            cellVisual.sprite = PrototypeBootstrap.GetSquareSprite();
-            cellVisual.color = color;
-            cellVisual.enabled = false;
-            
-            // Build the actual visible 3x3 voxel grid
-            VoxelBlockBuilder.BuildVoxelGrid(visual.transform, part.name, part.size, color);
-
-            GameObject colliderObject = new GameObject($"{part.name} Collider");
-            colliderObject.transform.SetParent(collisionRoot, false);
-            colliderObject.transform.localPosition = part.localPosition - collisionCentre;
-            BoxCollider2D partCollider = colliderObject.AddComponent<BoxCollider2D>();
-            partCollider.size = part.size;
-            // PuzzlePiece applies clearance to this individual modular cell.
-            // Its centre never moves relative to the corresponding artwork.
-            partCollider.edgeRadius = 0f;
-            partCollider.usedByComposite = true;
-            return partCollider;
-        }
-
-        private static void GetPiecePartBounds(
-            List<PiecePartGeometry> parts,
-            out Vector2 minimum,
-            out Vector2 maximum)
-        {
-            minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
-            maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
-            foreach (PiecePartGeometry part in parts)
-            {
-                Vector2 halfSize = part.size * .5f;
-                minimum = Vector2.Min(minimum, part.localPosition - halfSize);
-                maximum = Vector2.Max(maximum, part.localPosition + halfSize);
-            }
-
-            if (parts.Count == 0)
-            {
-                minimum = Vector2.zero;
-                maximum = Vector2.one * .01f;
-            }
-        }
-
-        private readonly struct PiecePartGeometry
-        {
-            public readonly string name;
-            public readonly Vector2 localPosition;
-            public readonly Vector2 size;
-
-            public PiecePartGeometry(string name, Vector2 localPosition, Vector2 size)
-            {
-                this.name = name;
-                this.localPosition = localPosition;
-                this.size = size;
-            }
         }
 
         private static Vector2 CellWorldPosition(GravityLevelDefinition level, Vector2Int cell)

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using GravityPuzzle.Core.Grid;
+using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -692,6 +693,59 @@ namespace GravityPuzzle
             BoardSnapshot = snapshot;
         }
 
+        public bool TryGetPieceModel(PuzzlePiece piece, out PieceModel model)
+        {
+            model = null;
+            return piece != null &&
+                   BoardSnapshot != null &&
+                   BoardSnapshot.TryGetPiece(piece.SourcePieceId, out model);
+        }
+
+        public bool TrySetPieceState(PuzzlePiece piece, PieceState state)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            model.SetState(state);
+            return true;
+        }
+
+        public bool TryClearPieceFromGrid(PuzzlePiece piece, PieceState state)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            BoardSnapshot.Grid.ClearPiece(model);
+            model.SetState(state);
+            return true;
+        }
+
+        public bool TryMovePieceOnGrid(
+            PuzzlePiece piece,
+            GridCoordinate targetAnchor,
+            out GridPlacementResult result)
+        {
+            result = GridPlacementResult.Failure(
+                GridPlacementFailureReason.EmptyPiece,
+                targetAnchor,
+                GridCellState.Empty,
+                default);
+
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
+                model,
+                targetAnchor,
+                piece.SourcePieceId,
+                out result);
+
+            if (moved)
+                model.SetState(PieceState.Placed);
+
+            return moved;
+        }
+
         public void StartTimer()
         {
             IsTimerStarted = true;
@@ -702,6 +756,7 @@ namespace GravityPuzzle
             if (!IsLevelRunning || destroyedPiece == null)
                 return;
 
+            TryClearPieceFromGrid(destroyedPiece, PieceState.Shredding);
             DestroyedPieceCount++;
             PuzzleDragController.WakeUpGravity();
             IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;

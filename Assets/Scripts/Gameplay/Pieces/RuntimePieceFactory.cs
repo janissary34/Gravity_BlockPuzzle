@@ -1,0 +1,254 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace GravityPuzzle.Gameplay.Pieces
+{
+    public static class RuntimePieceFactory
+    {
+        private static Material sharedOutlineMaterial;
+
+        public static PuzzlePiece Create(
+            GravityLevelDefinition level,
+            PieceDefinition definition,
+            int sourcePieceId)
+        {
+            GameObject piece = new GameObject(definition.name);
+            piece.transform.position = CellWorldPosition(level, definition.origin);
+
+            Rigidbody2D body = piece.AddComponent<Rigidbody2D>();
+            body.gravityScale = level.gravityScale;
+            body.mass = 1f;
+            body.bodyType = RigidbodyType2D.Kinematic;
+            body.useFullKinematicContacts = true;
+            body.interpolation = RigidbodyInterpolation2D.None;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+
+            CompositeCollider2D pieceComposite = piece.AddComponent<CompositeCollider2D>();
+            pieceComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+            pieceComposite.generationType = CompositeCollider2D.GenerationType.Synchronous;
+            pieceComposite.edgeRadius = 0f;
+
+            float fineCellSize = 1f / level.subdivisions;
+            List<PiecePartGeometry> parts = BuildPartGeometry(level, definition, fineCellSize, out int progressUnits);
+            GetPiecePartBounds(parts, out Vector2 minimum, out Vector2 maximum);
+            Vector2 collisionCentre = (minimum + maximum) * .5f;
+
+            GameObject collisionRootObject = new GameObject("Collision Geometry");
+            collisionRootObject.transform.SetParent(piece.transform, false);
+            collisionRootObject.transform.localPosition = collisionCentre;
+
+            List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(parts.Count);
+            List<SpriteRenderer> collisionCellVisuals = new List<SpriteRenderer>(parts.Count);
+            for (int index = 0; index < parts.Count; index++)
+            {
+                collisionCells.Add(CreatePiecePart(
+                    piece.transform,
+                    collisionRootObject.transform,
+                    collisionCentre,
+                    parts[index],
+                    definition.color,
+                    out SpriteRenderer cellVisual));
+                collisionCellVisuals.Add(cellVisual);
+            }
+
+            pieceComposite.GenerateGeometry();
+            ConfigureOutline(piece, pieceComposite);
+
+            PuzzlePiece puzzlePiece = piece.AddComponent<PuzzlePiece>();
+            puzzlePiece.Configure(new PieceRuntimeSetup(
+                sourcePieceId,
+                Mathf.Max(1, progressUnits),
+                definition.color,
+                pieceComposite,
+                collisionCells,
+                collisionCellVisuals,
+                definition.frozenMoveCount,
+                definition.iceCounterFontSize,
+                definition.iceCounterTextColor,
+                definition.iceCounterOutlineColor,
+                definition.iceCounterOutlineWidth,
+                definition.iceCounterOffset));
+
+            return puzzlePiece;
+        }
+
+        private static List<PiecePartGeometry> BuildPartGeometry(
+            GravityLevelDefinition level,
+            PieceDefinition definition,
+            float fineCellSize,
+            out int progressUnits)
+        {
+            List<PiecePartGeometry> parts = new List<PiecePartGeometry>();
+            Dictionary<Vector2Int, int> blockCounts = new Dictionary<Vector2Int, int>();
+
+            for (int index = 0; index < definition.cells.Count; index++)
+            {
+                PieceCellDefinition cell = definition.cells[index];
+                Vector2Int rotated = QuarterTurnUtility.Rotate(cell.localCell, definition.quarterTurns);
+                if (cell.type != PieceCellType.Block)
+                    continue;
+
+                Vector2Int absolute = definition.origin + rotated;
+                Vector2Int gridCell = new Vector2Int(
+                    Mathf.FloorToInt((float)absolute.x / level.subdivisions),
+                    Mathf.FloorToInt((float)absolute.y / level.subdivisions));
+                blockCounts.TryGetValue(gridCell, out int count);
+                blockCounts[gridCell] = count + 1;
+            }
+
+            HashSet<Vector2Int> completeModules = new HashSet<Vector2Int>();
+            int cellsPerModule = level.subdivisions * level.subdivisions;
+            foreach (KeyValuePair<Vector2Int, int> blockCount in blockCounts)
+            {
+                if (blockCount.Value != cellsPerModule)
+                    continue;
+
+                completeModules.Add(blockCount.Key);
+                Vector2 localPosition =
+                    GridCellWorldPosition(level, blockCount.Key) -
+                    CellWorldPosition(level, definition.origin);
+                parts.Add(new PiecePartGeometry("Grid Block", localPosition, Vector2.one));
+            }
+
+            for (int index = 0; index < definition.cells.Count; index++)
+            {
+                PieceCellDefinition cell = definition.cells[index];
+                Vector2Int rotated = QuarterTurnUtility.Rotate(cell.localCell, definition.quarterTurns);
+                Vector2Int absolute = definition.origin + rotated;
+                Vector2Int gridCell = new Vector2Int(
+                    Mathf.FloorToInt((float)absolute.x / level.subdivisions),
+                    Mathf.FloorToInt((float)absolute.y / level.subdivisions));
+                if (cell.type == PieceCellType.Block && completeModules.Contains(gridCell))
+                    continue;
+
+                Vector2 localPosition = (Vector2)rotated * fineCellSize;
+                string partName = cell.type == PieceCellType.Hook ? "Hook Cell" : "Block Cell";
+                parts.Add(new PiecePartGeometry(
+                    partName,
+                    localPosition,
+                    Vector2.one * fineCellSize));
+            }
+
+            progressUnits = blockCounts.Count;
+            return parts;
+        }
+
+        private static void ConfigureOutline(GameObject piece, CompositeCollider2D pieceComposite)
+        {
+            LineRenderer outline = piece.AddComponent<LineRenderer>();
+            outline.useWorldSpace = false;
+            outline.loop = true;
+            outline.startWidth = 0.05f;
+            outline.endWidth = 0.05f;
+            outline.numCornerVertices = 4;
+            outline.numCapVertices = 4;
+            outline.sortingOrder = 10;
+
+            if (sharedOutlineMaterial == null)
+            {
+                Shader shader = Shader.Find("Sprites/Default");
+                if (shader != null)
+                    sharedOutlineMaterial = new Material(shader) { name = "Shared Outline Material" };
+            }
+
+            if (sharedOutlineMaterial != null)
+                outline.sharedMaterial = sharedOutlineMaterial;
+
+            outline.startColor = Color.black;
+            outline.endColor = Color.black;
+
+            if (pieceComposite.pathCount <= 0)
+                return;
+
+            int pointCount = pieceComposite.GetPathPointCount(0);
+            outline.positionCount = pointCount;
+            Vector2[] path = new Vector2[pointCount];
+            pieceComposite.GetPath(0, path);
+            for (int index = 0; index < pointCount; index++)
+                outline.SetPosition(index, new Vector3(path[index].x, path[index].y, 0f));
+        }
+
+        private static BoxCollider2D CreatePiecePart(
+            Transform visualParent,
+            Transform collisionRoot,
+            Vector2 collisionCentre,
+            PiecePartGeometry part,
+            Color color,
+            out SpriteRenderer cellVisual)
+        {
+            GameObject visual = new GameObject(part.Name);
+            visual.transform.SetParent(visualParent, false);
+            visual.transform.localPosition = part.LocalPosition;
+
+            cellVisual = visual.AddComponent<SpriteRenderer>();
+            cellVisual.sprite = PrototypeBootstrap.GetSquareSprite();
+            cellVisual.color = color;
+            cellVisual.enabled = false;
+
+            VoxelBlockBuilder.BuildVoxelGrid(visual.transform, part.Name, part.Size, color);
+
+            GameObject colliderObject = new GameObject($"{part.Name} Collider");
+            colliderObject.transform.SetParent(collisionRoot, false);
+            colliderObject.transform.localPosition = part.LocalPosition - collisionCentre;
+
+            BoxCollider2D partCollider = colliderObject.AddComponent<BoxCollider2D>();
+            partCollider.size = part.Size;
+            partCollider.edgeRadius = 0f;
+            partCollider.usedByComposite = true;
+            return partCollider;
+        }
+
+        private static void GetPiecePartBounds(
+            List<PiecePartGeometry> parts,
+            out Vector2 minimum,
+            out Vector2 maximum)
+        {
+            minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            for (int index = 0; index < parts.Count; index++)
+            {
+                PiecePartGeometry part = parts[index];
+                Vector2 half = part.Size * .5f;
+                minimum = Vector2.Min(minimum, part.LocalPosition - half);
+                maximum = Vector2.Max(maximum, part.LocalPosition + half);
+            }
+
+            if (parts.Count == 0)
+            {
+                minimum = Vector2.zero;
+                maximum = Vector2.one * .01f;
+            }
+        }
+
+        private static Vector2 CellWorldPosition(GravityLevelDefinition level, Vector2Int cell)
+        {
+            float fineCellSize = 1f / level.subdivisions;
+            return new Vector2(
+                -level.boardColumns * .5f + (cell.x + .5f) * fineCellSize,
+                -level.boardRows * .5f + (cell.y + .5f) * fineCellSize);
+        }
+
+        private static Vector2 GridCellWorldPosition(GravityLevelDefinition level, Vector2Int cell)
+        {
+            return new Vector2(
+                -level.boardColumns * .5f + cell.x + .5f,
+                -level.boardRows * .5f + cell.y + .5f);
+        }
+
+        private readonly struct PiecePartGeometry
+        {
+            public PiecePartGeometry(string name, Vector2 localPosition, Vector2 size)
+            {
+                Name = name;
+                LocalPosition = localPosition;
+                Size = size;
+            }
+
+            public string Name { get; }
+            public Vector2 LocalPosition { get; }
+            public Vector2 Size { get; }
+        }
+    }
+}

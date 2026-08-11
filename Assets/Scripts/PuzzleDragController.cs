@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using GravityPuzzle.Core.Grid;
+using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
 
 namespace GravityPuzzle
@@ -19,6 +21,7 @@ namespace GravityPuzzle
         private readonly Vector2[] contactNormals = new Vector2[32];
         private readonly Dictionary<int, float> fallingSpeeds = new Dictionary<int, float>();
         private readonly Dictionary<int, float> snappingTargetsX = new Dictionary<int, float>();
+        private readonly Dictionary<int, GridCoordinate> lastGridSyncWarningAnchors = new Dictionary<int, GridCoordinate>();
         private readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
         private readonly Collider2D[] selectionHits = new Collider2D[32];
         private readonly Collider2D[] snapOverlapHits = new Collider2D[64];
@@ -398,14 +401,21 @@ namespace GravityPuzzle
                         if (CanOccupySnapPosition(piece, targetX))
                         {
                             MoveBody(body, new Vector2(targetX, body.position.y));
+                            TrySyncGridToPiecePosition(piece);
                             anyPieceMoved = true;
                         }
                     }
                 }
                 
                 bool grounded = MovePieceDown(piece, requestedDistance);
+                if (grounded && requestedDistance >= MinimumMoveDistance)
+                    TrySyncGridToPiecePosition(piece);
+
                 if (!grounded && requestedDistance >= MinimumMoveDistance)
+                {
                     anyPieceMoved = true;
+                    PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Falling);
+                }
 
                 fallingSpeeds[pieceId] = grounded ? 0f : fallingSpeed;
             }
@@ -579,6 +589,78 @@ namespace GravityPuzzle
             return !overlapsSolid;
         }
 
+        private bool TrySyncGridToPiecePosition(PuzzlePiece piece)
+        {
+            if (piece == null || piece.Body == null)
+                return false;
+
+            GravityLevelDefinition activeLevel = GravityLevelRuntime.FindLevelToPlay();
+            if (activeLevel == null ||
+                !TryGetSnapshotPiece(piece, out LevelBoardSnapshot snapshot, out PieceModel model))
+                return false;
+
+            int sourcePieceId = piece.SourcePieceId;
+            GridCoordinate targetPivot = GravityLevelGridCoordinates.WorldToFineCell(
+                activeLevel,
+                piece.Body.position);
+            GridCoordinate targetAnchor = targetPivot.Offset(model.PivotOffset);
+            if (!snapshot.Grid.IsInside(targetAnchor))
+                return false;
+
+            if (!GravityLevelGridCoordinates.IsAlignedToFineCell(
+                    activeLevel,
+                    piece.Body.position,
+                    targetPivot))
+                return false;
+
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            if (activeBoard == null)
+                return false;
+
+            bool synced = activeBoard.TryMovePieceOnGrid(
+                piece,
+                targetAnchor,
+                out GridPlacementResult result);
+            if (synced)
+            {
+                lastGridSyncWarningAnchors.Remove(sourcePieceId);
+                return true;
+            }
+
+            if (!lastGridSyncWarningAnchors.TryGetValue(sourcePieceId, out GridCoordinate lastAnchor) ||
+                !lastAnchor.Equals(targetAnchor))
+            {
+                lastGridSyncWarningAnchors[sourcePieceId] = targetAnchor;
+                Debug.LogWarning(
+                    $"[GridSync] Failed. piece='{piece.name}', reason={result.Reason}, " +
+                    $"target=({targetAnchor.X}, {targetAnchor.Y}), cell=({result.Coordinate.X}, {result.Coordinate.Y}).",
+                    this);
+            }
+
+            return false;
+        }
+
+        private static void ClearSelectedPieceFromGrid(PuzzlePiece piece)
+        {
+            PrototypeBoard.Active?.TryClearPieceFromGrid(piece, PieceState.Dragging);
+        }
+
+        private static bool TryGetSnapshotPiece(
+            PuzzlePiece piece,
+            out LevelBoardSnapshot snapshot,
+            out PieceModel model)
+        {
+            snapshot = null;
+            model = null;
+
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            if (activeBoard == null)
+                return false;
+
+            snapshot = activeBoard.BoardSnapshot;
+            return activeBoard.TryGetPieceModel(piece, out model);
+        }
+
         private void ProcessTouchInput()
         {
             Touch touch = FindActiveTouch();
@@ -682,6 +764,7 @@ namespace GravityPuzzle
             Rigidbody2D body = piece.Body;
             PrepareKinematicBody(body);
             selectedPiece.SetSelected(true);
+            ClearSelectedPieceFromGrid(selectedPiece);
             Physics2D.SyncTransforms();
 
             int pieceId = piece.GetInstanceID();
@@ -732,11 +815,9 @@ namespace GravityPuzzle
             float offsetFromStart = currentX - startX;
             float snappedX = startX + Mathf.Round(offsetFromStart); // Round to nearest 1.0
             
-            // Always queue the release snap. MoveSelectedBody sweeps the piece
-            // toward this target, so obstacles still stop it at the nearest legal
-            // position instead of preventing grid alignment altogether. Checking
-            // overlaps here rejects normal resting contacts with a shelf/piece and
-            // was leaving released pieces at arbitrary X coordinates.
+            // Keep the legacy snap active while the matrix is still being
+            // synchronized with the physics-driven runtime. The snapshot is
+            // updated only after this snap visibly completes.
             snappingTargetsX[pieceId] = snappedX;
 
             selectedPiece = null;

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using GravityPuzzle.Core.Grid;
+using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
 
 namespace GravityPuzzle.Gameplay.Gravity
@@ -98,8 +99,12 @@ namespace GravityPuzzle.Gameplay.Gravity
                 if (runtimePiece == null)
                     continue;
 
-                GridCoordinate runtimeAnchor = WorldToFineCell(level, runtimePiece.transform.position);
-                GridCoordinate snapshotAnchor = snapshot.Pieces[index].Anchor;
+                PieceModel model = snapshot.Pieces[index];
+                GridCoordinate runtimePivot = GravityLevelGridCoordinates.WorldToFineCell(
+                    level,
+                    runtimePiece.transform.position);
+                GridCoordinate runtimeAnchor = runtimePivot.Offset(model.PivotOffset);
+                GridCoordinate snapshotAnchor = model.Anchor;
                 if (runtimeAnchor.Equals(snapshotAnchor))
                     continue;
 
@@ -114,13 +119,6 @@ namespace GravityPuzzle.Gameplay.Gravity
             }
 
             return mismatchCount;
-        }
-
-        private static GridCoordinate WorldToFineCell(GravityLevelDefinition level, Vector2 worldPosition)
-        {
-            int x = Mathf.FloorToInt((worldPosition.x + level.boardColumns * .5f) * level.subdivisions);
-            int y = Mathf.FloorToInt((worldPosition.y + level.boardRows * .5f) * level.subdivisions);
-            return new GridCoordinate(x, y);
         }
 
         private static int CountAuthoredProgressUnits(GravityLevelDefinition level)

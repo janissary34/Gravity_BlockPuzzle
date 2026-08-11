@@ -18,5 +18,17 @@ namespace GravityPuzzle.Core.Grid
             Pieces = pieces;
             Issues = issues;
         }
+
+        public bool TryGetPiece(int pieceId, out PieceModel piece)
+        {
+            if (pieceId >= 0 && pieceId < Pieces.Count)
+            {
+                piece = Pieces[pieceId];
+                return true;
+            }
+
+            piece = null;
+            return false;
+        }
     }
 }

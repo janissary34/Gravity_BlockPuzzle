@@ -40,15 +40,50 @@ namespace GravityPuzzle.Core.Grid
 
         public void SetBlocked(GridCoordinate coordinate)
         {
-            if (!IsInside(coordinate) || cellStates[coordinate.X, coordinate.Y] != GridCellState.Empty)
-                return;
+            TrySetBlocked(coordinate, out _);
+        }
 
-            cellStates[coordinate.X, coordinate.Y] = GridCellState.Blocked;
+        public bool TrySetBlocked(GridCoordinate coordinate, out GridPlacementResult result)
+        {
+            if (!IsInside(coordinate))
+            {
+                result = GridPlacementResult.Failure(
+                    GridPlacementFailureReason.OutOfBounds,
+                    coordinate,
+                    GridCellState.Blocked,
+                    default);
+                return false;
+            }
+
+            GridCellState state = cellStates[coordinate.X, coordinate.Y];
+            if (state == GridCellState.Occupied || state == GridCellState.Reserved)
+            {
+                GridPlacementFailureReason reason = state == GridCellState.Occupied
+                    ? GridPlacementFailureReason.OccupiedCell
+                    : GridPlacementFailureReason.ReservedCell;
+                result = GridPlacementResult.Failure(
+                    reason,
+                    coordinate,
+                    state,
+                    occupantIds[coordinate.X, coordinate.Y]);
+                return false;
+            }
+
+            if (state == GridCellState.Empty)
+                cellStates[coordinate.X, coordinate.Y] = GridCellState.Blocked;
+
+            result = GridPlacementResult.Success();
+            return true;
         }
 
         public bool CanPlace(PieceModel piece, GridCoordinate anchor)
         {
             return CheckPlacement(piece, anchor).IsSuccess;
+        }
+
+        public bool CanPlaceIgnoringPiece(PieceModel piece, GridCoordinate anchor, int ignoredPieceId)
+        {
+            return CheckPlacementIgnoringPiece(piece, anchor, ignoredPieceId).IsSuccess;
         }
 
         public bool TryPlace(PieceModel piece)
@@ -63,6 +98,7 @@ namespace GravityPuzzle.Core.Grid
                 return false;
 
             SetPieceCells(piece, GridCellState.Occupied);
+            piece.MarkOnBoard();
             return true;
         }
 
@@ -126,6 +162,72 @@ namespace GravityPuzzle.Core.Grid
             return GridPlacementResult.Success();
         }
 
+        public GridPlacementResult CheckPlacementIgnoringPiece(
+            PieceModel piece,
+            GridCoordinate anchor,
+            int ignoredPieceId)
+        {
+            if (piece.LocalCells.Count == 0)
+                return GridPlacementResult.Failure(
+                    GridPlacementFailureReason.EmptyPiece,
+                    anchor,
+                    GridCellState.Empty,
+                    default);
+
+            for (int index = 0; index < piece.LocalCells.Count; index++)
+            {
+                GridCoordinate coordinate = anchor.Offset(piece.LocalCells[index]);
+                for (int previousIndex = 0; previousIndex < index; previousIndex++)
+                {
+                    if (coordinate.Equals(anchor.Offset(piece.LocalCells[previousIndex])))
+                        return GridPlacementResult.Failure(
+                            GridPlacementFailureReason.DuplicateCell,
+                            coordinate,
+                            GridCellState.Empty,
+                            default);
+                }
+
+                if (!IsInside(coordinate))
+                    return GridPlacementResult.Failure(
+                        GridPlacementFailureReason.OutOfBounds,
+                        coordinate,
+                        GridCellState.Blocked,
+                        default);
+
+                GridCellState state = cellStates[coordinate.X, coordinate.Y];
+                bool isIgnoredPieceCell =
+                    (state == GridCellState.Occupied || state == GridCellState.Reserved) &&
+                    occupantIds[coordinate.X, coordinate.Y] == ignoredPieceId;
+                if (state == GridCellState.Empty || isIgnoredPieceCell)
+                    continue;
+
+                GridPlacementFailureReason reason;
+                switch (state)
+                {
+                    case GridCellState.Blocked:
+                        reason = GridPlacementFailureReason.BlockedCell;
+                        break;
+                    case GridCellState.Occupied:
+                        reason = GridPlacementFailureReason.OccupiedCell;
+                        break;
+                    case GridCellState.Reserved:
+                        reason = GridPlacementFailureReason.ReservedCell;
+                        break;
+                    default:
+                        reason = GridPlacementFailureReason.None;
+                        break;
+                }
+
+                return GridPlacementResult.Failure(
+                    reason,
+                    coordinate,
+                    state,
+                    occupantIds[coordinate.X, coordinate.Y]);
+            }
+
+            return GridPlacementResult.Success();
+        }
+
         public bool TryMove(PieceModel piece, GridCoordinate targetAnchor)
         {
             ClearPieceCells(piece);
@@ -135,6 +237,22 @@ namespace GravityPuzzle.Core.Grid
                 return false;
             }
 
+            piece.SetAnchor(targetAnchor);
+            SetPieceCells(piece, GridCellState.Occupied);
+            return true;
+        }
+
+        public bool TryMoveIgnoringPiece(
+            PieceModel piece,
+            GridCoordinate targetAnchor,
+            int ignoredPieceId,
+            out GridPlacementResult result)
+        {
+            result = CheckPlacementIgnoringPiece(piece, targetAnchor, ignoredPieceId);
+            if (!result.IsSuccess)
+                return false;
+
+            ClearPieceCells(piece);
             piece.SetAnchor(targetAnchor);
             SetPieceCells(piece, GridCellState.Occupied);
             return true;
@@ -152,12 +270,14 @@ namespace GravityPuzzle.Core.Grid
             }
 
             SetPieceCells(piece, GridCellState.Reserved);
+            piece.MarkOnBoard();
             return true;
         }
 
         public void ClearPiece(PieceModel piece)
         {
             ClearPieceCells(piece);
+            piece.MarkOffBoard();
         }
 
         private void SetPieceCells(PieceModel piece, GridCellState state)
