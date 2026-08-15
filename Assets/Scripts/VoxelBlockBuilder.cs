@@ -11,50 +11,21 @@ namespace GravityPuzzle
         
         public const int Subdivisions = 3; // 3x3 grid
 
-        public static void InitializePool(int initialSize)
-        {
-            if (poolContainer == null)
-            {
-                poolContainer = new GameObject("Voxel Shard Pool").transform;
-                GameObject.DontDestroyOnLoad(poolContainer.gameObject);
-            }
-
-            for (int i = 0; i < initialSize; i++)
-            {
-                VoxelShard shard = CreateNewVoxel();
-                shard.gameObject.SetActive(false);
-                voxelPool.Enqueue(shard);
-            }
-        }
-
         private static VoxelShard CreateNewVoxel()
         {
-            if (poolContainer == null)
-            {
-                poolContainer = new GameObject("Voxel Shard Pool").transform;
-                GameObject.DontDestroyOnLoad(poolContainer.gameObject);
-            }
-
             GameObject go = new GameObject("VoxelShard");
+            if (poolContainer == null) poolContainer = new GameObject("Voxel Shard Pool").transform;
             go.transform.SetParent(poolContainer, false);
-            
-            VoxelShard shard = go.AddComponent<VoxelShard>();
-            return shard;
+            return go.AddComponent<VoxelShard>();
         }
 
         public static VoxelShard GetVoxel()
         {
-            if (voxelPool.Count > 0)
-            {
-                return voxelPool.Dequeue();
-            }
-            return CreateNewVoxel();
+            return voxelPool.Count > 0 ? voxelPool.Dequeue() : CreateNewVoxel();
         }
 
         public static void ReturnVoxel(VoxelShard shard)
         {
-            if (poolContainer != null)
-                shard.transform.SetParent(poolContainer, false);
             shard.gameObject.SetActive(false);
             voxelPool.Enqueue(shard);
         }
@@ -90,7 +61,6 @@ namespace GravityPuzzle
 
             float startX = -totalSize.x * 0.5f + voxelWidth * 0.5f;
             float startY = -totalSize.y * 0.5f + voxelHeight * 0.5f;
-
             for (int x = 0; x < Subdivisions; x++)
             {
                 for (int y = 0; y < Subdivisions; y++)

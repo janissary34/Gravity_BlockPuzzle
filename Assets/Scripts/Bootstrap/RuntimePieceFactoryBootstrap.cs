@@ -7,13 +7,11 @@ namespace GravityPuzzle.Bootstrap
 {
     public sealed class RuntimePieceFactoryBootstrap : MonoBehaviour
     {
-        private readonly GeneratedRuntimePieceRootProvider generatedProvider = new GeneratedRuntimePieceRootProvider();
-
-        [Header("Optional Piece Pool")]
-        [Tooltip("Root prefab with PuzzlePiece, Rigidbody2D, CompositeCollider2D, and LineRenderer. Leave empty to use generated runtime pieces.")]
+        [Header("Piece Pool")]
+        [Tooltip("Root prefab with PuzzlePiece, Rigidbody2D, CompositeCollider2D, and LineRenderer.")]
         [SerializeField] private PuzzlePiece blockPiecePrefab;
 
-        [Tooltip("Controls prewarm capacity. Leave empty to use generated runtime pieces.")]
+        [Tooltip("Controls the BlockPiece pool prewarm capacity.")]
         [SerializeField] private PoolConfig poolConfig;
 
         [Tooltip("Optional parent for inactive pooled pieces. Uses this object when empty.")]
@@ -21,22 +19,22 @@ namespace GravityPuzzle.Bootstrap
 
         private void Awake()
         {
-            if (blockPiecePrefab != null &&
-                poolConfig != null &&
-                poolConfig.BlockPieceCapacity > 0 &&
-                IsPrefabReady(blockPiecePrefab))
+            if (blockPiecePrefab == null || poolConfig == null ||
+                poolConfig.BlockPieceCapacity <= 0 || !IsPrefabReady(blockPiecePrefab))
             {
-                Transform parent = poolParent != null ? poolParent : transform;
-                GameObjectPool<PuzzlePiece> piecePool = new GameObjectPool<PuzzlePiece>(
-                    blockPiecePrefab,
-                    parent,
-                    poolConfig.BlockPieceCapacity);
-                piecePool.Prewarm();
-                RuntimePieceFactory.SetRootProvider(new PooledRuntimePieceRootProvider(piecePool));
+                Debug.LogError(
+                    "[PiecePool] RuntimePieceFactoryBootstrap needs a valid BlockPiece prefab and PoolConfig with a positive BlockPieceCapacity.",
+                    this);
                 return;
             }
 
-            RuntimePieceFactory.SetRootProvider(generatedProvider);
+            Transform parent = poolParent != null ? poolParent : transform;
+            GameObjectPool<PuzzlePiece> piecePool = new GameObjectPool<PuzzlePiece>(
+                blockPiecePrefab,
+                parent,
+                poolConfig.BlockPieceCapacity);
+            piecePool.Prewarm();
+            RuntimePieceFactory.SetRootProvider(new PooledRuntimePieceRootProvider(piecePool));
         }
 
         private static bool IsPrefabReady(PuzzlePiece prefab)

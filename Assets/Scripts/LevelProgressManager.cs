@@ -304,6 +304,8 @@ namespace GravityPuzzle
                 -curveDrop);
             float flightDuration = voxelFlyDuration + UnityEngine.Random.Range(-.08f, .12f);
             Sequence flightSequence = DOTween.Sequence()
+                .SetLink(flyingVoxel, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true)
                 .SetDelay(UnityEngine.Random.Range(0f, .12f));
             flightSequence.Append(DOVirtual.Float(0f, 1f, flightDuration, progress =>
                 voxelRect.anchoredPosition = QuadraticBezier(start, control, target, progress)).SetEase(Ease.InOutSine));
@@ -316,7 +318,9 @@ namespace GravityPuzzle
                     if (sliderPunchTween != null && sliderPunchTween.IsActive())
                         sliderPunchTween.Kill(true);
 
-                    sliderPunchTween = progressSlider.transform.DOPunchScale(sliderPunchScale, sliderPunchDuration, 6, 0.5f);
+                    sliderPunchTween = progressSlider.transform.DOPunchScale(sliderPunchScale, sliderPunchDuration, 6, 0.5f)
+                        .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
+                        .SetAutoKill(true);
                     nextSliderPulseTime = Time.unscaledTime + .09f;
                 }
 
@@ -386,7 +390,9 @@ namespace GravityPuzzle
                     sliderFillTween.Kill();
 
                 sliderFillTween = progressSlider.DOValue(currentShreddedUnits, sliderFillDuration)
-                    .SetEase(Ease.OutQuad);
+                    .SetEase(Ease.OutQuad)
+                    .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
 
                 Debug.Log($"[LevelProgress] AddProgress(+{amount:0.###}): value={currentShreddedUnits:0.###}/{progressSlider.maxValue:0.###}, " +
                           $"authored={authoredBlockUnits}.");

@@ -6,9 +6,6 @@ namespace GravityPuzzle.Gameplay.Pieces
     public sealed class PooledRuntimePieceRootProvider : IRuntimePieceRootProvider
     {
         private readonly IPool<PuzzlePiece> pool;
-        private readonly GeneratedRuntimePieceRootProvider fallbackProvider = new GeneratedRuntimePieceRootProvider();
-        private bool warnedAboutExhaustion;
-
         public PooledRuntimePieceRootProvider(IPool<PuzzlePiece> piecePool)
         {
             pool = piecePool;
@@ -18,14 +15,8 @@ namespace GravityPuzzle.Gameplay.Pieces
         {
             if (pool == null || !pool.TryRent(out PuzzlePiece piece))
             {
-                if (!warnedAboutExhaustion)
-                {
-                    warnedAboutExhaustion = true;
-                    Debug.LogWarning(
-                        "[PiecePool] Pool exhausted. Falling back to generated runtime piece. Increase PoolConfig BlockPieceCapacity.");
-                }
-
-                return fallbackProvider.Create(pieceName);
+                throw new System.InvalidOperationException(
+                    "[PiecePool] Pool exhausted. Increase PoolConfig BlockPieceCapacity before starting the level.");
             }
 
             piece.gameObject.name = pieceName;

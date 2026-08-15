@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Infrastructure.Pooling;
@@ -38,6 +39,7 @@ namespace GravityPuzzle
         }
 
         private const float RuntimeIceCounterFontScale = .32f;
+        private const string IceCounterPresentationName = "Ice Counter Presentation";
         private static readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
 
         public static IReadOnlyList<PuzzlePiece> ActivePieces => activePieces;
@@ -94,6 +96,8 @@ namespace GravityPuzzle
         private readonly List<SpriteRenderer> selectedRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> outlineRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> iceRenderers = new List<SpriteRenderer>();
+        private readonly List<SpriteRenderer> iceSlots = new List<SpriteRenderer>();
+        private Transform iceSlotsRoot;
         private Transform selectionVisualsRoot;
         private CompositeCollider2D compositeCollider;
         private LineRenderer rootOutline;
@@ -106,7 +110,9 @@ namespace GravityPuzzle
         private bool useFullCollisionGeometry;
         private bool isSelected;
         private bool destructionReported;
+        private bool iceReleaseAnimating;
         private int frozenUntilDestroyedCount;
+        private int previousFrozenRemaining = -1;
         private TextMeshPro iceCounterText;
         private Action<PuzzlePiece> returnToPool;
         private float iceCounterFontSize = 36f;
@@ -126,6 +132,27 @@ namespace GravityPuzzle
             Body = GetComponent<Rigidbody2D>();
             compositeCollider = GetComponent<CompositeCollider2D>();
             rootOutline = GetComponent<LineRenderer>();
+            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            for (int index = 0; index < renderers.Length; index++)
+            {
+                SpriteRenderer renderer = renderers[index];
+                if (renderer.transform.parent != null &&
+                    renderer.transform.parent.name == "Ice Presentation Slots")
+                {
+                    iceSlotsRoot = renderer.transform.parent;
+                    iceSlots.Add(renderer);
+                }
+            }
+
+            TextMeshPro[] textComponents = GetComponentsInChildren<TextMeshPro>(true);
+            for (int index = 0; index < textComponents.Length; index++)
+            {
+                if (textComponents[index].name == IceCounterPresentationName)
+                {
+                    iceCounterText = textComponents[index];
+                    break;
+                }
+            }
         }
 
         private void OnEnable()
@@ -148,6 +175,8 @@ namespace GravityPuzzle
         {
             beingShredded = false;
             destructionReported = false;
+            iceReleaseAnimating = false;
+            previousFrozenRemaining = -1;
             useFullCollisionGeometry = false;
             isSelected = false;
             IsFrozen = false;
@@ -163,6 +192,7 @@ namespace GravityPuzzle
         {
             isSelected = false;
             returnToPool = null;
+            ClearIceVisuals();
             InvalidateVoxelCache();
         }
 
@@ -350,10 +380,9 @@ namespace GravityPuzzle
             normalRenderers.Clear();
             selectedRenderers.Clear();
             outlineRenderers.Clear();
-            iceRenderers.Clear();
+            ClearIceVisuals();
             selectionVisualsRoot = null;
             selectionVisualsBuilt = false;
-            iceCounterText = null;
             beingShredded = false;
             destructionReported = false;
             useFullCollisionGeometry = false;
@@ -463,11 +492,23 @@ namespace GravityPuzzle
             {
                 if (iceRenderers.Count == 0)
                     BuildIceVisuals();
-                UpdateIceCounter(frozenUntilDestroyedCount - destroyedPieceCount);
+
+                int remainingCount = frozenUntilDestroyedCount - destroyedPieceCount;
+                if (previousFrozenRemaining >= 0 && remainingCount < previousFrozenRemaining)
+                    PlayIceCrackFeedback(remainingCount, previousFrozenRemaining);
+
+                iceReleaseAnimating = false;
+                previousFrozenRemaining = remainingCount;
+                UpdateIceCounter(remainingCount);
             }
             else
             {
-                ClearIceVisuals();
+                previousFrozenRemaining = -1;
+                if (iceRenderers.Count > 0 && !iceReleaseAnimating)
+                    PlayIceReleaseAnimation();
+                else if (!iceReleaseAnimating)
+                    ClearIceVisuals();
+
                 if (Body != null)
                     Body.WakeUp();
             }
@@ -869,17 +910,15 @@ namespace GravityPuzzle
 
             if (iceCounterText == null)
             {
-                GameObject counterObject = new GameObject("Ice Remaining Count");
-                counterObject.transform.SetParent(transform, true);
-                iceCounterText = counterObject.AddComponent<TextMeshPro>();
-                iceCounterText.alignment = TextAlignmentOptions.Center;
-                iceCounterText.fontStyle = FontStyles.Bold;
+                Debug.LogWarning("[PuzzlePiece] Ice counter presentation is missing from BlockPiece.prefab.", this);
+                return;
             }
 
             // Apply style on every refresh, not only on object creation. This
             // keeps Play Mode previews in sync after editor recompilation and
             // after changing the serialized level settings.
             iceCounterText.color = iceCounterTextColor;
+            iceCounterText.enabled = true;
             iceCounterText.enableAutoSizing = false;
             iceCounterText.fontSize = iceCounterFontSize * RuntimeIceCounterFontScale;
             iceCounterText.outlineColor = iceCounterOutlineColor;
@@ -904,37 +943,95 @@ namespace GravityPuzzle
             Color color,
             int sortingOrder)
         {
-            GameObject layer = new GameObject(layerName);
-            layer.transform.SetParent(source.transform, false);
-            layer.transform.localPosition = Vector3.zero;
-            layer.transform.localRotation = Quaternion.identity;
-            layer.transform.localScale = scale;
+            if (iceRenderers.Count >= iceSlots.Count)
+            {
+                Debug.LogWarning("[PuzzlePiece] Ice presentation slot capacity exceeded.", this);
+                return;
+            }
 
-            SpriteRenderer renderer = layer.AddComponent<SpriteRenderer>();
+            SpriteRenderer renderer = iceSlots[iceRenderers.Count];
+            renderer.transform.SetParent(source.transform, false);
+            renderer.transform.localPosition = Vector3.zero;
+            renderer.transform.localRotation = Quaternion.identity;
+            renderer.transform.localScale = scale;
+            renderer.gameObject.name = layerName;
             renderer.sprite = source.sprite;
             renderer.color = color;
             renderer.sortingLayerID = source.sortingLayerID;
             renderer.sortingOrder = sortingOrder;
+            renderer.enabled = true;
             iceRenderers.Add(renderer);
+        }
+
+        private void PlayIceCrackFeedback(int remainingCount, int previousRemainingCount)
+        {
+            float remainingFraction = previousRemainingCount > 0
+                ? Mathf.Clamp01((float)remainingCount / previousRemainingCount)
+                : 0f;
+
+            for (int index = 0; index < iceRenderers.Count; index++)
+            {
+                SpriteRenderer renderer = iceRenderers[index];
+                if (renderer == null || !renderer.enabled)
+                    continue;
+
+                DOTween.Kill(renderer);
+                Vector3 restingScale = renderer.transform.localScale;
+                float targetAlpha = renderer.color.a * Mathf.Lerp(.55f, .9f, remainingFraction);
+                Sequence crack = DOTween.Sequence()
+                    .Append(renderer.transform.DOPunchScale(restingScale * .12f, .16f, 5, .55f))
+                    .Join(renderer.DOFade(targetAlpha, .16f));
+                crack.SetLink(renderer.gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
+            }
+        }
+
+        private void PlayIceReleaseAnimation()
+        {
+            iceReleaseAnimating = true;
+            Sequence release = DOTween.Sequence();
+            bool hasIce = false;
+            for (int index = 0; index < iceRenderers.Count; index++)
+            {
+                SpriteRenderer renderer = iceRenderers[index];
+                if (renderer == null || !renderer.enabled)
+                    continue;
+
+                hasIce = true;
+                DOTween.Kill(renderer);
+                release.Join(renderer.transform.DOPunchScale(renderer.transform.localScale * .16f, .2f, 6, .55f));
+                release.Join(renderer.DOFade(0f, .2f));
+            }
+
+            if (!hasIce)
+            {
+                ClearIceVisuals();
+                return;
+            }
+
+            release.OnComplete(ClearIceVisuals)
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
         }
 
         private void ClearIceVisuals()
         {
+            iceReleaseAnimating = false;
+            previousFrozenRemaining = -1;
             foreach (SpriteRenderer renderer in iceRenderers)
             {
                 if (renderer == null)
                     continue;
 
+                DOTween.Kill(renderer);
                 renderer.enabled = false;
-                Destroy(renderer.gameObject);
+                renderer.transform.SetParent(iceSlotsRoot, false);
             }
             iceRenderers.Clear();
 
             if (iceCounterText != null)
             {
                 iceCounterText.enabled = false;
-                Destroy(iceCounterText.gameObject);
-                iceCounterText = null;
             }
         }
 

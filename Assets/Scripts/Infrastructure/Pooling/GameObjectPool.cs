@@ -54,6 +54,7 @@ namespace GravityPuzzle.Infrastructure.Pooling
                 return;
 
             item.OnDespawn();
+            item.transform.SetParent(parent, false);
             item.gameObject.SetActive(false);
             available.Push(item);
         }

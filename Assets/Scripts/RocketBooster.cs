@@ -250,7 +250,10 @@ namespace GravityPuzzle
             SetSortingOrder(rocket, rocketSortingOrder);
 
             // 2. Animate rocket from screen bottom up to piece center (entranceDuration)
-            Tween entranceTween = rocket.transform.DOMove(centerPos, entranceDuration).SetEase(Ease.OutCubic);
+            Tween entranceTween = rocket.transform.DOMove(centerPos, entranceDuration)
+                .SetEase(Ease.OutCubic)
+                .SetLink(rocket, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
             yield return entranceTween.WaitForCompletion();
 
             if (rocket == null || piece == null)
@@ -287,7 +290,10 @@ namespace GravityPuzzle
 
             ShredderParticleEffects.SpawnBurst(rocket.transform.position, pieceColor, 25, 14, 10);
 
-            Tween launchTween = rocket.transform.DOMoveY(targetY, launchDuration).SetEase(Ease.InQuad);
+            Tween launchTween = rocket.transform.DOMoveY(targetY, launchDuration)
+                .SetEase(Ease.InQuad)
+                .SetLink(rocket, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
             yield return launchTween.WaitForCompletion();
 
             // 6. Rocket launch animation finished! Decrement count now

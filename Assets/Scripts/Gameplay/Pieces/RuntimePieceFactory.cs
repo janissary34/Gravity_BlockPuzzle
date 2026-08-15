@@ -11,17 +11,18 @@ namespace GravityPuzzle.Gameplay.Pieces
         private const string HookCellName = "Hook Cell";
 
         private static Material sharedOutlineMaterial;
-        private static IRuntimePieceRootProvider rootProvider = new GeneratedRuntimePieceRootProvider();
+        private static IRuntimePieceRootProvider rootProvider;
 
         public static void SetRootProvider(IRuntimePieceRootProvider provider)
         {
-            rootProvider = provider ?? new GeneratedRuntimePieceRootProvider();
+            rootProvider = provider ?? throw new System.ArgumentNullException(nameof(provider));
         }
+
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetRootProvider()
         {
-            rootProvider = new GeneratedRuntimePieceRootProvider();
+            rootProvider = null;
             sharedOutlineMaterial = null;
         }
 
@@ -30,6 +31,10 @@ namespace GravityPuzzle.Gameplay.Pieces
             PieceDefinition definition,
             int sourcePieceId)
         {
+            if (rootProvider == null)
+                throw new System.InvalidOperationException(
+                    "[PiecePool] RuntimePieceFactory has not been configured by RuntimePieceFactoryBootstrap.");
+
             RuntimePieceRoot root = rootProvider.Create(definition.name);
             GameObject piece = root.GameObject;
             PrepareRoot(piece.transform, level, definition);
@@ -121,22 +126,15 @@ namespace GravityPuzzle.Gameplay.Pieces
             List<PiecePartGeometry> parts = BuildPartGeometry(level, definition, fineCellSize, out int progressUnits);
             GetPiecePartBounds(parts, out Vector2 minimum, out Vector2 maximum);
             Vector2 collisionCentre = (minimum + maximum) * .5f;
-
             GameObject collisionRootObject = new GameObject(CollisionGeometryRootName);
             collisionRootObject.transform.SetParent(pieceTransform, false);
             collisionRootObject.transform.localPosition = collisionCentre;
-
             List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(parts.Count);
             List<SpriteRenderer> collisionCellVisuals = new List<SpriteRenderer>(parts.Count);
             for (int index = 0; index < parts.Count; index++)
             {
-                collisionCells.Add(CreatePiecePart(
-                    pieceTransform,
-                    collisionRootObject.transform,
-                    collisionCentre,
-                    parts[index],
-                    definition.color,
-                    out SpriteRenderer cellVisual));
+                BoxCollider2D collider = CreatePiecePart(pieceTransform, collisionRootObject.transform, collisionCentre, parts[index], definition.color, out SpriteRenderer cellVisual);
+                collisionCells.Add(collider);
                 collisionCellVisuals.Add(cellVisual);
             }
 
@@ -148,24 +146,14 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         private static void ClearGeneratedContent(Transform pieceTransform)
         {
-            for (int childIndex = pieceTransform.childCount - 1; childIndex >= 0; childIndex--)
+            for (int index = pieceTransform.childCount - 1; index >= 0; index--)
             {
-                Transform child = pieceTransform.GetChild(childIndex);
-                if (!IsGeneratedContentRoot(child.name))
-                    continue;
-
-                child.gameObject.SetActive(false);
-                Object.Destroy(child.gameObject);
+                Transform child = pieceTransform.GetChild(index);
+                if (child.name == CollisionGeometryRootName || child.name == GridBlockName || child.name == BlockCellName || child.name == HookCellName)
+                    Object.Destroy(child.gameObject);
             }
         }
 
-        private static bool IsGeneratedContentRoot(string objectName)
-        {
-            return objectName == CollisionGeometryRootName ||
-                   objectName == GridBlockName ||
-                   objectName == BlockCellName ||
-                   objectName == HookCellName;
-        }
 
         private static List<PiecePartGeometry> BuildPartGeometry(
             GravityLevelDefinition level,

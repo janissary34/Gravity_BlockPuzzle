@@ -200,7 +200,9 @@ namespace GravityPuzzle
             hammerTransform.rotation = Quaternion.Euler(0f, facingYAngle, 0f);
             SetHammerSortingOrder(hammer);
 
-            Sequence swing = DOTween.Sequence();
+            Sequence swing = DOTween.Sequence()
+                .SetLink(hammer, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
             // Phase 1: royal-style pop from the bottom of the play area.
             swing.Append(hammerTransform.DOMove(screenCentre, .35f).SetEase(Ease.OutQuart));
             swing.Join(hammerTransform.DOScale(impactScale, .35f).SetEase(Ease.OutSine));
@@ -267,7 +269,9 @@ namespace GravityPuzzle
 
             Camera camera = Camera.main;
             if (camera != null)
-                camera.transform.DOShakePosition(.15f, .12f, 18, 90f, false, true);
+                camera.transform.DOShakePosition(.15f, .12f, 18, 90f, false, true)
+                    .SetLink(camera.gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
         }
 
         private static Vector3 GetViewportWorldPoint(Camera camera, float x, float y, float z)

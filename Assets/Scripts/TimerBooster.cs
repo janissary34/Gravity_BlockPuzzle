@@ -245,7 +245,9 @@ namespace GravityPuzzle
                 timer_obj.transform.position = startPos;
             }
 
-            Sequence seq = DOTween.Sequence().SetLink(timer_obj);
+            Sequence seq = DOTween.Sequence()
+                .SetLink(timer_obj, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
             activeSequence = seq;
 
             // Step 1: Move from bottom off-screen to screen center position smoothly (0.85s)

@@ -6,8 +6,8 @@ namespace GravityPuzzle.Config
     [CreateAssetMenu(fileName = "TweenConfig", menuName = "Gravity Puzzle/Config/Tween")]
     public sealed class TweenConfig : ScriptableObject
     {
-        [Min(1)] [SerializeField] private int tweenCapacity = 128;
-        [Min(1)] [SerializeField] private int sequenceCapacity = 32;
+        [Min(1)] [SerializeField] private int tweenCapacity = 200;
+        [Min(1)] [SerializeField] private int sequenceCapacity = 125;
         [SerializeField] private float pieceMoveDuration = .12f;
         [SerializeField] private Ease pieceMoveEase = Ease.OutQuad;
         [SerializeField] private float shredDuration = .3f;

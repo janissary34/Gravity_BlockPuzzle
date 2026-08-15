@@ -105,7 +105,9 @@ namespace GravityPuzzle
             }
 
             if (popDuration > 0f)
-                activeJumpTween = DOVirtual.DelayedCall(popDuration, StartMagnetFlyToUI);
+                activeJumpTween = DOVirtual.DelayedCall(popDuration, StartMagnetFlyToUI)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
             else
                 StartMagnetFlyToUI();
         }
@@ -131,6 +133,8 @@ namespace GravityPuzzle
             // Animate flight to target UI position using DOMove with Ease.InBack
             activeFlyTween = transform.DOMove(targetWorldPos, flyDuration)
                 .SetEase(flyEase)
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true)
                 .OnUpdate(() =>
                 {
                     // Dynamically update target position during flight in case canvas scales or UI moves
@@ -174,7 +178,9 @@ namespace GravityPuzzle
 
             if (targetRectTransform != null)
             {
-                targetRectTransform.DOPunchScale(uiPunchScale, uiPunchDuration, 5, 0.5f);
+                targetRectTransform.DOPunchScale(uiPunchScale, uiPunchDuration, 5, 0.5f)
+                    .SetLink(targetRectTransform.gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
             }
 
             RecycleSelf();
