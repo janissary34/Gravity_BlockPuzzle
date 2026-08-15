@@ -5,6 +5,7 @@ using DG.Tweening;
 using TMPro;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Infrastructure.Pooling;
+using GravityPuzzle.Presentation.Views;
 
 namespace GravityPuzzle
 {
@@ -44,6 +45,7 @@ namespace GravityPuzzle
 
         public static IReadOnlyList<PuzzlePiece> ActivePieces => activePieces;
         public Rigidbody2D Body { get; private set; }
+        public PieceGridFallView GridFallView { get; private set; }
         public CompositeCollider2D CompositeCollider => compositeCollider;
         public LineRenderer Outline => rootOutline;
         public bool IsSelected => isSelected;
@@ -130,6 +132,7 @@ namespace GravityPuzzle
         private void Awake()
         {
             Body = GetComponent<Rigidbody2D>();
+            GridFallView = GetComponent<PieceGridFallView>();
             compositeCollider = GetComponent<CompositeCollider2D>();
             rootOutline = GetComponent<LineRenderer>();
             SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);

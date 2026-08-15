@@ -146,6 +146,14 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         private static void ClearGeneratedContent(Transform pieceTransform)
         {
+            VoxelShard[] attachedVoxels = pieceTransform.GetComponentsInChildren<VoxelShard>(true);
+            for (int index = 0; index < attachedVoxels.Length; index++)
+            {
+                VoxelShard voxel = attachedVoxels[index];
+                if (voxel != null)
+                    VoxelBlockBuilder.ReturnVoxel(voxel);
+            }
+
             for (int index = pieceTransform.childCount - 1; index >= 0; index--)
             {
                 Transform child = pieceTransform.GetChild(index);

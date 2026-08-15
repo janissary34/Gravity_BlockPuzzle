@@ -1,11 +1,13 @@
 using UnityEngine;
 using System.Collections;
 using System;
+using GravityPuzzle.Infrastructure.Pooling;
 
 namespace GravityPuzzle
 {
-    [RequireComponent(typeof(SpriteRenderer))]
-    public class VoxelShard : MonoBehaviour
+    [RequireComponent(typeof(SpriteRenderer), typeof(Rigidbody2D), typeof(BoxCollider2D))]
+    [RequireComponent(typeof(GemFlyToUI))]
+    public sealed class VoxelShard : MonoBehaviour, IPoolable
     {
         private SpriteRenderer spriteRenderer;
         private Rigidbody2D rb;
@@ -15,11 +17,32 @@ namespace GravityPuzzle
         private void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
+            rb = GetComponent<Rigidbody2D>();
+            col = GetComponent<BoxCollider2D>();
+            gemFly = GetComponent<GemFlyToUI>();
+        }
+
+        public void OnSpawn()
+        {
+            StopAllCoroutines();
+            rb.simulated = false;
+            rb.velocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            col.enabled = false;
+            transform.localRotation = Quaternion.identity;
+        }
+
+        public void OnDespawn()
+        {
+            StopAllCoroutines();
+            rb.simulated = false;
+            rb.velocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            col.enabled = false;
         }
 
         public void InitializeIntact(Color color, Vector2 size, Sprite sprite)
         {
-            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
             spriteRenderer.color = color;
             spriteRenderer.sprite = sprite;
             spriteRenderer.sortingOrder = 5; 
@@ -37,13 +60,11 @@ namespace GravityPuzzle
             if (spriteRenderer != null)
                 spriteRenderer.maskInteraction = SpriteMaskInteraction.None;
 
-            if (col == null) col = gameObject.AddComponent<BoxCollider2D>();
             col.enabled = true;
             col.size = Vector2.one; 
             
             if (isGem)
             {
-                if (gemFly == null) gemFly = gameObject.AddComponent<GemFlyToUI>();
                 spriteRenderer.sortingOrder = 4; // Behind shredder disc
                 gemFly.Launch(
                     transform.position,
@@ -61,7 +82,6 @@ namespace GravityPuzzle
             }
             else
             {
-                if (rb == null) rb = gameObject.AddComponent<Rigidbody2D>();
                 spriteRenderer.sortingOrder = 4; // Behind shredder disc
                 rb.simulated = true;
                 rb.bodyType = RigidbodyType2D.Dynamic;

@@ -4,6 +4,8 @@ namespace GravityPuzzle.Core.Grid
 {
     public sealed class GravityBoardGrid
     {
+        private static readonly GridCoordinate Down = new GridCoordinate(0, -1);
+
         private readonly GridCellState[,] cellStates;
         private readonly int[,] occupantIds;
 
@@ -256,6 +258,28 @@ namespace GravityPuzzle.Core.Grid
             piece.SetAnchor(targetAnchor);
             SetPieceCells(piece, GridCellState.Occupied);
             return true;
+        }
+
+        /// <summary>
+        /// Calculates the lowest legal anchor for an on-board piece without
+        /// mutating the grid or the piece model. The piece's current cells are
+        /// ignored while checking each candidate so its own geometry never
+        /// blocks a vertical move.
+        /// </summary>
+        public bool TryGetFallTarget(PieceModel piece, out GridCoordinate targetAnchor)
+        {
+            targetAnchor = piece != null ? piece.Anchor : default;
+            if (piece == null || !piece.IsOnBoard)
+                return false;
+
+            GridCoordinate candidate = targetAnchor.Offset(Down);
+            while (CheckPlacementIgnoringPiece(piece, candidate, piece.Id).IsSuccess)
+            {
+                targetAnchor = candidate;
+                candidate = candidate.Offset(Down);
+            }
+
+            return !targetAnchor.Equals(piece.Anchor);
         }
 
         public bool TryReserve(PieceModel piece)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GravityPuzzle.Config;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
@@ -159,7 +160,10 @@ namespace GravityPuzzle
             CreateBoardBackground(level);
             CreateBoardFrame(level, exitWidth);
 
-            CreateShredders(level, halfHeight, exitWidth);
+            ShredderConfig shredderConfig = BlockShredder.Instance != null
+                ? BlockShredder.Instance.Config
+                : null;
+            CreateShredders(level, halfHeight, exitWidth, shredderConfig);
 
             foreach (ObstacleDefinition obstacle in level.obstacles)
                 CreateObstacle(level, obstacle);
@@ -435,8 +439,19 @@ namespace GravityPuzzle
             return true;
         }
 
-        private static void CreateShredders(GravityLevelDefinition level, float halfHeight, float exitWidth)
+        private static void CreateShredders(
+            GravityLevelDefinition level,
+            float halfHeight,
+            float exitWidth,
+            ShredderConfig shredderConfig)
         {
+            float radiusMultiplier = shredderConfig != null
+                ? shredderConfig.WheelRadiusMultiplier
+                : 1f;
+            float rotationMultiplier = shredderConfig != null
+                ? shredderConfig.WheelRotationSpeedMultiplier
+                : 1f;
+
             if (level.shredders != null && level.shredders.Count > 0)
             {
                 float largestRadius = 0f;
@@ -445,7 +460,7 @@ namespace GravityPuzzle
                 float highestShredderTop = float.NegativeInfinity;
                 foreach (ShredderDefinition definition in level.shredders)
                 {
-                    float authoredRadius = definition.radiusInFineCells / level.subdivisions;
+                    float authoredRadius = definition.radiusInFineCells / level.subdivisions * radiusMultiplier;
                     largestRadius = Mathf.Max(largestRadius, authoredRadius);
                     Vector2 position = CellWorldPosition(level, definition.cell);
                     leftEdge = Mathf.Min(leftEdge, position.x - authoredRadius);
@@ -458,7 +473,7 @@ namespace GravityPuzzle
                         definition.name,
                         position,
                         authoredRadius,
-                        authoredSpeed);
+                        authoredSpeed * rotationMultiplier);
                 }
 
                 CreateShredderCatchZone(
@@ -470,7 +485,10 @@ namespace GravityPuzzle
             }
 
             int count = Mathf.Clamp(Mathf.RoundToInt(exitWidth), 1, 6);
-            float radius = Mathf.Clamp(level.shredderRadius, .2f, exitWidth / (count + .5f));
+            float radius = Mathf.Clamp(
+                level.shredderRadius * radiusMultiplier,
+                .2f,
+                exitWidth / (count + .5f));
             float spacing = count == 1 ? 0f : exitWidth / count;
             float startX = -(count - 1) * spacing * .5f;
             
@@ -485,7 +503,7 @@ namespace GravityPuzzle
                     $"Shredder {i + 1}",
                     new Vector2(startX + i * spacing, y),
                     radius,
-                    level.shredderRotationSpeed * direction);
+                    level.shredderRotationSpeed * rotationMultiplier * direction);
             }
 
             CreateShredderCatchZone(

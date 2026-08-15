@@ -16,5 +16,7 @@ MonoBehaviour:
   sequenceCapacity: 125
   pieceMoveDuration: 0.12
   pieceMoveEase: 6
+  gridFallDuration: 0.3
+  gridFallEase: 6
   shredDuration: 0.3
   shredEase: 5

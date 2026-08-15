@@ -10,6 +10,8 @@ namespace GravityPuzzle.Config
         [Min(1)] [SerializeField] private int sequenceCapacity = 125;
         [SerializeField] private float pieceMoveDuration = .12f;
         [SerializeField] private Ease pieceMoveEase = Ease.OutQuad;
+        [Min(.001f)] [SerializeField] private float gridFallDuration = .12f;
+        [SerializeField] private Ease gridFallEase = Ease.OutQuad;
         [SerializeField] private float shredDuration = .3f;
         [SerializeField] private Ease shredEase = Ease.InQuad;
 
@@ -17,6 +19,8 @@ namespace GravityPuzzle.Config
         public int SequenceCapacity => sequenceCapacity;
         public float PieceMoveDuration => pieceMoveDuration;
         public Ease PieceMoveEase => pieceMoveEase;
+        public float GridFallDuration => gridFallDuration;
+        public Ease GridFallEase => gridFallEase;
         public float ShredDuration => shredDuration;
         public Ease ShredEase => shredEase;
     }

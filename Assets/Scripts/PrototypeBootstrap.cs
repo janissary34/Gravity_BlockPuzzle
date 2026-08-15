@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using GravityPuzzle.Core.Grid;
+using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -742,6 +743,31 @@ namespace GravityPuzzle
 
             if (moved)
                 model.SetState(PieceState.Placed);
+
+            return moved;
+        }
+
+        public bool TryCommitGridGravityMove(
+            GridGravityMove move,
+            out GridPlacementResult result)
+        {
+            result = GridPlacementResult.Failure(
+                GridPlacementFailureReason.EmptyPiece,
+                move.ToAnchor,
+                GridCellState.Empty,
+                default);
+
+            if (BoardSnapshot == null ||
+                !BoardSnapshot.TryGetPiece(move.PieceId, out PieceModel piece))
+                return false;
+
+            bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
+                piece,
+                move.ToAnchor,
+                move.PieceId,
+                out result);
+            if (moved)
+                piece.SetState(PieceState.Falling);
 
             return moved;
         }

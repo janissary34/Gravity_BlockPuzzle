@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using GravityPuzzle.Config;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -12,6 +13,10 @@ namespace GravityPuzzle
     [DisallowMultipleComponent]
     public class BlockShredder : MonoBehaviour
     {
+        [Header("Configuration")]
+        [Tooltip("Authoring asset used for both this feed behaviour and runtime-created shredder wheels.")]
+        [SerializeField] private ShredderConfig shredderConfig;
+
         [Header("Shredder Explosion Forces")]
         [SerializeField, Tooltip("Base explosion impulse force applied to shattered voxels.")]
         private float shredExplosionForce = 1.4f;
@@ -47,6 +52,7 @@ namespace GravityPuzzle
         public static BlockShredder Instance { get; private set; }
         public static int ActiveGemFlightCount { get; private set; }
         public static bool HasActiveGemFlights => ActiveGemFlightCount > 0;
+        public ShredderConfig Config => shredderConfig;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetGemFlightCount()
@@ -62,6 +68,7 @@ namespace GravityPuzzle
                 return;
             }
             Instance = this;
+            ApplyConfig();
         }
 
         private void OnDestroy()
@@ -112,6 +119,17 @@ namespace GravityPuzzle
         {
             if (feedSpeed > 0f) shredlenmeHizi = feedSpeed;
             if (tremorIntensity >= 0f) titremeMiktari = tremorIntensity;
+        }
+
+        private void ApplyConfig()
+        {
+            if (shredderConfig == null)
+                return;
+
+            shredlenmeHizi = shredderConfig.FeedSpeed;
+            titremeMiktari = shredderConfig.TremorIntensity;
+            shredderTremorFrequency = shredderConfig.TremorFrequency;
+            shredderTumbleTorque = shredderConfig.TumbleTorque;
         }
 
         // The trigger has already accepted this piece for shredding. Keep it from
@@ -189,6 +207,7 @@ namespace GravityPuzzle
                 // Apply a gentle initial tilt angle (-15 to +15 deg/sec)
                 float gentleTilt = Random.Range(0, 2) == 0 ? Random.Range(-15f, -6f) : Random.Range(6f, 15f);
                 rb.angularVelocity = gentleTilt;
+                rb.AddTorque(Random.Range(-1f, 1f) * shredderTumbleTorque, ForceMode2D.Impulse);
             }
 
             // 2. Sprite Masking / Visual Clipping: mask out any portion moving below shredderY
