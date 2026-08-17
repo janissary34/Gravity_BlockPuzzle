@@ -3,7 +3,9 @@ guid: a4c9515ccd9184fd6bf2e5de7a188c0e
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - gridTransform: {instanceID: 0}
+  - shredderPrefab: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

@@ -1,11 +1,13 @@
 using UnityEngine;
 using System.Collections;
 using System;
+using GravityPuzzle.Infrastructure.Pooling;
 
 namespace GravityPuzzle
 {
     [RequireComponent(typeof(SpriteRenderer), typeof(Rigidbody2D), typeof(BoxCollider2D))]
-    public class VoxelShard : MonoBehaviour
+    [RequireComponent(typeof(GemFlyToUI))]
+    public sealed class VoxelShard : MonoBehaviour, IPoolable
     {
         private SpriteRenderer spriteRenderer;
         private Rigidbody2D rb;
@@ -17,9 +19,26 @@ namespace GravityPuzzle
             spriteRenderer = GetComponent<SpriteRenderer>();
             rb = GetComponent<Rigidbody2D>();
             col = GetComponent<BoxCollider2D>();
-            
             gemFly = GetComponent<GemFlyToUI>();
-            if (gemFly == null) gemFly = gameObject.AddComponent<GemFlyToUI>();
+        }
+
+        public void OnSpawn()
+        {
+            StopAllCoroutines();
+            rb.simulated = false;
+            rb.velocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            col.enabled = false;
+            transform.localRotation = Quaternion.identity;
+        }
+
+        public void OnDespawn()
+        {
+            StopAllCoroutines();
+            rb.simulated = false;
+            rb.velocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            col.enabled = false;
         }
 
         public void InitializeIntact(Color color, Vector2 size, Sprite sprite)
@@ -30,8 +49,8 @@ namespace GravityPuzzle
             transform.localScale = new Vector3(size.x, size.y, 1f);
             transform.localRotation = Quaternion.identity;
             
-            rb.simulated = false;
-            col.enabled = false;
+            if (rb != null) rb.simulated = false;
+            if (col != null) col.enabled = false;
             gameObject.SetActive(true);
         }
 

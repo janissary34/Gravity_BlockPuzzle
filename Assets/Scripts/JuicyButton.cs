@@ -90,7 +90,9 @@ namespace GravityPuzzle
 
             transform.DOScale(targetScale, pressDuration)
                 .SetEase(pressEase)
-                .SetUpdate(ignoreTimeScale);
+                .SetUpdate(ignoreTimeScale)
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
         }
 
         public void OnPointerUp(PointerEventData eventData)
@@ -121,13 +123,17 @@ namespace GravityPuzzle
             {
                 transform.localScale = originalScale;
                 transform.DOPunchScale(punchScaleStrength, releaseDuration, punchVibrato, punchElasticity)
-                    .SetUpdate(ignoreTimeScale);
+                    .SetUpdate(ignoreTimeScale)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
             }
             else
             {
                 transform.DOScale(originalScale, releaseDuration)
                     .SetEase(releaseEase)
-                    .SetUpdate(ignoreTimeScale);
+                    .SetUpdate(ignoreTimeScale)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
             }
 
             // 2. Subtle Random Rotational Punch Animation
@@ -142,7 +148,9 @@ namespace GravityPuzzle
                 Vector3 rotationPunchVector = new Vector3(0f, 0f, randomZAngle);
 
                 transform.DOPunchRotation(rotationPunchVector, releaseDuration, rotationVibrato)
-                    .SetUpdate(ignoreTimeScale);
+                    .SetUpdate(ignoreTimeScale)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
             }
         }
 

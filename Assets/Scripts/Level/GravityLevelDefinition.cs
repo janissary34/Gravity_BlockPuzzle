@@ -13,10 +13,9 @@ namespace GravityPuzzle
         public const float ReferencePortraitHeight = 812f;
         public const float MinimumTouchTargetPoints = 44f;
         public const float FrameThicknessInCells = .12f;
-        // Visuals always stay on the exact grid. Physics gets a very small,
-        // invisible inset while resting and a little more while the player is
-        // holding a piece. This is the tolerance that lets an N-cell block pass
-        // through an N-cell opening without asking level design for a fake gap.
+        // Collision geometry uses a tiny inset at rest and a larger one while
+        // dragging so pieces can pass through exact-size grid openings. The
+        // matching visual scale is applied by PuzzlePiece.
         public const float RestingPieceCollisionSkinInCells = .005f;
         public const float DraggingPieceCollisionSkinInCells = .055f;
 
@@ -34,11 +33,31 @@ namespace GravityPuzzle
             float safeWidthFraction = 1f,
             float safeHeightFraction = 1f)
         {
+            return CameraSize(
+                columns,
+                rows,
+                aspect,
+                safeWidthFraction,
+                safeHeightFraction,
+                BoardViewportWidth,
+                BoardViewportHeight);
+        }
+
+        public static float CameraSize(
+            int columns,
+            int rows,
+            float aspect,
+            float safeWidthFraction,
+            float safeHeightFraction,
+            float viewportWidth,
+            float viewportHeight)
+        {
             float widthLimited = columns * .5f /
-                                 (Mathf.Max(.25f, aspect) * BoardViewportWidth *
+                                 (Mathf.Max(.25f, aspect) * Mathf.Clamp(viewportWidth, .1f, 1f) *
                                   Mathf.Clamp(safeWidthFraction, .5f, 1f));
             float heightLimited = rows * .5f /
-                                  (BoardViewportHeight * Mathf.Clamp(safeHeightFraction, .5f, 1f));
+                                  (Mathf.Clamp(viewportHeight, .1f, 1f) *
+                                   Mathf.Clamp(safeHeightFraction, .5f, 1f));
             return Mathf.Max(widthLimited, heightLimited);
         }
     }
@@ -56,11 +75,27 @@ namespace GravityPuzzle
         public Color frameColor = new Color(.16f, .18f, .32f);
         [Min(.1f)] public float gravityScale = 1.5f;
 
+        [Header("Camera Framing")]
+        [Tooltip("If disabled, the level uses Fixed Camera Size instead of fitting the camera from board dimensions.")]
+        public bool useAutomaticCameraFit = true;
+        [Min(.1f)] public float fixedCameraSize = 6f;
+        [Range(.1f, 1f)] public float cameraViewportWidth = GravityGridMetrics.BoardViewportWidth;
+        [Range(.1f, 1f)] public float cameraViewportHeight = GravityGridMetrics.BoardViewportHeight;
+        [Tooltip("Enable only if the camera should react to the current device safe area. Off keeps editor/simulator framing stable across machines.")]
+        public bool useRuntimeSafeAreaForCameraFit;
+
         [Header("Bottom Exit & Shredders")]
         [Min(1f)] public float exitWidth = 3f;
         [Range(1, 3)] public int shredderCount = 2;
         [Range(.2f, .65f)] public float shredderRadius = .42f;
         [Min(0f)] public float shredderRotationSpeed = 220f;
+
+        [Header("Öğütme Ayarları (Tuning)")]
+        [Tooltip("Bloğun öğütücüye çekilme ve inme hızı (birim/saniye). Varsayılan: 0.7")]
+        public float shredlenmeHizi = 0.7f;
+
+        [Tooltip("Öğütülme esnasındaki mekanik titreme/sarsıntı genliği. Varsayılan: 0.045")]
+        public float titremeMiktari = 0.045f;
 
         public List<PieceDefinition> pieces = new List<PieceDefinition>();
         public List<PinDefinition> pins = new List<PinDefinition>();
@@ -85,6 +120,8 @@ namespace GravityPuzzle
     public sealed class PieceDefinition
     {
         public string name = "Puzzle Piece";
+        [Tooltip("Optional key resolved through PieceVisualConfig. Leave empty to use this piece's legacy colour.")]
+        public string visualId;
         public Color color = new Color(.2f, .65f, 1f);
         public Vector2Int origin = new Vector2Int(8, 10);
         [Range(0, 3)] public int quarterTurns;

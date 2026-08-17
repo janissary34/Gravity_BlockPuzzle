@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: a7a0c47571124ad0949341543bb1cda0
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - blockPiecePrefab: {fileID: 9164068488278492767, guid: 7f069ed2705a74c998225ef6e254fb9e, type: 3}
+  - voxelShardPrefab: {fileID: 5548497357006573719, guid: 407437a00a22144cd80d53c456435d6e, type: 3}
+  - poolConfig: {fileID: 11400000, guid: e83a15e692e0d4a49ab874c797e92f79, type: 2}
+  - pieceVisualConfig: {instanceID: 0}
+  - poolParent: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

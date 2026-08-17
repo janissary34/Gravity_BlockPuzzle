@@ -1,62 +1,64 @@
 using UnityEngine;
-using System.Collections.Generic;
+using GravityPuzzle.Infrastructure.Pooling;
 
 namespace GravityPuzzle
 {
     public static class VoxelBlockBuilder
     {
-        private static Queue<VoxelShard> voxelPool = new Queue<VoxelShard>();
-        private static Transform poolContainer;
+        private static PoolService poolService;
         private static Sprite defaultVoxelSprite;
         
-        public const int Subdivisions = 3; // 3x3 grid
+        private static int subdivisions = 3;
+        public static int Subdivisions => subdivisions;
 
-        public static void InitializePool(int initialSize)
+        public static void SetPoolService(PoolService pools, int configuredSubdivisions)
         {
-            if (poolContainer == null)
-            {
-                poolContainer = new GameObject("Voxel Shard Pool").transform;
-                GameObject.DontDestroyOnLoad(poolContainer.gameObject);
-            }
-
-            for (int i = 0; i < initialSize; i++)
-            {
-                VoxelShard shard = CreateNewVoxel();
-                shard.gameObject.SetActive(false);
-                voxelPool.Enqueue(shard);
-            }
+            poolService = pools ?? throw new System.ArgumentNullException(nameof(pools));
+            subdivisions = Mathf.Clamp(configuredSubdivisions, 1, 6);
         }
 
-        private static VoxelShard CreateNewVoxel()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetPool()
         {
-            if (poolContainer == null)
-            {
-                poolContainer = new GameObject("Voxel Shard Pool").transform;
-                GameObject.DontDestroyOnLoad(poolContainer.gameObject);
-            }
-
-            GameObject go = new GameObject("VoxelShard");
-            go.transform.SetParent(poolContainer, false);
-            
-            VoxelShard shard = go.AddComponent<VoxelShard>();
-            return shard;
+            poolService = null;
+            defaultVoxelSprite = null;
+            subdivisions = 3;
         }
 
         public static VoxelShard GetVoxel()
         {
-            if (voxelPool.Count > 0)
-            {
-                return voxelPool.Dequeue();
-            }
-            return CreateNewVoxel();
+            if (poolService == null || !poolService.TryGet(out IPool<VoxelShard> voxelPool))
+                throw new System.InvalidOperationException(
+                    "[VoxelPool] VoxelBlockBuilder has not been configured by RuntimePieceFactoryBootstrap.");
+
+            if (voxelPool.TryRent(out VoxelShard shard))
+                return shard;
+
+            throw new System.InvalidOperationException("[VoxelPool] Pool exhausted. Increase PoolConfig.ShredVoxelCapacity.");
         }
 
         public static void ReturnVoxel(VoxelShard shard)
         {
-            if (poolContainer != null)
-                shard.transform.SetParent(poolContainer, false);
-            shard.gameObject.SetActive(false);
-            voxelPool.Enqueue(shard);
+            if (shard != null && poolService != null &&
+                poolService.TryGet(out IPool<VoxelShard> voxelPool))
+                voxelPool.Return(shard);
+        }
+
+        public static int EstimateMaximumVoxelCount(GravityLevelDefinition level, int configuredSubdivisions)
+        {
+            if (level == null || level.pieces == null)
+                return 0;
+
+            int voxelsPerCell = configuredSubdivisions * configuredSubdivisions;
+            int total = 0;
+            for (int index = 0; index < level.pieces.Count; index++)
+            {
+                PieceDefinition piece = level.pieces[index];
+                if (piece != null && piece.cells != null)
+                    total += piece.cells.Count * voxelsPerCell;
+            }
+
+            return total;
         }
 
         public static Sprite GetDefaultVoxelSprite()
@@ -80,20 +82,24 @@ namespace GravityPuzzle
             return defaultVoxelSprite;
         }
 
-        public static void BuildVoxelGrid(Transform parent, string namePrefix, Vector2 totalSize, Color color)
+        public static void BuildVoxelGrid(
+            Transform parent,
+            string namePrefix,
+            Vector2 totalSize,
+            Color color,
+            Sprite voxelSprite = null)
         {
-            float voxelWidth = totalSize.x / Subdivisions;
-            float voxelHeight = totalSize.y / Subdivisions;
+            float voxelWidth = totalSize.x / subdivisions;
+            float voxelHeight = totalSize.y / subdivisions;
             Vector2 voxelSize = new Vector2(voxelWidth, voxelHeight);
             
-            Sprite sprite = GetDefaultVoxelSprite();
+            Sprite sprite = voxelSprite != null ? voxelSprite : GetDefaultVoxelSprite();
 
             float startX = -totalSize.x * 0.5f + voxelWidth * 0.5f;
             float startY = -totalSize.y * 0.5f + voxelHeight * 0.5f;
-
-            for (int x = 0; x < Subdivisions; x++)
+            for (int x = 0; x < subdivisions; x++)
             {
-                for (int y = 0; y < Subdivisions; y++)
+                for (int y = 0; y < subdivisions; y++)
                 {
                     VoxelShard shard = GetVoxel();
                     shard.transform.SetParent(parent, false);

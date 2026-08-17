@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 50a1c14f239a644cb9c0492628aa4e8e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - wheelPrefab: {fileID: 6496321627930684527, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

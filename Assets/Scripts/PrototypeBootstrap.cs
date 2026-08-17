@@ -1,5 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using GravityPuzzle.Core.Grid;
+using GravityPuzzle.Gameplay.Gravity;
+using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -16,10 +19,8 @@ namespace GravityPuzzle
         internal const float ColliderCornerRadius = .025f;
         private static Sprite squareSprite;
         private static Sprite circleSprite;
-        // Puzzle bodies are moved by our deterministic kinematic solver. Physics
-        // materials remain frictionless because Box2D is used only for queries
-        // and trigger detection, never for mass/friction impulse resolution.
-        private static PhysicsMaterial2D frictionlessMaterial;
+        // This material gives casts/contact resolution a stable, non-bouncy surface.
+        private static PhysicsMaterial2D puzzleContactMaterial;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void RegisterSceneLoader()
@@ -101,27 +102,65 @@ namespace GravityPuzzle
         private static void ConfigurePuzzleColliders()
         {
             EnsurePhysicsMaterials();
+            EnsurePuzzleObstacleCollisionLayers();
+            Physics2D.velocityIterations = Mathf.Max(Physics2D.velocityIterations, 10);
+            Physics2D.positionIterations = Mathf.Max(Physics2D.positionIterations, 10);
 
             foreach (Collider2D sceneCollider in Object.FindObjectsOfType<Collider2D>())
-                sceneCollider.sharedMaterial = frictionlessMaterial;
+                sceneCollider.sharedMaterial = puzzleContactMaterial;
         }
 
         internal static void SetDraggingFriction(PuzzlePiece piece, bool isDragging)
         {
             EnsurePhysicsMaterials();
-            ApplyPieceMaterial(piece, frictionlessMaterial);
+            ApplyPieceMaterial(piece, puzzleContactMaterial);
         }
 
         private static void EnsurePhysicsMaterials()
         {
-            if (frictionlessMaterial == null)
+            if (puzzleContactMaterial == null)
             {
-                frictionlessMaterial = new PhysicsMaterial2D("Puzzle Frictionless")
+                puzzleContactMaterial = new PhysicsMaterial2D("Puzzle Contact")
                 {
-                    friction = 0f,
+                    friction = .4f,
                     bounciness = 0f
                 };
             }
+        }
+
+        private static void EnsurePuzzleObstacleCollisionLayers()
+        {
+            int pieceLayer = LayerMask.NameToLayer("PuzzlePiece");
+            int obstacleLayer = LayerMask.NameToLayer("Obstacle");
+
+            // Projects without named custom layers keep Unity's Default layer; make
+            // that pair explicit as well so a stale matrix cannot disable contacts.
+            if (pieceLayer < 0 || obstacleLayer < 0)
+            {
+                Physics2D.IgnoreLayerCollision(0, 0, false);
+                return;
+            }
+
+            Physics2D.IgnoreLayerCollision(pieceLayer, obstacleLayer, false);
+            foreach (PuzzlePiece piece in Object.FindObjectsOfType<PuzzlePiece>())
+                SetLayerRecursively(piece.gameObject, pieceLayer);
+
+            foreach (Collider2D collider in Object.FindObjectsOfType<Collider2D>())
+            {
+                if (collider.GetComponentInParent<PuzzlePiece>() != null)
+                    continue;
+
+                Rigidbody2D body = collider.GetComponentInParent<Rigidbody2D>();
+                if (body != null && body.bodyType == RigidbodyType2D.Static)
+                    SetLayerRecursively(collider.gameObject, obstacleLayer);
+            }
+        }
+
+        private static void SetLayerRecursively(GameObject target, int layer)
+        {
+            target.layer = layer;
+            foreach (Transform child in target.transform)
+                SetLayerRecursively(child.gameObject, layer);
         }
 
         private static void ApplyPieceMaterial(PuzzlePiece piece, PhysicsMaterial2D material)
@@ -216,7 +255,7 @@ namespace GravityPuzzle
             body.interpolation = RigidbodyInterpolation2D.None;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            body.sleepMode = RigidbodySleepMode2D.StartAwake;
+            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
             piece.AddComponent<PuzzlePiece>();
 
             // The stem, arm, and tip together form a J-shaped hook.
@@ -604,7 +643,9 @@ namespace GravityPuzzle
         public static PrototypeBoard Active { get; private set; }
 
         private const float NextLevelDelay = 1.25f;
+        private float finalShredderGraceSeconds = 1f;
         private float removalHeight = -5.5f;
+        private bool finalShredderOutcomeLocked;
         private bool boardCleared;
         private bool boardFailed;
         private bool sequentialLevelsEnabled = true;
@@ -626,6 +667,7 @@ namespace GravityPuzzle
         public bool IsTimerActive => TimeLimit > 0f && IsTimerStarted && !boardCleared && !boardFailed;
         public bool IsTimerPaused => timerPauseOwners.Count > 0;
         public bool IsLevelRunning => !boardCleared && !boardFailed;
+        public LevelBoardSnapshot BoardSnapshot { get; private set; }
 
         private void OnEnable()
         {
@@ -645,6 +687,254 @@ namespace GravityPuzzle
             IsTimerStarted = false;
             DestroyedPieceCount = 0;
             timerPauseOwners.Clear();
+            finalShredderOutcomeLocked = false;
+        }
+
+        public void SetFinalShredderGraceSeconds(float seconds)
+        {
+            finalShredderGraceSeconds = Mathf.Max(0f, seconds);
+        }
+
+        /// <summary>
+        /// Locks the result to a win when the final live piece reaches the
+        /// shredder inside the configured final-seconds window. The allowance
+        /// is an entry window, not a second timer running beside the shred
+        /// animation: once earned, the feed and its progress voxels may finish.
+        /// </summary>
+        public void TryLockFinalShredderOutcome(PuzzlePiece shredderPiece)
+        {
+            if (shredderPiece == null ||
+                TimeLimit <= 0f ||
+                !IsTimerStarted ||
+                TimeRemaining > finalShredderGraceSeconds)
+                return;
+
+            IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            int livePieceCount = 0;
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                if (pieces[index] != null)
+                    livePieceCount++;
+            }
+
+            if (livePieceCount == 1)
+                finalShredderOutcomeLocked = true;
+        }
+
+        // Phase 2 keeps this snapshot parallel to the legacy physics runtime.
+        // A later phase will make it the sole gameplay authority.
+        public void InitializeBoardSnapshot(LevelBoardSnapshot snapshot)
+        {
+            BoardSnapshot = snapshot;
+        }
+
+        public bool TryGetPieceModel(PuzzlePiece piece, out PieceModel model)
+        {
+            model = null;
+            return piece != null &&
+                   BoardSnapshot != null &&
+                   BoardSnapshot.TryGetPiece(piece.SourcePieceId, out model);
+        }
+
+        public bool TrySetPieceState(PuzzlePiece piece, PieceState state)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            model.SetState(state);
+            return true;
+        }
+
+        public bool TryClearPieceFromGrid(PuzzlePiece piece, PieceState state)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            BoardSnapshot.Grid.ClearPiece(model);
+            model.SetState(state);
+            return true;
+        }
+
+        /// <summary>
+        /// Keeps a piece's current footprint occupied while it is travelling
+        /// through the shredder.  Reserved cells block placement and grid
+        /// gravity, but are released normally when the pooled piece despawns.
+        /// </summary>
+        public bool TryReservePieceInGrid(PuzzlePiece piece, PieceState state)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            if (!BoardSnapshot.Grid.TryReserve(model))
+                return false;
+
+            model.SetState(state);
+            return true;
+        }
+
+        /// <summary>
+        /// Releases a runtime piece's occupied cells before its prefab root is
+        /// returned to the typed pool.  A later rent can therefore never
+        /// inherit a stale grid reservation from its previous lifetime.
+        /// </summary>
+        public bool TryDespawnPieceFromGrid(PuzzlePiece piece)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            BoardSnapshot.Grid.ClearPiece(model);
+            model.SetState(PieceState.Despawned);
+            return true;
+        }
+
+        /// <summary>
+        /// Replaces a damaged source model with the connected visual fragments
+        /// created by the hammer. The grid is updated before gravity is woken,
+        /// so fragments immediately block one another and every other piece.
+        /// </summary>
+        public bool TryRegisterHammerFragments(
+            IReadOnlyList<PuzzlePiece> fragments,
+            PieceState initialState)
+        {
+            if (BoardSnapshot == null || fragments == null || fragments.Count == 0)
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null || !TryGetPieceModel(fragments[0], out PieceModel sourceModel))
+                return false;
+
+            List<PieceModel> fragmentModels = new List<PieceModel>(fragments.Count);
+            int nextId = BoardSnapshot.NextPieceId;
+            for (int index = 0; index < fragments.Count; index++)
+            {
+                PuzzlePiece fragment = fragments[index];
+                if (fragment == null ||
+                    !fragment.TryCreateGridModel(level, nextId + index, out PieceModel model))
+                    return false;
+
+                model.SetState(initialState);
+                fragmentModels.Add(model);
+            }
+
+            BoardSnapshot.Grid.ClearPiece(sourceModel);
+            int placedCount = 0;
+            for (; placedCount < fragmentModels.Count; placedCount++)
+            {
+                if (BoardSnapshot.Grid.TryPlace(fragmentModels[placedCount]))
+                    continue;
+
+                for (int rollbackIndex = 0; rollbackIndex < placedCount; rollbackIndex++)
+                    BoardSnapshot.Grid.ClearPiece(fragmentModels[rollbackIndex]);
+
+                BoardSnapshot.Grid.TryPlace(sourceModel);
+                Debug.LogWarning(
+                    "[GridSplit] Hammer fragments could not be registered; restored the source grid model.",
+                    this);
+                return false;
+            }
+
+            for (int index = 0; index < fragmentModels.Count; index++)
+            {
+                if (!BoardSnapshot.TryRegisterPlacedPiece(fragmentModels[index]))
+                {
+                    Debug.LogError("[GridSplit] Registered fragment id sequence was invalid.", this);
+                    return false;
+                }
+
+                fragments[index].ConfigureSourcePieceId(fragmentModels[index].Id);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Safe interim hammer behaviour: one runtime root keeps its identity,
+        /// while the grid footprint is rebuilt from its remaining cells.  This
+        /// deliberately avoids creating disconnected runtime roots until the
+        /// full split lifecycle has a dedicated grid transaction.
+        /// </summary>
+        public bool TryRefreshHammerPieceGeometry(PuzzlePiece piece)
+        {
+            if (BoardSnapshot == null || piece == null ||
+                !TryGetPieceModel(piece, out PieceModel existingModel))
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null ||
+                !piece.TryCreateGridModel(level, existingModel.Id, out PieceModel refreshedModel))
+                return false;
+
+            refreshedModel.SetState(PieceState.Placed);
+            BoardSnapshot.Grid.ClearPiece(existingModel);
+            if (!BoardSnapshot.Grid.TryPlace(refreshedModel))
+            {
+                BoardSnapshot.Grid.TryPlace(existingModel);
+                Debug.LogWarning(
+                    "[GridHammer] The edited piece footprint could not be committed; restored its previous grid shape.",
+                    this);
+                return false;
+            }
+
+            if (!BoardSnapshot.TryReplacePlacedPiece(refreshedModel))
+            {
+                BoardSnapshot.Grid.ClearPiece(refreshedModel);
+                BoardSnapshot.Grid.TryPlace(existingModel);
+                Debug.LogError("[GridHammer] The edited piece model could not replace its stable id.", this);
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool TryMovePieceOnGrid(
+            PuzzlePiece piece,
+            GridCoordinate targetAnchor,
+            out GridPlacementResult result)
+        {
+            result = GridPlacementResult.Failure(
+                GridPlacementFailureReason.EmptyPiece,
+                targetAnchor,
+                GridCellState.Empty,
+                default);
+
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
+                model,
+                targetAnchor,
+                piece.SourcePieceId,
+                out result);
+
+            if (moved)
+                model.SetState(PieceState.Placed);
+
+            return moved;
+        }
+
+        public bool TryCommitGridGravityMove(
+            GridGravityMove move,
+            out GridPlacementResult result)
+        {
+            result = GridPlacementResult.Failure(
+                GridPlacementFailureReason.EmptyPiece,
+                move.ToAnchor,
+                GridCellState.Empty,
+                default);
+
+            if (BoardSnapshot == null ||
+                !BoardSnapshot.TryGetPiece(move.PieceId, out PieceModel piece))
+                return false;
+
+            bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
+                piece,
+                move.ToAnchor,
+                move.PieceId,
+                out result);
+            if (moved)
+                piece.SetState(PieceState.Falling);
+
+            return moved;
         }
 
         public void StartTimer()
@@ -657,13 +947,29 @@ namespace GravityPuzzle
             if (!IsLevelRunning || destroyedPiece == null)
                 return;
 
+            // A shredder feed is still a physical object until the last voxel
+            // has crossed the cutter. Keep its cells reserved during that
+            // interval so a grid-driven falling piece cannot enter it.
+            if (destroyedPiece.IsBeingShredded)
+                TryReservePieceInGrid(destroyedPiece, PieceState.Shredding);
+            else
+                TryClearPieceFromGrid(destroyedPiece, PieceState.Shredding);
             DestroyedPieceCount++;
+            PuzzleDragController.WakeUpGravity();
             IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
             for (int i = 0; i < pieces.Count; i++)
             {
                 PuzzlePiece piece = pieces[i];
                 if (piece != null && piece != destroyedPiece)
                     piece.RefreshFreezeState(DestroyedPieceCount);
+            }
+        }
+
+        public void AddTime(float seconds)
+        {
+            if (seconds > 0f && TimeLimit > 0f)
+            {
+                TimeRemaining += seconds;
             }
         }
 
@@ -717,13 +1023,17 @@ namespace GravityPuzzle
                 if (piece.transform.position.y < removalHeight)
                 {
                     piece.ReportDestroyed();
-                    Object.Destroy(piece.gameObject);
+                    piece.ReleaseInstance();
                 }
             }
 
             if (!boardCleared && !boardFailed)
             {
-                if (livePieceCount == 0 && !BlockShredder.HasActiveGemFlights)
+                LevelProgressManager progress = LevelProgressManager.Instance;
+                bool requiresProgress = progress != null && progress.TotalBlockUnits > 0;
+                bool progressReady = !requiresProgress ||
+                                     (progress.IsLevelComplete && !progress.HasPendingProgressPresentation);
+                if (livePieceCount == 0 && !BlockShredder.HasActiveGemFlights && progressReady)
                 {
                     boardCleared = true;
                     Debug.Log("LEVEL CLEARED!");
@@ -741,6 +1051,15 @@ namespace GravityPuzzle
                 }
                 else if (TimeLimit > 0f && TimeRemaining <= 0f)
                 {
+                    // The final piece entered a shredder during the configured
+                    // final-seconds window. It has earned its completion even
+                    // if its physical feed and flying progress voxels continue
+                    // after the display reaches 00:00.
+                    if (finalShredderOutcomeLocked)
+                    {
+                        return;
+                    }
+
                     bool allSettled = true;
                     for (int i = 0; i < pieces.Count; i++)
                     {

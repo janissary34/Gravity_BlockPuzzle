@@ -1,5 +1,9 @@
 using System;
 using System.Collections.Generic;
+using GravityPuzzle.Config;
+using GravityPuzzle.Core.Grid;
+using GravityPuzzle.Gameplay.Gravity;
+using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -140,12 +144,7 @@ namespace GravityPuzzle
         public static void Build(GravityLevelDefinition level)
         {
             float halfHeight = level.boardRows * .5f;
-            float cameraSize = GravityGridMetrics.CameraSize(
-                level.boardColumns,
-                level.boardRows,
-                CameraAspect(),
-                SafeAreaWidthFraction(),
-                SafeAreaHeightFraction());
+            float cameraSize = 10f;
             PrototypeBootstrap.ConfigureCamera(cameraSize, level.backgroundColor);
 
             GameObject board = new GameObject($"Level - {level.levelName}");
@@ -153,6 +152,7 @@ namespace GravityPuzzle
             boardState.SetRemovalHeight(-halfHeight - 15f);
             boardState.SetTimeLimit(level.timeLimit);
             boardState.EnableSequentialLevels();
+            boardState.InitializeBoardSnapshot(LevelBoardSnapshotBuilder.Build(level));
             board.AddComponent<PuzzleDragController>();
 
             float frameThickness = GravityGridMetrics.FrameThicknessInCells;
@@ -160,7 +160,13 @@ namespace GravityPuzzle
             CreateBoardBackground(level);
             CreateBoardFrame(level, exitWidth);
 
-            CreateShredders(level, halfHeight, exitWidth);
+            ShredderConfig shredderConfig = BlockShredder.Instance != null
+                ? BlockShredder.Instance.Config
+                : null;
+            if (shredderConfig != null)
+                boardState.SetFinalShredderGraceSeconds(
+                    shredderConfig.FinalPieceTimerGraceSeconds);
+            CreateShredders(level, halfHeight, shredderConfig);
 
             foreach (ObstacleDefinition obstacle in level.obstacles)
                 CreateObstacle(level, obstacle);
@@ -168,8 +174,47 @@ namespace GravityPuzzle
             foreach (PinDefinition pin in level.pins)
                 CreatePin(level, pin);
 
-            foreach (PieceDefinition piece in level.pieces)
-                CreatePiece(level, piece);
+            for (int pieceIndex = 0; pieceIndex < level.pieces.Count; pieceIndex++)
+                RuntimePieceFactory.Create(level, level.pieces[pieceIndex], pieceIndex);
+
+            ValidateLevelSnapshotRuntimeState(level, boardState);
+
+            // The manager creates its UI fallback when this scene does not provide one.
+            LevelProgressManager.EnsureInstance().InitializeLevelProgress(level);
+            SettingsPanelButton.EnsureConnected();
+        }
+
+        private static float ResolveCameraSize(GravityLevelDefinition level)
+        {
+            if (!level.useAutomaticCameraFit)
+                return level.fixedCameraSize;
+
+            float safeWidthFraction = level.useRuntimeSafeAreaForCameraFit
+                ? SafeAreaWidthFraction()
+                : 1f;
+            float safeHeightFraction = level.useRuntimeSafeAreaForCameraFit
+                ? SafeAreaHeightFraction()
+                : 1f;
+
+            return GravityGridMetrics.CameraSize(
+                level.boardColumns,
+                level.boardRows,
+                CameraAspect(),
+                safeWidthFraction,
+                safeHeightFraction,
+                level.cameraViewportWidth,
+                level.cameraViewportHeight);
+        }
+
+        private static void ValidateLevelSnapshotRuntimeState(
+            GravityLevelDefinition level,
+            PrototypeBoard boardState)
+        {
+            LevelBoardSnapshotRuntimeValidator.Validate(
+                level,
+                boardState.BoardSnapshot,
+                PuzzlePiece.ActivePieces,
+                boardState);
         }
 
         private static void CreateBoardBackground(GravityLevelDefinition level)
@@ -397,35 +442,30 @@ namespace GravityPuzzle
             return true;
         }
 
-        private static void CreateShredders(GravityLevelDefinition level, float halfHeight, float exitWidth)
+        private static void CreateShredders(
+            GravityLevelDefinition level,
+            float halfHeight,
+            ShredderConfig shredderConfig)
         {
-            if (level.shredders != null && level.shredders.Count > 0)
-            {
-                float largestRadius = 0f;
-                foreach (ShredderDefinition definition in level.shredders)
-                {
-                    float authoredRadius = definition.radiusInFineCells / level.subdivisions;
-                    largestRadius = Mathf.Max(largestRadius, authoredRadius);
-                    float authoredSpeed = definition.clockwise
-                        ? -definition.rotationSpeed
-                        : definition.rotationSpeed;
-                    CreateShredder(
-                        definition.name,
-                        CellWorldPosition(level, definition.cell),
-                        authoredRadius,
-                        authoredSpeed);
-                }
+            float radiusMultiplier = shredderConfig != null
+                ? shredderConfig.WheelRadiusMultiplier
+                : 1f;
+            float rotationMultiplier = shredderConfig != null
+                ? shredderConfig.WheelRotationSpeedMultiplier
+                : 1f;
 
-                CreateShredderCatchZone(
-                    halfHeight,
-                    exitWidth,
-                    Mathf.Max(.2f, largestRadius));
-                return;
-            }
-
-            int count = Mathf.Clamp(Mathf.RoundToInt(exitWidth), 1, 6);
-            float radius = Mathf.Clamp(level.shredderRadius, .2f, exitWidth / (count + .5f));
-            float spacing = count == 1 ? 0f : exitWidth / count;
+            // The cutter is a continuous bottom-row hazard, independent of the
+            // decorative frame exit. Cover every board column including both
+            // outermost cells, so pieces cannot bypass it through a corner.
+            float coverageWidth = level.boardColumns;
+            float requestedRadius = Mathf.Max(.2f, level.shredderRadius * radiusMultiplier);
+            int count = Mathf.Max(1, Mathf.CeilToInt(coverageWidth / (requestedRadius * 2f)));
+            // Fit an integer number of touching wheels exactly across the full
+            // board width. The first/last wheel edges land on the board edges.
+            float radius = coverageWidth / (count * 2f);
+            // Centre-to-centre spacing equals a wheel diameter: teeth touch with
+            // no authored gaps, regardless of board size or old level metadata.
+            float spacing = radius * 2f;
             float startX = -(count - 1) * spacing * .5f;
             
             // Lower the shredders so their top edge (y + radius) is exactly at the bottom of the board (-halfHeight).
@@ -439,31 +479,50 @@ namespace GravityPuzzle
                     $"Shredder {i + 1}",
                     new Vector2(startX + i * spacing, y),
                     radius,
-                    level.shredderRotationSpeed * direction);
+                    level.shredderRotationSpeed * rotationMultiplier * direction);
             }
 
-            CreateShredderCatchZone(halfHeight, exitWidth, radius);
+            CreateShredderCatchZone(
+                startX - radius,
+                startX + (count - 1) * spacing + radius,
+                y + radius,
+                radius,
+                shredderConfig);
         }
 
         private static void CreateShredder(string name, Vector2 position, float radius, float speed)
         {
-            GameObject shredder = new GameObject(name);
+            if (!ShredderWheelPool.TryRent(out ShredderWheel wheel))
+                throw new InvalidOperationException("[ShredderPool] Pool is not configured or has insufficient capacity.");
+
+            GameObject shredder = wheel.gameObject;
+            shredder.name = name;
             shredder.transform.position = position;
-            ShredderWheel wheel = shredder.AddComponent<ShredderWheel>();
-            wheel.Build(radius, speed);
+            wheel.Configure(radius, speed);
         }
 
-        private static void CreateShredderCatchZone(float halfHeight, float exitWidth, float radius)
+        private static void CreateShredderCatchZone(
+            float leftEdge,
+            float rightEdge,
+            float topY,
+            float radius,
+            ShredderConfig shredderConfig)
         {
-            GameObject catchZone = new GameObject("Shredder Catch Zone");
+            if (shredderConfig == null ||
+                !ShredderCatchZonePool.TryRent(out ShredderCatchZone zone))
+            {
+                throw new InvalidOperationException(
+                    "[ShredderPool] Catch-zone pool is not configured. Create and assign the ShredderCatchZone prefab in ShredderConfig.");
+            }
+
             float thickness = 10f;
-            float topY = -halfHeight - radius * .5f;
-            catchZone.transform.position = new Vector2(0f, topY - thickness * .5f);
-            BoxCollider2D catchTrigger = catchZone.AddComponent<BoxCollider2D>();
-            catchTrigger.size = new Vector2(exitWidth + 2f, thickness);
-            catchTrigger.isTrigger = true;
-            ShredderCatchZone zone = catchZone.AddComponent<ShredderCatchZone>();
-            zone.shredY = topY;
+            float width = Mathf.Max(radius * 2f, rightEdge - leftEdge + radius * .5f);
+            zone.Configure(
+                new Vector2(
+                (leftEdge + rightEdge) * .5f,
+                topY - thickness * .5f),
+                new Vector2(width, thickness),
+                topY);
         }
 
         private static void CreateObstacle(GravityLevelDefinition level, ObstacleDefinition obstacle)
@@ -509,209 +568,6 @@ namespace GravityPuzzle
                 pin.color);
         }
 
-        private static void CreatePiece(GravityLevelDefinition level, PieceDefinition definition)
-        {
-            GameObject piece = new GameObject(definition.name);
-            piece.transform.position = CellWorldPosition(level, definition.origin);
-
-            Rigidbody2D body = piece.AddComponent<Rigidbody2D>();
-            body.gravityScale = level.gravityScale;
-            body.mass = 1f;
-            body.bodyType = RigidbodyType2D.Kinematic;
-            body.useFullKinematicContacts = true;
-            body.interpolation = RigidbodyInterpolation2D.None;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            body.sleepMode = RigidbodySleepMode2D.StartAwake;
-
-            CompositeCollider2D pieceComposite = piece.AddComponent<CompositeCollider2D>();
-            pieceComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
-            pieceComposite.generationType = CompositeCollider2D.GenerationType.Synchronous;
-            pieceComposite.edgeRadius = 0f;
-
-            float fineCellSize = 1f / level.subdivisions;
-
-            List<PiecePartGeometry> parts = new List<PiecePartGeometry>();
-            Dictionary<Vector2Int, int> blockCounts = new Dictionary<Vector2Int, int>();
-            foreach (PieceCellDefinition cell in definition.cells)
-            {
-                Vector2Int rotated = QuarterTurnUtility.Rotate(cell.localCell, definition.quarterTurns);
-                if (cell.type != PieceCellType.Block)
-                    continue;
-
-                Vector2Int absolute = definition.origin + rotated;
-                Vector2Int gridCell = new Vector2Int(
-                    Mathf.FloorToInt((float)absolute.x / level.subdivisions),
-                    Mathf.FloorToInt((float)absolute.y / level.subdivisions));
-                blockCounts.TryGetValue(gridCell, out int count);
-                blockCounts[gridCell] = count + 1;
-            }
-
-            HashSet<Vector2Int> completeModules = new HashSet<Vector2Int>();
-            int cellsPerModule = level.subdivisions * level.subdivisions;
-            foreach (KeyValuePair<Vector2Int, int> blockCount in blockCounts)
-            {
-                if (blockCount.Value != cellsPerModule)
-                    continue;
-
-                completeModules.Add(blockCount.Key);
-                Vector2 localPosition =
-                    GridCellWorldPosition(level, blockCount.Key) -
-                    CellWorldPosition(level, definition.origin);
-                parts.Add(new PiecePartGeometry("Grid Block", localPosition, Vector2.one));
-            }
-
-            foreach (PieceCellDefinition cell in definition.cells)
-            {
-                Vector2Int rotated = QuarterTurnUtility.Rotate(cell.localCell, definition.quarterTurns);
-                Vector2Int absolute = definition.origin + rotated;
-                Vector2Int gridCell = new Vector2Int(
-                    Mathf.FloorToInt((float)absolute.x / level.subdivisions),
-                    Mathf.FloorToInt((float)absolute.y / level.subdivisions));
-                if (cell.type == PieceCellType.Block && completeModules.Contains(gridCell))
-                    continue;
-
-                Vector2 localPosition = (Vector2)rotated * fineCellSize;
-                string partName = cell.type == PieceCellType.Hook ? "Hook Cell" : "Block Cell";
-                parts.Add(new PiecePartGeometry(
-                    partName,
-                    localPosition,
-                    Vector2.one * fineCellSize));
-            }
-
-            GetPiecePartBounds(parts, out Vector2 minimum, out Vector2 maximum);
-            Vector2 collisionCentre = (minimum + maximum) * .5f;
-
-            GameObject collisionRootObject = new GameObject("Collision Geometry");
-            collisionRootObject.transform.SetParent(piece.transform, false);
-            collisionRootObject.transform.localPosition = collisionCentre;
-
-            List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(parts.Count);
-            List<SpriteRenderer> collisionCellVisuals = new List<SpriteRenderer>(parts.Count);
-            foreach (PiecePartGeometry part in parts)
-            {
-                collisionCells.Add(CreatePiecePart(
-                    piece.transform,
-                    collisionRootObject.transform,
-                    collisionCentre,
-                    part,
-                    definition.color,
-                    out SpriteRenderer cellVisual));
-                collisionCellVisuals.Add(cellVisual);
-            }
-
-            pieceComposite.GenerateGeometry();
-
-            // Draw a unified outline around the outer perimeter of the shape
-            LineRenderer outline = piece.AddComponent<LineRenderer>();
-            outline.useWorldSpace = false;
-            outline.loop = true;
-            outline.startWidth = 0.08f;
-            outline.endWidth = 0.08f;
-            outline.numCornerVertices = 4;
-            outline.numCapVertices = 4;
-            outline.sortingOrder = -1; // Draw just behind the colored blocks
-            
-            // Standard sprite material so it matches the 2D lighting/rendering
-            outline.material = new Material(Shader.Find("Sprites/Default"));
-            Color outlineColor = new Color(0.12f, 0.12f, 0.15f, 1f);
-            outline.startColor = outlineColor;
-            outline.endColor = outlineColor;
-
-            if (pieceComposite.pathCount > 0)
-            {
-                int pointCount = pieceComposite.GetPathPointCount(0);
-                outline.positionCount = pointCount;
-                Vector2[] path = new Vector2[pointCount];
-                pieceComposite.GetPath(0, path);
-                for (int i = 0; i < pointCount; i++)
-                {
-                    outline.SetPosition(i, new Vector3(path[i].x, path[i].y, 0f));
-                }
-            }
-
-            PuzzlePiece puzzlePiece = piece.AddComponent<PuzzlePiece>();
-            puzzlePiece.ConfigureCollisionGeometry(
-                pieceComposite,
-                collisionCells,
-                collisionCellVisuals);
-            puzzlePiece.ConfigureFreeze(
-                definition.frozenMoveCount,
-                definition.iceCounterFontSize,
-                definition.iceCounterTextColor,
-                definition.iceCounterOutlineColor,
-                definition.iceCounterOutlineWidth,
-                definition.iceCounterOffset);
-        }
-
-        private static BoxCollider2D CreatePiecePart(
-            Transform visualParent,
-            Transform collisionRoot,
-            Vector2 collisionCentre,
-            PiecePartGeometry part,
-            Color color,
-            out SpriteRenderer cellVisual)
-        {
-            GameObject visual = new GameObject(part.name);
-            visual.transform.SetParent(visualParent, false);
-            visual.transform.localPosition = part.localPosition;
-            
-            // Add a disabled SpriteRenderer to satisfy PuzzlePiece's internal logic
-            cellVisual = visual.AddComponent<SpriteRenderer>();
-            cellVisual.sprite = PrototypeBootstrap.GetSquareSprite();
-            cellVisual.color = color;
-            cellVisual.enabled = false;
-            
-            // Build the actual visible 3x3 voxel grid
-            VoxelBlockBuilder.BuildVoxelGrid(visual.transform, part.name, part.size, color);
-
-            GameObject colliderObject = new GameObject($"{part.name} Collider");
-            colliderObject.transform.SetParent(collisionRoot, false);
-            colliderObject.transform.localPosition = part.localPosition - collisionCentre;
-            BoxCollider2D partCollider = colliderObject.AddComponent<BoxCollider2D>();
-            partCollider.size = part.size;
-            // PuzzlePiece applies clearance to this individual modular cell.
-            // Its centre never moves relative to the corresponding artwork.
-            partCollider.edgeRadius = 0f;
-            partCollider.usedByComposite = true;
-            return partCollider;
-        }
-
-        private static void GetPiecePartBounds(
-            List<PiecePartGeometry> parts,
-            out Vector2 minimum,
-            out Vector2 maximum)
-        {
-            minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
-            maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
-            foreach (PiecePartGeometry part in parts)
-            {
-                Vector2 halfSize = part.size * .5f;
-                minimum = Vector2.Min(minimum, part.localPosition - halfSize);
-                maximum = Vector2.Max(maximum, part.localPosition + halfSize);
-            }
-
-            if (parts.Count == 0)
-            {
-                minimum = Vector2.zero;
-                maximum = Vector2.one * .01f;
-            }
-        }
-
-        private readonly struct PiecePartGeometry
-        {
-            public readonly string name;
-            public readonly Vector2 localPosition;
-            public readonly Vector2 size;
-
-            public PiecePartGeometry(string name, Vector2 localPosition, Vector2 size)
-            {
-                this.name = name;
-                this.localPosition = localPosition;
-                this.size = size;
-            }
-        }
-
         private static Vector2 CellWorldPosition(GravityLevelDefinition level, Vector2Int cell)
         {
             float fineCellSize = 1f / level.subdivisions;
@@ -743,164 +599,4 @@ namespace GravityPuzzle
         }
     }
 
-    public sealed class ShredderWheel : MonoBehaviour
-    {
-        private const int ToothCount = 12;
-        private float rotationSpeed;
-
-        public void Build(float radius, float speed)
-        {
-            rotationSpeed = speed;
-
-            CircleCollider2D trigger = gameObject.AddComponent<CircleCollider2D>();
-            trigger.radius = radius * .92f;
-            trigger.isTrigger = true;
-
-            GameObject disc = new GameObject("Shredder Disc");
-            disc.transform.SetParent(transform, false);
-            disc.transform.localScale = Vector3.one * (radius * 1.65f);
-            SpriteRenderer discRenderer = disc.AddComponent<SpriteRenderer>();
-            discRenderer.sprite = PrototypeBootstrap.GetCircleSprite();
-            discRenderer.color = new Color(.32f, .36f, .48f);
-            discRenderer.sortingOrder = 25; // In front of feeding blocks
-
-            GameObject hub = new GameObject("Shredder Hub");
-            hub.transform.SetParent(transform, false);
-            hub.transform.localScale = Vector3.one * (radius * .48f);
-            SpriteRenderer hubRenderer = hub.AddComponent<SpriteRenderer>();
-            hubRenderer.sprite = PrototypeBootstrap.GetCircleSprite();
-            hubRenderer.color = new Color(.1f, .12f, .18f);
-            hubRenderer.sortingOrder = 27; // In front of feeding blocks
-
-            for (int i = 0; i < ToothCount; i++)
-            {
-                float angle = i * 360f / ToothCount;
-                GameObject tooth = PrototypeBootstrap.CreateVisualBlock(
-                    $"Tooth {i + 1}",
-                    Vector2.zero,
-                    new Vector2(radius * .42f, radius * .24f),
-                    new Color(.75f, .8f, .92f));
-                tooth.transform.SetParent(transform, false);
-                tooth.transform.localPosition = Quaternion.Euler(0f, 0f, angle) * Vector3.up * (radius * .86f);
-                tooth.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
-                tooth.GetComponent<SpriteRenderer>().sortingOrder = 26; // In front of feeding blocks
-            }
-
-            if (gameObject.GetComponent<BlockShredder>() == null)
-            {
-                gameObject.AddComponent<BlockShredder>();
-            }
-        }
-
-        private void Update()
-        {
-            transform.Rotate(0f, 0f, rotationSpeed * Time.deltaTime);
-        }
-
-        private void OnTriggerEnter2D(Collider2D other)
-        {
-            TryShred(other, transform.position);
-        }
-
-        internal static void TryShred(Collider2D other, Vector2 shredderCentre)
-        {
-            BlockShredder shredder = UnityEngine.Object.FindObjectOfType<BlockShredder>();
-            if (shredder != null)
-            {
-                shredder.TryShredBlock(other, shredderCentre);
-                return;
-            }
-
-            PuzzlePiece piece = other.GetComponentInParent<PuzzlePiece>();
-            if (piece == null || !piece.TryBeginShredding())
-                return;
-
-            Vector2 contactPoint = other.ClosestPoint(shredderCentre);
-            CreateFragments(piece, contactPoint);
-            Destroy(piece.gameObject);
-        }
-
-        private static void CreateFragments(PuzzlePiece piece, Vector2 contactPoint)
-        {
-            SpriteRenderer[] renderers = piece.GetComponentsInChildren<SpriteRenderer>();
-            Color pieceColor = Color.white;
-            int originalPartCount = 0;
-            foreach (SpriteRenderer renderer in renderers)
-            {
-                if (renderer.gameObject.name.StartsWith("Selected Fill") ||
-                    renderer.gameObject.name.StartsWith("White Selection Outline") ||
-                    renderer.gameObject.name.StartsWith("Ice ") ||
-                    renderer.gameObject.name.StartsWith("Block Border"))
-                    continue;
-
-                pieceColor = renderer.color;
-                originalPartCount++;
-            }
-
-            ShredderParticleEffects.SpawnBurst(contactPoint, pieceColor, 8, 4, 3);
-            int fragmentCount = Mathf.Clamp(originalPartCount * 5, 18, 40);
-            for (int i = 0; i < fragmentCount; i++)
-            {
-                float size = UnityEngine.Random.Range(.055f, .13f);
-                Color fragmentColor = Color.Lerp(pieceColor, Color.white, UnityEngine.Random.Range(0f, .2f));
-                GameObject fragment = PrototypeBootstrap.CreateVisualBlock(
-                    "Shredded Fragment",
-                    contactPoint + UnityEngine.Random.insideUnitCircle * .12f,
-                    Vector2.one * size,
-                    fragmentColor);
-                fragment.GetComponent<SpriteRenderer>().sortingOrder = 20;
-
-                Rigidbody2D body = fragment.AddComponent<Rigidbody2D>();
-                body.gravityScale = .9f;
-                body.velocity = new Vector2(
-                    UnityEngine.Random.Range(-2.0f, 2.0f),
-                    UnityEngine.Random.Range(-3.8f, -1.2f));
-                body.angularVelocity = UnityEngine.Random.Range(-720f, 720f);
-
-                ShredderFragment fragmentLife = fragment.AddComponent<ShredderFragment>();
-                fragmentLife.SetLifetime(UnityEngine.Random.Range(.65f, 1.15f));
-            }
-        }
-    }
-
-    public sealed class ShredderCatchZone : MonoBehaviour
-    {
-        public float shredY;
-
-        private void OnTriggerEnter2D(Collider2D other)
-        {
-            ShredderWheel.TryShred(other, new Vector2(other.transform.position.x, shredY));
-        }
-    }
-
-    public sealed class ShredderFragment : MonoBehaviour
-    {
-        private float lifetime;
-        private float remaining;
-        private SpriteRenderer fragmentRenderer;
-
-        public void SetLifetime(float seconds)
-        {
-            lifetime = seconds;
-            remaining = seconds;
-            fragmentRenderer = GetComponent<SpriteRenderer>();
-        }
-
-        private void Update()
-        {
-            remaining -= Time.deltaTime;
-            if (remaining <= 0f)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            if (fragmentRenderer != null && remaining < lifetime * .35f)
-            {
-                Color color = fragmentRenderer.color;
-                color.a = remaining / (lifetime * .35f);
-                fragmentRenderer.color = color;
-            }
-        }
-    }
 }

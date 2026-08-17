@@ -1,0 +1,5429 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
+  m_Name: hardest_level
+  m_EditorClassIdentifier: 
+  levelName: New Level
+  timeLimit: 60
+  boardColumns: 12
+  boardRows: 20
+  subdivisions: 4
+  backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
+  frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
+  gravityScale: 1.5
+  useAutomaticCameraFit: 1
+  fixedCameraSize: 6
+  cameraViewportWidth: 0.88
+  cameraViewportHeight: 0.7
+  useRuntimeSafeAreaForCameraFit: 0
+  exitWidth: 3
+  shredderCount: 2
+  shredderRadius: 0.42
+  shredderRotationSpeed: 220
+  shredlenmeHizi: 0.7
+  titremeMiktari: 0.045
+  pieces:
+  - name: Piece 1
+    color: {r: 1, g: 0.3, b: 0.3, a: 1}
+    origin: {x: 10, y: 46}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -10, y: 30}
+      type: 0
+    - localCell: {x: -9, y: 30}
+      type: 0
+    - localCell: {x: -8, y: 30}
+      type: 0
+    - localCell: {x: -7, y: 30}
+      type: 0
+    - localCell: {x: -10, y: 31}
+      type: 0
+    - localCell: {x: -9, y: 31}
+      type: 0
+    - localCell: {x: -8, y: 31}
+      type: 0
+    - localCell: {x: -7, y: 31}
+      type: 0
+    - localCell: {x: -10, y: 32}
+      type: 0
+    - localCell: {x: -9, y: 32}
+      type: 0
+    - localCell: {x: -8, y: 32}
+      type: 0
+    - localCell: {x: -7, y: 32}
+      type: 0
+    - localCell: {x: -10, y: 33}
+      type: 0
+    - localCell: {x: -9, y: 33}
+      type: 0
+    - localCell: {x: -8, y: 33}
+      type: 0
+    - localCell: {x: -7, y: 33}
+      type: 0
+    - localCell: {x: -10, y: 26}
+      type: 0
+    - localCell: {x: -9, y: 26}
+      type: 0
+    - localCell: {x: -8, y: 26}
+      type: 0
+    - localCell: {x: -7, y: 26}
+      type: 0
+    - localCell: {x: -10, y: 27}
+      type: 0
+    - localCell: {x: -9, y: 27}
+      type: 0
+    - localCell: {x: -8, y: 27}
+      type: 0
+    - localCell: {x: -7, y: 27}
+      type: 0
+    - localCell: {x: -10, y: 28}
+      type: 0
+    - localCell: {x: -9, y: 28}
+      type: 0
+    - localCell: {x: -8, y: 28}
+      type: 0
+    - localCell: {x: -7, y: 28}
+      type: 0
+    - localCell: {x: -10, y: 29}
+      type: 0
+    - localCell: {x: -9, y: 29}
+      type: 0
+    - localCell: {x: -8, y: 29}
+      type: 0
+    - localCell: {x: -7, y: 29}
+      type: 0
+    - localCell: {x: -6, y: 26}
+      type: 0
+    - localCell: {x: -5, y: 26}
+      type: 0
+    - localCell: {x: -4, y: 26}
+      type: 0
+    - localCell: {x: -3, y: 26}
+      type: 0
+    - localCell: {x: -6, y: 27}
+      type: 0
+    - localCell: {x: -5, y: 27}
+      type: 0
+    - localCell: {x: -4, y: 27}
+      type: 0
+    - localCell: {x: -3, y: 27}
+      type: 0
+    - localCell: {x: -6, y: 28}
+      type: 0
+    - localCell: {x: -5, y: 28}
+      type: 0
+    - localCell: {x: -4, y: 28}
+      type: 0
+    - localCell: {x: -3, y: 28}
+      type: 0
+    - localCell: {x: -6, y: 29}
+      type: 0
+    - localCell: {x: -5, y: 29}
+      type: 0
+    - localCell: {x: -4, y: 29}
+      type: 0
+    - localCell: {x: -3, y: 29}
+      type: 0
+    - localCell: {x: -6, y: 30}
+      type: 0
+    - localCell: {x: -5, y: 30}
+      type: 0
+    - localCell: {x: -4, y: 30}
+      type: 0
+    - localCell: {x: -3, y: 30}
+      type: 0
+    - localCell: {x: -6, y: 31}
+      type: 0
+    - localCell: {x: -5, y: 31}
+      type: 0
+    - localCell: {x: -4, y: 31}
+      type: 0
+    - localCell: {x: -3, y: 31}
+      type: 0
+    - localCell: {x: -6, y: 32}
+      type: 0
+    - localCell: {x: -5, y: 32}
+      type: 0
+    - localCell: {x: -4, y: 32}
+      type: 0
+    - localCell: {x: -3, y: 32}
+      type: 0
+    - localCell: {x: -6, y: 33}
+      type: 0
+    - localCell: {x: -5, y: 33}
+      type: 0
+    - localCell: {x: -4, y: 33}
+      type: 0
+    - localCell: {x: -3, y: 33}
+      type: 0
+  - name: Piece 2
+    color: {r: 0.902, g: 1, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -24, y: 24}
+      type: 0
+    - localCell: {x: -23, y: 24}
+      type: 0
+    - localCell: {x: -22, y: 24}
+      type: 0
+    - localCell: {x: -21, y: 24}
+      type: 0
+    - localCell: {x: -24, y: 25}
+      type: 0
+    - localCell: {x: -23, y: 25}
+      type: 0
+    - localCell: {x: -22, y: 25}
+      type: 0
+    - localCell: {x: -21, y: 25}
+      type: 0
+    - localCell: {x: -24, y: 26}
+      type: 0
+    - localCell: {x: -23, y: 26}
+      type: 0
+    - localCell: {x: -22, y: 26}
+      type: 0
+    - localCell: {x: -21, y: 26}
+      type: 0
+    - localCell: {x: -24, y: 27}
+      type: 0
+    - localCell: {x: -23, y: 27}
+      type: 0
+    - localCell: {x: -22, y: 27}
+      type: 0
+    - localCell: {x: -21, y: 27}
+      type: 0
+    - localCell: {x: -20, y: 24}
+      type: 0
+    - localCell: {x: -19, y: 24}
+      type: 0
+    - localCell: {x: -18, y: 24}
+      type: 0
+    - localCell: {x: -17, y: 24}
+      type: 0
+    - localCell: {x: -20, y: 25}
+      type: 0
+    - localCell: {x: -19, y: 25}
+      type: 0
+    - localCell: {x: -18, y: 25}
+      type: 0
+    - localCell: {x: -17, y: 25}
+      type: 0
+    - localCell: {x: -20, y: 26}
+      type: 0
+    - localCell: {x: -19, y: 26}
+      type: 0
+    - localCell: {x: -18, y: 26}
+      type: 0
+    - localCell: {x: -17, y: 26}
+      type: 0
+    - localCell: {x: -20, y: 27}
+      type: 0
+    - localCell: {x: -19, y: 27}
+      type: 0
+    - localCell: {x: -18, y: 27}
+      type: 0
+    - localCell: {x: -17, y: 27}
+      type: 0
+    - localCell: {x: -20, y: 28}
+      type: 0
+    - localCell: {x: -19, y: 28}
+      type: 0
+    - localCell: {x: -18, y: 28}
+      type: 0
+    - localCell: {x: -17, y: 28}
+      type: 0
+    - localCell: {x: -20, y: 29}
+      type: 0
+    - localCell: {x: -19, y: 29}
+      type: 0
+    - localCell: {x: -18, y: 29}
+      type: 0
+    - localCell: {x: -17, y: 29}
+      type: 0
+    - localCell: {x: -20, y: 30}
+      type: 0
+    - localCell: {x: -19, y: 30}
+      type: 0
+    - localCell: {x: -18, y: 30}
+      type: 0
+    - localCell: {x: -17, y: 30}
+      type: 0
+    - localCell: {x: -20, y: 31}
+      type: 0
+    - localCell: {x: -19, y: 31}
+      type: 0
+    - localCell: {x: -18, y: 31}
+      type: 0
+    - localCell: {x: -17, y: 31}
+      type: 0
+    - localCell: {x: -24, y: 28}
+      type: 0
+    - localCell: {x: -23, y: 28}
+      type: 0
+    - localCell: {x: -22, y: 28}
+      type: 0
+    - localCell: {x: -21, y: 28}
+      type: 0
+    - localCell: {x: -24, y: 29}
+      type: 0
+    - localCell: {x: -23, y: 29}
+      type: 0
+    - localCell: {x: -22, y: 29}
+      type: 0
+    - localCell: {x: -21, y: 29}
+      type: 0
+    - localCell: {x: -24, y: 30}
+      type: 0
+    - localCell: {x: -23, y: 30}
+      type: 0
+    - localCell: {x: -22, y: 30}
+      type: 0
+    - localCell: {x: -21, y: 30}
+      type: 0
+    - localCell: {x: -24, y: 31}
+      type: 0
+    - localCell: {x: -23, y: 31}
+      type: 0
+    - localCell: {x: -22, y: 31}
+      type: 0
+    - localCell: {x: -21, y: 31}
+      type: 0
+  - name: Piece 3
+    color: {r: 0.3, g: 1, b: 0.496, a: 1}
+    origin: {x: 20, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -12, y: 36}
+      type: 0
+    - localCell: {x: -11, y: 36}
+      type: 0
+    - localCell: {x: -10, y: 36}
+      type: 0
+    - localCell: {x: -9, y: 36}
+      type: 0
+    - localCell: {x: -12, y: 37}
+      type: 0
+    - localCell: {x: -11, y: 37}
+      type: 0
+    - localCell: {x: -10, y: 37}
+      type: 0
+    - localCell: {x: -9, y: 37}
+      type: 0
+    - localCell: {x: -12, y: 38}
+      type: 0
+    - localCell: {x: -11, y: 38}
+      type: 0
+    - localCell: {x: -10, y: 38}
+      type: 0
+    - localCell: {x: -9, y: 38}
+      type: 0
+    - localCell: {x: -12, y: 39}
+      type: 0
+    - localCell: {x: -11, y: 39}
+      type: 0
+    - localCell: {x: -10, y: 39}
+      type: 0
+    - localCell: {x: -9, y: 39}
+      type: 0
+    - localCell: {x: -12, y: 32}
+      type: 0
+    - localCell: {x: -11, y: 32}
+      type: 0
+    - localCell: {x: -10, y: 32}
+      type: 0
+    - localCell: {x: -9, y: 32}
+      type: 0
+    - localCell: {x: -12, y: 33}
+      type: 0
+    - localCell: {x: -11, y: 33}
+      type: 0
+    - localCell: {x: -10, y: 33}
+      type: 0
+    - localCell: {x: -9, y: 33}
+      type: 0
+    - localCell: {x: -12, y: 34}
+      type: 0
+    - localCell: {x: -11, y: 34}
+      type: 0
+    - localCell: {x: -10, y: 34}
+      type: 0
+    - localCell: {x: -9, y: 34}
+      type: 0
+    - localCell: {x: -12, y: 35}
+      type: 0
+    - localCell: {x: -11, y: 35}
+      type: 0
+    - localCell: {x: -10, y: 35}
+      type: 0
+    - localCell: {x: -9, y: 35}
+      type: 0
+    - localCell: {x: -12, y: 28}
+      type: 0
+    - localCell: {x: -11, y: 28}
+      type: 0
+    - localCell: {x: -10, y: 28}
+      type: 0
+    - localCell: {x: -9, y: 28}
+      type: 0
+    - localCell: {x: -12, y: 29}
+      type: 0
+    - localCell: {x: -11, y: 29}
+      type: 0
+    - localCell: {x: -10, y: 29}
+      type: 0
+    - localCell: {x: -9, y: 29}
+      type: 0
+    - localCell: {x: -12, y: 30}
+      type: 0
+    - localCell: {x: -11, y: 30}
+      type: 0
+    - localCell: {x: -10, y: 30}
+      type: 0
+    - localCell: {x: -9, y: 30}
+      type: 0
+    - localCell: {x: -12, y: 31}
+      type: 0
+    - localCell: {x: -11, y: 31}
+      type: 0
+    - localCell: {x: -10, y: 31}
+      type: 0
+    - localCell: {x: -9, y: 31}
+      type: 0
+    - localCell: {x: -12, y: 24}
+      type: 0
+    - localCell: {x: -11, y: 24}
+      type: 0
+    - localCell: {x: -10, y: 24}
+      type: 0
+    - localCell: {x: -9, y: 24}
+      type: 0
+    - localCell: {x: -12, y: 25}
+      type: 0
+    - localCell: {x: -11, y: 25}
+      type: 0
+    - localCell: {x: -10, y: 25}
+      type: 0
+    - localCell: {x: -9, y: 25}
+      type: 0
+    - localCell: {x: -12, y: 26}
+      type: 0
+    - localCell: {x: -11, y: 26}
+      type: 0
+    - localCell: {x: -10, y: 26}
+      type: 0
+    - localCell: {x: -9, y: 26}
+      type: 0
+    - localCell: {x: -12, y: 27}
+      type: 0
+    - localCell: {x: -11, y: 27}
+      type: 0
+    - localCell: {x: -10, y: 27}
+      type: 0
+    - localCell: {x: -9, y: 27}
+      type: 0
+  - name: Piece 4
+    color: {r: 0.3, g: 0.706, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -24, y: 20}
+      type: 0
+    - localCell: {x: -23, y: 20}
+      type: 0
+    - localCell: {x: -22, y: 20}
+      type: 0
+    - localCell: {x: -21, y: 20}
+      type: 0
+    - localCell: {x: -24, y: 21}
+      type: 0
+    - localCell: {x: -23, y: 21}
+      type: 0
+    - localCell: {x: -22, y: 21}
+      type: 0
+    - localCell: {x: -21, y: 21}
+      type: 0
+    - localCell: {x: -24, y: 22}
+      type: 0
+    - localCell: {x: -23, y: 22}
+      type: 0
+    - localCell: {x: -22, y: 22}
+      type: 0
+    - localCell: {x: -21, y: 22}
+      type: 0
+    - localCell: {x: -24, y: 23}
+      type: 0
+    - localCell: {x: -23, y: 23}
+      type: 0
+    - localCell: {x: -22, y: 23}
+      type: 0
+    - localCell: {x: -21, y: 23}
+      type: 0
+    - localCell: {x: -24, y: 16}
+      type: 0
+    - localCell: {x: -23, y: 16}
+      type: 0
+    - localCell: {x: -22, y: 16}
+      type: 0
+    - localCell: {x: -21, y: 16}
+      type: 0
+    - localCell: {x: -24, y: 17}
+      type: 0
+    - localCell: {x: -23, y: 17}
+      type: 0
+    - localCell: {x: -22, y: 17}
+      type: 0
+    - localCell: {x: -21, y: 17}
+      type: 0
+    - localCell: {x: -24, y: 18}
+      type: 0
+    - localCell: {x: -23, y: 18}
+      type: 0
+    - localCell: {x: -22, y: 18}
+      type: 0
+    - localCell: {x: -21, y: 18}
+      type: 0
+    - localCell: {x: -24, y: 19}
+      type: 0
+    - localCell: {x: -23, y: 19}
+      type: 0
+    - localCell: {x: -22, y: 19}
+      type: 0
+    - localCell: {x: -21, y: 19}
+      type: 0
+    - localCell: {x: -24, y: 12}
+      type: 0
+    - localCell: {x: -23, y: 12}
+      type: 0
+    - localCell: {x: -22, y: 12}
+      type: 0
+    - localCell: {x: -21, y: 12}
+      type: 0
+    - localCell: {x: -24, y: 13}
+      type: 0
+    - localCell: {x: -23, y: 13}
+      type: 0
+    - localCell: {x: -22, y: 13}
+      type: 0
+    - localCell: {x: -21, y: 13}
+      type: 0
+    - localCell: {x: -24, y: 14}
+      type: 0
+    - localCell: {x: -23, y: 14}
+      type: 0
+    - localCell: {x: -22, y: 14}
+      type: 0
+    - localCell: {x: -21, y: 14}
+      type: 0
+    - localCell: {x: -24, y: 15}
+      type: 0
+    - localCell: {x: -23, y: 15}
+      type: 0
+    - localCell: {x: -22, y: 15}
+      type: 0
+    - localCell: {x: -21, y: 15}
+      type: 0
+    - localCell: {x: -20, y: 12}
+      type: 0
+    - localCell: {x: -19, y: 12}
+      type: 0
+    - localCell: {x: -18, y: 12}
+      type: 0
+    - localCell: {x: -17, y: 12}
+      type: 0
+    - localCell: {x: -20, y: 13}
+      type: 0
+    - localCell: {x: -19, y: 13}
+      type: 0
+    - localCell: {x: -18, y: 13}
+      type: 0
+    - localCell: {x: -17, y: 13}
+      type: 0
+    - localCell: {x: -20, y: 14}
+      type: 0
+    - localCell: {x: -19, y: 14}
+      type: 0
+    - localCell: {x: -18, y: 14}
+      type: 0
+    - localCell: {x: -17, y: 14}
+      type: 0
+    - localCell: {x: -20, y: 15}
+      type: 0
+    - localCell: {x: -19, y: 15}
+      type: 0
+    - localCell: {x: -18, y: 15}
+      type: 0
+    - localCell: {x: -17, y: 15}
+      type: 0
+    - localCell: {x: -16, y: 12}
+      type: 0
+    - localCell: {x: -15, y: 12}
+      type: 0
+    - localCell: {x: -14, y: 12}
+      type: 0
+    - localCell: {x: -13, y: 12}
+      type: 0
+    - localCell: {x: -16, y: 13}
+      type: 0
+    - localCell: {x: -15, y: 13}
+      type: 0
+    - localCell: {x: -14, y: 13}
+      type: 0
+    - localCell: {x: -13, y: 13}
+      type: 0
+    - localCell: {x: -16, y: 14}
+      type: 0
+    - localCell: {x: -15, y: 14}
+      type: 0
+    - localCell: {x: -14, y: 14}
+      type: 0
+    - localCell: {x: -13, y: 14}
+      type: 0
+    - localCell: {x: -16, y: 15}
+      type: 0
+    - localCell: {x: -15, y: 15}
+      type: 0
+    - localCell: {x: -14, y: 15}
+      type: 0
+    - localCell: {x: -13, y: 15}
+      type: 0
+  - name: Piece 5
+    color: {r: 0.692, g: 0.3, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -20, y: 20}
+      type: 0
+    - localCell: {x: -19, y: 20}
+      type: 0
+    - localCell: {x: -18, y: 20}
+      type: 0
+    - localCell: {x: -17, y: 20}
+      type: 0
+    - localCell: {x: -20, y: 21}
+      type: 0
+    - localCell: {x: -19, y: 21}
+      type: 0
+    - localCell: {x: -18, y: 21}
+      type: 0
+    - localCell: {x: -17, y: 21}
+      type: 0
+    - localCell: {x: -20, y: 22}
+      type: 0
+    - localCell: {x: -19, y: 22}
+      type: 0
+    - localCell: {x: -18, y: 22}
+      type: 0
+    - localCell: {x: -17, y: 22}
+      type: 0
+    - localCell: {x: -20, y: 23}
+      type: 0
+    - localCell: {x: -19, y: 23}
+      type: 0
+    - localCell: {x: -18, y: 23}
+      type: 0
+    - localCell: {x: -17, y: 23}
+      type: 0
+    - localCell: {x: -20, y: 16}
+      type: 0
+    - localCell: {x: -19, y: 16}
+      type: 0
+    - localCell: {x: -18, y: 16}
+      type: 0
+    - localCell: {x: -17, y: 16}
+      type: 0
+    - localCell: {x: -20, y: 17}
+      type: 0
+    - localCell: {x: -19, y: 17}
+      type: 0
+    - localCell: {x: -18, y: 17}
+      type: 0
+    - localCell: {x: -17, y: 17}
+      type: 0
+    - localCell: {x: -20, y: 18}
+      type: 0
+    - localCell: {x: -19, y: 18}
+      type: 0
+    - localCell: {x: -18, y: 18}
+      type: 0
+    - localCell: {x: -17, y: 18}
+      type: 0
+    - localCell: {x: -20, y: 19}
+      type: 0
+    - localCell: {x: -19, y: 19}
+      type: 0
+    - localCell: {x: -18, y: 19}
+      type: 0
+    - localCell: {x: -17, y: 19}
+      type: 0
+    - localCell: {x: -16, y: 16}
+      type: 0
+    - localCell: {x: -15, y: 16}
+      type: 0
+    - localCell: {x: -14, y: 16}
+      type: 0
+    - localCell: {x: -13, y: 16}
+      type: 0
+    - localCell: {x: -16, y: 17}
+      type: 0
+    - localCell: {x: -15, y: 17}
+      type: 0
+    - localCell: {x: -14, y: 17}
+      type: 0
+    - localCell: {x: -13, y: 17}
+      type: 0
+    - localCell: {x: -16, y: 18}
+      type: 0
+    - localCell: {x: -15, y: 18}
+      type: 0
+    - localCell: {x: -14, y: 18}
+      type: 0
+    - localCell: {x: -13, y: 18}
+      type: 0
+    - localCell: {x: -16, y: 19}
+      type: 0
+    - localCell: {x: -15, y: 19}
+      type: 0
+    - localCell: {x: -14, y: 19}
+      type: 0
+    - localCell: {x: -13, y: 19}
+      type: 0
+    - localCell: {x: -16, y: 20}
+      type: 0
+    - localCell: {x: -15, y: 20}
+      type: 0
+    - localCell: {x: -14, y: 20}
+      type: 0
+    - localCell: {x: -13, y: 20}
+      type: 0
+    - localCell: {x: -16, y: 21}
+      type: 0
+    - localCell: {x: -15, y: 21}
+      type: 0
+    - localCell: {x: -14, y: 21}
+      type: 0
+    - localCell: {x: -13, y: 21}
+      type: 0
+    - localCell: {x: -16, y: 22}
+      type: 0
+    - localCell: {x: -15, y: 22}
+      type: 0
+    - localCell: {x: -14, y: 22}
+      type: 0
+    - localCell: {x: -13, y: 22}
+      type: 0
+    - localCell: {x: -16, y: 23}
+      type: 0
+    - localCell: {x: -15, y: 23}
+      type: 0
+    - localCell: {x: -14, y: 23}
+      type: 0
+    - localCell: {x: -13, y: 23}
+      type: 0
+  - name: Piece 6
+    color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 4, y: 36}
+      type: 0
+    - localCell: {x: 5, y: 36}
+      type: 0
+    - localCell: {x: 6, y: 36}
+      type: 0
+    - localCell: {x: 7, y: 36}
+      type: 0
+    - localCell: {x: 4, y: 37}
+      type: 0
+    - localCell: {x: 5, y: 37}
+      type: 0
+    - localCell: {x: 6, y: 37}
+      type: 0
+    - localCell: {x: 7, y: 37}
+      type: 0
+    - localCell: {x: 4, y: 38}
+      type: 0
+    - localCell: {x: 5, y: 38}
+      type: 0
+    - localCell: {x: 6, y: 38}
+      type: 0
+    - localCell: {x: 7, y: 38}
+      type: 0
+    - localCell: {x: 4, y: 39}
+      type: 0
+    - localCell: {x: 5, y: 39}
+      type: 0
+    - localCell: {x: 6, y: 39}
+      type: 0
+    - localCell: {x: 7, y: 39}
+      type: 0
+    - localCell: {x: 4, y: 32}
+      type: 0
+    - localCell: {x: 5, y: 32}
+      type: 0
+    - localCell: {x: 6, y: 32}
+      type: 0
+    - localCell: {x: 7, y: 32}
+      type: 0
+    - localCell: {x: 4, y: 33}
+      type: 0
+    - localCell: {x: 5, y: 33}
+      type: 0
+    - localCell: {x: 6, y: 33}
+      type: 0
+    - localCell: {x: 7, y: 33}
+      type: 0
+    - localCell: {x: 4, y: 34}
+      type: 0
+    - localCell: {x: 5, y: 34}
+      type: 0
+    - localCell: {x: 6, y: 34}
+      type: 0
+    - localCell: {x: 7, y: 34}
+      type: 0
+    - localCell: {x: 4, y: 35}
+      type: 0
+    - localCell: {x: 5, y: 35}
+      type: 0
+    - localCell: {x: 6, y: 35}
+      type: 0
+    - localCell: {x: 7, y: 35}
+      type: 0
+    - localCell: {x: 8, y: 32}
+      type: 0
+    - localCell: {x: 9, y: 32}
+      type: 0
+    - localCell: {x: 10, y: 32}
+      type: 0
+    - localCell: {x: 11, y: 32}
+      type: 0
+    - localCell: {x: 8, y: 33}
+      type: 0
+    - localCell: {x: 9, y: 33}
+      type: 0
+    - localCell: {x: 10, y: 33}
+      type: 0
+    - localCell: {x: 11, y: 33}
+      type: 0
+    - localCell: {x: 8, y: 34}
+      type: 0
+    - localCell: {x: 9, y: 34}
+      type: 0
+    - localCell: {x: 10, y: 34}
+      type: 0
+    - localCell: {x: 11, y: 34}
+      type: 0
+    - localCell: {x: 8, y: 35}
+      type: 0
+    - localCell: {x: 9, y: 35}
+      type: 0
+    - localCell: {x: 10, y: 35}
+      type: 0
+    - localCell: {x: 11, y: 35}
+      type: 0
+    - localCell: {x: 8, y: 36}
+      type: 0
+    - localCell: {x: 9, y: 36}
+      type: 0
+    - localCell: {x: 10, y: 36}
+      type: 0
+    - localCell: {x: 11, y: 36}
+      type: 0
+    - localCell: {x: 8, y: 37}
+      type: 0
+    - localCell: {x: 9, y: 37}
+      type: 0
+    - localCell: {x: 10, y: 37}
+      type: 0
+    - localCell: {x: 11, y: 37}
+      type: 0
+    - localCell: {x: 8, y: 38}
+      type: 0
+    - localCell: {x: 9, y: 38}
+      type: 0
+    - localCell: {x: 10, y: 38}
+      type: 0
+    - localCell: {x: 11, y: 38}
+      type: 0
+    - localCell: {x: 8, y: 39}
+      type: 0
+    - localCell: {x: 9, y: 39}
+      type: 0
+    - localCell: {x: 10, y: 39}
+      type: 0
+    - localCell: {x: 11, y: 39}
+      type: 0
+  - name: Piece 7
+    color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 0, y: 16}
+      type: 0
+    - localCell: {x: 1, y: 16}
+      type: 0
+    - localCell: {x: 2, y: 16}
+      type: 0
+    - localCell: {x: 3, y: 16}
+      type: 0
+    - localCell: {x: 0, y: 17}
+      type: 0
+    - localCell: {x: 1, y: 17}
+      type: 0
+    - localCell: {x: 2, y: 17}
+      type: 0
+    - localCell: {x: 3, y: 17}
+      type: 0
+    - localCell: {x: 0, y: 18}
+      type: 0
+    - localCell: {x: 1, y: 18}
+      type: 0
+    - localCell: {x: 2, y: 18}
+      type: 0
+    - localCell: {x: 3, y: 18}
+      type: 0
+    - localCell: {x: 0, y: 19}
+      type: 0
+    - localCell: {x: 1, y: 19}
+      type: 0
+    - localCell: {x: 2, y: 19}
+      type: 0
+    - localCell: {x: 3, y: 19}
+      type: 0
+    - localCell: {x: 4, y: 20}
+      type: 0
+    - localCell: {x: 5, y: 20}
+      type: 0
+    - localCell: {x: 6, y: 20}
+      type: 0
+    - localCell: {x: 7, y: 20}
+      type: 0
+    - localCell: {x: 4, y: 21}
+      type: 0
+    - localCell: {x: 5, y: 21}
+      type: 0
+    - localCell: {x: 6, y: 21}
+      type: 0
+    - localCell: {x: 7, y: 21}
+      type: 0
+    - localCell: {x: 4, y: 22}
+      type: 0
+    - localCell: {x: 5, y: 22}
+      type: 0
+    - localCell: {x: 6, y: 22}
+      type: 0
+    - localCell: {x: 7, y: 22}
+      type: 0
+    - localCell: {x: 4, y: 23}
+      type: 0
+    - localCell: {x: 5, y: 23}
+      type: 0
+    - localCell: {x: 6, y: 23}
+      type: 0
+    - localCell: {x: 7, y: 23}
+      type: 0
+    - localCell: {x: 4, y: 16}
+      type: 0
+    - localCell: {x: 5, y: 16}
+      type: 0
+    - localCell: {x: 6, y: 16}
+      type: 0
+    - localCell: {x: 7, y: 16}
+      type: 0
+    - localCell: {x: 4, y: 17}
+      type: 0
+    - localCell: {x: 5, y: 17}
+      type: 0
+    - localCell: {x: 6, y: 17}
+      type: 0
+    - localCell: {x: 7, y: 17}
+      type: 0
+    - localCell: {x: 4, y: 18}
+      type: 0
+    - localCell: {x: 5, y: 18}
+      type: 0
+    - localCell: {x: 6, y: 18}
+      type: 0
+    - localCell: {x: 7, y: 18}
+      type: 0
+    - localCell: {x: 4, y: 19}
+      type: 0
+    - localCell: {x: 5, y: 19}
+      type: 0
+    - localCell: {x: 6, y: 19}
+      type: 0
+    - localCell: {x: 7, y: 19}
+      type: 0
+    - localCell: {x: 8, y: 16}
+      type: 0
+    - localCell: {x: 9, y: 16}
+      type: 0
+    - localCell: {x: 10, y: 16}
+      type: 0
+    - localCell: {x: 11, y: 16}
+      type: 0
+    - localCell: {x: 8, y: 17}
+      type: 0
+    - localCell: {x: 9, y: 17}
+      type: 0
+    - localCell: {x: 10, y: 17}
+      type: 0
+    - localCell: {x: 11, y: 17}
+      type: 0
+    - localCell: {x: 8, y: 18}
+      type: 0
+    - localCell: {x: 9, y: 18}
+      type: 0
+    - localCell: {x: 10, y: 18}
+      type: 0
+    - localCell: {x: 11, y: 18}
+      type: 0
+    - localCell: {x: 8, y: 19}
+      type: 0
+    - localCell: {x: 9, y: 19}
+      type: 0
+    - localCell: {x: 10, y: 19}
+      type: 0
+    - localCell: {x: 11, y: 19}
+      type: 0
+  - name: Piece 8
+    color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 4, y: 12}
+      type: 0
+    - localCell: {x: 5, y: 12}
+      type: 0
+    - localCell: {x: 6, y: 12}
+      type: 0
+    - localCell: {x: 7, y: 12}
+      type: 0
+    - localCell: {x: 4, y: 13}
+      type: 0
+    - localCell: {x: 5, y: 13}
+      type: 0
+    - localCell: {x: 6, y: 13}
+      type: 0
+    - localCell: {x: 7, y: 13}
+      type: 0
+    - localCell: {x: 4, y: 14}
+      type: 0
+    - localCell: {x: 5, y: 14}
+      type: 0
+    - localCell: {x: 6, y: 14}
+      type: 0
+    - localCell: {x: 7, y: 14}
+      type: 0
+    - localCell: {x: 4, y: 15}
+      type: 0
+    - localCell: {x: 5, y: 15}
+      type: 0
+    - localCell: {x: 6, y: 15}
+      type: 0
+    - localCell: {x: 7, y: 15}
+      type: 0
+    - localCell: {x: 8, y: 12}
+      type: 0
+    - localCell: {x: 9, y: 12}
+      type: 0
+    - localCell: {x: 10, y: 12}
+      type: 0
+    - localCell: {x: 11, y: 12}
+      type: 0
+    - localCell: {x: 8, y: 13}
+      type: 0
+    - localCell: {x: 9, y: 13}
+      type: 0
+    - localCell: {x: 10, y: 13}
+      type: 0
+    - localCell: {x: 11, y: 13}
+      type: 0
+    - localCell: {x: 8, y: 14}
+      type: 0
+    - localCell: {x: 9, y: 14}
+      type: 0
+    - localCell: {x: 10, y: 14}
+      type: 0
+    - localCell: {x: 11, y: 14}
+      type: 0
+    - localCell: {x: 8, y: 15}
+      type: 0
+    - localCell: {x: 9, y: 15}
+      type: 0
+    - localCell: {x: 10, y: 15}
+      type: 0
+    - localCell: {x: 11, y: 15}
+      type: 0
+    - localCell: {x: 12, y: 12}
+      type: 0
+    - localCell: {x: 13, y: 12}
+      type: 0
+    - localCell: {x: 14, y: 12}
+      type: 0
+    - localCell: {x: 15, y: 12}
+      type: 0
+    - localCell: {x: 12, y: 13}
+      type: 0
+    - localCell: {x: 13, y: 13}
+      type: 0
+    - localCell: {x: 14, y: 13}
+      type: 0
+    - localCell: {x: 15, y: 13}
+      type: 0
+    - localCell: {x: 12, y: 14}
+      type: 0
+    - localCell: {x: 13, y: 14}
+      type: 0
+    - localCell: {x: 14, y: 14}
+      type: 0
+    - localCell: {x: 15, y: 14}
+      type: 0
+    - localCell: {x: 12, y: 15}
+      type: 0
+    - localCell: {x: 13, y: 15}
+      type: 0
+    - localCell: {x: 14, y: 15}
+      type: 0
+    - localCell: {x: 15, y: 15}
+      type: 0
+  - name: Piece 9
+    color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 16, y: 12}
+      type: 0
+    - localCell: {x: 17, y: 12}
+      type: 0
+    - localCell: {x: 18, y: 12}
+      type: 0
+    - localCell: {x: 19, y: 12}
+      type: 0
+    - localCell: {x: 16, y: 13}
+      type: 0
+    - localCell: {x: 17, y: 13}
+      type: 0
+    - localCell: {x: 18, y: 13}
+      type: 0
+    - localCell: {x: 19, y: 13}
+      type: 0
+    - localCell: {x: 16, y: 14}
+      type: 0
+    - localCell: {x: 17, y: 14}
+      type: 0
+    - localCell: {x: 18, y: 14}
+      type: 0
+    - localCell: {x: 19, y: 14}
+      type: 0
+    - localCell: {x: 16, y: 15}
+      type: 0
+    - localCell: {x: 17, y: 15}
+      type: 0
+    - localCell: {x: 18, y: 15}
+      type: 0
+    - localCell: {x: 19, y: 15}
+      type: 0
+    - localCell: {x: 16, y: 16}
+      type: 0
+    - localCell: {x: 17, y: 16}
+      type: 0
+    - localCell: {x: 18, y: 16}
+      type: 0
+    - localCell: {x: 19, y: 16}
+      type: 0
+    - localCell: {x: 16, y: 17}
+      type: 0
+    - localCell: {x: 17, y: 17}
+      type: 0
+    - localCell: {x: 18, y: 17}
+      type: 0
+    - localCell: {x: 19, y: 17}
+      type: 0
+    - localCell: {x: 16, y: 18}
+      type: 0
+    - localCell: {x: 17, y: 18}
+      type: 0
+    - localCell: {x: 18, y: 18}
+      type: 0
+    - localCell: {x: 19, y: 18}
+      type: 0
+    - localCell: {x: 16, y: 19}
+      type: 0
+    - localCell: {x: 17, y: 19}
+      type: 0
+    - localCell: {x: 18, y: 19}
+      type: 0
+    - localCell: {x: 19, y: 19}
+      type: 0
+    - localCell: {x: 12, y: 16}
+      type: 0
+    - localCell: {x: 13, y: 16}
+      type: 0
+    - localCell: {x: 14, y: 16}
+      type: 0
+    - localCell: {x: 15, y: 16}
+      type: 0
+    - localCell: {x: 12, y: 17}
+      type: 0
+    - localCell: {x: 13, y: 17}
+      type: 0
+    - localCell: {x: 14, y: 17}
+      type: 0
+    - localCell: {x: 15, y: 17}
+      type: 0
+    - localCell: {x: 12, y: 18}
+      type: 0
+    - localCell: {x: 13, y: 18}
+      type: 0
+    - localCell: {x: 14, y: 18}
+      type: 0
+    - localCell: {x: 15, y: 18}
+      type: 0
+    - localCell: {x: 12, y: 19}
+      type: 0
+    - localCell: {x: 13, y: 19}
+      type: 0
+    - localCell: {x: 14, y: 19}
+      type: 0
+    - localCell: {x: 15, y: 19}
+      type: 0
+  - name: Piece 10
+    color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
+    origin: {x: 24, y: 27}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 20, y: 28}
+      type: 0
+    - localCell: {x: 21, y: 28}
+      type: 0
+    - localCell: {x: 22, y: 28}
+      type: 0
+    - localCell: {x: 23, y: 28}
+      type: 0
+    - localCell: {x: 20, y: 29}
+      type: 0
+    - localCell: {x: 21, y: 29}
+      type: 0
+    - localCell: {x: 22, y: 29}
+      type: 0
+    - localCell: {x: 23, y: 29}
+      type: 0
+    - localCell: {x: 20, y: 30}
+      type: 0
+    - localCell: {x: 21, y: 30}
+      type: 0
+    - localCell: {x: 22, y: 30}
+      type: 0
+    - localCell: {x: 23, y: 30}
+      type: 0
+    - localCell: {x: 20, y: 31}
+      type: 0
+    - localCell: {x: 21, y: 31}
+      type: 0
+    - localCell: {x: 22, y: 31}
+      type: 0
+    - localCell: {x: 23, y: 31}
+      type: 0
+    - localCell: {x: 20, y: 32}
+      type: 0
+    - localCell: {x: 21, y: 32}
+      type: 0
+    - localCell: {x: 22, y: 32}
+      type: 0
+    - localCell: {x: 23, y: 32}
+      type: 0
+    - localCell: {x: 20, y: 33}
+      type: 0
+    - localCell: {x: 21, y: 33}
+      type: 0
+    - localCell: {x: 22, y: 33}
+      type: 0
+    - localCell: {x: 23, y: 33}
+      type: 0
+    - localCell: {x: 20, y: 34}
+      type: 0
+    - localCell: {x: 21, y: 34}
+      type: 0
+    - localCell: {x: 22, y: 34}
+      type: 0
+    - localCell: {x: 23, y: 34}
+      type: 0
+    - localCell: {x: 20, y: 35}
+      type: 0
+    - localCell: {x: 21, y: 35}
+      type: 0
+    - localCell: {x: 22, y: 35}
+      type: 0
+    - localCell: {x: 23, y: 35}
+      type: 0
+    - localCell: {x: 20, y: 36}
+      type: 0
+    - localCell: {x: 21, y: 36}
+      type: 0
+    - localCell: {x: 22, y: 36}
+      type: 0
+    - localCell: {x: 23, y: 36}
+      type: 0
+    - localCell: {x: 20, y: 37}
+      type: 0
+    - localCell: {x: 21, y: 37}
+      type: 0
+    - localCell: {x: 22, y: 37}
+      type: 0
+    - localCell: {x: 23, y: 37}
+      type: 0
+    - localCell: {x: 20, y: 38}
+      type: 0
+    - localCell: {x: 21, y: 38}
+      type: 0
+    - localCell: {x: 22, y: 38}
+      type: 0
+    - localCell: {x: 23, y: 38}
+      type: 0
+    - localCell: {x: 20, y: 39}
+      type: 0
+    - localCell: {x: 21, y: 39}
+      type: 0
+    - localCell: {x: 22, y: 39}
+      type: 0
+    - localCell: {x: 23, y: 39}
+      type: 0
+    - localCell: {x: 20, y: 40}
+      type: 0
+    - localCell: {x: 21, y: 40}
+      type: 0
+    - localCell: {x: 22, y: 40}
+      type: 0
+    - localCell: {x: 23, y: 40}
+      type: 0
+  - name: Piece 11
+    color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells: []
+  - name: Piece 12
+    color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 4, y: 28}
+      type: 0
+    - localCell: {x: 5, y: 28}
+      type: 0
+    - localCell: {x: 6, y: 28}
+      type: 0
+    - localCell: {x: 7, y: 28}
+      type: 0
+    - localCell: {x: 4, y: 29}
+      type: 0
+    - localCell: {x: 5, y: 29}
+      type: 0
+    - localCell: {x: 6, y: 29}
+      type: 0
+    - localCell: {x: 7, y: 29}
+      type: 0
+    - localCell: {x: 4, y: 30}
+      type: 0
+    - localCell: {x: 5, y: 30}
+      type: 0
+    - localCell: {x: 6, y: 30}
+      type: 0
+    - localCell: {x: 7, y: 30}
+      type: 0
+    - localCell: {x: 4, y: 31}
+      type: 0
+    - localCell: {x: 5, y: 31}
+      type: 0
+    - localCell: {x: 6, y: 31}
+      type: 0
+    - localCell: {x: 7, y: 31}
+      type: 0
+    - localCell: {x: 8, y: 28}
+      type: 0
+    - localCell: {x: 9, y: 28}
+      type: 0
+    - localCell: {x: 10, y: 28}
+      type: 0
+    - localCell: {x: 11, y: 28}
+      type: 0
+    - localCell: {x: 8, y: 29}
+      type: 0
+    - localCell: {x: 9, y: 29}
+      type: 0
+    - localCell: {x: 10, y: 29}
+      type: 0
+    - localCell: {x: 11, y: 29}
+      type: 0
+    - localCell: {x: 8, y: 30}
+      type: 0
+    - localCell: {x: 9, y: 30}
+      type: 0
+    - localCell: {x: 10, y: 30}
+      type: 0
+    - localCell: {x: 11, y: 30}
+      type: 0
+    - localCell: {x: 8, y: 31}
+      type: 0
+    - localCell: {x: 9, y: 31}
+      type: 0
+    - localCell: {x: 10, y: 31}
+      type: 0
+    - localCell: {x: 11, y: 31}
+      type: 0
+    - localCell: {x: 8, y: 24}
+      type: 0
+    - localCell: {x: 9, y: 24}
+      type: 0
+    - localCell: {x: 10, y: 24}
+      type: 0
+    - localCell: {x: 11, y: 24}
+      type: 0
+    - localCell: {x: 8, y: 25}
+      type: 0
+    - localCell: {x: 9, y: 25}
+      type: 0
+    - localCell: {x: 10, y: 25}
+      type: 0
+    - localCell: {x: 11, y: 25}
+      type: 0
+    - localCell: {x: 8, y: 26}
+      type: 0
+    - localCell: {x: 9, y: 26}
+      type: 0
+    - localCell: {x: 10, y: 26}
+      type: 0
+    - localCell: {x: 11, y: 26}
+      type: 0
+    - localCell: {x: 8, y: 27}
+      type: 0
+    - localCell: {x: 9, y: 27}
+      type: 0
+    - localCell: {x: 10, y: 27}
+      type: 0
+    - localCell: {x: 11, y: 27}
+      type: 0
+  - name: Piece 13
+    color: {r: 0.5240001, g: 1, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 20, y: 12}
+      type: 0
+    - localCell: {x: 21, y: 12}
+      type: 0
+    - localCell: {x: 22, y: 12}
+      type: 0
+    - localCell: {x: 23, y: 12}
+      type: 0
+    - localCell: {x: 20, y: 13}
+      type: 0
+    - localCell: {x: 21, y: 13}
+      type: 0
+    - localCell: {x: 22, y: 13}
+      type: 0
+    - localCell: {x: 23, y: 13}
+      type: 0
+    - localCell: {x: 20, y: 14}
+      type: 0
+    - localCell: {x: 21, y: 14}
+      type: 0
+    - localCell: {x: 22, y: 14}
+      type: 0
+    - localCell: {x: 23, y: 14}
+      type: 0
+    - localCell: {x: 20, y: 15}
+      type: 0
+    - localCell: {x: 21, y: 15}
+      type: 0
+    - localCell: {x: 22, y: 15}
+      type: 0
+    - localCell: {x: 23, y: 15}
+      type: 0
+  - name: Piece 14
+    color: {r: 0.3, g: 1, b: 0.8739998, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells: []
+  - name: Piece 15
+    color: {r: 0.3, g: 0.32800016, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 8, y: 20}
+      type: 0
+    - localCell: {x: 9, y: 20}
+      type: 0
+    - localCell: {x: 10, y: 20}
+      type: 0
+    - localCell: {x: 11, y: 20}
+      type: 0
+    - localCell: {x: 8, y: 21}
+      type: 0
+    - localCell: {x: 9, y: 21}
+      type: 0
+    - localCell: {x: 10, y: 21}
+      type: 0
+    - localCell: {x: 11, y: 21}
+      type: 0
+    - localCell: {x: 8, y: 22}
+      type: 0
+    - localCell: {x: 9, y: 22}
+      type: 0
+    - localCell: {x: 10, y: 22}
+      type: 0
+    - localCell: {x: 11, y: 22}
+      type: 0
+    - localCell: {x: 8, y: 23}
+      type: 0
+    - localCell: {x: 9, y: 23}
+      type: 0
+    - localCell: {x: 10, y: 23}
+      type: 0
+    - localCell: {x: 11, y: 23}
+      type: 0
+    - localCell: {x: 12, y: 20}
+      type: 0
+    - localCell: {x: 13, y: 20}
+      type: 0
+    - localCell: {x: 14, y: 20}
+      type: 0
+    - localCell: {x: 15, y: 20}
+      type: 0
+    - localCell: {x: 12, y: 21}
+      type: 0
+    - localCell: {x: 13, y: 21}
+      type: 0
+    - localCell: {x: 14, y: 21}
+      type: 0
+    - localCell: {x: 15, y: 21}
+      type: 0
+    - localCell: {x: 12, y: 22}
+      type: 0
+    - localCell: {x: 13, y: 22}
+      type: 0
+    - localCell: {x: 14, y: 22}
+      type: 0
+    - localCell: {x: 15, y: 22}
+      type: 0
+    - localCell: {x: 12, y: 23}
+      type: 0
+    - localCell: {x: 13, y: 23}
+      type: 0
+    - localCell: {x: 14, y: 23}
+      type: 0
+    - localCell: {x: 15, y: 23}
+      type: 0
+    - localCell: {x: 16, y: 20}
+      type: 0
+    - localCell: {x: 17, y: 20}
+      type: 0
+    - localCell: {x: 18, y: 20}
+      type: 0
+    - localCell: {x: 19, y: 20}
+      type: 0
+    - localCell: {x: 16, y: 21}
+      type: 0
+    - localCell: {x: 17, y: 21}
+      type: 0
+    - localCell: {x: 18, y: 21}
+      type: 0
+    - localCell: {x: 19, y: 21}
+      type: 0
+    - localCell: {x: 16, y: 22}
+      type: 0
+    - localCell: {x: 17, y: 22}
+      type: 0
+    - localCell: {x: 18, y: 22}
+      type: 0
+    - localCell: {x: 19, y: 22}
+      type: 0
+    - localCell: {x: 16, y: 23}
+      type: 0
+    - localCell: {x: 17, y: 23}
+      type: 0
+    - localCell: {x: 18, y: 23}
+      type: 0
+    - localCell: {x: 19, y: 23}
+      type: 0
+  - name: Piece 16
+    color: {r: 1, g: 0.3, b: 0.93000007, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells: []
+  - name: Piece 17
+    color: {r: 1, g: 0.46799985, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 16, y: -8}
+      type: 0
+    - localCell: {x: 17, y: -8}
+      type: 0
+    - localCell: {x: 18, y: -8}
+      type: 0
+    - localCell: {x: 19, y: -8}
+      type: 0
+    - localCell: {x: 16, y: -7}
+      type: 0
+    - localCell: {x: 17, y: -7}
+      type: 0
+    - localCell: {x: 18, y: -7}
+      type: 0
+    - localCell: {x: 19, y: -7}
+      type: 0
+    - localCell: {x: 16, y: -6}
+      type: 0
+    - localCell: {x: 17, y: -6}
+      type: 0
+    - localCell: {x: 18, y: -6}
+      type: 0
+    - localCell: {x: 19, y: -6}
+      type: 0
+    - localCell: {x: 16, y: -5}
+      type: 0
+    - localCell: {x: 17, y: -5}
+      type: 0
+    - localCell: {x: 18, y: -5}
+      type: 0
+    - localCell: {x: 19, y: -5}
+      type: 0
+    - localCell: {x: 20, y: -8}
+      type: 0
+    - localCell: {x: 21, y: -8}
+      type: 0
+    - localCell: {x: 22, y: -8}
+      type: 0
+    - localCell: {x: 23, y: -8}
+      type: 0
+    - localCell: {x: 20, y: -7}
+      type: 0
+    - localCell: {x: 21, y: -7}
+      type: 0
+    - localCell: {x: 22, y: -7}
+      type: 0
+    - localCell: {x: 23, y: -7}
+      type: 0
+    - localCell: {x: 20, y: -6}
+      type: 0
+    - localCell: {x: 21, y: -6}
+      type: 0
+    - localCell: {x: 22, y: -6}
+      type: 0
+    - localCell: {x: 23, y: -6}
+      type: 0
+    - localCell: {x: 20, y: -5}
+      type: 0
+    - localCell: {x: 21, y: -5}
+      type: 0
+    - localCell: {x: 22, y: -5}
+      type: 0
+    - localCell: {x: 23, y: -5}
+      type: 0
+    - localCell: {x: 20, y: -4}
+      type: 0
+    - localCell: {x: 21, y: -4}
+      type: 0
+    - localCell: {x: 22, y: -4}
+      type: 0
+    - localCell: {x: 23, y: -4}
+      type: 0
+    - localCell: {x: 20, y: -3}
+      type: 0
+    - localCell: {x: 21, y: -3}
+      type: 0
+    - localCell: {x: 22, y: -3}
+      type: 0
+    - localCell: {x: 23, y: -3}
+      type: 0
+    - localCell: {x: 20, y: -2}
+      type: 0
+    - localCell: {x: 21, y: -2}
+      type: 0
+    - localCell: {x: 22, y: -2}
+      type: 0
+    - localCell: {x: 23, y: -2}
+      type: 0
+    - localCell: {x: 20, y: -1}
+      type: 0
+    - localCell: {x: 21, y: -1}
+      type: 0
+    - localCell: {x: 22, y: -1}
+      type: 0
+    - localCell: {x: 23, y: -1}
+      type: 0
+    - localCell: {x: 20, y: 0}
+      type: 0
+    - localCell: {x: 21, y: 0}
+      type: 0
+    - localCell: {x: 22, y: 0}
+      type: 0
+    - localCell: {x: 23, y: 0}
+      type: 0
+    - localCell: {x: 20, y: 1}
+      type: 0
+    - localCell: {x: 21, y: 1}
+      type: 0
+    - localCell: {x: 22, y: 1}
+      type: 0
+    - localCell: {x: 23, y: 1}
+      type: 0
+    - localCell: {x: 20, y: 2}
+      type: 0
+    - localCell: {x: 21, y: 2}
+      type: 0
+    - localCell: {x: 22, y: 2}
+      type: 0
+    - localCell: {x: 23, y: 2}
+      type: 0
+    - localCell: {x: 20, y: 3}
+      type: 0
+    - localCell: {x: 21, y: 3}
+      type: 0
+    - localCell: {x: 22, y: 3}
+      type: 0
+    - localCell: {x: 23, y: 3}
+      type: 0
+    - localCell: {x: 20, y: 4}
+      type: 0
+    - localCell: {x: 21, y: 4}
+      type: 0
+    - localCell: {x: 22, y: 4}
+      type: 0
+    - localCell: {x: 23, y: 4}
+      type: 0
+    - localCell: {x: 20, y: 5}
+      type: 0
+    - localCell: {x: 21, y: 5}
+      type: 0
+    - localCell: {x: 22, y: 5}
+      type: 0
+    - localCell: {x: 23, y: 5}
+      type: 0
+    - localCell: {x: 20, y: 6}
+      type: 0
+    - localCell: {x: 21, y: 6}
+      type: 0
+    - localCell: {x: 22, y: 6}
+      type: 0
+    - localCell: {x: 23, y: 6}
+      type: 0
+    - localCell: {x: 20, y: 7}
+      type: 0
+    - localCell: {x: 21, y: 7}
+      type: 0
+    - localCell: {x: 22, y: 7}
+      type: 0
+    - localCell: {x: 23, y: 7}
+      type: 0
+  - name: Piece 18
+    color: {r: 0.73400015, g: 1, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 12, y: -4}
+      type: 0
+    - localCell: {x: 13, y: -4}
+      type: 0
+    - localCell: {x: 14, y: -4}
+      type: 0
+    - localCell: {x: 15, y: -4}
+      type: 0
+    - localCell: {x: 12, y: -3}
+      type: 0
+    - localCell: {x: 13, y: -3}
+      type: 0
+    - localCell: {x: 14, y: -3}
+      type: 0
+    - localCell: {x: 15, y: -3}
+      type: 0
+    - localCell: {x: 12, y: -2}
+      type: 0
+    - localCell: {x: 13, y: -2}
+      type: 0
+    - localCell: {x: 14, y: -2}
+      type: 0
+    - localCell: {x: 15, y: -2}
+      type: 0
+    - localCell: {x: 12, y: -1}
+      type: 0
+    - localCell: {x: 13, y: -1}
+      type: 0
+    - localCell: {x: 14, y: -1}
+      type: 0
+    - localCell: {x: 15, y: -1}
+      type: 0
+    - localCell: {x: 16, y: -4}
+      type: 0
+    - localCell: {x: 17, y: -4}
+      type: 0
+    - localCell: {x: 18, y: -4}
+      type: 0
+    - localCell: {x: 19, y: -4}
+      type: 0
+    - localCell: {x: 16, y: -3}
+      type: 0
+    - localCell: {x: 17, y: -3}
+      type: 0
+    - localCell: {x: 18, y: -3}
+      type: 0
+    - localCell: {x: 19, y: -3}
+      type: 0
+    - localCell: {x: 16, y: -2}
+      type: 0
+    - localCell: {x: 17, y: -2}
+      type: 0
+    - localCell: {x: 18, y: -2}
+      type: 0
+    - localCell: {x: 19, y: -2}
+      type: 0
+    - localCell: {x: 16, y: -1}
+      type: 0
+    - localCell: {x: 17, y: -1}
+      type: 0
+    - localCell: {x: 18, y: -1}
+      type: 0
+    - localCell: {x: 19, y: -1}
+      type: 0
+    - localCell: {x: 16, y: 0}
+      type: 0
+    - localCell: {x: 17, y: 0}
+      type: 0
+    - localCell: {x: 18, y: 0}
+      type: 0
+    - localCell: {x: 19, y: 0}
+      type: 0
+    - localCell: {x: 16, y: 1}
+      type: 0
+    - localCell: {x: 17, y: 1}
+      type: 0
+    - localCell: {x: 18, y: 1}
+      type: 0
+    - localCell: {x: 19, y: 1}
+      type: 0
+    - localCell: {x: 16, y: 2}
+      type: 0
+    - localCell: {x: 17, y: 2}
+      type: 0
+    - localCell: {x: 18, y: 2}
+      type: 0
+    - localCell: {x: 19, y: 2}
+      type: 0
+    - localCell: {x: 16, y: 3}
+      type: 0
+    - localCell: {x: 17, y: 3}
+      type: 0
+    - localCell: {x: 18, y: 3}
+      type: 0
+    - localCell: {x: 19, y: 3}
+      type: 0
+    - localCell: {x: 16, y: 4}
+      type: 0
+    - localCell: {x: 17, y: 4}
+      type: 0
+    - localCell: {x: 18, y: 4}
+      type: 0
+    - localCell: {x: 19, y: 4}
+      type: 0
+    - localCell: {x: 16, y: 5}
+      type: 0
+    - localCell: {x: 17, y: 5}
+      type: 0
+    - localCell: {x: 18, y: 5}
+      type: 0
+    - localCell: {x: 19, y: 5}
+      type: 0
+    - localCell: {x: 16, y: 6}
+      type: 0
+    - localCell: {x: 17, y: 6}
+      type: 0
+    - localCell: {x: 18, y: 6}
+      type: 0
+    - localCell: {x: 19, y: 6}
+      type: 0
+    - localCell: {x: 16, y: 7}
+      type: 0
+    - localCell: {x: 17, y: 7}
+      type: 0
+    - localCell: {x: 18, y: 7}
+      type: 0
+    - localCell: {x: 19, y: 7}
+      type: 0
+  - name: Piece 19
+    color: {r: 0.3, g: 1, b: 0.6639998, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 8, y: 0}
+      type: 0
+    - localCell: {x: 9, y: 0}
+      type: 0
+    - localCell: {x: 10, y: 0}
+      type: 0
+    - localCell: {x: 11, y: 0}
+      type: 0
+    - localCell: {x: 8, y: 1}
+      type: 0
+    - localCell: {x: 9, y: 1}
+      type: 0
+    - localCell: {x: 10, y: 1}
+      type: 0
+    - localCell: {x: 11, y: 1}
+      type: 0
+    - localCell: {x: 8, y: 2}
+      type: 0
+    - localCell: {x: 9, y: 2}
+      type: 0
+    - localCell: {x: 10, y: 2}
+      type: 0
+    - localCell: {x: 11, y: 2}
+      type: 0
+    - localCell: {x: 8, y: 3}
+      type: 0
+    - localCell: {x: 9, y: 3}
+      type: 0
+    - localCell: {x: 10, y: 3}
+      type: 0
+    - localCell: {x: 11, y: 3}
+      type: 0
+    - localCell: {x: 12, y: 0}
+      type: 0
+    - localCell: {x: 13, y: 0}
+      type: 0
+    - localCell: {x: 14, y: 0}
+      type: 0
+    - localCell: {x: 15, y: 0}
+      type: 0
+    - localCell: {x: 12, y: 1}
+      type: 0
+    - localCell: {x: 13, y: 1}
+      type: 0
+    - localCell: {x: 14, y: 1}
+      type: 0
+    - localCell: {x: 15, y: 1}
+      type: 0
+    - localCell: {x: 12, y: 2}
+      type: 0
+    - localCell: {x: 13, y: 2}
+      type: 0
+    - localCell: {x: 14, y: 2}
+      type: 0
+    - localCell: {x: 15, y: 2}
+      type: 0
+    - localCell: {x: 12, y: 3}
+      type: 0
+    - localCell: {x: 13, y: 3}
+      type: 0
+    - localCell: {x: 14, y: 3}
+      type: 0
+    - localCell: {x: 15, y: 3}
+      type: 0
+    - localCell: {x: 12, y: 4}
+      type: 0
+    - localCell: {x: 13, y: 4}
+      type: 0
+    - localCell: {x: 14, y: 4}
+      type: 0
+    - localCell: {x: 15, y: 4}
+      type: 0
+    - localCell: {x: 12, y: 5}
+      type: 0
+    - localCell: {x: 13, y: 5}
+      type: 0
+    - localCell: {x: 14, y: 5}
+      type: 0
+    - localCell: {x: 15, y: 5}
+      type: 0
+    - localCell: {x: 12, y: 6}
+      type: 0
+    - localCell: {x: 13, y: 6}
+      type: 0
+    - localCell: {x: 14, y: 6}
+      type: 0
+    - localCell: {x: 15, y: 6}
+      type: 0
+    - localCell: {x: 12, y: 7}
+      type: 0
+    - localCell: {x: 13, y: 7}
+      type: 0
+    - localCell: {x: 14, y: 7}
+      type: 0
+    - localCell: {x: 15, y: 7}
+      type: 0
+  - name: Piece 20
+    color: {r: 0.3, g: 0.5380001, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 8, y: 4}
+      type: 0
+    - localCell: {x: 9, y: 4}
+      type: 0
+    - localCell: {x: 10, y: 4}
+      type: 0
+    - localCell: {x: 11, y: 4}
+      type: 0
+    - localCell: {x: 8, y: 5}
+      type: 0
+    - localCell: {x: 9, y: 5}
+      type: 0
+    - localCell: {x: 10, y: 5}
+      type: 0
+    - localCell: {x: 11, y: 5}
+      type: 0
+    - localCell: {x: 8, y: 6}
+      type: 0
+    - localCell: {x: 9, y: 6}
+      type: 0
+    - localCell: {x: 10, y: 6}
+      type: 0
+    - localCell: {x: 11, y: 6}
+      type: 0
+    - localCell: {x: 8, y: 7}
+      type: 0
+    - localCell: {x: 9, y: 7}
+      type: 0
+    - localCell: {x: 10, y: 7}
+      type: 0
+    - localCell: {x: 11, y: 7}
+      type: 0
+    - localCell: {x: 4, y: 4}
+      type: 0
+    - localCell: {x: 5, y: 4}
+      type: 0
+    - localCell: {x: 6, y: 4}
+      type: 0
+    - localCell: {x: 7, y: 4}
+      type: 0
+    - localCell: {x: 4, y: 5}
+      type: 0
+    - localCell: {x: 5, y: 5}
+      type: 0
+    - localCell: {x: 6, y: 5}
+      type: 0
+    - localCell: {x: 7, y: 5}
+      type: 0
+    - localCell: {x: 4, y: 6}
+      type: 0
+    - localCell: {x: 5, y: 6}
+      type: 0
+    - localCell: {x: 6, y: 6}
+      type: 0
+    - localCell: {x: 7, y: 6}
+      type: 0
+    - localCell: {x: 4, y: 7}
+      type: 0
+    - localCell: {x: 5, y: 7}
+      type: 0
+    - localCell: {x: 6, y: 7}
+      type: 0
+    - localCell: {x: 7, y: 7}
+      type: 0
+  - name: Piece 21
+    color: {r: 0.8599998, g: 0.3, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 4, y: 0}
+      type: 0
+    - localCell: {x: 5, y: 0}
+      type: 0
+    - localCell: {x: 6, y: 0}
+      type: 0
+    - localCell: {x: 7, y: 0}
+      type: 0
+    - localCell: {x: 4, y: 1}
+      type: 0
+    - localCell: {x: 5, y: 1}
+      type: 0
+    - localCell: {x: 6, y: 1}
+      type: 0
+    - localCell: {x: 7, y: 1}
+      type: 0
+    - localCell: {x: 4, y: 2}
+      type: 0
+    - localCell: {x: 5, y: 2}
+      type: 0
+    - localCell: {x: 6, y: 2}
+      type: 0
+    - localCell: {x: 7, y: 2}
+      type: 0
+    - localCell: {x: 4, y: 3}
+      type: 0
+    - localCell: {x: 5, y: 3}
+      type: 0
+    - localCell: {x: 6, y: 3}
+      type: 0
+    - localCell: {x: 7, y: 3}
+      type: 0
+    - localCell: {x: 4, y: -4}
+      type: 0
+    - localCell: {x: 5, y: -4}
+      type: 0
+    - localCell: {x: 6, y: -4}
+      type: 0
+    - localCell: {x: 7, y: -4}
+      type: 0
+    - localCell: {x: 4, y: -3}
+      type: 0
+    - localCell: {x: 5, y: -3}
+      type: 0
+    - localCell: {x: 6, y: -3}
+      type: 0
+    - localCell: {x: 7, y: -3}
+      type: 0
+    - localCell: {x: 4, y: -2}
+      type: 0
+    - localCell: {x: 5, y: -2}
+      type: 0
+    - localCell: {x: 6, y: -2}
+      type: 0
+    - localCell: {x: 7, y: -2}
+      type: 0
+    - localCell: {x: 4, y: -1}
+      type: 0
+    - localCell: {x: 5, y: -1}
+      type: 0
+    - localCell: {x: 6, y: -1}
+      type: 0
+    - localCell: {x: 7, y: -1}
+      type: 0
+    - localCell: {x: 8, y: -4}
+      type: 0
+    - localCell: {x: 9, y: -4}
+      type: 0
+    - localCell: {x: 10, y: -4}
+      type: 0
+    - localCell: {x: 11, y: -4}
+      type: 0
+    - localCell: {x: 8, y: -3}
+      type: 0
+    - localCell: {x: 9, y: -3}
+      type: 0
+    - localCell: {x: 10, y: -3}
+      type: 0
+    - localCell: {x: 11, y: -3}
+      type: 0
+    - localCell: {x: 8, y: -2}
+      type: 0
+    - localCell: {x: 9, y: -2}
+      type: 0
+    - localCell: {x: 10, y: -2}
+      type: 0
+    - localCell: {x: 11, y: -2}
+      type: 0
+    - localCell: {x: 8, y: -1}
+      type: 0
+    - localCell: {x: 9, y: -1}
+      type: 0
+    - localCell: {x: 10, y: -1}
+      type: 0
+    - localCell: {x: 11, y: -1}
+      type: 0
+    - localCell: {x: 0, y: -4}
+      type: 0
+    - localCell: {x: 1, y: -4}
+      type: 0
+    - localCell: {x: 2, y: -4}
+      type: 0
+    - localCell: {x: 3, y: -4}
+      type: 0
+    - localCell: {x: 0, y: -3}
+      type: 0
+    - localCell: {x: 1, y: -3}
+      type: 0
+    - localCell: {x: 2, y: -3}
+      type: 0
+    - localCell: {x: 3, y: -3}
+      type: 0
+    - localCell: {x: 0, y: -2}
+      type: 0
+    - localCell: {x: 1, y: -2}
+      type: 0
+    - localCell: {x: 2, y: -2}
+      type: 0
+    - localCell: {x: 3, y: -2}
+      type: 0
+    - localCell: {x: 0, y: -1}
+      type: 0
+    - localCell: {x: 1, y: -1}
+      type: 0
+    - localCell: {x: 2, y: -1}
+      type: 0
+    - localCell: {x: 3, y: -1}
+      type: 0
+  - name: Piece 22
+    color: {r: 1, g: 0.3, b: 0.3420003, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 12, y: -28}
+      type: 0
+    - localCell: {x: 13, y: -28}
+      type: 0
+    - localCell: {x: 14, y: -28}
+      type: 0
+    - localCell: {x: 15, y: -28}
+      type: 0
+    - localCell: {x: 12, y: -27}
+      type: 0
+    - localCell: {x: 13, y: -27}
+      type: 0
+    - localCell: {x: 14, y: -27}
+      type: 0
+    - localCell: {x: 15, y: -27}
+      type: 0
+    - localCell: {x: 12, y: -26}
+      type: 0
+    - localCell: {x: 13, y: -26}
+      type: 0
+    - localCell: {x: 14, y: -26}
+      type: 0
+    - localCell: {x: 15, y: -26}
+      type: 0
+    - localCell: {x: 12, y: -25}
+      type: 0
+    - localCell: {x: 13, y: -25}
+      type: 0
+    - localCell: {x: 14, y: -25}
+      type: 0
+    - localCell: {x: 15, y: -25}
+      type: 0
+    - localCell: {x: 16, y: -28}
+      type: 0
+    - localCell: {x: 17, y: -28}
+      type: 0
+    - localCell: {x: 18, y: -28}
+      type: 0
+    - localCell: {x: 19, y: -28}
+      type: 0
+    - localCell: {x: 16, y: -27}
+      type: 0
+    - localCell: {x: 17, y: -27}
+      type: 0
+    - localCell: {x: 18, y: -27}
+      type: 0
+    - localCell: {x: 19, y: -27}
+      type: 0
+    - localCell: {x: 16, y: -26}
+      type: 0
+    - localCell: {x: 17, y: -26}
+      type: 0
+    - localCell: {x: 18, y: -26}
+      type: 0
+    - localCell: {x: 19, y: -26}
+      type: 0
+    - localCell: {x: 16, y: -25}
+      type: 0
+    - localCell: {x: 17, y: -25}
+      type: 0
+    - localCell: {x: 18, y: -25}
+      type: 0
+    - localCell: {x: 19, y: -25}
+      type: 0
+    - localCell: {x: 20, y: -28}
+      type: 0
+    - localCell: {x: 21, y: -28}
+      type: 0
+    - localCell: {x: 22, y: -28}
+      type: 0
+    - localCell: {x: 23, y: -28}
+      type: 0
+    - localCell: {x: 20, y: -27}
+      type: 0
+    - localCell: {x: 21, y: -27}
+      type: 0
+    - localCell: {x: 22, y: -27}
+      type: 0
+    - localCell: {x: 23, y: -27}
+      type: 0
+    - localCell: {x: 20, y: -26}
+      type: 0
+    - localCell: {x: 21, y: -26}
+      type: 0
+    - localCell: {x: 22, y: -26}
+      type: 0
+    - localCell: {x: 23, y: -26}
+      type: 0
+    - localCell: {x: 20, y: -25}
+      type: 0
+    - localCell: {x: 21, y: -25}
+      type: 0
+    - localCell: {x: 22, y: -25}
+      type: 0
+    - localCell: {x: 23, y: -25}
+      type: 0
+  - name: Piece 23
+    color: {r: 0.94400024, g: 1, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 8, y: -24}
+      type: 0
+    - localCell: {x: 9, y: -24}
+      type: 0
+    - localCell: {x: 10, y: -24}
+      type: 0
+    - localCell: {x: 11, y: -24}
+      type: 0
+    - localCell: {x: 8, y: -23}
+      type: 0
+    - localCell: {x: 9, y: -23}
+      type: 0
+    - localCell: {x: 10, y: -23}
+      type: 0
+    - localCell: {x: 11, y: -23}
+      type: 0
+    - localCell: {x: 8, y: -22}
+      type: 0
+    - localCell: {x: 9, y: -22}
+      type: 0
+    - localCell: {x: 10, y: -22}
+      type: 0
+    - localCell: {x: 11, y: -22}
+      type: 0
+    - localCell: {x: 8, y: -21}
+      type: 0
+    - localCell: {x: 9, y: -21}
+      type: 0
+    - localCell: {x: 10, y: -21}
+      type: 0
+    - localCell: {x: 11, y: -21}
+      type: 0
+    - localCell: {x: 12, y: -24}
+      type: 0
+    - localCell: {x: 13, y: -24}
+      type: 0
+    - localCell: {x: 14, y: -24}
+      type: 0
+    - localCell: {x: 15, y: -24}
+      type: 0
+    - localCell: {x: 12, y: -23}
+      type: 0
+    - localCell: {x: 13, y: -23}
+      type: 0
+    - localCell: {x: 14, y: -23}
+      type: 0
+    - localCell: {x: 15, y: -23}
+      type: 0
+    - localCell: {x: 12, y: -22}
+      type: 0
+    - localCell: {x: 13, y: -22}
+      type: 0
+    - localCell: {x: 14, y: -22}
+      type: 0
+    - localCell: {x: 15, y: -22}
+      type: 0
+    - localCell: {x: 12, y: -21}
+      type: 0
+    - localCell: {x: 13, y: -21}
+      type: 0
+    - localCell: {x: 14, y: -21}
+      type: 0
+    - localCell: {x: 15, y: -21}
+      type: 0
+    - localCell: {x: 16, y: -24}
+      type: 0
+    - localCell: {x: 17, y: -24}
+      type: 0
+    - localCell: {x: 18, y: -24}
+      type: 0
+    - localCell: {x: 19, y: -24}
+      type: 0
+    - localCell: {x: 16, y: -23}
+      type: 0
+    - localCell: {x: 17, y: -23}
+      type: 0
+    - localCell: {x: 18, y: -23}
+      type: 0
+    - localCell: {x: 19, y: -23}
+      type: 0
+    - localCell: {x: 16, y: -22}
+      type: 0
+    - localCell: {x: 17, y: -22}
+      type: 0
+    - localCell: {x: 18, y: -22}
+      type: 0
+    - localCell: {x: 19, y: -22}
+      type: 0
+    - localCell: {x: 16, y: -21}
+      type: 0
+    - localCell: {x: 17, y: -21}
+      type: 0
+    - localCell: {x: 18, y: -21}
+      type: 0
+    - localCell: {x: 19, y: -21}
+      type: 0
+  - name: Piece 24
+    color: {r: 0.3, g: 1, b: 0.45399988, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 4, y: -20}
+      type: 0
+    - localCell: {x: 5, y: -20}
+      type: 0
+    - localCell: {x: 6, y: -20}
+      type: 0
+    - localCell: {x: 7, y: -20}
+      type: 0
+    - localCell: {x: 4, y: -19}
+      type: 0
+    - localCell: {x: 5, y: -19}
+      type: 0
+    - localCell: {x: 6, y: -19}
+      type: 0
+    - localCell: {x: 7, y: -19}
+      type: 0
+    - localCell: {x: 4, y: -18}
+      type: 0
+    - localCell: {x: 5, y: -18}
+      type: 0
+    - localCell: {x: 6, y: -18}
+      type: 0
+    - localCell: {x: 7, y: -18}
+      type: 0
+    - localCell: {x: 4, y: -17}
+      type: 0
+    - localCell: {x: 5, y: -17}
+      type: 0
+    - localCell: {x: 6, y: -17}
+      type: 0
+    - localCell: {x: 7, y: -17}
+      type: 0
+    - localCell: {x: 8, y: -20}
+      type: 0
+    - localCell: {x: 9, y: -20}
+      type: 0
+    - localCell: {x: 10, y: -20}
+      type: 0
+    - localCell: {x: 11, y: -20}
+      type: 0
+    - localCell: {x: 8, y: -19}
+      type: 0
+    - localCell: {x: 9, y: -19}
+      type: 0
+    - localCell: {x: 10, y: -19}
+      type: 0
+    - localCell: {x: 11, y: -19}
+      type: 0
+    - localCell: {x: 8, y: -18}
+      type: 0
+    - localCell: {x: 9, y: -18}
+      type: 0
+    - localCell: {x: 10, y: -18}
+      type: 0
+    - localCell: {x: 11, y: -18}
+      type: 0
+    - localCell: {x: 8, y: -17}
+      type: 0
+    - localCell: {x: 9, y: -17}
+      type: 0
+    - localCell: {x: 10, y: -17}
+      type: 0
+    - localCell: {x: 11, y: -17}
+      type: 0
+    - localCell: {x: 12, y: -20}
+      type: 0
+    - localCell: {x: 13, y: -20}
+      type: 0
+    - localCell: {x: 14, y: -20}
+      type: 0
+    - localCell: {x: 15, y: -20}
+      type: 0
+    - localCell: {x: 12, y: -19}
+      type: 0
+    - localCell: {x: 13, y: -19}
+      type: 0
+    - localCell: {x: 14, y: -19}
+      type: 0
+    - localCell: {x: 15, y: -19}
+      type: 0
+    - localCell: {x: 12, y: -18}
+      type: 0
+    - localCell: {x: 13, y: -18}
+      type: 0
+    - localCell: {x: 14, y: -18}
+      type: 0
+    - localCell: {x: 15, y: -18}
+      type: 0
+    - localCell: {x: 12, y: -17}
+      type: 0
+    - localCell: {x: 13, y: -17}
+      type: 0
+    - localCell: {x: 14, y: -17}
+      type: 0
+    - localCell: {x: 15, y: -17}
+      type: 0
+  - name: Piece 25
+    color: {r: 0.3, g: 0.74800026, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 16, y: -20}
+      type: 0
+    - localCell: {x: 17, y: -20}
+      type: 0
+    - localCell: {x: 18, y: -20}
+      type: 0
+    - localCell: {x: 19, y: -20}
+      type: 0
+    - localCell: {x: 16, y: -19}
+      type: 0
+    - localCell: {x: 17, y: -19}
+      type: 0
+    - localCell: {x: 18, y: -19}
+      type: 0
+    - localCell: {x: 19, y: -19}
+      type: 0
+    - localCell: {x: 16, y: -18}
+      type: 0
+    - localCell: {x: 17, y: -18}
+      type: 0
+    - localCell: {x: 18, y: -18}
+      type: 0
+    - localCell: {x: 19, y: -18}
+      type: 0
+    - localCell: {x: 16, y: -17}
+      type: 0
+    - localCell: {x: 17, y: -17}
+      type: 0
+    - localCell: {x: 18, y: -17}
+      type: 0
+    - localCell: {x: 19, y: -17}
+      type: 0
+    - localCell: {x: 20, y: -20}
+      type: 0
+    - localCell: {x: 21, y: -20}
+      type: 0
+    - localCell: {x: 22, y: -20}
+      type: 0
+    - localCell: {x: 23, y: -20}
+      type: 0
+    - localCell: {x: 20, y: -19}
+      type: 0
+    - localCell: {x: 21, y: -19}
+      type: 0
+    - localCell: {x: 22, y: -19}
+      type: 0
+    - localCell: {x: 23, y: -19}
+      type: 0
+    - localCell: {x: 20, y: -18}
+      type: 0
+    - localCell: {x: 21, y: -18}
+      type: 0
+    - localCell: {x: 22, y: -18}
+      type: 0
+    - localCell: {x: 23, y: -18}
+      type: 0
+    - localCell: {x: 20, y: -17}
+      type: 0
+    - localCell: {x: 21, y: -17}
+      type: 0
+    - localCell: {x: 22, y: -17}
+      type: 0
+    - localCell: {x: 23, y: -17}
+      type: 0
+    - localCell: {x: 20, y: -24}
+      type: 0
+    - localCell: {x: 21, y: -24}
+      type: 0
+    - localCell: {x: 22, y: -24}
+      type: 0
+    - localCell: {x: 23, y: -24}
+      type: 0
+    - localCell: {x: 20, y: -23}
+      type: 0
+    - localCell: {x: 21, y: -23}
+      type: 0
+    - localCell: {x: 22, y: -23}
+      type: 0
+    - localCell: {x: 23, y: -23}
+      type: 0
+    - localCell: {x: 20, y: -22}
+      type: 0
+    - localCell: {x: 21, y: -22}
+      type: 0
+    - localCell: {x: 22, y: -22}
+      type: 0
+    - localCell: {x: 23, y: -22}
+      type: 0
+    - localCell: {x: 20, y: -21}
+      type: 0
+    - localCell: {x: 21, y: -21}
+      type: 0
+    - localCell: {x: 22, y: -21}
+      type: 0
+    - localCell: {x: 23, y: -21}
+      type: 0
+  - name: Piece 26
+    color: {r: 0.6499997, g: 0.3, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 8, y: -16}
+      type: 0
+    - localCell: {x: 9, y: -16}
+      type: 0
+    - localCell: {x: 10, y: -16}
+      type: 0
+    - localCell: {x: 11, y: -16}
+      type: 0
+    - localCell: {x: 8, y: -15}
+      type: 0
+    - localCell: {x: 9, y: -15}
+      type: 0
+    - localCell: {x: 10, y: -15}
+      type: 0
+    - localCell: {x: 11, y: -15}
+      type: 0
+    - localCell: {x: 8, y: -14}
+      type: 0
+    - localCell: {x: 9, y: -14}
+      type: 0
+    - localCell: {x: 10, y: -14}
+      type: 0
+    - localCell: {x: 11, y: -14}
+      type: 0
+    - localCell: {x: 8, y: -13}
+      type: 0
+    - localCell: {x: 9, y: -13}
+      type: 0
+    - localCell: {x: 10, y: -13}
+      type: 0
+    - localCell: {x: 11, y: -13}
+      type: 0
+    - localCell: {x: 12, y: -16}
+      type: 0
+    - localCell: {x: 13, y: -16}
+      type: 0
+    - localCell: {x: 14, y: -16}
+      type: 0
+    - localCell: {x: 15, y: -16}
+      type: 0
+    - localCell: {x: 12, y: -15}
+      type: 0
+    - localCell: {x: 13, y: -15}
+      type: 0
+    - localCell: {x: 14, y: -15}
+      type: 0
+    - localCell: {x: 15, y: -15}
+      type: 0
+    - localCell: {x: 12, y: -14}
+      type: 0
+    - localCell: {x: 13, y: -14}
+      type: 0
+    - localCell: {x: 14, y: -14}
+      type: 0
+    - localCell: {x: 15, y: -14}
+      type: 0
+    - localCell: {x: 12, y: -13}
+      type: 0
+    - localCell: {x: 13, y: -13}
+      type: 0
+    - localCell: {x: 14, y: -13}
+      type: 0
+    - localCell: {x: 15, y: -13}
+      type: 0
+    - localCell: {x: 12, y: -12}
+      type: 0
+    - localCell: {x: 13, y: -12}
+      type: 0
+    - localCell: {x: 14, y: -12}
+      type: 0
+    - localCell: {x: 15, y: -12}
+      type: 0
+    - localCell: {x: 12, y: -11}
+      type: 0
+    - localCell: {x: 13, y: -11}
+      type: 0
+    - localCell: {x: 14, y: -11}
+      type: 0
+    - localCell: {x: 15, y: -11}
+      type: 0
+    - localCell: {x: 12, y: -10}
+      type: 0
+    - localCell: {x: 13, y: -10}
+      type: 0
+    - localCell: {x: 14, y: -10}
+      type: 0
+    - localCell: {x: 15, y: -10}
+      type: 0
+    - localCell: {x: 12, y: -9}
+      type: 0
+    - localCell: {x: 13, y: -9}
+      type: 0
+    - localCell: {x: 14, y: -9}
+      type: 0
+    - localCell: {x: 15, y: -9}
+      type: 0
+  - name: Piece 27
+    color: {r: 1, g: 0.3, b: 0.55200046, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 8, y: -12}
+      type: 0
+    - localCell: {x: 9, y: -12}
+      type: 0
+    - localCell: {x: 10, y: -12}
+      type: 0
+    - localCell: {x: 11, y: -12}
+      type: 0
+    - localCell: {x: 8, y: -11}
+      type: 0
+    - localCell: {x: 9, y: -11}
+      type: 0
+    - localCell: {x: 10, y: -11}
+      type: 0
+    - localCell: {x: 11, y: -11}
+      type: 0
+    - localCell: {x: 8, y: -10}
+      type: 0
+    - localCell: {x: 9, y: -10}
+      type: 0
+    - localCell: {x: 10, y: -10}
+      type: 0
+    - localCell: {x: 11, y: -10}
+      type: 0
+    - localCell: {x: 8, y: -9}
+      type: 0
+    - localCell: {x: 9, y: -9}
+      type: 0
+    - localCell: {x: 10, y: -9}
+      type: 0
+    - localCell: {x: 11, y: -9}
+      type: 0
+    - localCell: {x: 8, y: -8}
+      type: 0
+    - localCell: {x: 9, y: -8}
+      type: 0
+    - localCell: {x: 10, y: -8}
+      type: 0
+    - localCell: {x: 11, y: -8}
+      type: 0
+    - localCell: {x: 8, y: -7}
+      type: 0
+    - localCell: {x: 9, y: -7}
+      type: 0
+    - localCell: {x: 10, y: -7}
+      type: 0
+    - localCell: {x: 11, y: -7}
+      type: 0
+    - localCell: {x: 8, y: -6}
+      type: 0
+    - localCell: {x: 9, y: -6}
+      type: 0
+    - localCell: {x: 10, y: -6}
+      type: 0
+    - localCell: {x: 11, y: -6}
+      type: 0
+    - localCell: {x: 8, y: -5}
+      type: 0
+    - localCell: {x: 9, y: -5}
+      type: 0
+    - localCell: {x: 10, y: -5}
+      type: 0
+    - localCell: {x: 11, y: -5}
+      type: 0
+    - localCell: {x: 12, y: -8}
+      type: 0
+    - localCell: {x: 13, y: -8}
+      type: 0
+    - localCell: {x: 14, y: -8}
+      type: 0
+    - localCell: {x: 15, y: -8}
+      type: 0
+    - localCell: {x: 12, y: -7}
+      type: 0
+    - localCell: {x: 13, y: -7}
+      type: 0
+    - localCell: {x: 14, y: -7}
+      type: 0
+    - localCell: {x: 15, y: -7}
+      type: 0
+    - localCell: {x: 12, y: -6}
+      type: 0
+    - localCell: {x: 13, y: -6}
+      type: 0
+    - localCell: {x: 14, y: -6}
+      type: 0
+    - localCell: {x: 15, y: -6}
+      type: 0
+    - localCell: {x: 12, y: -5}
+      type: 0
+    - localCell: {x: 13, y: -5}
+      type: 0
+    - localCell: {x: 14, y: -5}
+      type: 0
+    - localCell: {x: 15, y: -5}
+      type: 0
+  - name: Piece 28
+    color: {r: 1, g: 0.8459997, b: 0.3, a: 1}
+    origin: {x: 24, y: 56}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -24, y: -12}
+      type: 0
+    - localCell: {x: -23, y: -12}
+      type: 0
+    - localCell: {x: -22, y: -12}
+      type: 0
+    - localCell: {x: -21, y: -12}
+      type: 0
+    - localCell: {x: -24, y: -11}
+      type: 0
+    - localCell: {x: -23, y: -11}
+      type: 0
+    - localCell: {x: -22, y: -11}
+      type: 0
+    - localCell: {x: -21, y: -11}
+      type: 0
+    - localCell: {x: -24, y: -10}
+      type: 0
+    - localCell: {x: -23, y: -10}
+      type: 0
+    - localCell: {x: -22, y: -10}
+      type: 0
+    - localCell: {x: -21, y: -10}
+      type: 0
+    - localCell: {x: -24, y: -9}
+      type: 0
+    - localCell: {x: -23, y: -9}
+      type: 0
+    - localCell: {x: -22, y: -9}
+      type: 0
+    - localCell: {x: -21, y: -9}
+      type: 0
+    - localCell: {x: -24, y: -16}
+      type: 0
+    - localCell: {x: -23, y: -16}
+      type: 0
+    - localCell: {x: -22, y: -16}
+      type: 0
+    - localCell: {x: -21, y: -16}
+      type: 0
+    - localCell: {x: -24, y: -15}
+      type: 0
+    - localCell: {x: -23, y: -15}
+      type: 0
+    - localCell: {x: -22, y: -15}
+      type: 0
+    - localCell: {x: -21, y: -15}
+      type: 0
+    - localCell: {x: -24, y: -14}
+      type: 0
+    - localCell: {x: -23, y: -14}
+      type: 0
+    - localCell: {x: -22, y: -14}
+      type: 0
+    - localCell: {x: -21, y: -14}
+      type: 0
+    - localCell: {x: -24, y: -13}
+      type: 0
+    - localCell: {x: -23, y: -13}
+      type: 0
+    - localCell: {x: -22, y: -13}
+      type: 0
+    - localCell: {x: -21, y: -13}
+      type: 0
+    - localCell: {x: -24, y: -20}
+      type: 0
+    - localCell: {x: -23, y: -20}
+      type: 0
+    - localCell: {x: -22, y: -20}
+      type: 0
+    - localCell: {x: -21, y: -20}
+      type: 0
+    - localCell: {x: -24, y: -19}
+      type: 0
+    - localCell: {x: -23, y: -19}
+      type: 0
+    - localCell: {x: -22, y: -19}
+      type: 0
+    - localCell: {x: -21, y: -19}
+      type: 0
+    - localCell: {x: -24, y: -18}
+      type: 0
+    - localCell: {x: -23, y: -18}
+      type: 0
+    - localCell: {x: -22, y: -18}
+      type: 0
+    - localCell: {x: -21, y: -18}
+      type: 0
+    - localCell: {x: -24, y: -17}
+      type: 0
+    - localCell: {x: -23, y: -17}
+      type: 0
+    - localCell: {x: -22, y: -17}
+      type: 0
+    - localCell: {x: -21, y: -17}
+      type: 0
+  - name: Piece 29
+    color: {r: 0.3560003, g: 1, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -20, y: 4}
+      type: 0
+    - localCell: {x: -19, y: 4}
+      type: 0
+    - localCell: {x: -18, y: 4}
+      type: 0
+    - localCell: {x: -17, y: 4}
+      type: 0
+    - localCell: {x: -20, y: 5}
+      type: 0
+    - localCell: {x: -19, y: 5}
+      type: 0
+    - localCell: {x: -18, y: 5}
+      type: 0
+    - localCell: {x: -17, y: 5}
+      type: 0
+    - localCell: {x: -20, y: 6}
+      type: 0
+    - localCell: {x: -19, y: 6}
+      type: 0
+    - localCell: {x: -18, y: 6}
+      type: 0
+    - localCell: {x: -17, y: 6}
+      type: 0
+    - localCell: {x: -20, y: 7}
+      type: 0
+    - localCell: {x: -19, y: 7}
+      type: 0
+    - localCell: {x: -18, y: 7}
+      type: 0
+    - localCell: {x: -17, y: 7}
+      type: 0
+    - localCell: {x: -20, y: 0}
+      type: 0
+    - localCell: {x: -19, y: 0}
+      type: 0
+    - localCell: {x: -18, y: 0}
+      type: 0
+    - localCell: {x: -17, y: 0}
+      type: 0
+    - localCell: {x: -20, y: 1}
+      type: 0
+    - localCell: {x: -19, y: 1}
+      type: 0
+    - localCell: {x: -18, y: 1}
+      type: 0
+    - localCell: {x: -17, y: 1}
+      type: 0
+    - localCell: {x: -20, y: 2}
+      type: 0
+    - localCell: {x: -19, y: 2}
+      type: 0
+    - localCell: {x: -18, y: 2}
+      type: 0
+    - localCell: {x: -17, y: 2}
+      type: 0
+    - localCell: {x: -20, y: 3}
+      type: 0
+    - localCell: {x: -19, y: 3}
+      type: 0
+    - localCell: {x: -18, y: 3}
+      type: 0
+    - localCell: {x: -17, y: 3}
+      type: 0
+    - localCell: {x: -20, y: -4}
+      type: 0
+    - localCell: {x: -19, y: -4}
+      type: 0
+    - localCell: {x: -18, y: -4}
+      type: 0
+    - localCell: {x: -17, y: -4}
+      type: 0
+    - localCell: {x: -20, y: -3}
+      type: 0
+    - localCell: {x: -19, y: -3}
+      type: 0
+    - localCell: {x: -18, y: -3}
+      type: 0
+    - localCell: {x: -17, y: -3}
+      type: 0
+    - localCell: {x: -20, y: -2}
+      type: 0
+    - localCell: {x: -19, y: -2}
+      type: 0
+    - localCell: {x: -18, y: -2}
+      type: 0
+    - localCell: {x: -17, y: -2}
+      type: 0
+    - localCell: {x: -20, y: -1}
+      type: 0
+    - localCell: {x: -19, y: -1}
+      type: 0
+    - localCell: {x: -18, y: -1}
+      type: 0
+    - localCell: {x: -17, y: -1}
+      type: 0
+    - localCell: {x: -16, y: -4}
+      type: 0
+    - localCell: {x: -15, y: -4}
+      type: 0
+    - localCell: {x: -14, y: -4}
+      type: 0
+    - localCell: {x: -13, y: -4}
+      type: 0
+    - localCell: {x: -16, y: -3}
+      type: 0
+    - localCell: {x: -15, y: -3}
+      type: 0
+    - localCell: {x: -14, y: -3}
+      type: 0
+    - localCell: {x: -13, y: -3}
+      type: 0
+    - localCell: {x: -16, y: -2}
+      type: 0
+    - localCell: {x: -15, y: -2}
+      type: 0
+    - localCell: {x: -14, y: -2}
+      type: 0
+    - localCell: {x: -13, y: -2}
+      type: 0
+    - localCell: {x: -16, y: -1}
+      type: 0
+    - localCell: {x: -15, y: -1}
+      type: 0
+    - localCell: {x: -14, y: -1}
+      type: 0
+    - localCell: {x: -13, y: -1}
+      type: 0
+  - name: Piece 30
+    color: {r: 0.3, g: 0.95800036, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -16, y: 0}
+      type: 0
+    - localCell: {x: -15, y: 0}
+      type: 0
+    - localCell: {x: -14, y: 0}
+      type: 0
+    - localCell: {x: -13, y: 0}
+      type: 0
+    - localCell: {x: -16, y: 1}
+      type: 0
+    - localCell: {x: -15, y: 1}
+      type: 0
+    - localCell: {x: -14, y: 1}
+      type: 0
+    - localCell: {x: -13, y: 1}
+      type: 0
+    - localCell: {x: -16, y: 2}
+      type: 0
+    - localCell: {x: -15, y: 2}
+      type: 0
+    - localCell: {x: -14, y: 2}
+      type: 0
+    - localCell: {x: -13, y: 2}
+      type: 0
+    - localCell: {x: -16, y: 3}
+      type: 0
+    - localCell: {x: -15, y: 3}
+      type: 0
+    - localCell: {x: -14, y: 3}
+      type: 0
+    - localCell: {x: -13, y: 3}
+      type: 0
+    - localCell: {x: -12, y: 0}
+      type: 0
+    - localCell: {x: -11, y: 0}
+      type: 0
+    - localCell: {x: -10, y: 0}
+      type: 0
+    - localCell: {x: -9, y: 0}
+      type: 0
+    - localCell: {x: -12, y: 1}
+      type: 0
+    - localCell: {x: -11, y: 1}
+      type: 0
+    - localCell: {x: -10, y: 1}
+      type: 0
+    - localCell: {x: -9, y: 1}
+      type: 0
+    - localCell: {x: -12, y: 2}
+      type: 0
+    - localCell: {x: -11, y: 2}
+      type: 0
+    - localCell: {x: -10, y: 2}
+      type: 0
+    - localCell: {x: -9, y: 2}
+      type: 0
+    - localCell: {x: -12, y: 3}
+      type: 0
+    - localCell: {x: -11, y: 3}
+      type: 0
+    - localCell: {x: -10, y: 3}
+      type: 0
+    - localCell: {x: -9, y: 3}
+      type: 0
+    - localCell: {x: -12, y: -4}
+      type: 0
+    - localCell: {x: -11, y: -4}
+      type: 0
+    - localCell: {x: -10, y: -4}
+      type: 0
+    - localCell: {x: -9, y: -4}
+      type: 0
+    - localCell: {x: -12, y: -3}
+      type: 0
+    - localCell: {x: -11, y: -3}
+      type: 0
+    - localCell: {x: -10, y: -3}
+      type: 0
+    - localCell: {x: -9, y: -3}
+      type: 0
+    - localCell: {x: -12, y: -2}
+      type: 0
+    - localCell: {x: -11, y: -2}
+      type: 0
+    - localCell: {x: -10, y: -2}
+      type: 0
+    - localCell: {x: -9, y: -2}
+      type: 0
+    - localCell: {x: -12, y: -1}
+      type: 0
+    - localCell: {x: -11, y: -1}
+      type: 0
+    - localCell: {x: -10, y: -1}
+      type: 0
+    - localCell: {x: -9, y: -1}
+      type: 0
+    - localCell: {x: -12, y: -8}
+      type: 0
+    - localCell: {x: -11, y: -8}
+      type: 0
+    - localCell: {x: -10, y: -8}
+      type: 0
+    - localCell: {x: -9, y: -8}
+      type: 0
+    - localCell: {x: -12, y: -7}
+      type: 0
+    - localCell: {x: -11, y: -7}
+      type: 0
+    - localCell: {x: -10, y: -7}
+      type: 0
+    - localCell: {x: -9, y: -7}
+      type: 0
+    - localCell: {x: -12, y: -6}
+      type: 0
+    - localCell: {x: -11, y: -6}
+      type: 0
+    - localCell: {x: -10, y: -6}
+      type: 0
+    - localCell: {x: -9, y: -6}
+      type: 0
+    - localCell: {x: -12, y: -5}
+      type: 0
+    - localCell: {x: -11, y: -5}
+      type: 0
+    - localCell: {x: -10, y: -5}
+      type: 0
+    - localCell: {x: -9, y: -5}
+      type: 0
+    - localCell: {x: -16, y: -8}
+      type: 0
+    - localCell: {x: -15, y: -8}
+      type: 0
+    - localCell: {x: -14, y: -8}
+      type: 0
+    - localCell: {x: -13, y: -8}
+      type: 0
+    - localCell: {x: -16, y: -7}
+      type: 0
+    - localCell: {x: -15, y: -7}
+      type: 0
+    - localCell: {x: -14, y: -7}
+      type: 0
+    - localCell: {x: -13, y: -7}
+      type: 0
+    - localCell: {x: -16, y: -6}
+      type: 0
+    - localCell: {x: -15, y: -6}
+      type: 0
+    - localCell: {x: -14, y: -6}
+      type: 0
+    - localCell: {x: -13, y: -6}
+      type: 0
+    - localCell: {x: -16, y: -5}
+      type: 0
+    - localCell: {x: -15, y: -5}
+      type: 0
+    - localCell: {x: -14, y: -5}
+      type: 0
+    - localCell: {x: -13, y: -5}
+      type: 0
+  - name: Piece 31
+    color: {r: 0.43999988, g: 0.3, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -12, y: 4}
+      type: 0
+    - localCell: {x: -11, y: 4}
+      type: 0
+    - localCell: {x: -10, y: 4}
+      type: 0
+    - localCell: {x: -9, y: 4}
+      type: 0
+    - localCell: {x: -12, y: 5}
+      type: 0
+    - localCell: {x: -11, y: 5}
+      type: 0
+    - localCell: {x: -10, y: 5}
+      type: 0
+    - localCell: {x: -9, y: 5}
+      type: 0
+    - localCell: {x: -12, y: 6}
+      type: 0
+    - localCell: {x: -11, y: 6}
+      type: 0
+    - localCell: {x: -10, y: 6}
+      type: 0
+    - localCell: {x: -9, y: 6}
+      type: 0
+    - localCell: {x: -12, y: 7}
+      type: 0
+    - localCell: {x: -11, y: 7}
+      type: 0
+    - localCell: {x: -10, y: 7}
+      type: 0
+    - localCell: {x: -9, y: 7}
+      type: 0
+    - localCell: {x: -8, y: 4}
+      type: 0
+    - localCell: {x: -7, y: 4}
+      type: 0
+    - localCell: {x: -6, y: 4}
+      type: 0
+    - localCell: {x: -5, y: 4}
+      type: 0
+    - localCell: {x: -8, y: 5}
+      type: 0
+    - localCell: {x: -7, y: 5}
+      type: 0
+    - localCell: {x: -6, y: 5}
+      type: 0
+    - localCell: {x: -5, y: 5}
+      type: 0
+    - localCell: {x: -8, y: 6}
+      type: 0
+    - localCell: {x: -7, y: 6}
+      type: 0
+    - localCell: {x: -6, y: 6}
+      type: 0
+    - localCell: {x: -5, y: 6}
+      type: 0
+    - localCell: {x: -8, y: 7}
+      type: 0
+    - localCell: {x: -7, y: 7}
+      type: 0
+    - localCell: {x: -6, y: 7}
+      type: 0
+    - localCell: {x: -5, y: 7}
+      type: 0
+    - localCell: {x: -4, y: 4}
+      type: 0
+    - localCell: {x: -3, y: 4}
+      type: 0
+    - localCell: {x: -2, y: 4}
+      type: 0
+    - localCell: {x: -1, y: 4}
+      type: 0
+    - localCell: {x: -4, y: 5}
+      type: 0
+    - localCell: {x: -3, y: 5}
+      type: 0
+    - localCell: {x: -2, y: 5}
+      type: 0
+    - localCell: {x: -1, y: 5}
+      type: 0
+    - localCell: {x: -4, y: 6}
+      type: 0
+    - localCell: {x: -3, y: 6}
+      type: 0
+    - localCell: {x: -2, y: 6}
+      type: 0
+    - localCell: {x: -1, y: 6}
+      type: 0
+    - localCell: {x: -4, y: 7}
+      type: 0
+    - localCell: {x: -3, y: 7}
+      type: 0
+    - localCell: {x: -2, y: 7}
+      type: 0
+    - localCell: {x: -1, y: 7}
+      type: 0
+    - localCell: {x: -4, y: 0}
+      type: 0
+    - localCell: {x: -3, y: 0}
+      type: 0
+    - localCell: {x: -2, y: 0}
+      type: 0
+    - localCell: {x: -1, y: 0}
+      type: 0
+    - localCell: {x: -4, y: 1}
+      type: 0
+    - localCell: {x: -3, y: 1}
+      type: 0
+    - localCell: {x: -2, y: 1}
+      type: 0
+    - localCell: {x: -1, y: 1}
+      type: 0
+    - localCell: {x: -4, y: 2}
+      type: 0
+    - localCell: {x: -3, y: 2}
+      type: 0
+    - localCell: {x: -2, y: 2}
+      type: 0
+    - localCell: {x: -1, y: 2}
+      type: 0
+    - localCell: {x: -4, y: 3}
+      type: 0
+    - localCell: {x: -3, y: 3}
+      type: 0
+    - localCell: {x: -2, y: 3}
+      type: 0
+    - localCell: {x: -1, y: 3}
+      type: 0
+  - name: Piece 32
+    color: {r: 1, g: 0.3, b: 0.7620002, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -24, y: -20}
+      type: 0
+    - localCell: {x: -23, y: -20}
+      type: 0
+    - localCell: {x: -22, y: -20}
+      type: 0
+    - localCell: {x: -21, y: -20}
+      type: 0
+    - localCell: {x: -24, y: -19}
+      type: 0
+    - localCell: {x: -23, y: -19}
+      type: 0
+    - localCell: {x: -22, y: -19}
+      type: 0
+    - localCell: {x: -21, y: -19}
+      type: 0
+    - localCell: {x: -24, y: -18}
+      type: 0
+    - localCell: {x: -23, y: -18}
+      type: 0
+    - localCell: {x: -22, y: -18}
+      type: 0
+    - localCell: {x: -21, y: -18}
+      type: 0
+    - localCell: {x: -24, y: -17}
+      type: 0
+    - localCell: {x: -23, y: -17}
+      type: 0
+    - localCell: {x: -22, y: -17}
+      type: 0
+    - localCell: {x: -21, y: -17}
+      type: 0
+    - localCell: {x: -24, y: -16}
+      type: 0
+    - localCell: {x: -23, y: -16}
+      type: 0
+    - localCell: {x: -22, y: -16}
+      type: 0
+    - localCell: {x: -21, y: -16}
+      type: 0
+    - localCell: {x: -24, y: -15}
+      type: 0
+    - localCell: {x: -23, y: -15}
+      type: 0
+    - localCell: {x: -22, y: -15}
+      type: 0
+    - localCell: {x: -21, y: -15}
+      type: 0
+    - localCell: {x: -24, y: -14}
+      type: 0
+    - localCell: {x: -23, y: -14}
+      type: 0
+    - localCell: {x: -22, y: -14}
+      type: 0
+    - localCell: {x: -21, y: -14}
+      type: 0
+    - localCell: {x: -24, y: -13}
+      type: 0
+    - localCell: {x: -23, y: -13}
+      type: 0
+    - localCell: {x: -22, y: -13}
+      type: 0
+    - localCell: {x: -21, y: -13}
+      type: 0
+    - localCell: {x: -24, y: -12}
+      type: 0
+    - localCell: {x: -23, y: -12}
+      type: 0
+    - localCell: {x: -22, y: -12}
+      type: 0
+    - localCell: {x: -21, y: -12}
+      type: 0
+    - localCell: {x: -24, y: -11}
+      type: 0
+    - localCell: {x: -23, y: -11}
+      type: 0
+    - localCell: {x: -22, y: -11}
+      type: 0
+    - localCell: {x: -21, y: -11}
+      type: 0
+    - localCell: {x: -24, y: -10}
+      type: 0
+    - localCell: {x: -23, y: -10}
+      type: 0
+    - localCell: {x: -22, y: -10}
+      type: 0
+    - localCell: {x: -21, y: -10}
+      type: 0
+    - localCell: {x: -24, y: -9}
+      type: 0
+    - localCell: {x: -23, y: -9}
+      type: 0
+    - localCell: {x: -22, y: -9}
+      type: 0
+    - localCell: {x: -21, y: -9}
+      type: 0
+    - localCell: {x: -24, y: -8}
+      type: 0
+    - localCell: {x: -23, y: -8}
+      type: 0
+    - localCell: {x: -22, y: -8}
+      type: 0
+    - localCell: {x: -21, y: -8}
+      type: 0
+    - localCell: {x: -24, y: -7}
+      type: 0
+    - localCell: {x: -23, y: -7}
+      type: 0
+    - localCell: {x: -22, y: -7}
+      type: 0
+    - localCell: {x: -21, y: -7}
+      type: 0
+    - localCell: {x: -24, y: -6}
+      type: 0
+    - localCell: {x: -23, y: -6}
+      type: 0
+    - localCell: {x: -22, y: -6}
+      type: 0
+    - localCell: {x: -21, y: -6}
+      type: 0
+    - localCell: {x: -24, y: -5}
+      type: 0
+    - localCell: {x: -23, y: -5}
+      type: 0
+    - localCell: {x: -22, y: -5}
+      type: 0
+    - localCell: {x: -21, y: -5}
+      type: 0
+    - localCell: {x: -20, y: -8}
+      type: 0
+    - localCell: {x: -19, y: -8}
+      type: 0
+    - localCell: {x: -18, y: -8}
+      type: 0
+    - localCell: {x: -17, y: -8}
+      type: 0
+    - localCell: {x: -20, y: -7}
+      type: 0
+    - localCell: {x: -19, y: -7}
+      type: 0
+    - localCell: {x: -18, y: -7}
+      type: 0
+    - localCell: {x: -17, y: -7}
+      type: 0
+    - localCell: {x: -20, y: -6}
+      type: 0
+    - localCell: {x: -19, y: -6}
+      type: 0
+    - localCell: {x: -18, y: -6}
+      type: 0
+    - localCell: {x: -17, y: -6}
+      type: 0
+    - localCell: {x: -20, y: -5}
+      type: 0
+    - localCell: {x: -19, y: -5}
+      type: 0
+    - localCell: {x: -18, y: -5}
+      type: 0
+    - localCell: {x: -17, y: -5}
+      type: 0
+  - name: Piece 33
+    color: {r: 1, g: 0.6359997, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -20, y: -20}
+      type: 0
+    - localCell: {x: -19, y: -20}
+      type: 0
+    - localCell: {x: -18, y: -20}
+      type: 0
+    - localCell: {x: -17, y: -20}
+      type: 0
+    - localCell: {x: -20, y: -19}
+      type: 0
+    - localCell: {x: -19, y: -19}
+      type: 0
+    - localCell: {x: -18, y: -19}
+      type: 0
+    - localCell: {x: -17, y: -19}
+      type: 0
+    - localCell: {x: -20, y: -18}
+      type: 0
+    - localCell: {x: -19, y: -18}
+      type: 0
+    - localCell: {x: -18, y: -18}
+      type: 0
+    - localCell: {x: -17, y: -18}
+      type: 0
+    - localCell: {x: -20, y: -17}
+      type: 0
+    - localCell: {x: -19, y: -17}
+      type: 0
+    - localCell: {x: -18, y: -17}
+      type: 0
+    - localCell: {x: -17, y: -17}
+      type: 0
+    - localCell: {x: -16, y: -20}
+      type: 0
+    - localCell: {x: -15, y: -20}
+      type: 0
+    - localCell: {x: -14, y: -20}
+      type: 0
+    - localCell: {x: -13, y: -20}
+      type: 0
+    - localCell: {x: -16, y: -19}
+      type: 0
+    - localCell: {x: -15, y: -19}
+      type: 0
+    - localCell: {x: -14, y: -19}
+      type: 0
+    - localCell: {x: -13, y: -19}
+      type: 0
+    - localCell: {x: -16, y: -18}
+      type: 0
+    - localCell: {x: -15, y: -18}
+      type: 0
+    - localCell: {x: -14, y: -18}
+      type: 0
+    - localCell: {x: -13, y: -18}
+      type: 0
+    - localCell: {x: -16, y: -17}
+      type: 0
+    - localCell: {x: -15, y: -17}
+      type: 0
+    - localCell: {x: -14, y: -17}
+      type: 0
+    - localCell: {x: -13, y: -17}
+      type: 0
+    - localCell: {x: -12, y: -20}
+      type: 0
+    - localCell: {x: -11, y: -20}
+      type: 0
+    - localCell: {x: -10, y: -20}
+      type: 0
+    - localCell: {x: -9, y: -20}
+      type: 0
+    - localCell: {x: -12, y: -19}
+      type: 0
+    - localCell: {x: -11, y: -19}
+      type: 0
+    - localCell: {x: -10, y: -19}
+      type: 0
+    - localCell: {x: -9, y: -19}
+      type: 0
+    - localCell: {x: -12, y: -18}
+      type: 0
+    - localCell: {x: -11, y: -18}
+      type: 0
+    - localCell: {x: -10, y: -18}
+      type: 0
+    - localCell: {x: -9, y: -18}
+      type: 0
+    - localCell: {x: -12, y: -17}
+      type: 0
+    - localCell: {x: -11, y: -17}
+      type: 0
+    - localCell: {x: -10, y: -17}
+      type: 0
+    - localCell: {x: -9, y: -17}
+      type: 0
+    - localCell: {x: -12, y: -16}
+      type: 0
+    - localCell: {x: -11, y: -16}
+      type: 0
+    - localCell: {x: -10, y: -16}
+      type: 0
+    - localCell: {x: -9, y: -16}
+      type: 0
+    - localCell: {x: -12, y: -15}
+      type: 0
+    - localCell: {x: -11, y: -15}
+      type: 0
+    - localCell: {x: -10, y: -15}
+      type: 0
+    - localCell: {x: -9, y: -15}
+      type: 0
+    - localCell: {x: -12, y: -14}
+      type: 0
+    - localCell: {x: -11, y: -14}
+      type: 0
+    - localCell: {x: -10, y: -14}
+      type: 0
+    - localCell: {x: -9, y: -14}
+      type: 0
+    - localCell: {x: -12, y: -13}
+      type: 0
+    - localCell: {x: -11, y: -13}
+      type: 0
+    - localCell: {x: -10, y: -13}
+      type: 0
+    - localCell: {x: -9, y: -13}
+      type: 0
+    - localCell: {x: -12, y: -12}
+      type: 0
+    - localCell: {x: -11, y: -12}
+      type: 0
+    - localCell: {x: -10, y: -12}
+      type: 0
+    - localCell: {x: -9, y: -12}
+      type: 0
+    - localCell: {x: -12, y: -11}
+      type: 0
+    - localCell: {x: -11, y: -11}
+      type: 0
+    - localCell: {x: -10, y: -11}
+      type: 0
+    - localCell: {x: -9, y: -11}
+      type: 0
+    - localCell: {x: -12, y: -10}
+      type: 0
+    - localCell: {x: -11, y: -10}
+      type: 0
+    - localCell: {x: -10, y: -10}
+      type: 0
+    - localCell: {x: -9, y: -10}
+      type: 0
+    - localCell: {x: -12, y: -9}
+      type: 0
+    - localCell: {x: -11, y: -9}
+      type: 0
+    - localCell: {x: -10, y: -9}
+      type: 0
+    - localCell: {x: -9, y: -9}
+      type: 0
+  - name: Piece 34
+    color: {r: 0.56600034, g: 1, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -20, y: -16}
+      type: 0
+    - localCell: {x: -19, y: -16}
+      type: 0
+    - localCell: {x: -18, y: -16}
+      type: 0
+    - localCell: {x: -17, y: -16}
+      type: 0
+    - localCell: {x: -20, y: -15}
+      type: 0
+    - localCell: {x: -19, y: -15}
+      type: 0
+    - localCell: {x: -18, y: -15}
+      type: 0
+    - localCell: {x: -17, y: -15}
+      type: 0
+    - localCell: {x: -20, y: -14}
+      type: 0
+    - localCell: {x: -19, y: -14}
+      type: 0
+    - localCell: {x: -18, y: -14}
+      type: 0
+    - localCell: {x: -17, y: -14}
+      type: 0
+    - localCell: {x: -20, y: -13}
+      type: 0
+    - localCell: {x: -19, y: -13}
+      type: 0
+    - localCell: {x: -18, y: -13}
+      type: 0
+    - localCell: {x: -17, y: -13}
+      type: 0
+    - localCell: {x: -20, y: -12}
+      type: 0
+    - localCell: {x: -19, y: -12}
+      type: 0
+    - localCell: {x: -18, y: -12}
+      type: 0
+    - localCell: {x: -17, y: -12}
+      type: 0
+    - localCell: {x: -20, y: -11}
+      type: 0
+    - localCell: {x: -19, y: -11}
+      type: 0
+    - localCell: {x: -18, y: -11}
+      type: 0
+    - localCell: {x: -17, y: -11}
+      type: 0
+    - localCell: {x: -20, y: -10}
+      type: 0
+    - localCell: {x: -19, y: -10}
+      type: 0
+    - localCell: {x: -18, y: -10}
+      type: 0
+    - localCell: {x: -17, y: -10}
+      type: 0
+    - localCell: {x: -20, y: -9}
+      type: 0
+    - localCell: {x: -19, y: -9}
+      type: 0
+    - localCell: {x: -18, y: -9}
+      type: 0
+    - localCell: {x: -17, y: -9}
+      type: 0
+    - localCell: {x: -16, y: -12}
+      type: 0
+    - localCell: {x: -15, y: -12}
+      type: 0
+    - localCell: {x: -14, y: -12}
+      type: 0
+    - localCell: {x: -13, y: -12}
+      type: 0
+    - localCell: {x: -16, y: -11}
+      type: 0
+    - localCell: {x: -15, y: -11}
+      type: 0
+    - localCell: {x: -14, y: -11}
+      type: 0
+    - localCell: {x: -13, y: -11}
+      type: 0
+    - localCell: {x: -16, y: -10}
+      type: 0
+    - localCell: {x: -15, y: -10}
+      type: 0
+    - localCell: {x: -14, y: -10}
+      type: 0
+    - localCell: {x: -13, y: -10}
+      type: 0
+    - localCell: {x: -16, y: -9}
+      type: 0
+    - localCell: {x: -15, y: -9}
+      type: 0
+    - localCell: {x: -14, y: -9}
+      type: 0
+    - localCell: {x: -13, y: -9}
+      type: 0
+  - name: Piece 35
+    color: {r: 0.3, g: 1, b: 0.83199966, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -16, y: -16}
+      type: 0
+    - localCell: {x: -15, y: -16}
+      type: 0
+    - localCell: {x: -14, y: -16}
+      type: 0
+    - localCell: {x: -13, y: -16}
+      type: 0
+    - localCell: {x: -16, y: -15}
+      type: 0
+    - localCell: {x: -15, y: -15}
+      type: 0
+    - localCell: {x: -14, y: -15}
+      type: 0
+    - localCell: {x: -13, y: -15}
+      type: 0
+    - localCell: {x: -16, y: -14}
+      type: 0
+    - localCell: {x: -15, y: -14}
+      type: 0
+    - localCell: {x: -14, y: -14}
+      type: 0
+    - localCell: {x: -13, y: -14}
+      type: 0
+    - localCell: {x: -16, y: -13}
+      type: 0
+    - localCell: {x: -15, y: -13}
+      type: 0
+    - localCell: {x: -14, y: -13}
+      type: 0
+    - localCell: {x: -13, y: -13}
+      type: 0
+  - name: Piece 36
+    color: {r: 0.3, g: 0.37000027, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -4, y: 8}
+      type: 0
+    - localCell: {x: -3, y: 8}
+      type: 0
+    - localCell: {x: -2, y: 8}
+      type: 0
+    - localCell: {x: -1, y: 8}
+      type: 0
+    - localCell: {x: -4, y: 9}
+      type: 0
+    - localCell: {x: -3, y: 9}
+      type: 0
+    - localCell: {x: -2, y: 9}
+      type: 0
+    - localCell: {x: -1, y: 9}
+      type: 0
+    - localCell: {x: -4, y: 10}
+      type: 0
+    - localCell: {x: -3, y: 10}
+      type: 0
+    - localCell: {x: -2, y: 10}
+      type: 0
+    - localCell: {x: -1, y: 10}
+      type: 0
+    - localCell: {x: -4, y: 11}
+      type: 0
+    - localCell: {x: -3, y: 11}
+      type: 0
+    - localCell: {x: -2, y: 11}
+      type: 0
+    - localCell: {x: -1, y: 11}
+      type: 0
+    - localCell: {x: 0, y: 8}
+      type: 0
+    - localCell: {x: 1, y: 8}
+      type: 0
+    - localCell: {x: 2, y: 8}
+      type: 0
+    - localCell: {x: 3, y: 8}
+      type: 0
+    - localCell: {x: 0, y: 9}
+      type: 0
+    - localCell: {x: 1, y: 9}
+      type: 0
+    - localCell: {x: 2, y: 9}
+      type: 0
+    - localCell: {x: 3, y: 9}
+      type: 0
+    - localCell: {x: 0, y: 10}
+      type: 0
+    - localCell: {x: 1, y: 10}
+      type: 0
+    - localCell: {x: 2, y: 10}
+      type: 0
+    - localCell: {x: 3, y: 10}
+      type: 0
+    - localCell: {x: 0, y: 11}
+      type: 0
+    - localCell: {x: 1, y: 11}
+      type: 0
+    - localCell: {x: 2, y: 11}
+      type: 0
+    - localCell: {x: 3, y: 11}
+      type: 0
+    - localCell: {x: 0, y: 12}
+      type: 0
+    - localCell: {x: 1, y: 12}
+      type: 0
+    - localCell: {x: 2, y: 12}
+      type: 0
+    - localCell: {x: 3, y: 12}
+      type: 0
+    - localCell: {x: 0, y: 13}
+      type: 0
+    - localCell: {x: 1, y: 13}
+      type: 0
+    - localCell: {x: 2, y: 13}
+      type: 0
+    - localCell: {x: 3, y: 13}
+      type: 0
+    - localCell: {x: 0, y: 14}
+      type: 0
+    - localCell: {x: 1, y: 14}
+      type: 0
+    - localCell: {x: 2, y: 14}
+      type: 0
+    - localCell: {x: 3, y: 14}
+      type: 0
+    - localCell: {x: 0, y: 15}
+      type: 0
+    - localCell: {x: 1, y: 15}
+      type: 0
+    - localCell: {x: 2, y: 15}
+      type: 0
+    - localCell: {x: 3, y: 15}
+      type: 0
+    - localCell: {x: 4, y: 8}
+      type: 0
+    - localCell: {x: 5, y: 8}
+      type: 0
+    - localCell: {x: 6, y: 8}
+      type: 0
+    - localCell: {x: 7, y: 8}
+      type: 0
+    - localCell: {x: 4, y: 9}
+      type: 0
+    - localCell: {x: 5, y: 9}
+      type: 0
+    - localCell: {x: 6, y: 9}
+      type: 0
+    - localCell: {x: 7, y: 9}
+      type: 0
+    - localCell: {x: 4, y: 10}
+      type: 0
+    - localCell: {x: 5, y: 10}
+      type: 0
+    - localCell: {x: 6, y: 10}
+      type: 0
+    - localCell: {x: 7, y: 10}
+      type: 0
+    - localCell: {x: 4, y: 11}
+      type: 0
+    - localCell: {x: 5, y: 11}
+      type: 0
+    - localCell: {x: 6, y: 11}
+      type: 0
+    - localCell: {x: 7, y: 11}
+      type: 0
+  - name: Piece 37
+    color: {r: 1, g: 0.3, b: 0.97200036, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -8, y: 16}
+      type: 0
+    - localCell: {x: -7, y: 16}
+      type: 0
+    - localCell: {x: -6, y: 16}
+      type: 0
+    - localCell: {x: -5, y: 16}
+      type: 0
+    - localCell: {x: -8, y: 17}
+      type: 0
+    - localCell: {x: -7, y: 17}
+      type: 0
+    - localCell: {x: -6, y: 17}
+      type: 0
+    - localCell: {x: -5, y: 17}
+      type: 0
+    - localCell: {x: -8, y: 18}
+      type: 0
+    - localCell: {x: -7, y: 18}
+      type: 0
+    - localCell: {x: -6, y: 18}
+      type: 0
+    - localCell: {x: -5, y: 18}
+      type: 0
+    - localCell: {x: -8, y: 19}
+      type: 0
+    - localCell: {x: -7, y: 19}
+      type: 0
+    - localCell: {x: -6, y: 19}
+      type: 0
+    - localCell: {x: -5, y: 19}
+      type: 0
+    - localCell: {x: -4, y: 16}
+      type: 0
+    - localCell: {x: -3, y: 16}
+      type: 0
+    - localCell: {x: -2, y: 16}
+      type: 0
+    - localCell: {x: -1, y: 16}
+      type: 0
+    - localCell: {x: -4, y: 17}
+      type: 0
+    - localCell: {x: -3, y: 17}
+      type: 0
+    - localCell: {x: -2, y: 17}
+      type: 0
+    - localCell: {x: -1, y: 17}
+      type: 0
+    - localCell: {x: -4, y: 18}
+      type: 0
+    - localCell: {x: -3, y: 18}
+      type: 0
+    - localCell: {x: -2, y: 18}
+      type: 0
+    - localCell: {x: -1, y: 18}
+      type: 0
+    - localCell: {x: -4, y: 19}
+      type: 0
+    - localCell: {x: -3, y: 19}
+      type: 0
+    - localCell: {x: -2, y: 19}
+      type: 0
+    - localCell: {x: -1, y: 19}
+      type: 0
+    - localCell: {x: -4, y: 12}
+      type: 0
+    - localCell: {x: -3, y: 12}
+      type: 0
+    - localCell: {x: -2, y: 12}
+      type: 0
+    - localCell: {x: -1, y: 12}
+      type: 0
+    - localCell: {x: -4, y: 13}
+      type: 0
+    - localCell: {x: -3, y: 13}
+      type: 0
+    - localCell: {x: -2, y: 13}
+      type: 0
+    - localCell: {x: -1, y: 13}
+      type: 0
+    - localCell: {x: -4, y: 14}
+      type: 0
+    - localCell: {x: -3, y: 14}
+      type: 0
+    - localCell: {x: -2, y: 14}
+      type: 0
+    - localCell: {x: -1, y: 14}
+      type: 0
+    - localCell: {x: -4, y: 15}
+      type: 0
+    - localCell: {x: -3, y: 15}
+      type: 0
+    - localCell: {x: -2, y: 15}
+      type: 0
+    - localCell: {x: -1, y: 15}
+      type: 0
+  - name: Piece 38
+    color: {r: 1, g: 0.42599964, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -8, y: 0}
+      type: 0
+    - localCell: {x: -7, y: 0}
+      type: 0
+    - localCell: {x: -6, y: 0}
+      type: 0
+    - localCell: {x: -5, y: 0}
+      type: 0
+    - localCell: {x: -8, y: 1}
+      type: 0
+    - localCell: {x: -7, y: 1}
+      type: 0
+    - localCell: {x: -6, y: 1}
+      type: 0
+    - localCell: {x: -5, y: 1}
+      type: 0
+    - localCell: {x: -8, y: 2}
+      type: 0
+    - localCell: {x: -7, y: 2}
+      type: 0
+    - localCell: {x: -6, y: 2}
+      type: 0
+    - localCell: {x: -5, y: 2}
+      type: 0
+    - localCell: {x: -8, y: 3}
+      type: 0
+    - localCell: {x: -7, y: 3}
+      type: 0
+    - localCell: {x: -6, y: 3}
+      type: 0
+    - localCell: {x: -5, y: 3}
+      type: 0
+    - localCell: {x: -8, y: -4}
+      type: 0
+    - localCell: {x: -7, y: -4}
+      type: 0
+    - localCell: {x: -6, y: -4}
+      type: 0
+    - localCell: {x: -5, y: -4}
+      type: 0
+    - localCell: {x: -8, y: -3}
+      type: 0
+    - localCell: {x: -7, y: -3}
+      type: 0
+    - localCell: {x: -6, y: -3}
+      type: 0
+    - localCell: {x: -5, y: -3}
+      type: 0
+    - localCell: {x: -8, y: -2}
+      type: 0
+    - localCell: {x: -7, y: -2}
+      type: 0
+    - localCell: {x: -6, y: -2}
+      type: 0
+    - localCell: {x: -5, y: -2}
+      type: 0
+    - localCell: {x: -8, y: -1}
+      type: 0
+    - localCell: {x: -7, y: -1}
+      type: 0
+    - localCell: {x: -6, y: -1}
+      type: 0
+    - localCell: {x: -5, y: -1}
+      type: 0
+    - localCell: {x: -8, y: -8}
+      type: 0
+    - localCell: {x: -7, y: -8}
+      type: 0
+    - localCell: {x: -6, y: -8}
+      type: 0
+    - localCell: {x: -5, y: -8}
+      type: 0
+    - localCell: {x: -8, y: -7}
+      type: 0
+    - localCell: {x: -7, y: -7}
+      type: 0
+    - localCell: {x: -6, y: -7}
+      type: 0
+    - localCell: {x: -5, y: -7}
+      type: 0
+    - localCell: {x: -8, y: -6}
+      type: 0
+    - localCell: {x: -7, y: -6}
+      type: 0
+    - localCell: {x: -6, y: -6}
+      type: 0
+    - localCell: {x: -5, y: -6}
+      type: 0
+    - localCell: {x: -8, y: -5}
+      type: 0
+    - localCell: {x: -7, y: -5}
+      type: 0
+    - localCell: {x: -6, y: -5}
+      type: 0
+    - localCell: {x: -5, y: -5}
+      type: 0
+    - localCell: {x: -4, y: -8}
+      type: 0
+    - localCell: {x: -3, y: -8}
+      type: 0
+    - localCell: {x: -2, y: -8}
+      type: 0
+    - localCell: {x: -1, y: -8}
+      type: 0
+    - localCell: {x: -4, y: -7}
+      type: 0
+    - localCell: {x: -3, y: -7}
+      type: 0
+    - localCell: {x: -2, y: -7}
+      type: 0
+    - localCell: {x: -1, y: -7}
+      type: 0
+    - localCell: {x: -4, y: -6}
+      type: 0
+    - localCell: {x: -3, y: -6}
+      type: 0
+    - localCell: {x: -2, y: -6}
+      type: 0
+    - localCell: {x: -1, y: -6}
+      type: 0
+    - localCell: {x: -4, y: -5}
+      type: 0
+    - localCell: {x: -3, y: -5}
+      type: 0
+    - localCell: {x: -2, y: -5}
+      type: 0
+    - localCell: {x: -1, y: -5}
+      type: 0
+    - localCell: {x: 0, y: -8}
+      type: 0
+    - localCell: {x: 1, y: -8}
+      type: 0
+    - localCell: {x: 2, y: -8}
+      type: 0
+    - localCell: {x: 3, y: -8}
+      type: 0
+    - localCell: {x: 0, y: -7}
+      type: 0
+    - localCell: {x: 1, y: -7}
+      type: 0
+    - localCell: {x: 2, y: -7}
+      type: 0
+    - localCell: {x: 3, y: -7}
+      type: 0
+    - localCell: {x: 0, y: -6}
+      type: 0
+    - localCell: {x: 1, y: -6}
+      type: 0
+    - localCell: {x: 2, y: -6}
+      type: 0
+    - localCell: {x: 3, y: -6}
+      type: 0
+    - localCell: {x: 0, y: -5}
+      type: 0
+    - localCell: {x: 1, y: -5}
+      type: 0
+    - localCell: {x: 2, y: -5}
+      type: 0
+    - localCell: {x: 3, y: -5}
+      type: 0
+  - name: Piece 39
+    color: {r: 0.7760004, g: 1, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 0, y: -16}
+      type: 0
+    - localCell: {x: 1, y: -16}
+      type: 0
+    - localCell: {x: 2, y: -16}
+      type: 0
+    - localCell: {x: 3, y: -16}
+      type: 0
+    - localCell: {x: 0, y: -15}
+      type: 0
+    - localCell: {x: 1, y: -15}
+      type: 0
+    - localCell: {x: 2, y: -15}
+      type: 0
+    - localCell: {x: 3, y: -15}
+      type: 0
+    - localCell: {x: 0, y: -14}
+      type: 0
+    - localCell: {x: 1, y: -14}
+      type: 0
+    - localCell: {x: 2, y: -14}
+      type: 0
+    - localCell: {x: 3, y: -14}
+      type: 0
+    - localCell: {x: 0, y: -13}
+      type: 0
+    - localCell: {x: 1, y: -13}
+      type: 0
+    - localCell: {x: 2, y: -13}
+      type: 0
+    - localCell: {x: 3, y: -13}
+      type: 0
+    - localCell: {x: 4, y: -16}
+      type: 0
+    - localCell: {x: 5, y: -16}
+      type: 0
+    - localCell: {x: 6, y: -16}
+      type: 0
+    - localCell: {x: 7, y: -16}
+      type: 0
+    - localCell: {x: 4, y: -15}
+      type: 0
+    - localCell: {x: 5, y: -15}
+      type: 0
+    - localCell: {x: 6, y: -15}
+      type: 0
+    - localCell: {x: 7, y: -15}
+      type: 0
+    - localCell: {x: 4, y: -14}
+      type: 0
+    - localCell: {x: 5, y: -14}
+      type: 0
+    - localCell: {x: 6, y: -14}
+      type: 0
+    - localCell: {x: 7, y: -14}
+      type: 0
+    - localCell: {x: 4, y: -13}
+      type: 0
+    - localCell: {x: 5, y: -13}
+      type: 0
+    - localCell: {x: 6, y: -13}
+      type: 0
+    - localCell: {x: 7, y: -13}
+      type: 0
+    - localCell: {x: 4, y: -12}
+      type: 0
+    - localCell: {x: 5, y: -12}
+      type: 0
+    - localCell: {x: 6, y: -12}
+      type: 0
+    - localCell: {x: 7, y: -12}
+      type: 0
+    - localCell: {x: 4, y: -11}
+      type: 0
+    - localCell: {x: 5, y: -11}
+      type: 0
+    - localCell: {x: 6, y: -11}
+      type: 0
+    - localCell: {x: 7, y: -11}
+      type: 0
+    - localCell: {x: 4, y: -10}
+      type: 0
+    - localCell: {x: 5, y: -10}
+      type: 0
+    - localCell: {x: 6, y: -10}
+      type: 0
+    - localCell: {x: 7, y: -10}
+      type: 0
+    - localCell: {x: 4, y: -9}
+      type: 0
+    - localCell: {x: 5, y: -9}
+      type: 0
+    - localCell: {x: 6, y: -9}
+      type: 0
+    - localCell: {x: 7, y: -9}
+      type: 0
+  - name: Piece 40
+    color: {r: 0.3, g: 1, b: 0.6219997, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -4, y: -16}
+      type: 0
+    - localCell: {x: -3, y: -16}
+      type: 0
+    - localCell: {x: -2, y: -16}
+      type: 0
+    - localCell: {x: -1, y: -16}
+      type: 0
+    - localCell: {x: -4, y: -15}
+      type: 0
+    - localCell: {x: -3, y: -15}
+      type: 0
+    - localCell: {x: -2, y: -15}
+      type: 0
+    - localCell: {x: -1, y: -15}
+      type: 0
+    - localCell: {x: -4, y: -14}
+      type: 0
+    - localCell: {x: -3, y: -14}
+      type: 0
+    - localCell: {x: -2, y: -14}
+      type: 0
+    - localCell: {x: -1, y: -14}
+      type: 0
+    - localCell: {x: -4, y: -13}
+      type: 0
+    - localCell: {x: -3, y: -13}
+      type: 0
+    - localCell: {x: -2, y: -13}
+      type: 0
+    - localCell: {x: -1, y: -13}
+      type: 0
+    - localCell: {x: -4, y: -12}
+      type: 0
+    - localCell: {x: -3, y: -12}
+      type: 0
+    - localCell: {x: -2, y: -12}
+      type: 0
+    - localCell: {x: -1, y: -12}
+      type: 0
+    - localCell: {x: -4, y: -11}
+      type: 0
+    - localCell: {x: -3, y: -11}
+      type: 0
+    - localCell: {x: -2, y: -11}
+      type: 0
+    - localCell: {x: -1, y: -11}
+      type: 0
+    - localCell: {x: -4, y: -10}
+      type: 0
+    - localCell: {x: -3, y: -10}
+      type: 0
+    - localCell: {x: -2, y: -10}
+      type: 0
+    - localCell: {x: -1, y: -10}
+      type: 0
+    - localCell: {x: -4, y: -9}
+      type: 0
+    - localCell: {x: -3, y: -9}
+      type: 0
+    - localCell: {x: -2, y: -9}
+      type: 0
+    - localCell: {x: -1, y: -9}
+      type: 0
+    - localCell: {x: 0, y: -12}
+      type: 0
+    - localCell: {x: 1, y: -12}
+      type: 0
+    - localCell: {x: 2, y: -12}
+      type: 0
+    - localCell: {x: 3, y: -12}
+      type: 0
+    - localCell: {x: 0, y: -11}
+      type: 0
+    - localCell: {x: 1, y: -11}
+      type: 0
+    - localCell: {x: 2, y: -11}
+      type: 0
+    - localCell: {x: 3, y: -11}
+      type: 0
+    - localCell: {x: 0, y: -10}
+      type: 0
+    - localCell: {x: 1, y: -10}
+      type: 0
+    - localCell: {x: 2, y: -10}
+      type: 0
+    - localCell: {x: 3, y: -10}
+      type: 0
+    - localCell: {x: 0, y: -9}
+      type: 0
+    - localCell: {x: 1, y: -9}
+      type: 0
+    - localCell: {x: 2, y: -9}
+      type: 0
+    - localCell: {x: 3, y: -9}
+      type: 0
+  - name: Piece 41
+    color: {r: 0.3, g: 0.5800004, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 16, y: 32}
+      type: 0
+    - localCell: {x: 17, y: 32}
+      type: 0
+    - localCell: {x: 18, y: 32}
+      type: 0
+    - localCell: {x: 19, y: 32}
+      type: 0
+    - localCell: {x: 16, y: 33}
+      type: 0
+    - localCell: {x: 17, y: 33}
+      type: 0
+    - localCell: {x: 18, y: 33}
+      type: 0
+    - localCell: {x: 19, y: 33}
+      type: 0
+    - localCell: {x: 16, y: 34}
+      type: 0
+    - localCell: {x: 17, y: 34}
+      type: 0
+    - localCell: {x: 18, y: 34}
+      type: 0
+    - localCell: {x: 19, y: 34}
+      type: 0
+    - localCell: {x: 16, y: 35}
+      type: 0
+    - localCell: {x: 17, y: 35}
+      type: 0
+    - localCell: {x: 18, y: 35}
+      type: 0
+    - localCell: {x: 19, y: 35}
+      type: 0
+    - localCell: {x: 16, y: 28}
+      type: 0
+    - localCell: {x: 17, y: 28}
+      type: 0
+    - localCell: {x: 18, y: 28}
+      type: 0
+    - localCell: {x: 19, y: 28}
+      type: 0
+    - localCell: {x: 16, y: 29}
+      type: 0
+    - localCell: {x: 17, y: 29}
+      type: 0
+    - localCell: {x: 18, y: 29}
+      type: 0
+    - localCell: {x: 19, y: 29}
+      type: 0
+    - localCell: {x: 16, y: 30}
+      type: 0
+    - localCell: {x: 17, y: 30}
+      type: 0
+    - localCell: {x: 18, y: 30}
+      type: 0
+    - localCell: {x: 19, y: 30}
+      type: 0
+    - localCell: {x: 16, y: 31}
+      type: 0
+    - localCell: {x: 17, y: 31}
+      type: 0
+    - localCell: {x: 18, y: 31}
+      type: 0
+    - localCell: {x: 19, y: 31}
+      type: 0
+    - localCell: {x: 16, y: 24}
+      type: 0
+    - localCell: {x: 17, y: 24}
+      type: 0
+    - localCell: {x: 18, y: 24}
+      type: 0
+    - localCell: {x: 19, y: 24}
+      type: 0
+    - localCell: {x: 16, y: 25}
+      type: 0
+    - localCell: {x: 17, y: 25}
+      type: 0
+    - localCell: {x: 18, y: 25}
+      type: 0
+    - localCell: {x: 19, y: 25}
+      type: 0
+    - localCell: {x: 16, y: 26}
+      type: 0
+    - localCell: {x: 17, y: 26}
+      type: 0
+    - localCell: {x: 18, y: 26}
+      type: 0
+    - localCell: {x: 19, y: 26}
+      type: 0
+    - localCell: {x: 16, y: 27}
+      type: 0
+    - localCell: {x: 17, y: 27}
+      type: 0
+    - localCell: {x: 18, y: 27}
+      type: 0
+    - localCell: {x: 19, y: 27}
+      type: 0
+  - name: Piece 42
+    color: {r: 0.8179995, g: 0.3, b: 1, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -4, y: -20}
+      type: 0
+    - localCell: {x: -3, y: -20}
+      type: 0
+    - localCell: {x: -2, y: -20}
+      type: 0
+    - localCell: {x: -1, y: -20}
+      type: 0
+    - localCell: {x: -4, y: -19}
+      type: 0
+    - localCell: {x: -3, y: -19}
+      type: 0
+    - localCell: {x: -2, y: -19}
+      type: 0
+    - localCell: {x: -1, y: -19}
+      type: 0
+    - localCell: {x: -4, y: -18}
+      type: 0
+    - localCell: {x: -3, y: -18}
+      type: 0
+    - localCell: {x: -2, y: -18}
+      type: 0
+    - localCell: {x: -1, y: -18}
+      type: 0
+    - localCell: {x: -4, y: -17}
+      type: 0
+    - localCell: {x: -3, y: -17}
+      type: 0
+    - localCell: {x: -2, y: -17}
+      type: 0
+    - localCell: {x: -1, y: -17}
+      type: 0
+    - localCell: {x: 0, y: -24}
+      type: 0
+    - localCell: {x: 1, y: -24}
+      type: 0
+    - localCell: {x: 2, y: -24}
+      type: 0
+    - localCell: {x: 3, y: -24}
+      type: 0
+    - localCell: {x: 0, y: -23}
+      type: 0
+    - localCell: {x: 1, y: -23}
+      type: 0
+    - localCell: {x: 2, y: -23}
+      type: 0
+    - localCell: {x: 3, y: -23}
+      type: 0
+    - localCell: {x: 0, y: -22}
+      type: 0
+    - localCell: {x: 1, y: -22}
+      type: 0
+    - localCell: {x: 2, y: -22}
+      type: 0
+    - localCell: {x: 3, y: -22}
+      type: 0
+    - localCell: {x: 0, y: -21}
+      type: 0
+    - localCell: {x: 1, y: -21}
+      type: 0
+    - localCell: {x: 2, y: -21}
+      type: 0
+    - localCell: {x: 3, y: -21}
+      type: 0
+    - localCell: {x: 0, y: -20}
+      type: 0
+    - localCell: {x: 1, y: -20}
+      type: 0
+    - localCell: {x: 2, y: -20}
+      type: 0
+    - localCell: {x: 3, y: -20}
+      type: 0
+    - localCell: {x: 0, y: -19}
+      type: 0
+    - localCell: {x: 1, y: -19}
+      type: 0
+    - localCell: {x: 2, y: -19}
+      type: 0
+    - localCell: {x: 3, y: -19}
+      type: 0
+    - localCell: {x: 0, y: -18}
+      type: 0
+    - localCell: {x: 1, y: -18}
+      type: 0
+    - localCell: {x: 2, y: -18}
+      type: 0
+    - localCell: {x: 3, y: -18}
+      type: 0
+    - localCell: {x: 0, y: -17}
+      type: 0
+    - localCell: {x: 1, y: -17}
+      type: 0
+    - localCell: {x: 2, y: -17}
+      type: 0
+    - localCell: {x: 3, y: -17}
+      type: 0
+  - name: Piece 43
+    color: {r: 1, g: 0.3, b: 0.3840006, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells: []
+  - name: Piece 44
+    color: {r: 0.9860004, g: 1, b: 0.3, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -12, y: -24}
+      type: 0
+    - localCell: {x: -11, y: -24}
+      type: 0
+    - localCell: {x: -10, y: -24}
+      type: 0
+    - localCell: {x: -9, y: -24}
+      type: 0
+    - localCell: {x: -12, y: -23}
+      type: 0
+    - localCell: {x: -11, y: -23}
+      type: 0
+    - localCell: {x: -10, y: -23}
+      type: 0
+    - localCell: {x: -9, y: -23}
+      type: 0
+    - localCell: {x: -12, y: -22}
+      type: 0
+    - localCell: {x: -11, y: -22}
+      type: 0
+    - localCell: {x: -10, y: -22}
+      type: 0
+    - localCell: {x: -9, y: -22}
+      type: 0
+    - localCell: {x: -12, y: -21}
+      type: 0
+    - localCell: {x: -11, y: -21}
+      type: 0
+    - localCell: {x: -10, y: -21}
+      type: 0
+    - localCell: {x: -9, y: -21}
+      type: 0
+    - localCell: {x: -8, y: -24}
+      type: 0
+    - localCell: {x: -7, y: -24}
+      type: 0
+    - localCell: {x: -6, y: -24}
+      type: 0
+    - localCell: {x: -5, y: -24}
+      type: 0
+    - localCell: {x: -8, y: -23}
+      type: 0
+    - localCell: {x: -7, y: -23}
+      type: 0
+    - localCell: {x: -6, y: -23}
+      type: 0
+    - localCell: {x: -5, y: -23}
+      type: 0
+    - localCell: {x: -8, y: -22}
+      type: 0
+    - localCell: {x: -7, y: -22}
+      type: 0
+    - localCell: {x: -6, y: -22}
+      type: 0
+    - localCell: {x: -5, y: -22}
+      type: 0
+    - localCell: {x: -8, y: -21}
+      type: 0
+    - localCell: {x: -7, y: -21}
+      type: 0
+    - localCell: {x: -6, y: -21}
+      type: 0
+    - localCell: {x: -5, y: -21}
+      type: 0
+    - localCell: {x: -4, y: -24}
+      type: 0
+    - localCell: {x: -3, y: -24}
+      type: 0
+    - localCell: {x: -2, y: -24}
+      type: 0
+    - localCell: {x: -1, y: -24}
+      type: 0
+    - localCell: {x: -4, y: -23}
+      type: 0
+    - localCell: {x: -3, y: -23}
+      type: 0
+    - localCell: {x: -2, y: -23}
+      type: 0
+    - localCell: {x: -1, y: -23}
+      type: 0
+    - localCell: {x: -4, y: -22}
+      type: 0
+    - localCell: {x: -3, y: -22}
+      type: 0
+    - localCell: {x: -2, y: -22}
+      type: 0
+    - localCell: {x: -1, y: -22}
+      type: 0
+    - localCell: {x: -4, y: -21}
+      type: 0
+    - localCell: {x: -3, y: -21}
+      type: 0
+    - localCell: {x: -2, y: -21}
+      type: 0
+    - localCell: {x: -1, y: -21}
+      type: 0
+  - name: Piece 45
+    color: {r: 0.3, g: 1, b: 0.41199958, a: 1}
+    origin: {x: 24, y: 40}
+    quarterTurns: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: -12, y: 12}
+      type: 0
+    - localCell: {x: -11, y: 12}
+      type: 0
+    - localCell: {x: -10, y: 12}
+      type: 0
+    - localCell: {x: -9, y: 12}
+      type: 0
+    - localCell: {x: -12, y: 13}
+      type: 0
+    - localCell: {x: -11, y: 13}
+      type: 0
+    - localCell: {x: -10, y: 13}
+      type: 0
+    - localCell: {x: -9, y: 13}
+      type: 0
+    - localCell: {x: -12, y: 14}
+      type: 0
+    - localCell: {x: -11, y: 14}
+      type: 0
+    - localCell: {x: -10, y: 14}
+      type: 0
+    - localCell: {x: -9, y: 14}
+      type: 0
+    - localCell: {x: -12, y: 15}
+      type: 0
+    - localCell: {x: -11, y: 15}
+      type: 0
+    - localCell: {x: -10, y: 15}
+      type: 0
+    - localCell: {x: -9, y: 15}
+      type: 0
+    - localCell: {x: -12, y: 8}
+      type: 0
+    - localCell: {x: -11, y: 8}
+      type: 0
+    - localCell: {x: -10, y: 8}
+      type: 0
+    - localCell: {x: -9, y: 8}
+      type: 0
+    - localCell: {x: -12, y: 9}
+      type: 0
+    - localCell: {x: -11, y: 9}
+      type: 0
+    - localCell: {x: -10, y: 9}
+      type: 0
+    - localCell: {x: -9, y: 9}
+      type: 0
+    - localCell: {x: -12, y: 10}
+      type: 0
+    - localCell: {x: -11, y: 10}
+      type: 0
+    - localCell: {x: -10, y: 10}
+      type: 0
+    - localCell: {x: -9, y: 10}
+      type: 0
+    - localCell: {x: -12, y: 11}
+      type: 0
+    - localCell: {x: -11, y: 11}
+      type: 0
+    - localCell: {x: -10, y: 11}
+      type: 0
+    - localCell: {x: -9, y: 11}
+      type: 0
+    - localCell: {x: -8, y: 8}
+      type: 0
+    - localCell: {x: -7, y: 8}
+      type: 0
+    - localCell: {x: -6, y: 8}
+      type: 0
+    - localCell: {x: -5, y: 8}
+      type: 0
+    - localCell: {x: -8, y: 9}
+      type: 0
+    - localCell: {x: -7, y: 9}
+      type: 0
+    - localCell: {x: -6, y: 9}
+      type: 0
+    - localCell: {x: -5, y: 9}
+      type: 0
+    - localCell: {x: -8, y: 10}
+      type: 0
+    - localCell: {x: -7, y: 10}
+      type: 0
+    - localCell: {x: -6, y: 10}
+      type: 0
+    - localCell: {x: -5, y: 10}
+      type: 0
+    - localCell: {x: -8, y: 11}
+      type: 0
+    - localCell: {x: -7, y: 11}
+      type: 0
+    - localCell: {x: -6, y: 11}
+      type: 0
+    - localCell: {x: -5, y: 11}
+      type: 0
+    - localCell: {x: -8, y: 12}
+      type: 0
+    - localCell: {x: -7, y: 12}
+      type: 0
+    - localCell: {x: -6, y: 12}
+      type: 0
+    - localCell: {x: -5, y: 12}
+      type: 0
+    - localCell: {x: -8, y: 13}
+      type: 0
+    - localCell: {x: -7, y: 13}
+      type: 0
+    - localCell: {x: -6, y: 13}
+      type: 0
+    - localCell: {x: -5, y: 13}
+      type: 0
+    - localCell: {x: -8, y: 14}
+      type: 0
+    - localCell: {x: -7, y: 14}
+      type: 0
+    - localCell: {x: -6, y: 14}
+      type: 0
+    - localCell: {x: -5, y: 14}
+      type: 0
+    - localCell: {x: -8, y: 15}
+      type: 0
+    - localCell: {x: -7, y: 15}
+      type: 0
+    - localCell: {x: -6, y: 15}
+      type: 0
+    - localCell: {x: -5, y: 15}
+      type: 0
+  pins: []
+  obstacles:
+  - name: Obstacle 1
+    usesGridCells: 1
+    gridCell: {x: 0, y: 4}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 2
+    usesGridCells: 1
+    gridCell: {x: 1, y: 4}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 3
+    usesGridCells: 1
+    gridCell: {x: 2, y: 4}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 4
+    usesGridCells: 1
+    gridCell: {x: 2, y: 3}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 5
+    usesGridCells: 1
+    gridCell: {x: 1, y: 3}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 6
+    usesGridCells: 1
+    gridCell: {x: 0, y: 3}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 9
+    usesGridCells: 1
+    gridCell: {x: 10, y: 7}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 10
+    usesGridCells: 1
+    gridCell: {x: 10, y: 6}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 11
+    usesGridCells: 1
+    gridCell: {x: 11, y: 6}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 12
+    usesGridCells: 1
+    gridCell: {x: 11, y: 7}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 13
+    usesGridCells: 1
+    gridCell: {x: 0, y: 12}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 14
+    usesGridCells: 1
+    gridCell: {x: 1, y: 12}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 15
+    usesGridCells: 1
+    gridCell: {x: 2, y: 12}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 16
+    usesGridCells: 1
+    gridCell: {x: 8, y: 12}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 17
+    usesGridCells: 1
+    gridCell: {x: 9, y: 12}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 18
+    usesGridCells: 1
+    gridCell: {x: 10, y: 12}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 19
+    usesGridCells: 1
+    gridCell: {x: 11, y: 12}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 20
+    usesGridCells: 1
+    gridCell: {x: 9, y: 19}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 21
+    usesGridCells: 1
+    gridCell: {x: 9, y: 18}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 22
+    usesGridCells: 1
+    gridCell: {x: 9, y: 17}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 23
+    usesGridCells: 1
+    gridCell: {x: 9, y: 16}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 24
+    usesGridCells: 1
+    gridCell: {x: 11, y: 2}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 25
+    usesGridCells: 1
+    gridCell: {x: 10, y: 2}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 26
+    usesGridCells: 1
+    gridCell: {x: 9, y: 2}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 25
+    usesGridCells: 1
+    gridCell: {x: 7, y: 8}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 26
+    usesGridCells: 1
+    gridCell: {x: 5, y: 3}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  shredders:
+  - name: Shredder 1
+    cell: {x: 2, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 2
+    cell: {x: 5, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 3
+    cell: {x: 7, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 4
+    cell: {x: 8, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 5
+    cell: {x: 11, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 6
+    cell: {x: 16, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 7
+    cell: {x: 16, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 8
+    cell: {x: 15, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 9
+    cell: {x: 14, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 10
+    cell: {x: 20, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 11
+    cell: {x: 23, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 12
+    cell: {x: 26, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 13
+    cell: {x: 32, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 14
+    cell: {x: 30, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 15
+    cell: {x: 34, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 16
+    cell: {x: 37, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 17
+    cell: {x: 39, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 18
+    cell: {x: 43, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 19
+    cell: {x: 46, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 20
+    cell: {x: 46, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 21
+    cell: {x: 18, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 22
+    cell: {x: 40, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 23
+    cell: {x: 28, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 24
+    cell: {x: 0, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  inactiveBoardCells:
+  - {x: 4, y: 19}
+  - {x: 4, y: 18}
+  - {x: 4, y: 17}
+  - {x: 5, y: 17}
+  - {x: 6, y: 17}
+  - {x: 6, y: 18}
+  - {x: 6, y: 19}
+  - {x: 5, y: 19}
+  - {x: 5, y: 18}
+  - {x: 4, y: 16}
+  - {x: 4, y: 15}
+  - {x: 5, y: 15}
+  - {x: 6, y: 15}
+  - {x: 6, y: 16}
+  - {x: 5, y: 16}
+  inactiveFineCells: []
