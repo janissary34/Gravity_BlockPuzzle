@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DG.Tweening;
+using GravityPuzzle.Config;
 using UnityEngine;
 
 namespace GravityPuzzle.Gameplay.Pieces
@@ -24,10 +25,16 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         private static Material sharedOutlineMaterial;
         private static IRuntimePieceRootProvider rootProvider;
+        private static PieceVisualConfig pieceVisualConfig;
 
         public static void SetRootProvider(IRuntimePieceRootProvider provider)
         {
             rootProvider = provider ?? throw new System.ArgumentNullException(nameof(provider));
+        }
+
+        public static void SetVisualConfig(PieceVisualConfig config)
+        {
+            pieceVisualConfig = config;
         }
 
 
@@ -36,6 +43,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         {
             rootProvider = null;
             sharedOutlineMaterial = null;
+            pieceVisualConfig = null;
         }
 
         public static PuzzlePiece Create(
@@ -49,6 +57,7 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             RuntimePieceRoot root = rootProvider.Create(definition.name);
             GameObject piece = root.GameObject;
+            ResolveVisual(definition, out Color visualColor, out Sprite voxelSprite);
             PrepareRoot(piece.transform, level, definition);
             ConfigureBody(root.Body, level);
             ConfigureComposite(root.CompositeCollider);
@@ -56,7 +65,9 @@ namespace GravityPuzzle.Gameplay.Pieces
             PieceRuntimeContent content = BuildRuntimeContent(
                 root.Piece,
                 level,
-                definition);
+                definition,
+                visualColor,
+                voxelSprite);
 
             root.CompositeCollider.GenerateGeometry();
             ConfigureOutline(root.Outline, root.CompositeCollider);
@@ -66,6 +77,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 puzzlePiece,
                 sourcePieceId,
                 definition,
+                visualColor,
                 root.CompositeCollider,
                 content);
 
@@ -251,6 +263,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                     slot,
                     new PiecePartGeometry(BlockCellName, fragmentCell.LocalPosition, fragmentCell.Size),
                     color,
+                    null,
                     out SpriteRenderer visual);
                 collisionCells.Add(collider);
                 cellVisuals.Add(visual);
@@ -276,13 +289,14 @@ namespace GravityPuzzle.Gameplay.Pieces
             PuzzlePiece puzzlePiece,
             int sourcePieceId,
             PieceDefinition definition,
+            Color visualColor,
             CompositeCollider2D pieceComposite,
             PieceRuntimeContent content)
         {
             puzzlePiece.Configure(new PieceRuntimeSetup(
                 sourcePieceId,
                 Mathf.Max(1, content.ProgressUnits),
-                definition.color,
+                visualColor,
                 pieceComposite,
                 content.CollisionCells,
                 content.CollisionCellVisuals,
@@ -297,7 +311,9 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static PieceRuntimeContent BuildRuntimeContent(
             PuzzlePiece puzzlePiece,
             GravityLevelDefinition level,
-            PieceDefinition definition)
+            PieceDefinition definition,
+            Color visualColor,
+            Sprite voxelSprite)
         {
             float fineCellSize = 1f / level.subdivisions;
             List<PiecePartGeometry> parts = BuildPartGeometry(level, definition, fineCellSize, out int progressUnits);
@@ -313,7 +329,12 @@ namespace GravityPuzzle.Gameplay.Pieces
             for (int index = 0; index < parts.Count; index++)
             {
                 PiecePartSlot slot = puzzlePiece.GetPartSlot(index);
-                BoxCollider2D collider = ConfigurePiecePartSlot(slot, parts[index], definition.color, out SpriteRenderer cellVisual);
+                BoxCollider2D collider = ConfigurePiecePartSlot(
+                    slot,
+                    parts[index],
+                    visualColor,
+                    voxelSprite,
+                    out SpriteRenderer cellVisual);
                 collisionCells.Add(collider);
                 collisionCellVisuals.Add(cellVisual);
             }
@@ -474,6 +495,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             PiecePartSlot slot,
             PiecePartGeometry part,
             Color color,
+            Sprite voxelSprite,
             out SpriteRenderer cellVisual)
         {
             cellVisual = slot.Visual;
@@ -483,7 +505,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             cellVisual.color = color;
             cellVisual.enabled = false;
 
-            VoxelBlockBuilder.BuildVoxelGrid(slot.transform, part.Name, part.Size, color);
+            VoxelBlockBuilder.BuildVoxelGrid(slot.transform, part.Name, part.Size, color, voxelSprite);
 
             BoxCollider2D partCollider = slot.Collision;
             partCollider.transform.localPosition = part.LocalPosition;
@@ -493,6 +515,21 @@ namespace GravityPuzzle.Gameplay.Pieces
             partCollider.usedByComposite = true;
             partCollider.enabled = true;
             return partCollider;
+        }
+
+        private static void ResolveVisual(
+            PieceDefinition definition,
+            out Color color,
+            out Sprite voxelSprite)
+        {
+            color = definition.color;
+            voxelSprite = null;
+            if (pieceVisualConfig == null || string.IsNullOrWhiteSpace(definition.visualId) ||
+                !pieceVisualConfig.TryGet(definition.visualId, out PieceVisualDefinition visual))
+                return;
+
+            color = visual.Tint;
+            voxelSprite = visual.Sprite;
         }
 
         private static void GetPiecePartBounds(

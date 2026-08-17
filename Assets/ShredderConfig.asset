@@ -24,6 +24,7 @@ MonoBehaviour:
   feedShakeAmplitude: 1
   tumbleTorque: 7.5
   maxFeedTiltAngle: 5
+  finalPieceTimerGraceSeconds: 1.8
   physicsHandoffY: 0
   tremorDuration: 0.3
   tremorPositionRange: {x: 0, y: 0}

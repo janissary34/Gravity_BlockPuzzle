@@ -33,6 +33,7 @@ MonoBehaviour:
   titremeMiktari: 0.045
   pieces:
   - name: Piece 1
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 22}
     quarterTurns: 0
@@ -172,6 +173,7 @@ MonoBehaviour:
     - localCell: {x: -3, y: 5}
       type: 0
   - name: Piece 2
+    visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 16, y: 24}
     quarterTurns: 0
@@ -375,6 +377,7 @@ MonoBehaviour:
     - localCell: {x: 7, y: 11}
       type: 0
   - name: Piece 3
+    visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 16, y: 24}
     quarterTurns: 0
@@ -546,6 +549,7 @@ MonoBehaviour:
     - localCell: {x: 11, y: 3}
       type: 0
   - name: Piece 4
+    visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 16, y: 24}
     quarterTurns: 0
@@ -653,6 +657,7 @@ MonoBehaviour:
     - localCell: {x: -5, y: 15}
       type: 0
   - name: Piece 5
+    visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 16, y: 24}
     quarterTurns: 0
@@ -856,6 +861,7 @@ MonoBehaviour:
     - localCell: {x: 3, y: -5}
       type: 0
   - name: Piece 6
+    visualId: 
     color: {r: 1, g: 0.6811323, b: 0, a: 1}
     origin: {x: 16, y: 24}
     quarterTurns: 0
@@ -1155,6 +1161,7 @@ MonoBehaviour:
     - localCell: {x: -13, y: -9}
       type: 0
   - name: Piece 7
+    visualId: 
     color: {r: 0.2980392, g: 1, b: 0.86699927, a: 1}
     origin: {x: 16, y: 28}
     quarterTurns: 0
@@ -1390,6 +1397,7 @@ MonoBehaviour:
     - localCell: {x: 3, y: -13}
       type: 0
   - name: Piece 8
+    visualId: 
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
     origin: {x: 20, y: 28}
     quarterTurns: 0
@@ -1689,6 +1697,7 @@ MonoBehaviour:
     - localCell: {x: 11, y: -13}
       type: 0
   - name: Piece 9
+    visualId: 
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
     origin: {x: 16, y: 28}
     quarterTurns: 0

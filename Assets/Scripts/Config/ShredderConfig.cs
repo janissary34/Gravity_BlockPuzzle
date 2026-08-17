@@ -25,6 +25,10 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float tumbleTorque = .35f;
         [Range(0f, 20f)] [SerializeField] private float maxFeedTiltAngle = 5f;
 
+        [Header("Final Piece Timer Grace")]
+        [Tooltip("If the final live piece enters a shredder within this many seconds of 00:00, its feed is allowed to finish and the result becomes a win.")]
+        [Min(0f)] [SerializeField] private float finalPieceTimerGraceSeconds = 1f;
+
         [Header("Physics Handoff")]
         [SerializeField] private float physicsHandoffY;
         [Min(0f)] [SerializeField] private float tremorDuration = .3f;
@@ -44,6 +48,7 @@ namespace GravityPuzzle.Config
         public float FeedShakeAmplitude => feedShakeAmplitude;
         public float TumbleTorque => tumbleTorque;
         public float MaxFeedTiltAngle => maxFeedTiltAngle;
+        public float FinalPieceTimerGraceSeconds => finalPieceTimerGraceSeconds;
         public float PhysicsHandoffY => physicsHandoffY;
         public float TremorDuration => tremorDuration;
         public Vector2 TremorPositionRange => tremorPositionRange;

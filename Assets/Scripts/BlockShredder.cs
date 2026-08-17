@@ -144,21 +144,6 @@ namespace GravityPuzzle
             maxFeedTiltAngle = shredderConfig.MaxFeedTiltAngle;
         }
 
-        // The trigger has already accepted this piece for shredding. Keep it from
-        // catching on the shredder frame or another piece while it is fed down.
-        // Normal board and obstacle collisions are untouched until that point.
-        private static void DisableCapturedPieceCollisions(PuzzlePiece piece)
-        {
-            Collider2D[] colliders = piece.GetComponentsInChildren<Collider2D>(true);
-            foreach (Collider2D collider in colliders)
-            {
-                if (collider != null)
-                    collider.enabled = false;
-            }
-
-            Physics2D.SyncTransforms();
-        }
-
         /// <summary>
         /// Attempts to shred an entering PuzzlePiece into Stone and Gem voxels slowly/progressively with high-density particle effects.
         /// </summary>
@@ -200,17 +185,22 @@ namespace GravityPuzzle
 
             EnsureSpriteMask(shredderY);
 
-            // 1. Release the piece into physics after removing its solid collision
-            // geometry. A large shape can otherwise wedge against the shredder
-            // frame before the cutter has a chance to consume it.
+            // 1. Release the piece into physics with its full collision geometry
+            // intact. Individual lower cells are removed only when they reach
+            // the cutter line below, preventing a feed from passing through an
+            // obstacle or another falling piece.
             piece.SetSelected(false);
             piece.PrepareForShredderPhysics();
-            DisableCapturedPieceCollisions(piece);
             ApplyShredderFeedMaterial(piece);
             Rigidbody2D rb = piece.Body;
             if (rb != null)
             {
-                rb.bodyType = RigidbodyType2D.Dynamic;
+                // The board frame is a presentation boundary, not a shredder
+                // blocker. Feed this already-captured piece kinematically through
+                // the cutter so it cannot lodge against that frame. Its modular
+                // colliders remain enabled until their individual cells cross
+                // the cutter line below.
+                rb.bodyType = RigidbodyType2D.Kinematic;
                 rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
                 rb.constraints = RigidbodyConstraints2D.None;
                 rb.velocity = Vector2.down * shredlenmeHizi;
@@ -264,8 +254,8 @@ namespace GravityPuzzle
             float elapsed = 0f;
             float previousShakeOffsetX = 0f;
 
-            // 3. The Rigidbody2D now owns position and rotation. The coroutine
-            // only watches the falling voxels and converts them to shred effects.
+            // 3. The kinematic feed owns the descent while this coroutine watches
+            // the crossing cells and converts them to shred effects.
             while (piece != null && elapsed < maxTime)
             {
                 elapsed += Time.deltaTime;

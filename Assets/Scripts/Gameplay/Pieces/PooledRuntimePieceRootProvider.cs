@@ -5,22 +5,24 @@ namespace GravityPuzzle.Gameplay.Pieces
 {
     public sealed class PooledRuntimePieceRootProvider : IRuntimePieceRootProvider
     {
-        private readonly IPool<PuzzlePiece> pool;
-        public PooledRuntimePieceRootProvider(IPool<PuzzlePiece> piecePool)
+        private readonly PoolService poolService;
+
+        public PooledRuntimePieceRootProvider(PoolService pools)
         {
-            pool = piecePool;
+            poolService = pools;
         }
 
         public RuntimePieceRoot Create(string pieceName)
         {
-            if (pool == null || !pool.TryRent(out PuzzlePiece piece))
+            if (poolService == null ||
+                !poolService.TryGet(out IPool<PuzzlePiece> pool) ||
+                !pool.TryRent(out PuzzlePiece piece))
             {
                 throw new System.InvalidOperationException(
                     "[PiecePool] Pool exhausted. Increase PoolConfig BlockPieceCapacity before starting the level.");
             }
 
             piece.gameObject.name = pieceName;
-            piece.ConfigurePoolReturn(pool.Return);
             return new RuntimePieceRoot(
                 piece.gameObject,
                 piece.Body,

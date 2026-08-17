@@ -5,4 +5,5 @@ namespace GravityPuzzle.Infrastructure.Pooling
         void OnSpawn();
         void OnDespawn();
     }
+
 }

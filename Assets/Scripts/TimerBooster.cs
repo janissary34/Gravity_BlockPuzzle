@@ -1,6 +1,7 @@
 using System.Collections;
 using DG.Tweening;
 using TMPro;
+using GravityPuzzle.Config;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,6 +26,9 @@ namespace GravityPuzzle
 
         [Tooltip("Optional UI Button to trigger the Timer Booster.")]
         [SerializeField] private Button boosterButton;
+
+        [SerializeField, Tooltip("Owns timer-booster tween timing and easing.")]
+        private TweenConfig tweenConfig;
 
         [Header("Visual Effects (VFX)")]
         [Tooltip("Blue particle explosion VFX system triggered when clock arrives at timer_txt.")]
@@ -63,6 +67,30 @@ namespace GravityPuzzle
         private Vector3 originalScale = Vector3.one;
         private Sequence activeSequence;
         private Coroutine freezeRoutine;
+
+        private float EntranceDuration => tweenConfig != null
+            ? tweenConfig.TimerEntranceDuration
+            : entranceDuration;
+
+        private Ease EntranceEase => tweenConfig != null
+            ? tweenConfig.TimerEntranceEase
+            : Ease.OutCubic;
+
+        private float FreezeFillDuration => tweenConfig != null
+            ? tweenConfig.TimerFreezeFillDuration
+            : freezeFillDuration;
+
+        private Ease FreezeFillEase => tweenConfig != null
+            ? tweenConfig.TimerFreezeFillEase
+            : fillEase;
+
+        private float FlyToTargetDuration => tweenConfig != null
+            ? tweenConfig.TimerFlyToTargetDuration
+            : flyToTextDuration;
+
+        private Ease FlyToTargetEase => tweenConfig != null
+            ? tweenConfig.TimerFlyToTargetEase
+            : Ease.InQuad;
 
         private void Awake()
         {
@@ -253,19 +281,19 @@ namespace GravityPuzzle
             // Step 1: Move from bottom off-screen to screen center position smoothly (0.85s)
             if (rectTransform != null)
             {
-                seq.Append(rectTransform.DOAnchorPos(centerPos, entranceDuration).SetEase(Ease.OutCubic));
+                seq.Append(rectTransform.DOAnchorPos(centerPos, EntranceDuration).SetEase(EntranceEase));
             }
             else
             {
-                seq.Append(timer_obj.transform.DOMove(centerPos, entranceDuration).SetEase(Ease.OutCubic));
+                seq.Append(timer_obj.transform.DOMove(centerPos, EntranceDuration).SetEase(EntranceEase));
             }
 
             // Step 2: Pause at center & animate 360 degree radial fill over freezeFillDuration
             if (frozenClockImage != null)
             {
                 frozenClockImage.type = Image.Type.Filled;
-                seq.Append(frozenClockImage.DOFillAmount(1f, freezeFillDuration).SetEase(fillEase));
-                float remainingPause = Mathf.Max(0f, centerPauseDuration - freezeFillDuration);
+                seq.Append(frozenClockImage.DOFillAmount(1f, FreezeFillDuration).SetEase(FreezeFillEase));
+                float remainingPause = Mathf.Max(0f, centerPauseDuration - FreezeFillDuration);
                 if (remainingPause > 0f)
                 {
                     seq.AppendInterval(remainingPause);
@@ -277,7 +305,7 @@ namespace GravityPuzzle
             }
 
             // Step 3: Move timer_obj directly to exact World position of timer_txt (0.5s Ease.InQuad)
-            seq.Append(timer_obj.transform.DOMove(timer_txt.position, 0.5f).SetEase(Ease.InQuad));
+            seq.Append(timer_obj.transform.DOMove(timer_txt.position, FlyToTargetDuration).SetEase(FlyToTargetEase));
 
             // Step 4: Arrival Event (Particle Burst + Deactivate)
             seq.AppendCallback(() =>

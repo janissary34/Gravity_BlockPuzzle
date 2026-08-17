@@ -43,6 +43,8 @@ namespace GravityPuzzle.Infrastructure.Pooling
 
             item = available.Pop();
             rented.Add(item);
+            if (item is IPoolReturnReceiver<T> returnReceiver)
+                returnReceiver.SetPoolReturnHandler(Return);
             item.gameObject.SetActive(true);
             item.OnSpawn();
             return true;

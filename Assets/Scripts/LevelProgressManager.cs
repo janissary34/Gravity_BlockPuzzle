@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
+using GravityPuzzle.Config;
 
 namespace GravityPuzzle
 {
@@ -37,6 +38,9 @@ namespace GravityPuzzle
         [Header("UI Slider Setup")]
         [SerializeField, Tooltip("Drag and drop your UI Slider component here.")]
         private Slider progressSlider;
+
+        [SerializeField, Tooltip("Owns the timing and easing of progress presentation tweens.")]
+        private TweenConfig tweenConfig;
 
         [SerializeField, Tooltip("Duration of the slider DOValue fill animation.")]
         private float sliderFillDuration = 0.12f;
@@ -84,6 +88,26 @@ namespace GravityPuzzle
         private int activeFlyingVoxelCount;
         private bool hasAuthoredLevelTotal;
         private float nextSliderPulseTime;
+
+        private float SliderFillDuration => tweenConfig != null
+            ? tweenConfig.ProgressSliderFillDuration
+            : sliderFillDuration;
+
+        private Ease SliderFillEase => tweenConfig != null
+            ? tweenConfig.ProgressSliderFillEase
+            : Ease.OutQuad;
+
+        private float VoxelFlightDuration => tweenConfig != null
+            ? tweenConfig.ProgressVoxelFlightDuration
+            : voxelFlyDuration;
+
+        private Ease VoxelFlightEase => tweenConfig != null
+            ? tweenConfig.ProgressVoxelFlightEase
+            : Ease.InOutSine;
+
+        private float SliderPunchDuration => tweenConfig != null
+            ? tweenConfig.ProgressSliderPunchDuration
+            : sliderPunchDuration;
 
         public bool HasActiveFlyingVoxels => activeFlyingVoxelCount > 0;
         public bool HasPendingProgressPresentation => HasActiveFlyingVoxels ||
@@ -234,7 +258,7 @@ namespace GravityPuzzle
 
         /// <summary>
         /// Instantiates a solid-colored flying voxel at startWorldPos that flies in an arched trajectory
-        /// up to the UI Slider bar, punches the slider scale, and increments level progress upon arrival.
+        /// to the Slider Handle, then increments level progress on arrival.
         /// </summary>
         /// <param name="startWorldPos">World position where the voxel was shredded.</param>
         /// <param name="voxelColor">Color of the block being shredded.</param>
@@ -265,9 +289,14 @@ namespace GravityPuzzle
                 return;
             }
 
-            RectTransform targetRect = progressSlider.fillRect != null
-                ? progressSlider.fillRect
-                : progressSlider.GetComponent<RectTransform>();
+            // The handle is the visible leading edge of the fill. Landing there
+            // makes each voxel read as material entering the progress bar rather
+            // than merely flying toward its static background.
+            RectTransform targetRect = progressSlider.handleRect != null
+                ? progressSlider.handleRect
+                : progressSlider.fillRect != null
+                    ? progressSlider.fillRect
+                    : progressSlider.GetComponent<RectTransform>();
             if (targetRect == null)
             {
                 onArrival?.Invoke();
@@ -279,7 +308,9 @@ namespace GravityPuzzle
                 canvasRect,
                 RectTransformUtility.WorldToScreenPoint(uiCamera, targetRect.position),
                 uiCamera);
-            target += new Vector2(UnityEngine.Random.Range(-20f, 20f), UnityEngine.Random.Range(-4f, 4f));
+            // Keep a very small spread so separate grains remain visible while
+            // still clearly converging on the Handle game object's position.
+            target += new Vector2(UnityEngine.Random.Range(-6f, 6f), UnityEngine.Random.Range(-3f, 3f));
 
             GameObject flyingVoxel = PuzzleObjectPool.GetFlyingVoxelUI(canvas.transform);
             RectTransform voxelRect = flyingVoxel.GetComponent<RectTransform>();
@@ -302,13 +333,13 @@ namespace GravityPuzzle
             Vector2 control = start + new Vector2(
                 UnityEngine.Random.Range(-28f, 28f),
                 -curveDrop);
-            float flightDuration = voxelFlyDuration + UnityEngine.Random.Range(-.08f, .12f);
+            float flightDuration = VoxelFlightDuration + UnityEngine.Random.Range(-.08f, .12f);
             Sequence flightSequence = DOTween.Sequence()
                 .SetLink(flyingVoxel, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true)
                 .SetDelay(UnityEngine.Random.Range(0f, .12f));
             flightSequence.Append(DOVirtual.Float(0f, 1f, flightDuration, progress =>
-                voxelRect.anchoredPosition = QuadraticBezier(start, control, target, progress)).SetEase(Ease.InOutSine));
+                voxelRect.anchoredPosition = QuadraticBezier(start, control, target, progress)).SetEase(VoxelFlightEase));
             flightSequence.Join(voxelRect.DORotate(new Vector3(0f, 0f, UnityEngine.Random.Range(-160f, 160f)), flightDuration, RotateMode.FastBeyond360));
             flightSequence.OnComplete(() =>
             {
@@ -318,7 +349,7 @@ namespace GravityPuzzle
                     if (sliderPunchTween != null && sliderPunchTween.IsActive())
                         sliderPunchTween.Kill(true);
 
-                    sliderPunchTween = progressSlider.transform.DOPunchScale(sliderPunchScale, sliderPunchDuration, 6, 0.5f)
+                    sliderPunchTween = progressSlider.transform.DOPunchScale(sliderPunchScale, SliderPunchDuration, 6, 0.5f)
                         .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
                         .SetAutoKill(true);
                     nextSliderPulseTime = Time.unscaledTime + .09f;
@@ -389,8 +420,8 @@ namespace GravityPuzzle
                 if (sliderFillTween != null && sliderFillTween.IsActive())
                     sliderFillTween.Kill();
 
-                sliderFillTween = progressSlider.DOValue(currentShreddedUnits, sliderFillDuration)
-                    .SetEase(Ease.OutQuad)
+                sliderFillTween = progressSlider.DOValue(currentShreddedUnits, SliderFillDuration)
+                    .SetEase(SliderFillEase)
                     .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
 

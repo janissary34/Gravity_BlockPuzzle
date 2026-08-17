@@ -643,7 +643,9 @@ namespace GravityPuzzle
         public static PrototypeBoard Active { get; private set; }
 
         private const float NextLevelDelay = 1.25f;
+        private float finalShredderGraceSeconds = 1f;
         private float removalHeight = -5.5f;
+        private bool finalShredderOutcomeLocked;
         private bool boardCleared;
         private bool boardFailed;
         private bool sequentialLevelsEnabled = true;
@@ -685,6 +687,38 @@ namespace GravityPuzzle
             IsTimerStarted = false;
             DestroyedPieceCount = 0;
             timerPauseOwners.Clear();
+            finalShredderOutcomeLocked = false;
+        }
+
+        public void SetFinalShredderGraceSeconds(float seconds)
+        {
+            finalShredderGraceSeconds = Mathf.Max(0f, seconds);
+        }
+
+        /// <summary>
+        /// Locks the result to a win when the final live piece reaches the
+        /// shredder inside the configured final-seconds window. The allowance
+        /// is an entry window, not a second timer running beside the shred
+        /// animation: once earned, the feed and its progress voxels may finish.
+        /// </summary>
+        public void TryLockFinalShredderOutcome(PuzzlePiece shredderPiece)
+        {
+            if (shredderPiece == null ||
+                TimeLimit <= 0f ||
+                !IsTimerStarted ||
+                TimeRemaining > finalShredderGraceSeconds)
+                return;
+
+            IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            int livePieceCount = 0;
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                if (pieces[index] != null)
+                    livePieceCount++;
+            }
+
+            if (livePieceCount == 1)
+                finalShredderOutcomeLocked = true;
         }
 
         // Phase 2 keeps this snapshot parallel to the legacy physics runtime.
@@ -717,6 +751,23 @@ namespace GravityPuzzle
                 return false;
 
             BoardSnapshot.Grid.ClearPiece(model);
+            model.SetState(state);
+            return true;
+        }
+
+        /// <summary>
+        /// Keeps a piece's current footprint occupied while it is travelling
+        /// through the shredder.  Reserved cells block placement and grid
+        /// gravity, but are released normally when the pooled piece despawns.
+        /// </summary>
+        public bool TryReservePieceInGrid(PuzzlePiece piece, PieceState state)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            if (!BoardSnapshot.Grid.TryReserve(model))
+                return false;
+
             model.SetState(state);
             return true;
         }
@@ -896,7 +947,13 @@ namespace GravityPuzzle
             if (!IsLevelRunning || destroyedPiece == null)
                 return;
 
-            TryClearPieceFromGrid(destroyedPiece, PieceState.Shredding);
+            // A shredder feed is still a physical object until the last voxel
+            // has crossed the cutter. Keep its cells reserved during that
+            // interval so a grid-driven falling piece cannot enter it.
+            if (destroyedPiece.IsBeingShredded)
+                TryReservePieceInGrid(destroyedPiece, PieceState.Shredding);
+            else
+                TryClearPieceFromGrid(destroyedPiece, PieceState.Shredding);
             DestroyedPieceCount++;
             PuzzleDragController.WakeUpGravity();
             IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
@@ -994,6 +1051,15 @@ namespace GravityPuzzle
                 }
                 else if (TimeLimit > 0f && TimeRemaining <= 0f)
                 {
+                    // The final piece entered a shredder during the configured
+                    // final-seconds window. It has earned its completion even
+                    // if its physical feed and flying progress voxels continue
+                    // after the display reaches 00:00.
+                    if (finalShredderOutcomeLocked)
+                    {
+                        return;
+                    }
+
                     bool allSettled = true;
                     for (int i = 0; i < pieces.Count; i++)
                     {

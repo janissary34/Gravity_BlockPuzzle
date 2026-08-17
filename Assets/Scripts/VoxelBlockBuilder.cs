@@ -5,29 +5,29 @@ namespace GravityPuzzle
 {
     public static class VoxelBlockBuilder
     {
-        private static IPool<VoxelShard> voxelPool;
+        private static PoolService poolService;
         private static Sprite defaultVoxelSprite;
         
         private static int subdivisions = 3;
         public static int Subdivisions => subdivisions;
 
-        public static void SetVoxelPool(IPool<VoxelShard> pool, int configuredSubdivisions)
+        public static void SetPoolService(PoolService pools, int configuredSubdivisions)
         {
-            voxelPool = pool ?? throw new System.ArgumentNullException(nameof(pool));
+            poolService = pools ?? throw new System.ArgumentNullException(nameof(pools));
             subdivisions = Mathf.Clamp(configuredSubdivisions, 1, 6);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetPool()
         {
-            voxelPool = null;
+            poolService = null;
             defaultVoxelSprite = null;
             subdivisions = 3;
         }
 
         public static VoxelShard GetVoxel()
         {
-            if (voxelPool == null)
+            if (poolService == null || !poolService.TryGet(out IPool<VoxelShard> voxelPool))
                 throw new System.InvalidOperationException(
                     "[VoxelPool] VoxelBlockBuilder has not been configured by RuntimePieceFactoryBootstrap.");
 
@@ -39,7 +39,9 @@ namespace GravityPuzzle
 
         public static void ReturnVoxel(VoxelShard shard)
         {
-            voxelPool?.Return(shard);
+            if (shard != null && poolService != null &&
+                poolService.TryGet(out IPool<VoxelShard> voxelPool))
+                voxelPool.Return(shard);
         }
 
         public static int EstimateMaximumVoxelCount(GravityLevelDefinition level, int configuredSubdivisions)
@@ -80,13 +82,18 @@ namespace GravityPuzzle
             return defaultVoxelSprite;
         }
 
-        public static void BuildVoxelGrid(Transform parent, string namePrefix, Vector2 totalSize, Color color)
+        public static void BuildVoxelGrid(
+            Transform parent,
+            string namePrefix,
+            Vector2 totalSize,
+            Color color,
+            Sprite voxelSprite = null)
         {
             float voxelWidth = totalSize.x / subdivisions;
             float voxelHeight = totalSize.y / subdivisions;
             Vector2 voxelSize = new Vector2(voxelWidth, voxelHeight);
             
-            Sprite sprite = GetDefaultVoxelSprite();
+            Sprite sprite = voxelSprite != null ? voxelSprite : GetDefaultVoxelSprite();
 
             float startX = -totalSize.x * 0.5f + voxelWidth * 0.5f;
             float startY = -totalSize.y * 0.5f + voxelHeight * 0.5f;

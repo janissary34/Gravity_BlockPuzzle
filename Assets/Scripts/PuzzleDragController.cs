@@ -15,6 +15,8 @@ namespace GravityPuzzle
         private Camera gameCamera;
         private PuzzlePiece selectedPiece;
         private PuzzlePiece gridFallingPiece;
+        private readonly Queue<GridGravityMove> pendingGridGravityMoves =
+            new Queue<GridGravityMove>();
         private GridCoordinate selectedPieceStartAnchor;
         private bool hasSelectedPieceStartAnchor;
         private Vector2 grabOffset;
@@ -147,23 +149,85 @@ namespace GravityPuzzle
             LevelBoardSnapshot snapshot = activeBoard != null
                 ? activeBoard.BoardSnapshot
                 : null;
-            if (snapshot == null ||
-                !GridGravityPlanner.TryPlanNextMove(snapshot, out GridGravityMove move))
+            if (snapshot == null)
                 return false;
+
+            // Resolve the complete logical cascade before starting its visual
+            // presentation.  A lower piece can then vacate cells and let the
+            // next piece above it calculate its final resting anchor in this
+            // same gravity pass instead of waiting for another gameplay event.
+            if (pendingGridGravityMoves.Count == 0 &&
+                !TryBuildSettledGridGravityPlan(activeBoard, snapshot))
+                return false;
+
+            return TryPlayNextGridGravityMove(activeBoard, snapshot);
+        }
+
+        private bool TryBuildSettledGridGravityPlan(
+            PrototypeBoard activeBoard,
+            LevelBoardSnapshot snapshot)
+        {
+            int remainingMoveBudget = snapshot.Pieces.Count;
+            while (remainingMoveBudget-- > 0 &&
+                   GridGravityPlanner.TryPlanNextMove(
+                       snapshot,
+                       IsEligibleForGridGravity,
+                       out GridGravityMove move))
+            {
+                PuzzlePiece piece = FindActivePiece(move.PieceId);
+                if (piece == null || piece.IsFrozen || piece.IsBeingShredded ||
+                    piece.GridFallView == null || !piece.GridFallView.CanPlay ||
+                    !activeBoard.TryCommitGridGravityMove(move, out _))
+                {
+                    // A failed commit means the snapshot changed while this
+                    // cascade was being assembled. Keep the already committed
+                    // moves and retry from a fresh snapshot next gravity tick.
+                    break;
+                }
+
+                pendingGridGravityMoves.Enqueue(move);
+            }
+
+            return pendingGridGravityMoves.Count > 0;
+        }
+
+        private static bool IsEligibleForGridGravity(PieceModel model)
+        {
+            PuzzlePiece piece = FindActivePiece(model.Id);
+            return piece != null &&
+                   !piece.IsFrozen &&
+                   !piece.IsBeingShredded &&
+                   piece.GridFallView != null &&
+                   piece.GridFallView.CanPlay;
+        }
+
+        private bool TryPlayNextGridGravityMove(
+            PrototypeBoard activeBoard,
+            LevelBoardSnapshot snapshot)
+        {
+            if (pendingGridGravityMoves.Count == 0)
+                return false;
+
+            GridGravityMove move = pendingGridGravityMoves.Dequeue();
 
             PuzzlePiece piece = FindActivePiece(move.PieceId);
             if (piece == null || piece.IsFrozen || piece.IsBeingShredded ||
                 piece.GridFallView == null || !piece.GridFallView.CanPlay ||
                 !snapshot.TryGetPiece(move.PieceId, out PieceModel model))
+            {
+                pendingGridGravityMoves.Clear();
                 return false;
+            }
 
             GridCoordinate targetPivot = new GridCoordinate(
                 move.ToAnchor.X - model.PivotOffset.X,
                 move.ToAnchor.Y - model.PivotOffset.Y);
             GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
-            if (level == null ||
-                !activeBoard.TryCommitGridGravityMove(move, out _))
+            if (level == null)
+            {
+                pendingGridGravityMoves.Clear();
                 return false;
+            }
 
             PrepareKinematicBody(piece.Body);
             gridFallingPiece = piece;

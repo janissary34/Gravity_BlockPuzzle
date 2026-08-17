@@ -175,6 +175,7 @@ MonoBehaviour:
   rb2D: {fileID: 0}
   col2D: {fileID: 0}
   spriteRenderer: {fileID: 0}
+  tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   popPower: 1.2
   popDuration: 0
   flyDuration: 0.75

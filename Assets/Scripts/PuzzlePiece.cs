@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
+using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Infrastructure.Pooling;
@@ -15,7 +16,7 @@ namespace GravityPuzzle
     /// Its child colliders form the body and the smaller hook geometry.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D), typeof(CompositeCollider2D), typeof(LineRenderer))]
-    public sealed class PuzzlePiece : MonoBehaviour, IPoolable
+    public sealed class PuzzlePiece : MonoBehaviour, IPoolable, IPoolReturnReceiver<PuzzlePiece>
     {
         public readonly struct RemovedCell
         {
@@ -95,21 +96,16 @@ namespace GravityPuzzle
                 ? GravityGridMetrics.DraggingPieceCollisionSkinInCells
                 : GravityGridMetrics.RestingPieceCollisionSkinInCells;
 
-        private readonly List<SpriteRenderer> normalRenderers = new List<SpriteRenderer>();
-        private readonly List<SpriteRenderer> selectedRenderers = new List<SpriteRenderer>();
-        private readonly List<SpriteRenderer> outlineRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> iceRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> iceSlots = new List<SpriteRenderer>();
         private Transform iceSlotsRoot;
         private readonly List<PiecePartSlot> partSlots = new List<PiecePartSlot>();
-        private Transform selectionVisualsRoot;
         private CompositeCollider2D compositeCollider;
         private LineRenderer rootOutline;
         private List<BoxCollider2D> collisionCells;
         private List<Vector2> fullCollisionCellSizes;
         private List<SpriteRenderer> collisionCellVisuals;
         private Collider2D[] solidColliders;
-        private bool selectionVisualsBuilt;
         private bool beingShredded;
         private bool useFullCollisionGeometry;
         private bool isSelected;
@@ -240,7 +236,7 @@ namespace GravityPuzzle
             InvalidateVoxelCache();
         }
 
-        public void ConfigurePoolReturn(Action<PuzzlePiece> returnHandler)
+        public void SetPoolReturnHandler(Action<PuzzlePiece> returnHandler)
         {
             returnToPool = returnHandler;
         }
@@ -261,7 +257,13 @@ namespace GravityPuzzle
 
         private void MarkDespawnedInBoard()
         {
-            PrototypeBoard.Active?.TryDespawnPieceFromGrid(this);
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board == null)
+                return;
+
+            bool releasedShredderReservation = beingShredded;
+            if (board.TryDespawnPieceFromGrid(this) && releasedShredderReservation)
+                PuzzleDragController.WakeUpGravity();
         }
 
         private List<Vector2Int> cachedActiveVoxelOffsets;
@@ -421,12 +423,7 @@ namespace GravityPuzzle
 
         private void PrepareForRuntimeSetup()
         {
-            normalRenderers.Clear();
-            selectedRenderers.Clear();
-            outlineRenderers.Clear();
             ClearIceVisuals();
-            selectionVisualsRoot = null;
-            selectionVisualsBuilt = false;
             beingShredded = false;
             destructionReported = false;
             useFullCollisionGeometry = false;
@@ -719,7 +716,6 @@ namespace GravityPuzzle
             if (removedCollider != null)
                 removedCollider.enabled = false;
 
-            RemoveSelectionVisualFor(removedVisual);
             collisionCellVisuals.RemoveAt(targetIndex);
             collisionCells.RemoveAt(targetIndex);
             fullCollisionCellSizes.RemoveAt(targetIndex);
@@ -875,30 +871,6 @@ namespace GravityPuzzle
             return sharesVerticalEdge || sharesHorizontalEdge || overlaps;
         }
 
-        private void RemoveSelectionVisualFor(SpriteRenderer removedVisual)
-        {
-            int visualIndex = normalRenderers.IndexOf(removedVisual);
-            if (visualIndex < 0)
-                return;
-
-            normalRenderers.RemoveAt(visualIndex);
-            if (visualIndex < selectedRenderers.Count)
-            {
-                SpriteRenderer selected = selectedRenderers[visualIndex];
-                selectedRenderers.RemoveAt(visualIndex);
-                if (selected != null)
-                    Destroy(selected.gameObject);
-            }
-
-            if (visualIndex < outlineRenderers.Count)
-            {
-                SpriteRenderer outline = outlineRenderers[visualIndex];
-                outlineRenderers.RemoveAt(visualIndex);
-                if (outline != null)
-                    Destroy(outline.gameObject);
-            }
-        }
-
         private void ApplyCollisionProfile()
         {
             if (collisionCells == null || fullCollisionCellSizes == null)
@@ -935,6 +907,7 @@ namespace GravityPuzzle
 
             beingShredded = true;
             SetSelected(false);
+            PrototypeBoard.Active?.TryLockFinalShredderOutcome(this);
             ReportDestroyed();
             return true;
         }
@@ -1034,6 +1007,7 @@ namespace GravityPuzzle
 
         private void PlayIceCrackFeedback(int remainingCount, int previousRemainingCount)
         {
+            TweenConfig tweenConfig = GridFallView != null ? GridFallView.Config : null;
             float remainingFraction = previousRemainingCount > 0
                 ? Mathf.Clamp01((float)remainingCount / previousRemainingCount)
                 : 0f;
@@ -1047,9 +1021,22 @@ namespace GravityPuzzle
                 DOTween.Kill(renderer);
                 Vector3 restingScale = renderer.transform.localScale;
                 float targetAlpha = renderer.color.a * Mathf.Lerp(.55f, .9f, remainingFraction);
+
+                if (tweenConfig == null)
+                {
+                    Color color = renderer.color;
+                    color.a = targetAlpha;
+                    renderer.color = color;
+                    continue;
+                }
+
                 Sequence crack = DOTween.Sequence()
-                    .Append(renderer.transform.DOPunchScale(restingScale * .12f, .16f, 5, .55f))
-                    .Join(renderer.DOFade(targetAlpha, .16f));
+                    .Append(renderer.transform.DOPunchScale(
+                        restingScale * tweenConfig.IceCrackScaleMultiplier,
+                        tweenConfig.IceCrackDuration,
+                        5,
+                        .55f))
+                    .Join(renderer.DOFade(targetAlpha, tweenConfig.IceCrackDuration));
                 crack.SetLink(renderer.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
             }
@@ -1058,6 +1045,13 @@ namespace GravityPuzzle
         private void PlayIceReleaseAnimation()
         {
             iceReleaseAnimating = true;
+            TweenConfig tweenConfig = GridFallView != null ? GridFallView.Config : null;
+            if (tweenConfig == null)
+            {
+                ClearIceVisuals();
+                return;
+            }
+
             Sequence release = DOTween.Sequence();
             bool hasIce = false;
             for (int index = 0; index < iceRenderers.Count; index++)
@@ -1068,8 +1062,12 @@ namespace GravityPuzzle
 
                 hasIce = true;
                 DOTween.Kill(renderer);
-                release.Join(renderer.transform.DOPunchScale(renderer.transform.localScale * .16f, .2f, 6, .55f));
-                release.Join(renderer.DOFade(0f, .2f));
+                release.Join(renderer.transform.DOPunchScale(
+                    renderer.transform.localScale * tweenConfig.IceReleaseScaleMultiplier,
+                    tweenConfig.IceReleaseDuration,
+                    6,
+                    .55f));
+                release.Join(renderer.DOFade(0f, tweenConfig.IceReleaseDuration));
             }
 
             if (!hasIce)

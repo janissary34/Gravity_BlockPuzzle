@@ -120,6 +120,8 @@ namespace GravityPuzzle
     public sealed class PieceDefinition
     {
         public string name = "Puzzle Piece";
+        [Tooltip("Optional key resolved through PieceVisualConfig. Leave empty to use this piece's legacy colour.")]
+        public string visualId;
         public Color color = new Color(.2f, .65f, 1f);
         public Vector2Int origin = new Vector2Int(8, 10);
         [Range(0, 3)] public int quarterTurns;

@@ -1,3 +1,4 @@
+using System;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Pieces;
 
@@ -14,6 +15,20 @@ namespace GravityPuzzle.Gameplay.Gravity
             LevelBoardSnapshot snapshot,
             out GridGravityMove move)
         {
+            return TryPlanNextMove(snapshot, null, out move);
+        }
+
+        /// <summary>
+        /// Chooses a move only from pieces whose presentation/lifecycle can
+        /// currently participate in gravity. Ineligible pieces remain solid
+        /// supports in the grid; they must never abort a cascade for pieces
+        /// above or beside them.
+        /// </summary>
+        public static bool TryPlanNextMove(
+            LevelBoardSnapshot snapshot,
+            Predicate<PieceModel> canMove,
+            out GridGravityMove move)
+        {
             move = default;
             if (snapshot == null)
                 return false;
@@ -22,6 +37,9 @@ namespace GravityPuzzle.Gameplay.Gravity
             for (int index = 0; index < snapshot.Pieces.Count; index++)
             {
                 PieceModel piece = snapshot.Pieces[index];
+                if (canMove != null && !canMove(piece))
+                    continue;
+
                 if (!snapshot.Grid.TryGetFallTarget(piece, out GridCoordinate targetAnchor))
                     continue;
 

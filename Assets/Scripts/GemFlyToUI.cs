@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
+using GravityPuzzle.Config;
 
 namespace GravityPuzzle
 {
@@ -23,6 +24,9 @@ namespace GravityPuzzle
 
         [SerializeField, Tooltip("SpriteRenderer component attached to this gem voxel.")]
         private SpriteRenderer spriteRenderer;
+
+        [SerializeField, Tooltip("Owns the default UI-flight tween timing and easing.")]
+        private TweenConfig tweenConfig;
 
         [Header("Stage Timings & Easing")]
         [SerializeField, Tooltip("Initial pop-out jump power/height.")]
@@ -55,6 +59,20 @@ namespace GravityPuzzle
         private Tween activeJumpTween;
         private Tweener activeFlyTween;
         private Vector3 defaultScale = Vector3.one;
+        private float activeFlightDuration;
+        private Ease activeFlightEase;
+
+        private float DefaultFlightDuration => tweenConfig != null
+            ? tweenConfig.GemFlightDuration
+            : flyDuration;
+
+        private Ease DefaultFlightEase => tweenConfig != null
+            ? tweenConfig.GemFlightEase
+            : flyEase;
+
+        private float UiPunchDuration => tweenConfig != null
+            ? tweenConfig.GemUiPunchDuration
+            : uiPunchDuration;
 
         private void Awake()
         {
@@ -93,8 +111,10 @@ namespace GravityPuzzle
             targetSlider = uiTargetSlider;
             targetCamera = cam != null ? cam : Camera.main;
             onRecycleCallback = onRecycle;
-            if (customFlyDuration > 0f) flyDuration = customFlyDuration;
-            flyEase = customFlyEase;
+            activeFlightDuration = customFlyDuration > 0f
+                ? customFlyDuration
+                : DefaultFlightDuration;
+            activeFlightEase = customFlyEase;
 
             // STAGE 1: Physical Pop-Out Bounce
             EnablePhysics(true);
@@ -131,8 +151,8 @@ namespace GravityPuzzle
             Vector3 targetWorldPos = GetTargetWorldPosition();
 
             // Animate flight to target UI position using DOMove with Ease.InBack
-            activeFlyTween = transform.DOMove(targetWorldPos, flyDuration)
-                .SetEase(flyEase)
+            activeFlyTween = transform.DOMove(targetWorldPos, activeFlightDuration)
+                .SetEase(activeFlightEase)
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true)
                 .OnUpdate(() =>
@@ -178,7 +198,7 @@ namespace GravityPuzzle
 
             if (targetRectTransform != null)
             {
-                targetRectTransform.DOPunchScale(uiPunchScale, uiPunchDuration, 5, 0.5f)
+                targetRectTransform.DOPunchScale(uiPunchScale, UiPunchDuration, 5, 0.5f)
                     .SetLink(targetRectTransform.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
             }

@@ -163,7 +163,10 @@ namespace GravityPuzzle
             ShredderConfig shredderConfig = BlockShredder.Instance != null
                 ? BlockShredder.Instance.Config
                 : null;
-            CreateShredders(level, halfHeight, exitWidth, shredderConfig);
+            if (shredderConfig != null)
+                boardState.SetFinalShredderGraceSeconds(
+                    shredderConfig.FinalPieceTimerGraceSeconds);
+            CreateShredders(level, halfHeight, shredderConfig);
 
             foreach (ObstacleDefinition obstacle in level.obstacles)
                 CreateObstacle(level, obstacle);
@@ -442,7 +445,6 @@ namespace GravityPuzzle
         private static void CreateShredders(
             GravityLevelDefinition level,
             float halfHeight,
-            float exitWidth,
             ShredderConfig shredderConfig)
         {
             float radiusMultiplier = shredderConfig != null
@@ -452,11 +454,15 @@ namespace GravityPuzzle
                 ? shredderConfig.WheelRotationSpeedMultiplier
                 : 1f;
 
+            // The cutter is a continuous bottom-row hazard, independent of the
+            // decorative frame exit. Cover every board column including both
+            // outermost cells, so pieces cannot bypass it through a corner.
+            float coverageWidth = level.boardColumns;
             float requestedRadius = Mathf.Max(.2f, level.shredderRadius * radiusMultiplier);
-            int count = Mathf.Max(1, Mathf.CeilToInt(exitWidth / (requestedRadius * 2f)));
-            // Fit an integer number of touching wheels exactly across the whole
-            // bottom exit, rather than leaving side gaps from an authored count.
-            float radius = exitWidth / (count * 2f);
+            int count = Mathf.Max(1, Mathf.CeilToInt(coverageWidth / (requestedRadius * 2f)));
+            // Fit an integer number of touching wheels exactly across the full
+            // board width. The first/last wheel edges land on the board edges.
+            float radius = coverageWidth / (count * 2f);
             // Centre-to-centre spacing equals a wheel diameter: teeth touch with
             // no authored gaps, regardless of board size or old level metadata.
             float spacing = radius * 2f;

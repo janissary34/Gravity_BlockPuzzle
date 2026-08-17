@@ -15,6 +15,7 @@ namespace GravityPuzzle.Presentation.Views
 
         public bool CanPlay => body != null && tweenConfig != null;
         public bool IsAnimating => activeFallTween != null && activeFallTween.IsActive();
+        public TweenConfig Config => tweenConfig;
 
         private void Awake()
         {

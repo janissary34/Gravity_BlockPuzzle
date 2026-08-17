@@ -12,11 +12,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ed1f0cd429714fff9ad3e163e5dc3cf, type: 3}
   m_Name: TweenConfig
   m_EditorClassIdentifier: 
-  tweenCapacity: 200
-  sequenceCapacity: 125
+  tweenCapacity: 600
+  sequenceCapacity: 384
   pieceMoveDuration: 0.12
   pieceMoveEase: 6
   gridFallDuration: 0.5
   gridFallEase: 6
   shredDuration: 0.3
   shredEase: 5
+  iceCrackDuration: 0.16
+  iceCrackScaleMultiplier: 0.12
+  iceReleaseDuration: 0.2
+  iceReleaseScaleMultiplier: 0.16
+  progressSliderFillDuration: 0.12
+  progressSliderFillEase: 6
+  progressVoxelFlightDuration: 0.55
+  progressVoxelFlightEase: 3
+  progressSliderPunchDuration: 0.12
+  gemFlightDuration: 0.75
+  gemFlightEase: 26
+  gemUiPunchDuration: 0.22
+  timerEntranceDuration: 0.75
+  timerEntranceEase: 9
+  timerFreezeFillDuration: 0.6
+  timerFreezeFillEase: 1
+  timerFlyToTargetDuration: 0.5
+  timerFlyToTargetEase: 5

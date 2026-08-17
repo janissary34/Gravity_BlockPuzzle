@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Mid_lvl1
   m_EditorClassIdentifier: 
   levelName: New Level
-  timeLimit: 60
+  timeLimit: 18
   boardColumns: 8
   boardRows: 8
   subdivisions: 4
@@ -33,6 +33,7 @@ MonoBehaviour:
   titremeMiktari: 0.045
   pieces:
   - name: Piece 1
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 11, y: 32}
     quarterTurns: 0
@@ -172,6 +173,7 @@ MonoBehaviour:
     - localCell: {x: 12, y: -9}
       type: 0
   - name: Piece 2
+    visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 15, y: 17}
     quarterTurns: 0
@@ -343,6 +345,7 @@ MonoBehaviour:
     - localCell: {x: 0, y: 10}
       type: 0
   - name: Piece 3
+    visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 10, y: 31}
     quarterTurns: 0
@@ -482,6 +485,7 @@ MonoBehaviour:
     - localCell: {x: -3, y: -8}
       type: 0
   - name: Piece 4
+    visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 16, y: 29}
     quarterTurns: 0
@@ -621,6 +625,7 @@ MonoBehaviour:
     - localCell: {x: -5, y: -10}
       type: 0
   - name: Piece 5
+    visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 3, y: 10}
     quarterTurns: 0
@@ -664,6 +669,7 @@ MonoBehaviour:
     - localCell: {x: 8, y: 17}
       type: 0
   - name: Piece 6
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
     origin: {x: 16, y: 16}
     quarterTurns: 0
@@ -739,6 +745,7 @@ MonoBehaviour:
     - localCell: {x: 3, y: 11}
       type: 0
   - name: Piece 7
+    visualId: 
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
     origin: {x: 16, y: 16}
     quarterTurns: 0
@@ -846,6 +853,7 @@ MonoBehaviour:
     - localCell: {x: 15, y: 11}
       type: 0
   - name: Piece 8
+    visualId: 
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
     origin: {x: 16, y: 16}
     quarterTurns: 0
@@ -1017,6 +1025,7 @@ MonoBehaviour:
     - localCell: {x: -1, y: -1}
       type: 0
   - name: Piece 9
+    visualId: 
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
     origin: {x: 16, y: 16}
     quarterTurns: 0

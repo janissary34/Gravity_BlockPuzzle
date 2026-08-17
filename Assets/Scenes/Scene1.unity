@@ -553,6 +553,7 @@ GameObject:
   m_Component:
   - component: {fileID: 254861992}
   - component: {fileID: 254861991}
+  - component: {fileID: 254861993}
   m_Layer: 0
   m_Name: ProgressManagerObject
   m_TagString: Untagged
@@ -586,6 +587,28 @@ MonoBehaviour:
   titremeMiktari: 0.045
   shredderTremorFrequency: 55
   shredderTumbleTorque: 7.5
+--- !u!114 &254861993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 254861990}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a81ad89829bb74811852cab837843531, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  progressSlider: {fileID: 963604833}
+  tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
+  sliderFillDuration: 0.12
+  sliderPunchScale: {x: 0.045, y: 0.045, z: 0}
+  sliderPunchDuration: 0.12
+  voxelFlyDuration: 0.55
+  voxelJumpPower: 0.8
+  voxelSize: 0.32
+  totalBlockUnitsInLevel: 0
+  currentShreddedUnits: 0
 --- !u!4 &254861992
 Transform:
   m_ObjectHideFlags: 0
@@ -1441,6 +1464,7 @@ MonoBehaviour:
   timer_obj: {fileID: 1286762672}
   timer_txt: {fileID: 1778561674}
   boosterButton: {fileID: 484269885}
+  tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   blueParticleVFX: {fileID: 0}
   baseClockImage: {fileID: 1660074255}
   frozenClockImage: {fileID: 224334603}
