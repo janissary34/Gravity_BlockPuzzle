@@ -20,17 +20,10 @@ MonoBehaviour:
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   gravityScale: 1.5
-  useAutomaticCameraFit: 1
-  fixedCameraSize: 6
-  cameraViewportWidth: 0.88
-  cameraViewportHeight: 0.7
-  useRuntimeSafeAreaForCameraFit: 0
   exitWidth: 3
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
-  shredlenmeHizi: 0.7
-  titremeMiktari: 0.045
   pieces:
   - name: Piece 1
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
@@ -1051,7 +1044,7 @@ MonoBehaviour:
     cells: []
   - name: Piece 12
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
-    origin: {x: 18, y: 18}
+    origin: {x: 26, y: 14}
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36

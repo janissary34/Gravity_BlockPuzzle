@@ -13,24 +13,17 @@ MonoBehaviour:
   m_Name: sel - 16
   m_EditorClassIdentifier: 
   levelName: New Level
-  timeLimit: 60
+  timeLimit: 800
   boardColumns: 11
   boardRows: 12
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   gravityScale: 1.5
-  useAutomaticCameraFit: 1
-  fixedCameraSize: 6
-  cameraViewportWidth: 0.88
-  cameraViewportHeight: 0.7
-  useRuntimeSafeAreaForCameraFit: 0
   exitWidth: 3
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
-  shredlenmeHizi: 0.7
-  titremeMiktari: 0.045
   pieces:
   - name: Piece 1
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
