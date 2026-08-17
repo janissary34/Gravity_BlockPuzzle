@@ -12,7 +12,6 @@ namespace GravityPuzzle
         public const float ReferencePortraitWidth = 375f;
         public const float ReferencePortraitHeight = 812f;
         public const float MinimumTouchTargetPoints = 44f;
-        public const float FrameThicknessInCells = .12f;
         // Collision geometry uses a tiny inset at rest and a larger one while
         // dragging so pieces can pass through exact-size grid openings. The
         // matching visual scale is applied by PuzzlePiece.
@@ -72,7 +71,14 @@ namespace GravityPuzzle
         [Min(3)] public int boardRows = 7;
         [Range(2, 8)] public int subdivisions = 4;
         public Color backgroundColor = new Color(.06f, .07f, .14f);
+
+        [Header("Board Frame")]
+        [Tooltip("Colour used by this level's outside board frame.")]
         public Color frameColor = new Color(.16f, .18f, .32f);
+        [Range(.05f, 1f)]
+        [Tooltip("Outside wall thickness in authored board-block units.")]
+        public float frameThickness = .5f;
+
         [Min(.1f)] public float gravityScale = 1.5f;
 
         [Header("Camera Framing")]

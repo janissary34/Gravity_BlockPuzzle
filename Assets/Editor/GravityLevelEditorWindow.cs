@@ -156,7 +156,12 @@ namespace GravityPuzzle.Editor
                 newColumns);
             float newExitWidth = newExitWidthCells;
             Color newBackground = EditorGUILayout.ColorField("Background", level.backgroundColor);
-            Color newFrame = EditorGUILayout.ColorField("Frame", level.frameColor);
+            Color newFrame = EditorGUILayout.ColorField("Frame Colour", level.frameColor);
+            float newFrameThickness = EditorGUILayout.Slider(
+                new GUIContent("Frame Thickness (blocks)", "Outside wall thickness expressed in authored board-block units."),
+                level.frameThickness,
+                .05f,
+                1f);
 
             using (new EditorGUI.DisabledScope(true))
                 EditorGUILayout.IntField("Internal Fine Grid", level.subdivisions);
@@ -177,7 +182,8 @@ namespace GravityPuzzle.Editor
                 !Mathf.Approximately(newTimeLimit, level.timeLimit) ||
                 !Mathf.Approximately(newGravity, level.gravityScale) ||
                 !Mathf.Approximately(newExitWidth, level.exitWidth) ||
-                newBackground != level.backgroundColor || newFrame != level.frameColor)
+                newBackground != level.backgroundColor || newFrame != level.frameColor ||
+                !Mathf.Approximately(newFrameThickness, level.frameThickness))
             {
                 Undo.RecordObject(level, "Edit map settings");
                 level.levelName = newName;
@@ -188,6 +194,7 @@ namespace GravityPuzzle.Editor
                 level.exitWidth = newExitWidth;
                 level.backgroundColor = newBackground;
                 level.frameColor = newFrame;
+                level.frameThickness = newFrameThickness;
                 MarkDirty();
             }
         }
@@ -576,6 +583,9 @@ namespace GravityPuzzle.Editor
 
             Handles.BeginGUI();
             Handles.color = level.frameColor;
+            float framePreviewThickness = Mathf.Max(
+                1f,
+                cellSize * level.subdivisions * level.frameThickness);
             for (int y = 0; y < level.FineRows; y++)
             {
                 for (int x = 0; x < level.FineColumns; x++)
@@ -586,14 +596,14 @@ namespace GravityPuzzle.Editor
 
                     Rect rect = CellRect(board, cellSize, cell);
                     if (!IsFineCellActive(cell + Vector2Int.left))
-                        Handles.DrawAAPolyLine(3f, new Vector3(rect.x, rect.y), new Vector3(rect.x, rect.yMax));
+                        Handles.DrawAAPolyLine(framePreviewThickness, new Vector3(rect.x, rect.y), new Vector3(rect.x, rect.yMax));
                     if (!IsFineCellActive(cell + Vector2Int.right))
-                        Handles.DrawAAPolyLine(3f, new Vector3(rect.xMax, rect.y), new Vector3(rect.xMax, rect.yMax));
+                        Handles.DrawAAPolyLine(framePreviewThickness, new Vector3(rect.xMax, rect.y), new Vector3(rect.xMax, rect.yMax));
                     if (!IsFineCellActive(cell + Vector2Int.up))
-                        Handles.DrawAAPolyLine(3f, new Vector3(rect.x, rect.y), new Vector3(rect.xMax, rect.y));
+                        Handles.DrawAAPolyLine(framePreviewThickness, new Vector3(rect.x, rect.y), new Vector3(rect.xMax, rect.y));
                     if (!IsFineCellActive(cell + Vector2Int.down) &&
                         !(cell.y == 0 && IsFineColumnInsideExit(cell.x)))
-                        Handles.DrawAAPolyLine(3f, new Vector3(rect.x, rect.yMax), new Vector3(rect.xMax, rect.yMax));
+                        Handles.DrawAAPolyLine(framePreviewThickness, new Vector3(rect.x, rect.yMax), new Vector3(rect.xMax, rect.yMax));
                 }
             }
             Handles.EndGUI();

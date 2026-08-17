@@ -155,7 +155,7 @@ namespace GravityPuzzle
             boardState.InitializeBoardSnapshot(LevelBoardSnapshotBuilder.Build(level));
             board.AddComponent<PuzzleDragController>();
 
-            float frameThickness = GravityGridMetrics.FrameThicknessInCells;
+            float frameThickness = level.frameThickness;
             float exitWidth = Mathf.Clamp(level.exitWidth, .75f, level.boardColumns - frameThickness * 2f);
             CreateBoardBackground(level);
             CreateBoardFrame(level, exitWidth);
@@ -267,7 +267,7 @@ namespace GravityPuzzle
         private static void CreateBoardFrame(GravityLevelDefinition level, float exitWidth)
         {
             float fineCellSize = 1f / level.subdivisions;
-            float thickness = GravityGridMetrics.FrameThicknessInCells;
+            float thickness = level.frameThickness;
             int edgeIndex = 0;
             GameObject frameRoot = new GameObject("Composite Board Frame");
 
