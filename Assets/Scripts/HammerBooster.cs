@@ -11,6 +11,13 @@ namespace GravityPuzzle
     /// </summary>
     public sealed class HammerBooster : MonoBehaviour
     {
+        // Hammer topology editing is intentionally paused while the board uses
+        // the legacy/runtime hybrid.  A hit must not mutate colliders or grid
+        // occupancy until disconnected-component splitting has one atomic
+        // lifecycle transaction.  The targeting animation remains available
+        // as harmless feedback and does not consume an inventory use.
+        private static readonly bool TopologyEditingEnabled = false;
+
         public static bool IsTargeting =>
             activeBooster != null || Time.frameCount <= suppressGameplayThroughFrame;
 
@@ -223,7 +230,8 @@ namespace GravityPuzzle
             {
                 Destroy(hammer);
                 impactInProgress = false;
-                GetHammerBoosterButton()?.TryConsumeUse();
+                if (TopologyEditingEnabled)
+                    GetHammerBoosterButton()?.TryConsumeUse();
             });
         }
 
@@ -248,7 +256,8 @@ namespace GravityPuzzle
 
         private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)
         {
-            if (piece != null && piece.TryRemoveCellAt(impactPosition, out PuzzlePiece.RemovedCell cell))
+            if (TopologyEditingEnabled &&
+                piece != null && piece.TryRemoveCellAt(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
                 Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
                 // Match the shredder exactly: every original rendered voxel

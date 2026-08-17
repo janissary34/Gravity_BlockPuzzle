@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Presentation.Views;
 
@@ -169,6 +170,34 @@ namespace GravityPuzzle
             return index >= 0 && index < partSlots.Count ? partSlots[index] : null;
         }
 
+        private PiecePartSlot FindPartSlot(BoxCollider2D collision, SpriteRenderer visual)
+        {
+            for (int index = 0; index < partSlots.Count; index++)
+            {
+                PiecePartSlot slot = partSlots[index];
+                if (slot != null && (slot.Collision == collision || slot.Visual == visual))
+                    return slot;
+            }
+
+            return null;
+        }
+
+        private List<RuntimePieceFragmentCell> BuildFragmentCells(IReadOnlyList<int> indices)
+        {
+            List<RuntimePieceFragmentCell> cells = new List<RuntimePieceFragmentCell>(indices.Count);
+            for (int index = 0; index < indices.Count; index++)
+            {
+                int sourceIndex = indices[index];
+                BoxCollider2D cell = collisionCells[sourceIndex];
+                Vector2 localPosition = transform.InverseTransformPoint(cell.bounds.center);
+                cells.Add(new RuntimePieceFragmentCell(
+                    localPosition,
+                    fullCollisionCellSizes[sourceIndex]));
+            }
+
+            return cells;
+        }
+
         private void OnEnable()
         {
             if (!activePieces.Contains(this))
@@ -207,6 +236,7 @@ namespace GravityPuzzle
             isSelected = false;
             returnToPool = null;
             ClearIceVisuals();
+            RuntimePieceFactory.ResetPooledPiece(this);
             InvalidateVoxelCache();
         }
 
@@ -225,13 +255,13 @@ namespace GravityPuzzle
                 return;
             }
 
-            Destroy(gameObject);
+            Debug.LogError("[PiecePool] A PuzzlePiece was released without a pool return handler. The instance has been disabled instead of destroyed.", this);
+            gameObject.SetActive(false);
         }
 
         private void MarkDespawnedInBoard()
         {
-            if (beingShredded || destructionReported)
-                PrototypeBoard.Active?.TrySetPieceState(this, PieceState.Despawned);
+            PrototypeBoard.Active?.TryDespawnPieceFromGrid(this);
         }
 
         private List<Vector2Int> cachedActiveVoxelOffsets;
@@ -416,6 +446,95 @@ namespace GravityPuzzle
             SourcePieceId = sourcePieceId;
         }
 
+        /// <summary>
+        /// Builds the authoritative fine-grid shape from this fragment's live
+        /// collider cells. Hammer splitting changes topology at runtime, so the
+        /// original level definition can no longer describe this particular
+        /// fragment.
+        /// </summary>
+        public bool TryCreateGridModel(
+            GravityLevelDefinition level,
+            int modelId,
+            out PieceModel model)
+        {
+            model = null;
+            if (level == null || Body == null || collisionCells == null || collisionCells.Count == 0)
+                return false;
+
+            // A runtime collider is not always one fine grid cell.  The piece
+            // factory collapses complete modules into a single 1x1 collider,
+            // which represents subdivisions * subdivisions fine cells.  Using
+            // just collider.bounds.center here made a hammer fragment look
+            // almost empty to the grid and allowed other pieces to overlap its
+            // visible area.  Expand every collider back into its full fine-cell
+            // footprint before constructing the authoritative model.
+            List<GridCoordinate> worldCells = new List<GridCoordinate>(collisionCells.Count);
+            GridCoordinate minimum = default;
+            bool hasCell = false;
+            for (int index = 0; index < collisionCells.Count; index++)
+            {
+                BoxCollider2D cell = collisionCells[index];
+                if (cell == null || !cell.enabled)
+                    continue;
+
+                Bounds bounds = cell.bounds;
+                int fineWidth = Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(bounds.size.x * level.subdivisions));
+                int fineHeight = Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(bounds.size.y * level.subdivisions));
+                float fineCellSize = 1f / level.subdivisions;
+                GridCoordinate bottomLeft = GravityLevelGridCoordinates.WorldToFineCell(
+                    level,
+                    new Vector2(
+                        bounds.min.x + fineCellSize * .5f,
+                        bounds.min.y + fineCellSize * .5f));
+
+                for (int y = 0; y < fineHeight; y++)
+                {
+                    for (int x = 0; x < fineWidth; x++)
+                    {
+                        GridCoordinate coordinate = new GridCoordinate(
+                            bottomLeft.X + x,
+                            bottomLeft.Y + y);
+                        if (!hasCell)
+                        {
+                            minimum = coordinate;
+                            hasCell = true;
+                        }
+                        else
+                        {
+                            minimum = new GridCoordinate(
+                                Mathf.Min(minimum.X, coordinate.X),
+                                Mathf.Min(minimum.Y, coordinate.Y));
+                        }
+
+                        worldCells.Add(coordinate);
+                    }
+                }
+            }
+
+            if (!hasCell)
+                return false;
+
+            List<GridCoordinate> localCells = new List<GridCoordinate>(worldCells.Count);
+            for (int index = 0; index < worldCells.Count; index++)
+            {
+                GridCoordinate worldCell = worldCells[index];
+                localCells.Add(new GridCoordinate(
+                    worldCell.X - minimum.X,
+                    worldCell.Y - minimum.Y));
+            }
+
+            GridCoordinate pivot = GravityLevelGridCoordinates.WorldToFineCell(level, Body.position);
+            GridCoordinate pivotOffset = new GridCoordinate(
+                minimum.X - pivot.X,
+                minimum.Y - pivot.Y);
+            model = new PieceModel(modelId, minimum, pivotOffset, localCells);
+            return true;
+        }
+
         public void ConfigureRemainingProgress(float units)
         {
             RemainingProgressUnits = Mathf.Max(0f, units);
@@ -457,6 +576,7 @@ namespace GravityPuzzle
             if (compositeCollider != null)
                 compositeCollider.GenerateGeometry();
             CacheSolidColliders();
+            RuntimePieceFactory.RefreshOutline(this);
             InvalidateVoxelCache();
             Physics2D.SyncTransforms();
         }
@@ -604,10 +724,10 @@ namespace GravityPuzzle
             collisionCells.RemoveAt(targetIndex);
             fullCollisionCellSizes.RemoveAt(targetIndex);
 
-            if (removedVisual != null)
-                Destroy(removedVisual.gameObject);
-            if (removedCollider != null)
-                Destroy(removedCollider.gameObject);
+            // The cells belong to authored prefab slots. Reset the slot and
+            // return its pooled voxels instead of destroying the hierarchy;
+            // it can then be rebuilt safely if this hit splits the piece.
+            RuntimePieceFactory.ResetPiecePartSlot(FindPartSlot(removedCollider, removedVisual));
 
             if (compositeCollider != null)
                 compositeCollider.GenerateGeometry();
@@ -625,7 +745,12 @@ namespace GravityPuzzle
             }
             else
             {
-                SplitDisconnectedCells();
+                // Interim hammer rule: preserve a single puzzle root even when
+                // the removed cell disconnects its silhouette.  The grid
+                // receives the exact edited footprint, so no other piece can
+                // enter the visible shape.  Independent fragment spawning is
+                // deferred until its lifecycle/grid transaction is rebuilt.
+                PrototypeBoard.Active?.TryRefreshHammerPieceGeometry(this);
                 ApplyCollisionProfile();
                 PrototypeBoard board = PrototypeBoard.Active;
                 RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
@@ -651,34 +776,44 @@ namespace GravityPuzzle
             components[largestIndex] = components[0];
             components[0] = largest;
 
-            Transform sourceCollisionRoot = collisionCells[0].transform.parent;
             int totalCellCount = collisionCells.Count;
             float remainingBeforeSplit = RemainingProgressUnits;
-            List<int> movedIndices = new List<int>();
+            List<List<RuntimePieceFragmentCell>> fragmentCells =
+                new List<List<RuntimePieceFragmentCell>>(components.Count);
+            for (int componentIndex = 0; componentIndex < components.Count; componentIndex++)
+                fragmentCells.Add(BuildFragmentCells(components[componentIndex]));
+
+            List<PuzzlePiece> fragments = new List<PuzzlePiece>(components.Count);
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null)
+                return;
+
+            float primaryProgress = remainingBeforeSplit * components[0].Count / totalCellCount;
+            RuntimePieceFactory.RebuildFragment(
+                this,
+                level,
+                fragmentCells[0],
+                VisualColor,
+                primaryProgress);
+            fragments.Add(this);
+
             for (int componentIndex = 1; componentIndex < components.Count; componentIndex++)
             {
                 float componentProgress = remainingBeforeSplit * components[componentIndex].Count / totalCellCount;
-                CreateIndependentPiece(
-                    components[componentIndex],
-                    sourceCollisionRoot,
-                    componentIndex,
+                PuzzlePiece fragment = RuntimePieceFactory.CreateFragment(
+                    $"{name} - Split {componentIndex}",
+                    level,
+                    transform.position,
+                    transform.rotation,
+                    transform.localScale,
+                    fragmentCells[componentIndex],
+                    VisualColor,
                     componentProgress);
-                movedIndices.AddRange(components[componentIndex]);
+                fragments.Add(fragment);
             }
 
-            movedIndices.Sort();
-            for (int i = movedIndices.Count - 1; i >= 0; i--)
-            {
-                int sourceIndex = movedIndices[i];
-                collisionCells.RemoveAt(sourceIndex);
-                collisionCellVisuals.RemoveAt(sourceIndex);
-                fullCollisionCellSizes.RemoveAt(sourceIndex);
-            }
-            RemainingProgressUnits = remainingBeforeSplit * collisionCells.Count / totalCellCount;
-
-            if (compositeCollider != null)
-                compositeCollider.GenerateGeometry();
-            CacheSolidColliders();
+            PrototypeBoard.Active?.TryRegisterHammerFragments(fragments, PieceState.Falling);
+            PuzzleDragController.WakeUpGravity();
         }
 
         private List<List<int>> FindConnectedComponents()
@@ -738,86 +873,6 @@ namespace GravityPuzzle
                 xDistance < xReach - tolerance &&
                 yDistance < yReach - tolerance;
             return sharesVerticalEdge || sharesHorizontalEdge || overlaps;
-        }
-
-        private void CreateIndependentPiece(
-            List<int> component,
-            Transform sourceCollisionRoot,
-            int splitNumber,
-            float remainingProgress)
-        {
-            GameObject splitObject = new GameObject($"{name} - Split {splitNumber}");
-            splitObject.transform.SetParent(transform.parent, false);
-            splitObject.transform.localPosition = transform.localPosition;
-            splitObject.transform.localRotation = transform.localRotation;
-            splitObject.transform.localScale = transform.localScale;
-
-            Rigidbody2D splitBody = splitObject.AddComponent<Rigidbody2D>();
-            CopyBodySettings(Body, splitBody);
-
-            CompositeCollider2D splitComposite = splitObject.AddComponent<CompositeCollider2D>();
-            splitComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
-            splitComposite.generationType = CompositeCollider2D.GenerationType.Synchronous;
-            splitComposite.edgeRadius = 0f;
-
-            GameObject collisionRootObject = new GameObject("Collision Geometry");
-            Transform splitCollisionRoot = collisionRootObject.transform;
-            splitCollisionRoot.SetParent(splitObject.transform, false);
-            splitCollisionRoot.localPosition = sourceCollisionRoot.localPosition;
-            splitCollisionRoot.localRotation = sourceCollisionRoot.localRotation;
-            splitCollisionRoot.localScale = sourceCollisionRoot.localScale;
-
-            List<BoxCollider2D> splitCells = new List<BoxCollider2D>(component.Count);
-            List<SpriteRenderer> splitVisuals = new List<SpriteRenderer>(component.Count);
-            List<Vector2> splitSizes = new List<Vector2>(component.Count);
-
-            component.Sort();
-            for (int i = 0; i < component.Count; i++)
-            {
-                int sourceIndex = component[i];
-                BoxCollider2D cell = collisionCells[sourceIndex];
-                SpriteRenderer visual = collisionCellVisuals[sourceIndex];
-                Vector2 fullSize = fullCollisionCellSizes[sourceIndex];
-
-                RemoveSelectionVisualFor(visual);
-                cell.size = fullSize;
-                cell.transform.SetParent(splitCollisionRoot, true);
-                visual.transform.SetParent(splitObject.transform, true);
-                splitCells.Add(cell);
-                splitVisuals.Add(visual);
-                splitSizes.Add(fullSize);
-            }
-
-            splitComposite.GenerateGeometry();
-            PuzzlePiece splitPiece = splitObject.AddComponent<PuzzlePiece>();
-            splitPiece.ConfigureCollisionGeometry(
-                splitComposite,
-                splitCells,
-                splitVisuals,
-                splitSizes);
-            splitPiece.ConfigureRemainingProgress(remainingProgress);
-            splitPiece.ConfigureFreeze(
-                frozenUntilDestroyedCount,
-                iceCounterFontSize,
-                iceCounterTextColor,
-                iceCounterOutlineColor,
-                iceCounterOutlineWidth,
-                iceCounterOffset);
-        }
-
-        private static void CopyBodySettings(Rigidbody2D source, Rigidbody2D target)
-        {
-            target.bodyType = RigidbodyType2D.Kinematic;
-            target.simulated = source.simulated;
-            target.useFullKinematicContacts = source.useFullKinematicContacts;
-            target.collisionDetectionMode = source.collisionDetectionMode;
-            target.interpolation = source.interpolation;
-            target.constraints = source.constraints;
-            target.sleepMode = source.sleepMode;
-            target.gravityScale = source.gravityScale;
-            target.mass = source.mass;
-            target.drag = source.drag;
-            target.angularDrag = source.angularDrag;
         }
 
         private void RemoveSelectionVisualFor(SpriteRenderer removedVisual)

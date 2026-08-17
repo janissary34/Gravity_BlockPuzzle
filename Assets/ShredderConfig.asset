@@ -12,6 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50a1c14f239a644cb9c0492628aa4e8e, type: 3}
   m_Name: ShredderConfig
   m_EditorClassIdentifier: 
+  wheelPrefab: {fileID: 6496321627930684527, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
+  wheelPoolCapacity: 16
+  catchZonePrefab: {fileID: 1348796746018862400, guid: 38977ea9b7627446fb5feb095e7ae1d6, type: 3}
+  catchZonePoolCapacity: 1
   wheelRadiusMultiplier: 1
   wheelRotationSpeedMultiplier: 1
   feedSpeed: 2

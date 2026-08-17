@@ -6,6 +6,12 @@ namespace GravityPuzzle.Config
     [CreateAssetMenu(fileName = "ShredderConfig", menuName = "Gravity Puzzle/Config/Shredder")]
     public sealed class ShredderConfig : ScriptableObject
     {
+        [Header("Prefab")]
+        [SerializeField] private ShredderWheel wheelPrefab;
+        [Min(1)] [SerializeField] private int wheelPoolCapacity = 16;
+        [SerializeField] private ShredderCatchZone catchZonePrefab;
+        [Min(1)] [SerializeField] private int catchZonePoolCapacity = 1;
+
         [Header("Runtime Shredder Wheels")]
         [Min(0.01f)] [SerializeField] private float wheelRadiusMultiplier = 1f;
         [Min(0f)] [SerializeField] private float wheelRotationSpeedMultiplier = 1f;
@@ -27,6 +33,10 @@ namespace GravityPuzzle.Config
         [SerializeField] private Vector2 angularVelocityRange;
 
         public float WheelRadiusMultiplier => wheelRadiusMultiplier;
+        public ShredderWheel WheelPrefab => wheelPrefab;
+        public int WheelPoolCapacity => wheelPoolCapacity;
+        public ShredderCatchZone CatchZonePrefab => catchZonePrefab;
+        public int CatchZonePoolCapacity => catchZonePoolCapacity;
         public float WheelRotationSpeedMultiplier => wheelRotationSpeedMultiplier;
         public float FeedSpeed => feedSpeed;
         public float TremorIntensity => tremorIntensity;

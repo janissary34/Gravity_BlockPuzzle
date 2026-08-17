@@ -721,6 +721,120 @@ namespace GravityPuzzle
             return true;
         }
 
+        /// <summary>
+        /// Releases a runtime piece's occupied cells before its prefab root is
+        /// returned to the typed pool.  A later rent can therefore never
+        /// inherit a stale grid reservation from its previous lifetime.
+        /// </summary>
+        public bool TryDespawnPieceFromGrid(PuzzlePiece piece)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            BoardSnapshot.Grid.ClearPiece(model);
+            model.SetState(PieceState.Despawned);
+            return true;
+        }
+
+        /// <summary>
+        /// Replaces a damaged source model with the connected visual fragments
+        /// created by the hammer. The grid is updated before gravity is woken,
+        /// so fragments immediately block one another and every other piece.
+        /// </summary>
+        public bool TryRegisterHammerFragments(
+            IReadOnlyList<PuzzlePiece> fragments,
+            PieceState initialState)
+        {
+            if (BoardSnapshot == null || fragments == null || fragments.Count == 0)
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null || !TryGetPieceModel(fragments[0], out PieceModel sourceModel))
+                return false;
+
+            List<PieceModel> fragmentModels = new List<PieceModel>(fragments.Count);
+            int nextId = BoardSnapshot.NextPieceId;
+            for (int index = 0; index < fragments.Count; index++)
+            {
+                PuzzlePiece fragment = fragments[index];
+                if (fragment == null ||
+                    !fragment.TryCreateGridModel(level, nextId + index, out PieceModel model))
+                    return false;
+
+                model.SetState(initialState);
+                fragmentModels.Add(model);
+            }
+
+            BoardSnapshot.Grid.ClearPiece(sourceModel);
+            int placedCount = 0;
+            for (; placedCount < fragmentModels.Count; placedCount++)
+            {
+                if (BoardSnapshot.Grid.TryPlace(fragmentModels[placedCount]))
+                    continue;
+
+                for (int rollbackIndex = 0; rollbackIndex < placedCount; rollbackIndex++)
+                    BoardSnapshot.Grid.ClearPiece(fragmentModels[rollbackIndex]);
+
+                BoardSnapshot.Grid.TryPlace(sourceModel);
+                Debug.LogWarning(
+                    "[GridSplit] Hammer fragments could not be registered; restored the source grid model.",
+                    this);
+                return false;
+            }
+
+            for (int index = 0; index < fragmentModels.Count; index++)
+            {
+                if (!BoardSnapshot.TryRegisterPlacedPiece(fragmentModels[index]))
+                {
+                    Debug.LogError("[GridSplit] Registered fragment id sequence was invalid.", this);
+                    return false;
+                }
+
+                fragments[index].ConfigureSourcePieceId(fragmentModels[index].Id);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Safe interim hammer behaviour: one runtime root keeps its identity,
+        /// while the grid footprint is rebuilt from its remaining cells.  This
+        /// deliberately avoids creating disconnected runtime roots until the
+        /// full split lifecycle has a dedicated grid transaction.
+        /// </summary>
+        public bool TryRefreshHammerPieceGeometry(PuzzlePiece piece)
+        {
+            if (BoardSnapshot == null || piece == null ||
+                !TryGetPieceModel(piece, out PieceModel existingModel))
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null ||
+                !piece.TryCreateGridModel(level, existingModel.Id, out PieceModel refreshedModel))
+                return false;
+
+            refreshedModel.SetState(PieceState.Placed);
+            BoardSnapshot.Grid.ClearPiece(existingModel);
+            if (!BoardSnapshot.Grid.TryPlace(refreshedModel))
+            {
+                BoardSnapshot.Grid.TryPlace(existingModel);
+                Debug.LogWarning(
+                    "[GridHammer] The edited piece footprint could not be committed; restored its previous grid shape.",
+                    this);
+                return false;
+            }
+
+            if (!BoardSnapshot.TryReplacePlacedPiece(refreshedModel))
+            {
+                BoardSnapshot.Grid.ClearPiece(refreshedModel);
+                BoardSnapshot.Grid.TryPlace(existingModel);
+                Debug.LogError("[GridHammer] The edited piece model could not replace its stable id.", this);
+                return false;
+            }
+
+            return true;
+        }
+
         public bool TryMovePieceOnGrid(
             PuzzlePiece piece,
             GridCoordinate targetAnchor,

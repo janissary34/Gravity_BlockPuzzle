@@ -69,6 +69,13 @@ namespace GravityPuzzle
             }
             Instance = this;
             ApplyConfig();
+            if (shredderConfig != null && shredderConfig.WheelPrefab != null)
+                ShredderWheelPool.Configure(shredderConfig.WheelPrefab, transform, shredderConfig.WheelPoolCapacity);
+            if (shredderConfig != null && shredderConfig.CatchZonePrefab != null)
+                ShredderCatchZonePool.Configure(
+                    shredderConfig.CatchZonePrefab,
+                    transform,
+                    shredderConfig.CatchZonePoolCapacity);
         }
 
         private void OnDestroy()

@@ -480,34 +480,43 @@ namespace GravityPuzzle
                 startX - radius,
                 startX + (count - 1) * spacing + radius,
                 y + radius,
-                radius);
+                radius,
+                shredderConfig);
         }
 
         private static void CreateShredder(string name, Vector2 position, float radius, float speed)
         {
-            GameObject shredder = new GameObject(name);
+            if (!ShredderWheelPool.TryRent(out ShredderWheel wheel))
+                throw new InvalidOperationException("[ShredderPool] Pool is not configured or has insufficient capacity.");
+
+            GameObject shredder = wheel.gameObject;
+            shredder.name = name;
             shredder.transform.position = position;
-            ShredderWheel wheel = shredder.AddComponent<ShredderWheel>();
-            wheel.Build(radius, speed);
+            wheel.Configure(radius, speed);
         }
 
         private static void CreateShredderCatchZone(
             float leftEdge,
             float rightEdge,
             float topY,
-            float radius)
+            float radius,
+            ShredderConfig shredderConfig)
         {
-            GameObject catchZone = new GameObject("Shredder Catch Zone");
+            if (shredderConfig == null ||
+                !ShredderCatchZonePool.TryRent(out ShredderCatchZone zone))
+            {
+                throw new InvalidOperationException(
+                    "[ShredderPool] Catch-zone pool is not configured. Create and assign the ShredderCatchZone prefab in ShredderConfig.");
+            }
+
             float thickness = 10f;
             float width = Mathf.Max(radius * 2f, rightEdge - leftEdge + radius * .5f);
-            catchZone.transform.position = new Vector2(
+            zone.Configure(
+                new Vector2(
                 (leftEdge + rightEdge) * .5f,
-                topY - thickness * .5f);
-            BoxCollider2D catchTrigger = catchZone.AddComponent<BoxCollider2D>();
-            catchTrigger.size = new Vector2(width, thickness);
-            catchTrigger.isTrigger = true;
-            ShredderCatchZone zone = catchZone.AddComponent<ShredderCatchZone>();
-            zone.shredY = topY;
+                topY - thickness * .5f),
+                new Vector2(width, thickness),
+                topY);
         }
 
         private static void CreateObstacle(GravityLevelDefinition level, ObstacleDefinition obstacle)
@@ -584,179 +593,4 @@ namespace GravityPuzzle
         }
     }
 
-    public sealed class ShredderWheel : MonoBehaviour
-    {
-        private const int ToothCount = 12;
-        private float rotationSpeed;
-
-        public void Build(float radius, float speed)
-        {
-            rotationSpeed = speed;
-
-            CircleCollider2D trigger = gameObject.AddComponent<CircleCollider2D>();
-            trigger.radius = radius * .92f;
-            trigger.isTrigger = true;
-
-            GameObject disc = new GameObject("Shredder Disc");
-            disc.transform.SetParent(transform, false);
-            disc.transform.localScale = Vector3.one * (radius * 1.65f);
-            SpriteRenderer discRenderer = disc.AddComponent<SpriteRenderer>();
-            discRenderer.sprite = PrototypeBootstrap.GetCircleSprite();
-            discRenderer.color = new Color(.32f, .36f, .48f);
-            discRenderer.sortingOrder = 25; // In front of feeding blocks
-
-            GameObject hub = new GameObject("Shredder Hub");
-            hub.transform.SetParent(transform, false);
-            hub.transform.localScale = Vector3.one * (radius * .48f);
-            SpriteRenderer hubRenderer = hub.AddComponent<SpriteRenderer>();
-            hubRenderer.sprite = PrototypeBootstrap.GetCircleSprite();
-            hubRenderer.color = new Color(.1f, .12f, .18f);
-            hubRenderer.sortingOrder = 27; // In front of feeding blocks
-
-            for (int i = 0; i < ToothCount; i++)
-            {
-                float angle = i * 360f / ToothCount;
-                GameObject tooth = PrototypeBootstrap.CreateVisualBlock(
-                    $"Tooth {i + 1}",
-                    Vector2.zero,
-                    new Vector2(radius * .42f, radius * .24f),
-                    new Color(.75f, .8f, .92f));
-                tooth.transform.SetParent(transform, false);
-                tooth.transform.localPosition = Quaternion.Euler(0f, 0f, angle) * Vector3.up * (radius * .86f);
-                tooth.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
-                tooth.GetComponent<SpriteRenderer>().sortingOrder = 26; // In front of feeding blocks
-            }
-        }
-
-        private void Update()
-        {
-            transform.Rotate(0f, 0f, rotationSpeed * Time.deltaTime);
-        }
-
-        private void OnTriggerEnter2D(Collider2D other)
-        {
-            TryShred(other, transform.position);
-        }
-
-        internal static void TryShred(Collider2D other, Vector2 shredderCentre)
-        {
-            BlockShredder shredder = BlockShredder.Instance ?? UnityEngine.Object.FindObjectOfType<BlockShredder>();
-            if (shredder != null)
-            {
-                shredder.TryShredBlock(other, shredderCentre);
-                return;
-            }
-
-            PuzzlePiece piece = other.GetComponentInParent<PuzzlePiece>();
-            if (piece == null || !piece.TryBeginShredding())
-                return;
-
-            Vector2 contactPoint = other.ClosestPoint(shredderCentre);
-            CreateFragments(piece, contactPoint);
-            piece.ReleaseInstance();
-        }
-
-        private static void CreateFragments(PuzzlePiece piece, Vector2 contactPoint)
-        {
-            SpriteRenderer[] renderers = piece.GetComponentsInChildren<SpriteRenderer>();
-            Color pieceColor = Color.white;
-            int originalPartCount = 0;
-            foreach (SpriteRenderer renderer in renderers)
-            {
-                if (renderer.gameObject.name.StartsWith("Selected Fill") ||
-                    renderer.gameObject.name.StartsWith("White Selection Outline") ||
-                    renderer.gameObject.name.StartsWith("Ice ") ||
-                    renderer.gameObject.name.StartsWith("Block Border"))
-                    continue;
-
-                pieceColor = renderer.color;
-                originalPartCount++;
-            }
-
-            ShredderParticleEffects.SpawnBurst(contactPoint, pieceColor, 8, 4, 3);
-            int fragmentCount = Mathf.Clamp(originalPartCount * 5, 18, 40);
-            for (int i = 0; i < fragmentCount; i++)
-            {
-                float size = UnityEngine.Random.Range(.055f, .13f);
-                Color fragmentColor = Color.Lerp(pieceColor, Color.white, UnityEngine.Random.Range(0f, .2f));
-                GameObject fragment = PrototypeBootstrap.CreateVisualBlock(
-                    "Shredded Fragment",
-                    contactPoint + UnityEngine.Random.insideUnitCircle * .12f,
-                    Vector2.one * size,
-                    fragmentColor);
-                fragment.GetComponent<SpriteRenderer>().sortingOrder = 20;
-
-                Rigidbody2D body = fragment.AddComponent<Rigidbody2D>();
-                body.gravityScale = .9f;
-                body.velocity = new Vector2(
-                    UnityEngine.Random.Range(-2.0f, 2.0f),
-                    UnityEngine.Random.Range(-3.8f, -1.2f));
-                body.angularVelocity = UnityEngine.Random.Range(-720f, 720f);
-
-                ShredderFragment fragmentLife = fragment.AddComponent<ShredderFragment>();
-                fragmentLife.SetLifetime(UnityEngine.Random.Range(.65f, 1.15f));
-            }
-        }
-    }
-
-    public sealed class ShredderCatchZone : MonoBehaviour
-    {
-        public static readonly List<ShredderCatchZone> ActiveZones = new List<ShredderCatchZone>();
-
-        public float shredY;
-
-        private void OnEnable()
-        {
-            if (!ActiveZones.Contains(this))
-                ActiveZones.Add(this);
-        }
-
-        private void OnDisable()
-        {
-            ActiveZones.Remove(this);
-        }
-
-        private void OnTriggerEnter2D(Collider2D other)
-        {
-            ShredderWheel.TryShred(other, new Vector2(other.transform.position.x, shredY));
-        }
-
-        private void OnTriggerStay2D(Collider2D other)
-        {
-            // Safety net for a body which enters the large catch trigger in the same
-            // physics step as a fast rotation or contact change.
-            ShredderWheel.TryShred(other, new Vector2(other.transform.position.x, shredY));
-        }
-    }
-
-    public sealed class ShredderFragment : MonoBehaviour
-    {
-        private float lifetime;
-        private float remaining;
-        private SpriteRenderer fragmentRenderer;
-
-        public void SetLifetime(float seconds)
-        {
-            lifetime = seconds;
-            remaining = seconds;
-            fragmentRenderer = GetComponent<SpriteRenderer>();
-        }
-
-        private void Update()
-        {
-            remaining -= Time.deltaTime;
-            if (remaining <= 0f)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            if (fragmentRenderer != null && remaining < lifetime * .35f)
-            {
-                Color color = fragmentRenderer.color;
-                color.a = remaining / (lifetime * .35f);
-                fragmentRenderer.color = color;
-            }
-        }
-    }
 }

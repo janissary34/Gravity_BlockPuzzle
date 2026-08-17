@@ -1,11 +1,23 @@
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 namespace GravityPuzzle.Gameplay.Pieces
 {
+    public readonly struct RuntimePieceFragmentCell
+    {
+        public RuntimePieceFragmentCell(Vector2 localPosition, Vector2 size)
+        {
+            LocalPosition = localPosition;
+            Size = size;
+        }
+
+        public Vector2 LocalPosition { get; }
+        public Vector2 Size { get; }
+    }
+
     public static class RuntimePieceFactory
     {
-        private const string CollisionGeometryRootName = "Collision Geometry";
         private const string GridBlockName = "Grid Block";
         private const string BlockCellName = "Block Cell";
         private const string HookCellName = "Hook Cell";
@@ -60,6 +72,126 @@ namespace GravityPuzzle.Gameplay.Pieces
             return puzzlePiece;
         }
 
+        public static RuntimePieceRoot RentSplitRoot(
+            string pieceName,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale)
+        {
+            if (rootProvider == null)
+                throw new System.InvalidOperationException(
+                    "[PiecePool] RuntimePieceFactory has not been configured by RuntimePieceFactoryBootstrap.");
+
+            RuntimePieceRoot root = rootProvider.Create(pieceName);
+            root.Transform.SetParent(null, true);
+            root.Transform.position = position;
+            root.Transform.rotation = rotation;
+            root.Transform.localScale = scale;
+            ClearGeneratedContent(root.Transform);
+            ConfigureComposite(root.CompositeCollider);
+            return root;
+        }
+
+        /// <summary>
+        /// Creates a hammer fragment from the same authored BlockPiece prefab
+        /// used by normal level pieces. No live visual or collider hierarchy is
+        /// moved between roots.
+        /// </summary>
+        public static PuzzlePiece CreateFragment(
+            string pieceName,
+            GravityLevelDefinition level,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            IReadOnlyList<RuntimePieceFragmentCell> cells,
+            Color color,
+            float remainingProgress)
+        {
+            if (rootProvider == null)
+                throw new System.InvalidOperationException(
+                    "[PiecePool] RuntimePieceFactory has not been configured by RuntimePieceFactoryBootstrap.");
+
+            RuntimePieceRoot root = rootProvider.Create(pieceName);
+            root.Transform.SetParent(null, true);
+            root.Transform.position = position;
+            root.Transform.rotation = rotation;
+            root.Transform.localScale = scale;
+            ConfigureFragment(root.Piece, root.Body, root.CompositeCollider, root.Outline,
+                level, cells, color, remainingProgress);
+            return root.Piece;
+        }
+
+        /// <summary>
+        /// Reuses an existing prefab root for the retained portion of a hammer
+        /// hit. Clearing slots first also returns their VoxelShards to the pool.
+        /// </summary>
+        public static void RebuildFragment(
+            PuzzlePiece piece,
+            GravityLevelDefinition level,
+            IReadOnlyList<RuntimePieceFragmentCell> cells,
+            Color color,
+            float remainingProgress)
+        {
+            if (piece == null)
+                return;
+
+            ConfigureFragment(piece, piece.Body, piece.CompositeCollider, piece.Outline,
+                level, cells, color, remainingProgress);
+        }
+
+        public static void ResetPiecePartSlot(PiecePartSlot slot)
+        {
+            if (slot == null)
+                return;
+
+            VoxelShard[] voxels = slot.GetComponentsInChildren<VoxelShard>(true);
+            for (int index = 0; index < voxels.Length; index++)
+            {
+                if (voxels[index] != null)
+                    VoxelBlockBuilder.ReturnVoxel(voxels[index]);
+            }
+
+            slot.ResetSlot();
+        }
+
+        public static void RefreshOutline(PuzzlePiece piece)
+        {
+            if (piece == null || piece.CompositeCollider == null || piece.Outline == null)
+                return;
+
+            ConfigureOutline(piece.Outline, piece.CompositeCollider);
+        }
+
+        /// <summary>
+        /// Restores a pooled BlockPiece root to an inert prefab-ready state.
+        /// This is the one cleanup point for content generated into authored
+        /// slots, presentation tweens, colliders and rigidbody state.
+        /// </summary>
+        public static void ResetPooledPiece(PuzzlePiece piece)
+        {
+            if (piece == null)
+                return;
+
+            DOTween.Kill(piece.gameObject);
+            ClearGeneratedContent(piece.transform);
+
+            Rigidbody2D body = piece.Body;
+            if (body != null)
+            {
+                body.velocity = Vector2.zero;
+                body.angularVelocity = 0f;
+                body.simulated = false;
+            }
+
+            if (piece.CompositeCollider != null)
+                piece.CompositeCollider.enabled = false;
+            if (piece.Outline != null)
+            {
+                piece.Outline.positionCount = 0;
+                piece.Outline.enabled = false;
+            }
+        }
+
         private static void PrepareRoot(
             Transform pieceTransform,
             GravityLevelDefinition level,
@@ -85,6 +217,51 @@ namespace GravityPuzzle.Gameplay.Pieces
             body.velocity = Vector2.zero;
             body.angularVelocity = 0f;
             body.rotation = 0f;
+        }
+
+        private static void ConfigureFragment(
+            PuzzlePiece piece,
+            Rigidbody2D body,
+            CompositeCollider2D composite,
+            LineRenderer outline,
+            GravityLevelDefinition level,
+            IReadOnlyList<RuntimePieceFragmentCell> cells,
+            Color color,
+            float remainingProgress)
+        {
+            if (piece == null || body == null || composite == null || outline == null ||
+                level == null || cells == null || cells.Count == 0)
+                throw new System.ArgumentException("A hammer fragment requires a configured BlockPiece prefab and at least one cell.");
+
+            if (cells.Count > piece.PartSlotCount)
+                throw new System.InvalidOperationException(
+                    $"[PiecePool] BlockPiece prefab has {piece.PartSlotCount} part slots but hammer fragment needs {cells.Count}.");
+
+            ClearGeneratedContent(piece.transform);
+            ConfigureBody(body, level);
+            ConfigureComposite(composite);
+
+            List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(cells.Count);
+            List<SpriteRenderer> cellVisuals = new List<SpriteRenderer>(cells.Count);
+            for (int index = 0; index < cells.Count; index++)
+            {
+                RuntimePieceFragmentCell fragmentCell = cells[index];
+                PiecePartSlot slot = piece.GetPartSlot(index);
+                BoxCollider2D collider = ConfigurePiecePartSlot(
+                    slot,
+                    new PiecePartGeometry(BlockCellName, fragmentCell.LocalPosition, fragmentCell.Size),
+                    color,
+                    out SpriteRenderer visual);
+                collisionCells.Add(collider);
+                cellVisuals.Add(visual);
+            }
+
+            composite.GenerateGeometry();
+            piece.ConfigureProgressUnits(Mathf.Max(1, Mathf.CeilToInt(remainingProgress)));
+            piece.ConfigureVisualColor(color);
+            piece.ConfigureCollisionGeometry(composite, collisionCells, cellVisuals);
+            piece.ConfigureRemainingProgress(remainingProgress);
+            ConfigureOutline(outline, composite);
         }
 
         private static void ConfigureComposite(CompositeCollider2D pieceComposite)
@@ -161,12 +338,6 @@ namespace GravityPuzzle.Gameplay.Pieces
             for (int index = 0; index < partSlots.Length; index++)
                 partSlots[index].ResetSlot();
 
-            for (int index = pieceTransform.childCount - 1; index >= 0; index--)
-            {
-                Transform child = pieceTransform.GetChild(index);
-                if (child.name == CollisionGeometryRootName || child.name == GridBlockName || child.name == BlockCellName || child.name == HookCellName)
-                    Object.Destroy(child.gameObject);
-            }
         }
 
 
@@ -259,12 +430,44 @@ namespace GravityPuzzle.Gameplay.Pieces
             if (pieceComposite.pathCount <= 0)
                 return;
 
-            int pointCount = pieceComposite.GetPathPointCount(0);
+            int pathIndex = FindOuterPathIndex(pieceComposite);
+            int pointCount = pieceComposite.GetPathPointCount(pathIndex);
             outline.positionCount = pointCount;
             Vector2[] path = new Vector2[pointCount];
-            pieceComposite.GetPath(0, path);
+            pieceComposite.GetPath(pathIndex, path);
             for (int index = 0; index < pointCount; index++)
                 outline.SetPosition(index, new Vector3(path[index].x, path[index].y, 0f));
+        }
+
+        private static int FindOuterPathIndex(CompositeCollider2D pieceComposite)
+        {
+            int outerPathIndex = 0;
+            float largestArea = 0f;
+            for (int pathIndex = 0; pathIndex < pieceComposite.pathCount; pathIndex++)
+            {
+                int count = pieceComposite.GetPathPointCount(pathIndex);
+                if (count < 3)
+                    continue;
+
+                Vector2[] path = new Vector2[count];
+                pieceComposite.GetPath(pathIndex, path);
+                float signedArea = 0f;
+                for (int index = 0; index < count; index++)
+                {
+                    Vector2 current = path[index];
+                    Vector2 next = path[(index + 1) % count];
+                    signedArea += current.x * next.y - next.x * current.y;
+                }
+
+                float area = Mathf.Abs(signedArea);
+                if (area <= largestArea)
+                    continue;
+
+                largestArea = area;
+                outerPathIndex = pathIndex;
+            }
+
+            return outerPathIndex;
         }
 
         private static BoxCollider2D ConfigurePiecePartSlot(

@@ -3,7 +3,11 @@ guid: da43c23eb5a9140989e58faccb6d97ea
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - shredderConfig: {fileID: 11400000, guid: 52cdf33a2b8bb4afbb63c2343d3c8e7d, type: 2}
+  - targetUISlider: {instanceID: 0}
+  - targetUIRectTransform: {instanceID: 0}
+  - targetCamera: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

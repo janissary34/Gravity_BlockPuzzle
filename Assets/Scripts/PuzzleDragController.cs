@@ -119,8 +119,11 @@ namespace GravityPuzzle
                 fallingSpeeds[selectedPiece.GetInstanceID()] = 0f;
             }
 
+            // A registered grid piece must never fall through the legacy
+            // presentation after the planner settles. That would move its
+            // transform without moving its grid model.
             if (!AdvanceGridGravityPresentation())
-                AdvanceManualGravity();
+                AdvanceManualGravityForUnregisteredPieces();
         }
 
         private bool AdvanceGridGravityPresentation()
@@ -401,12 +404,12 @@ namespace GravityPuzzle
 
         private static bool IsInShredderApproach(PuzzlePiece piece)
         {
-            List<ShredderCatchZone> zones = ShredderCatchZone.ActiveZones;
+            IReadOnlyList<ShredderCatchZone> zones = ShredderCatchZone.ActiveZones;
             for (int i = 0; i < zones.Count; i++)
             {
                 ShredderCatchZone zone = zones[i];
                 if (zone != null &&
-                    piece.LowestColliderPoint() <= zone.shredY + ShredderCollisionGuardDistance)
+                    piece.LowestColliderPoint() <= zone.ShredY + ShredderCollisionGuardDistance)
                 {
                     return true;
                 }
@@ -415,7 +418,7 @@ namespace GravityPuzzle
             return false;
         }
 
-        private void AdvanceManualGravity()
+        private void AdvanceManualGravityForUnregisteredPieces()
         {
             if (selectedPiece == null && snappingTargetsX.Count == 0 && !hasMovingPieces)
                 return;
@@ -428,6 +431,9 @@ namespace GravityPuzzle
             foreach (PuzzlePiece piece in activePieces)
             {
                 if (piece == null || piece.Body == null)
+                    continue;
+
+                if (IsRegisteredWithGrid(piece))
                     continue;
 
                 int pieceId = piece.GetInstanceID();
@@ -493,6 +499,13 @@ namespace GravityPuzzle
             {
                 hasMovingPieces = false;
             }
+        }
+
+        private static bool IsRegisteredWithGrid(PuzzlePiece piece)
+        {
+            return PrototypeBoard.Active != null &&
+                   PrototypeBoard.Active.TryGetPieceModel(piece, out PieceModel model) &&
+                   model.IsOnBoard;
         }
 
         private void RefreshActivePieces()
@@ -837,6 +850,17 @@ namespace GravityPuzzle
             int pieceId = selectedPiece.GetInstanceID();
             fallingSpeeds[pieceId] = 0f;
 
+            // Once a piece has a board model, the grid owns both its legal
+            // position and its rollback position.  Falling through to the
+            // legacy physics snap after a rejected grid placement is what let
+            // hammer fragments visually enter occupied cells and obstacles.
+            // Capture this before committing: the model is intentionally
+            // off-board while the player is holding it.
+            bool isGridOwned = TryGetSnapshotPiece(
+                selectedPiece,
+                out _,
+                out _);
+
             // Preserve the game's authored horizontal cadence: pieces move in
             // whole board-cell steps from their own spawn alignment. The grid
             // still validates every fine cell occupied by the resulting shape.
@@ -862,6 +886,23 @@ namespace GravityPuzzle
             {
                 snappingTargetsX.Remove(pieceId);
                 MoveBody(body, restorePosition);
+                selectedPiece = null;
+                hasSelectedPieceStartAnchor = false;
+                hasMovingPieces = true;
+                return;
+            }
+
+            if (isGridOwned)
+            {
+                // A grid-owned piece must never use the old collider-based
+                // snap as a fallback.  It would update only the transform,
+                // leaving the matrix at a different position.  Keep the
+                // release rejected and leave the body at its last legal grid
+                // presentation instead of allowing an illegal overlap.
+                Debug.LogWarning(
+                    $"[GridRelease] Rejected release for '{selectedPiece.name}'. " +
+                    "Could not restore its committed grid anchor.",
+                    selectedPiece);
                 selectedPiece = null;
                 hasSelectedPieceStartAnchor = false;
                 hasMovingPieces = true;
