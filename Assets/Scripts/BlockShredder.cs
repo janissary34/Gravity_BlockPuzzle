@@ -113,6 +113,9 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Brief angular impulse applied when a piece first bites into the gears.")]
         private float shredderTumbleTorque = 1.25f;
 
+        private float maxFeedTiltAngle = 5f;
+        private float feedShakeAmplitude = 2.5f;
+
         private static PhysicsMaterial2D shredderFeedMaterial;
 
         public void Configure(float feedSpeed, float tremorIntensity)
@@ -129,7 +132,9 @@ namespace GravityPuzzle
             shredlenmeHizi = shredderConfig.FeedSpeed;
             titremeMiktari = shredderConfig.TremorIntensity;
             shredderTremorFrequency = shredderConfig.TremorFrequency;
+            feedShakeAmplitude = shredderConfig.FeedShakeAmplitude;
             shredderTumbleTorque = shredderConfig.TumbleTorque;
+            maxFeedTiltAngle = shredderConfig.MaxFeedTiltAngle;
         }
 
         // The trigger has already accepted this piece for shredding. Keep it from
@@ -205,7 +210,7 @@ namespace GravityPuzzle
                 rb.angularDrag = 6f;
 
                 // Apply a gentle initial tilt angle (-15 to +15 deg/sec)
-                float gentleTilt = Random.Range(0, 2) == 0 ? Random.Range(-15f, -6f) : Random.Range(6f, 15f);
+                float gentleTilt = Random.Range(-maxFeedTiltAngle, maxFeedTiltAngle);
                 rb.angularVelocity = gentleTilt;
                 rb.AddTorque(Random.Range(-1f, 1f) * shredderTumbleTorque, ForceMode2D.Impulse);
             }
@@ -250,6 +255,7 @@ namespace GravityPuzzle
                                      (float)Mathf.Max(1, shardList.Count * LevelProgressManager.SandGrainsPerRenderedVoxel);
             float maxTime = 4.0f;
             float elapsed = 0f;
+            float previousShakeOffsetX = 0f;
 
             // 3. The Rigidbody2D now owns position and rotation. The coroutine
             // only watches the falling voxels and converts them to shred effects.
@@ -265,15 +271,18 @@ namespace GravityPuzzle
                 if (rb != null)
                 {
                     // Apply continuous high-frequency horizontal tremor
-                    float tremorX = Mathf.Sin(Time.time * shredderTremorFrequency) * titremeMiktari;
-                    rb.velocity = new Vector2(tremorX, -shredlenmeHizi);
+                    float shakeOffsetX = Mathf.Sin(Time.time * shredderTremorFrequency) *
+                                         titremeMiktari * feedShakeAmplitude;
+                    rb.position += new Vector2(shakeOffsetX - previousShakeOffsetX, 0f);
+                    previousShakeOffsetX = shakeOffsetX;
+                    rb.velocity = new Vector2(0f, -shredlenmeHizi);
 
-                    // Gentle tilt constraint: Clamp rotation angle to stay within a natural slight tilt (-18° to +18°)
+                    // Keep the feed visually stable while it enters the cutter.
                     float currentAngle = Mathf.DeltaAngle(0f, rb.rotation);
-                    if (Mathf.Abs(currentAngle) > 18f)
+                    if (Mathf.Abs(currentAngle) > maxFeedTiltAngle)
                     {
                         rb.angularVelocity *= 0.5f;
-                        rb.rotation = Mathf.Clamp(currentAngle, -18f, 18f);
+                        rb.rotation = Mathf.Clamp(currentAngle, -maxFeedTiltAngle, maxFeedTiltAngle);
                     }
                 }
 

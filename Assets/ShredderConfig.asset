@@ -17,7 +17,9 @@ MonoBehaviour:
   feedSpeed: 2
   tremorIntensity: 0.045
   tremorFrequency: 55
+  feedShakeAmplitude: 1
   tumbleTorque: 7.5
+  maxFeedTiltAngle: 5
   physicsHandoffY: 0
   tremorDuration: 0.3
   tremorPositionRange: {x: 0, y: 0}

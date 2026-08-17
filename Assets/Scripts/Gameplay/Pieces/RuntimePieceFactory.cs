@@ -42,7 +42,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             ConfigureComposite(root.CompositeCollider);
 
             PieceRuntimeContent content = BuildRuntimeContent(
-                piece.transform,
+                root.Piece,
                 level,
                 definition);
 
@@ -118,22 +118,25 @@ namespace GravityPuzzle.Gameplay.Pieces
         }
 
         private static PieceRuntimeContent BuildRuntimeContent(
-            Transform pieceTransform,
+            PuzzlePiece puzzlePiece,
             GravityLevelDefinition level,
             PieceDefinition definition)
         {
             float fineCellSize = 1f / level.subdivisions;
             List<PiecePartGeometry> parts = BuildPartGeometry(level, definition, fineCellSize, out int progressUnits);
             GetPiecePartBounds(parts, out Vector2 minimum, out Vector2 maximum);
-            Vector2 collisionCentre = (minimum + maximum) * .5f;
-            GameObject collisionRootObject = new GameObject(CollisionGeometryRootName);
-            collisionRootObject.transform.SetParent(pieceTransform, false);
-            collisionRootObject.transform.localPosition = collisionCentre;
+            if (parts.Count > puzzlePiece.PartSlotCount)
+            {
+                throw new System.InvalidOperationException(
+                    $"[PiecePool] BlockPiece prefab has {puzzlePiece.PartSlotCount} part slots but '{definition.name}' needs {parts.Count}. Add more authored slots before Play.");
+            }
+
             List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(parts.Count);
             List<SpriteRenderer> collisionCellVisuals = new List<SpriteRenderer>(parts.Count);
             for (int index = 0; index < parts.Count; index++)
             {
-                BoxCollider2D collider = CreatePiecePart(pieceTransform, collisionRootObject.transform, collisionCentre, parts[index], definition.color, out SpriteRenderer cellVisual);
+                PiecePartSlot slot = puzzlePiece.GetPartSlot(index);
+                BoxCollider2D collider = ConfigurePiecePartSlot(slot, parts[index], definition.color, out SpriteRenderer cellVisual);
                 collisionCells.Add(collider);
                 collisionCellVisuals.Add(cellVisual);
             }
@@ -153,6 +156,10 @@ namespace GravityPuzzle.Gameplay.Pieces
                 if (voxel != null)
                     VoxelBlockBuilder.ReturnVoxel(voxel);
             }
+
+            PiecePartSlot[] partSlots = pieceTransform.GetComponentsInChildren<PiecePartSlot>(true);
+            for (int index = 0; index < partSlots.Length; index++)
+                partSlots[index].ResetSlot();
 
             for (int index = pieceTransform.childCount - 1; index >= 0; index--)
             {
@@ -260,33 +267,28 @@ namespace GravityPuzzle.Gameplay.Pieces
                 outline.SetPosition(index, new Vector3(path[index].x, path[index].y, 0f));
         }
 
-        private static BoxCollider2D CreatePiecePart(
-            Transform visualParent,
-            Transform collisionRoot,
-            Vector2 collisionCentre,
+        private static BoxCollider2D ConfigurePiecePartSlot(
+            PiecePartSlot slot,
             PiecePartGeometry part,
             Color color,
             out SpriteRenderer cellVisual)
         {
-            GameObject visual = new GameObject(part.Name);
-            visual.transform.SetParent(visualParent, false);
-            visual.transform.localPosition = part.LocalPosition;
-
-            cellVisual = visual.AddComponent<SpriteRenderer>();
+            cellVisual = slot.Visual;
+            slot.transform.localPosition = part.LocalPosition;
+            slot.transform.localScale = Vector3.one;
             cellVisual.sprite = PrototypeBootstrap.GetSquareSprite();
             cellVisual.color = color;
             cellVisual.enabled = false;
 
-            VoxelBlockBuilder.BuildVoxelGrid(visual.transform, part.Name, part.Size, color);
+            VoxelBlockBuilder.BuildVoxelGrid(slot.transform, part.Name, part.Size, color);
 
-            GameObject colliderObject = new GameObject($"{part.Name} Collider");
-            colliderObject.transform.SetParent(collisionRoot, false);
-            colliderObject.transform.localPosition = part.LocalPosition - collisionCentre;
-
-            BoxCollider2D partCollider = colliderObject.AddComponent<BoxCollider2D>();
+            BoxCollider2D partCollider = slot.Collision;
+            partCollider.transform.localPosition = part.LocalPosition;
+            partCollider.transform.localScale = Vector3.one;
             partCollider.size = part.Size;
             partCollider.edgeRadius = 0f;
             partCollider.usedByComposite = true;
+            partCollider.enabled = true;
             return partCollider;
         }
 

@@ -452,44 +452,14 @@ namespace GravityPuzzle
                 ? shredderConfig.WheelRotationSpeedMultiplier
                 : 1f;
 
-            if (level.shredders != null && level.shredders.Count > 0)
-            {
-                float largestRadius = 0f;
-                float leftEdge = float.PositiveInfinity;
-                float rightEdge = float.NegativeInfinity;
-                float highestShredderTop = float.NegativeInfinity;
-                foreach (ShredderDefinition definition in level.shredders)
-                {
-                    float authoredRadius = definition.radiusInFineCells / level.subdivisions * radiusMultiplier;
-                    largestRadius = Mathf.Max(largestRadius, authoredRadius);
-                    Vector2 position = CellWorldPosition(level, definition.cell);
-                    leftEdge = Mathf.Min(leftEdge, position.x - authoredRadius);
-                    rightEdge = Mathf.Max(rightEdge, position.x + authoredRadius);
-                    highestShredderTop = Mathf.Max(highestShredderTop, position.y + authoredRadius);
-                    float authoredSpeed = definition.clockwise
-                        ? -definition.rotationSpeed
-                        : definition.rotationSpeed;
-                    CreateShredder(
-                        definition.name,
-                        position,
-                        authoredRadius,
-                        authoredSpeed * rotationMultiplier);
-                }
-
-                CreateShredderCatchZone(
-                    leftEdge,
-                    rightEdge,
-                    highestShredderTop,
-                    Mathf.Max(.2f, largestRadius));
-                return;
-            }
-
-            int count = Mathf.Clamp(Mathf.RoundToInt(exitWidth), 1, 6);
-            float radius = Mathf.Clamp(
-                level.shredderRadius * radiusMultiplier,
-                .2f,
-                exitWidth / (count + .5f));
-            float spacing = count == 1 ? 0f : exitWidth / count;
+            float requestedRadius = Mathf.Max(.2f, level.shredderRadius * radiusMultiplier);
+            int count = Mathf.Max(1, Mathf.CeilToInt(exitWidth / (requestedRadius * 2f)));
+            // Fit an integer number of touching wheels exactly across the whole
+            // bottom exit, rather than leaving side gaps from an authored count.
+            float radius = exitWidth / (count * 2f);
+            // Centre-to-centre spacing equals a wheel diameter: teeth touch with
+            // no authored gaps, regardless of board size or old level metadata.
+            float spacing = radius * 2f;
             float startX = -(count - 1) * spacing * .5f;
             
             // Lower the shredders so their top edge (y + radius) is exactly at the bottom of the board (-halfHeight).

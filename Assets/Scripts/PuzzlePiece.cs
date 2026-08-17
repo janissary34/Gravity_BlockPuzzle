@@ -100,6 +100,7 @@ namespace GravityPuzzle
         private readonly List<SpriteRenderer> iceRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> iceSlots = new List<SpriteRenderer>();
         private Transform iceSlotsRoot;
+        private readonly List<PiecePartSlot> partSlots = new List<PiecePartSlot>();
         private Transform selectionVisualsRoot;
         private CompositeCollider2D compositeCollider;
         private LineRenderer rootOutline;
@@ -135,6 +136,9 @@ namespace GravityPuzzle
             GridFallView = GetComponent<PieceGridFallView>();
             compositeCollider = GetComponent<CompositeCollider2D>();
             rootOutline = GetComponent<LineRenderer>();
+            PiecePartSlot[] cachedPartSlots = GetComponentsInChildren<PiecePartSlot>(true);
+            for (int index = 0; index < cachedPartSlots.Length; index++)
+                partSlots.Add(cachedPartSlots[index]);
             SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
             for (int index = 0; index < renderers.Length; index++)
             {
@@ -156,6 +160,13 @@ namespace GravityPuzzle
                     break;
                 }
             }
+        }
+
+        public int PartSlotCount => partSlots.Count;
+
+        public PiecePartSlot GetPartSlot(int index)
+        {
+            return index >= 0 && index < partSlots.Count ? partSlots[index] : null;
         }
 
         private void OnEnable()

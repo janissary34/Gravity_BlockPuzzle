@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GravityPuzzle.Config
 {
@@ -13,7 +14,10 @@ namespace GravityPuzzle.Config
         [Min(0.01f)] [SerializeField] private float feedSpeed = 2f;
         [Min(0f)] [SerializeField] private float tremorIntensity = .045f;
         [Min(0f)] [SerializeField] private float tremorFrequency = 55f;
-        [Min(0f)] [SerializeField] private float tumbleTorque = 7.5f;
+        [FormerlySerializedAs("tremorVelocityMultiplier")]
+        [Min(0f)] [SerializeField] private float feedShakeAmplitude = 2.5f;
+        [Min(0f)] [SerializeField] private float tumbleTorque = .35f;
+        [Range(0f, 20f)] [SerializeField] private float maxFeedTiltAngle = 5f;
 
         [Header("Physics Handoff")]
         [SerializeField] private float physicsHandoffY;
@@ -27,7 +31,9 @@ namespace GravityPuzzle.Config
         public float FeedSpeed => feedSpeed;
         public float TremorIntensity => tremorIntensity;
         public float TremorFrequency => tremorFrequency;
+        public float FeedShakeAmplitude => feedShakeAmplitude;
         public float TumbleTorque => tumbleTorque;
+        public float MaxFeedTiltAngle => maxFeedTiltAngle;
         public float PhysicsHandoffY => physicsHandoffY;
         public float TremorDuration => tremorDuration;
         public Vector2 TremorPositionRange => tremorPositionRange;
