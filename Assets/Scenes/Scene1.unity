@@ -587,6 +587,21 @@ MonoBehaviour:
   titremeMiktari: 0.045
   shredderTremorFrequency: 55
   shredderTumbleTorque: 7.5
+--- !u!4 &254861992
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 254861990}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1196.8627, y: 1410.3712, z: -11.670037}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &254861993
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -609,21 +624,6 @@ MonoBehaviour:
   voxelSize: 0.32
   totalBlockUnitsInLevel: 0
   currentShreddedUnits: 0
---- !u!4 &254861992
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 254861990}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1196.8627, y: 1410.3712, z: -11.670037}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &269755339
 GameObject:
   m_ObjectHideFlags: 0
@@ -1466,6 +1466,12 @@ MonoBehaviour:
   boosterButton: {fileID: 484269885}
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   blueParticleVFX: {fileID: 0}
+  timerUrgencyPresentation: {fileID: 784967920}
+  timerUrgencyCanvasGroup: {fileID: 784967922}
+  urgencyFadeInDuration: 0.35
+  urgencyFadeInEase: 3
+  urgencyFadeOutDuration: 0.45
+  urgencyFadeOutEase: 2
   baseClockImage: {fileID: 1660074255}
   frozenClockImage: {fileID: 224334603}
   freezeFillDuration: 0.6
@@ -1712,6 +1718,7 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 784967921}
   - {fileID: 1584572013}
   - {fileID: 1339735205}
   - {fileID: 1863261119}
@@ -2028,6 +2035,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boosterButton: {fileID: 691598866}
   freezeDuration: 5
+  timerUrgencyVignette: {fileID: 784967920}
+  timerUrgencyCanvasGroup: {fileID: 0}
+  urgencyFadeOutDuration: 0.45
+  urgencyFadeOutEase: 2
 --- !u!114 &691598866
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2195,7 +2206,7 @@ GameObject:
   m_Component:
   - component: {fileID: 755949205}
   m_Layer: 5
-  m_Name: Boosters
+  m_Name: Old_Boosters
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2299,6 +2310,55 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 784702162}
   m_CullTransparentMesh: 1
+--- !u!1 &784967920
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 784967921}
+  - component: {fileID: 784967922}
+  m_Layer: 5
+  m_Name: Timer_effect
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &784967921
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 784967920}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 992728207}
+  m_Father: {fileID: 527882130}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &784967922
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 784967920}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &810525867
 GameObject:
   m_ObjectHideFlags: 0
@@ -3000,6 +3060,81 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 968959432}
   m_CullTransparentMesh: 1
+--- !u!1 &992728204
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 992728207}
+  - component: {fileID: 992728206}
+  - component: {fileID: 992728205}
+  m_Layer: 5
+  m_Name: TimerIcyVignette
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &992728205
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 992728204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.3137255}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: a981d982a8ab843c5869a6979b2d5e9f, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &992728206
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 992728204}
+  m_CullTransparentMesh: 1
+--- !u!224 &992728207
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 992728204}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 784967921}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 1.2499084, y: 0.014526367}
+  m_SizeDelta: {x: 877.49146, y: 2018.1985}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1032931238
 GameObject:
   m_ObjectHideFlags: 0
@@ -5363,6 +5498,7 @@ MonoBehaviour:
   blockPiecePrefab: {fileID: 9164068488278492767, guid: 7f069ed2705a74c998225ef6e254fb9e, type: 3}
   voxelShardPrefab: {fileID: 5548497357006573719, guid: 407437a00a22144cd80d53c456435d6e, type: 3}
   poolConfig: {fileID: 11400000, guid: e83a15e692e0d4a49ab874c797e92f79, type: 2}
+  pieceVisualConfig: {fileID: 0}
   poolParent: {fileID: 1938475611}
 --- !u!1 &1938475620
 GameObject:

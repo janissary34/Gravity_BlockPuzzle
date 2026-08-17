@@ -34,6 +34,18 @@ namespace GravityPuzzle
         [Tooltip("Blue particle explosion VFX system triggered when clock arrives at timer_txt.")]
         [SerializeField] private ParticleSystem blueParticleVFX;
 
+        [Header("Urgency Presentation")]
+        [Tooltip("Full-screen timer-freeze presentation root. It is shown as soon as the timer booster begins and remains visible for the freeze window.")]
+        [SerializeField] private GameObject timerUrgencyPresentation;
+
+        [Tooltip("Optional CanvasGroup on the presentation root. Assigning it enables a smooth fade instead of an instant visibility change.")]
+        [SerializeField] private CanvasGroup timerUrgencyCanvasGroup;
+
+        [Min(.01f)] [SerializeField] private float urgencyFadeInDuration = .45f;
+        [SerializeField] private Ease urgencyFadeInEase = Ease.OutSine;
+        [Min(.01f)] [SerializeField] private float urgencyFadeOutDuration = .45f;
+        [SerializeField] private Ease urgencyFadeOutEase = Ease.InSine;
+
         [Header("Clock Freeze Visual Animation")]
         [Tooltip("Base clock UI Image.")]
         [SerializeField] private Image baseClockImage;
@@ -67,6 +79,7 @@ namespace GravityPuzzle
         private Vector3 originalScale = Vector3.one;
         private Sequence activeSequence;
         private Coroutine freezeRoutine;
+        private Tween urgencyFadeTween;
 
         private float EntranceDuration => tweenConfig != null
             ? tweenConfig.TimerEntranceDuration
@@ -109,6 +122,11 @@ namespace GravityPuzzle
             {
                 frozenClockImage.fillAmount = 0f;
             }
+
+            if (timerUrgencyPresentation != null && timerUrgencyCanvasGroup == null)
+                timerUrgencyCanvasGroup = timerUrgencyPresentation.GetComponent<CanvasGroup>();
+
+            SetUrgencyPresentationVisible(false, true);
         }
 
         private void OnEnable()
@@ -142,6 +160,8 @@ namespace GravityPuzzle
             {
                 frozenClockImage.fillAmount = 0f;
             }
+
+            SetUrgencyPresentationVisible(false, true);
         }
 
         /// <summary>
@@ -310,6 +330,11 @@ namespace GravityPuzzle
             // Step 4: Arrival Event (Particle Burst + Deactivate)
             seq.AppendCallback(() =>
             {
+                // The visual freeze begins at the exact impact moment, not on
+                // button press. This keeps the vignette synchronized with the
+                // clock reaching the timer display.
+                SetUrgencyPresentationVisible(true, false);
+
                 if (blueParticleVFX != null)
                 {
                     ParticleSystem vfxInstance = blueParticleVFX;
@@ -470,7 +495,10 @@ namespace GravityPuzzle
         private IEnumerator FreezeTimerRoutine(PrototypeBoard targetBoard, float duration)
         {
             if (targetBoard == null || !targetBoard.TryPauseTimer(this))
+            {
+                SetUrgencyPresentationVisible(false, false);
                 yield break;
+            }
 
             Debug.Log($"[TimerBooster] Timer frozen for {duration} seconds!");
 
@@ -490,6 +518,63 @@ namespace GravityPuzzle
             }
 
             freezeRoutine = null;
+            SetUrgencyPresentationVisible(false, false);
+        }
+
+        private void SetUrgencyPresentationVisible(bool visible, bool immediate)
+        {
+            if (timerUrgencyPresentation == null)
+                return;
+
+            urgencyFadeTween?.Kill();
+
+            if (visible)
+            {
+                // The assigned reference is normally the inactive Timer_effect
+                // root.  Also restore inactive ancestors so this works when a
+                // nested vignette object is assigned instead.
+                for (Transform current = timerUrgencyPresentation.transform;
+                     current != null;
+                     current = current.parent)
+                {
+                    if (!current.gameObject.activeSelf)
+                        current.gameObject.SetActive(true);
+                }
+
+                if (timerUrgencyCanvasGroup == null)
+                    return;
+
+                timerUrgencyCanvasGroup.alpha = 0f;
+                urgencyFadeTween = timerUrgencyCanvasGroup
+                    .DOFade(1f, urgencyFadeInDuration)
+                    .SetEase(urgencyFadeInEase)
+                    .SetLink(timerUrgencyPresentation, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
+
+                return;
+            }
+
+            if (immediate || timerUrgencyCanvasGroup == null)
+            {
+                if (timerUrgencyCanvasGroup != null)
+                    timerUrgencyCanvasGroup.alpha = 0f;
+
+                if (timerUrgencyPresentation.activeSelf)
+                    timerUrgencyPresentation.SetActive(false);
+
+                return;
+            }
+
+            urgencyFadeTween = timerUrgencyCanvasGroup
+                .DOFade(0f, urgencyFadeOutDuration)
+                .SetEase(urgencyFadeOutEase)
+                .SetLink(timerUrgencyPresentation, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true)
+                .OnComplete(() =>
+                {
+                    if (timerUrgencyPresentation != null)
+                        timerUrgencyPresentation.SetActive(false);
+                });
         }
     }
 }
