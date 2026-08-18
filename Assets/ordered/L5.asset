@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
-  m_Name: Level_idea_1
+  m_Name: L5
   m_EditorClassIdentifier: 
   levelName: New Level
   timeLimit: 60
@@ -33,6 +33,7 @@ MonoBehaviour:
   titremeMiktari: 0.045
   pieces:
   - name: Piece 3
+    visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0
@@ -172,6 +173,7 @@ MonoBehaviour:
     - localCell: {x: -1, y: 3}
       type: 0
   - name: Piece 4
+    visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0
@@ -343,6 +345,7 @@ MonoBehaviour:
     - localCell: {x: -1, y: -1}
       type: 0
   - name: Piece 5
+    visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0
@@ -514,6 +517,7 @@ MonoBehaviour:
     - localCell: {x: 11, y: 3}
       type: 0
   - name: Piece 4
+    visualId: 
     color: {r: 1, g: 0.2980392, b: 0.33612108, a: 1}
     origin: {x: 6, y: 18}
     quarterTurns: 0
