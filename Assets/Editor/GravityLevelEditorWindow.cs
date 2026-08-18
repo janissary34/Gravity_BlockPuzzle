@@ -11,12 +11,8 @@ namespace GravityPuzzle.Editor
             Select,
             MovePiece,
             MapShape,
-            ThinMapShape,
             PaintBlock,
-            PaintHook,
-            Pin,
             Obstacle,
-            ThinObstacle,
             Shredder,
             Erase
         }
@@ -201,7 +197,7 @@ namespace GravityPuzzle.Editor
 
         private void DrawToolButtons()
         {
-            string[] labels = { "Select", "Move", "Map Cell", "Thin Map Cell", "Block", "Hook", "Pin", "Obstacle", "Thin Obstacle", "Shredder", "Erase" };
+            string[] labels = { "Select", "Move", "Map Cell", "Block", "Obstacle", "Shredder", "Erase" };
             int chosen = GUILayout.SelectionGrid((int)tool, labels, 2);
             if (chosen != (int)tool)
             {
@@ -843,20 +839,8 @@ namespace GravityPuzzle.Editor
                     if (mapShapeStrokeActive)
                         PaintBoardCell(cell, mapShapeStrokeMakesInactive);
                     break;
-                case EditTool.ThinMapShape:
-                    if (current.type == EventType.MouseDown)
-                    {
-                        mapShapeStrokeActive = true;
-                        mapShapeStrokeMakesInactive = IsFineCellActive(cell);
-                    }
-                    if (mapShapeStrokeActive)
-                        PaintFineBoardCell(cell, mapShapeStrokeMakesInactive);
-                    break;
                 case EditTool.PaintBlock: PaintBlock(cell); break;
-                case EditTool.PaintHook: PaintFineCell(cell, PieceCellType.Hook); break;
-                case EditTool.Pin: if (current.type == EventType.MouseDown) AddPin(cell); break;
                 case EditTool.Obstacle: AddObstacle(cell); break;
-                case EditTool.ThinObstacle: AddThinObstacle(cell); break;
                 case EditTool.Shredder: if (current.type == EventType.MouseDown) AddShredder(cell); break;
                 case EditTool.Erase: EraseAt(cell); break;
             }
@@ -881,15 +865,6 @@ namespace GravityPuzzle.Editor
                 if (IsInside(fineCell))
                     SetPieceCell(level.pieces[selectedPiece], fineCell, PieceCellType.Block);
             }
-            MarkDirty();
-        }
-
-        private void PaintFineCell(Vector2Int cell, PieceCellType type)
-        {
-            if (!HasSelectedPiece() || !IsInside(cell))
-                return;
-            Undo.RecordObject(level, "Paint hook");
-            SetPieceCell(level.pieces[selectedPiece], cell, type);
             MarkDirty();
         }
 
@@ -918,46 +893,6 @@ namespace GravityPuzzle.Editor
             else
             {
                 level.inactiveBoardCells.Remove(coarseCell);
-            }
-
-            ClearSelection();
-            MarkDirty();
-        }
-
-        private void PaintFineBoardCell(Vector2Int fineCell, bool makeInactive)
-        {
-            Undo.RecordObject(level, "Edit fine map shape");
-
-            if (level.inactiveFineCells == null)
-                level.inactiveFineCells = new List<Vector2Int>();
-            if (level.inactiveBoardCells == null)
-                level.inactiveBoardCells = new List<Vector2Int>();
-
-            Vector2Int coarseCell = new Vector2Int(
-                fineCell.x / level.subdivisions,
-                fineCell.y / level.subdivisions);
-
-            if (level.inactiveBoardCells.Contains(coarseCell))
-            {
-                level.inactiveBoardCells.Remove(coarseCell);
-                Vector2Int coarseOrigin = coarseCell * level.subdivisions;
-                for (int y = 0; y < level.subdivisions; y++)
-                for (int x = 0; x < level.subdivisions; x++)
-                {
-                    Vector2Int f = coarseOrigin + new Vector2Int(x, y);
-                    if (!level.inactiveFineCells.Contains(f))
-                        level.inactiveFineCells.Add(f);
-                }
-            }
-
-            if (makeInactive)
-            {
-                if (!level.inactiveFineCells.Contains(fineCell))
-                    level.inactiveFineCells.Add(fineCell);
-            }
-            else
-            {
-                level.inactiveFineCells.Remove(fineCell);
             }
 
             ClearSelection();
@@ -1034,6 +969,38 @@ namespace GravityPuzzle.Editor
             }
         }
 
+        private static Vector2Int GetPieceFineMinimumRotated(PieceDefinition piece)
+        {
+            if (piece == null || piece.cells == null || piece.cells.Count == 0)
+                return Vector2Int.zero;
+
+            Vector2Int minimum = QuarterTurnUtility.Rotate(piece.cells[0].localCell, piece.quarterTurns);
+            for (int i = 1; i < piece.cells.Count; i++)
+            {
+                Vector2Int rotated = QuarterTurnUtility.Rotate(piece.cells[i].localCell, piece.quarterTurns);
+                minimum = new Vector2Int(
+                    Mathf.Min(minimum.x, rotated.x),
+                    Mathf.Min(minimum.y, rotated.y));
+            }
+            return minimum;
+        }
+
+        private static Vector2Int GetPieceFineMaximumRotated(PieceDefinition piece)
+        {
+            if (piece == null || piece.cells == null || piece.cells.Count == 0)
+                return Vector2Int.zero;
+
+            Vector2Int maximum = QuarterTurnUtility.Rotate(piece.cells[0].localCell, piece.quarterTurns);
+            for (int i = 1; i < piece.cells.Count; i++)
+            {
+                Vector2Int rotated = QuarterTurnUtility.Rotate(piece.cells[i].localCell, piece.quarterTurns);
+                maximum = new Vector2Int(
+                    Mathf.Max(maximum.x, rotated.x),
+                    Mathf.Max(maximum.y, rotated.y));
+            }
+            return maximum;
+        }
+
         private void SelectAt(Vector2Int cell)
         {
             for (int i = level.pieces.Count - 1; i >= 0; i--)
@@ -1043,20 +1010,18 @@ namespace GravityPuzzle.Editor
                 if (piece.cells.Exists(c => c.localCell == local))
                 {
                     SelectPiece(i);
-                    dragOffset = piece.origin - cell;
+                    Vector2Int rotMin = GetPieceFineMinimumRotated(piece);
+                    Vector2Int pieceBoundMin = piece.origin + rotMin;
+                    int subs = Mathf.Max(1, level.subdivisions);
+                    Vector2Int coarsePieceAnchor = new Vector2Int(
+                        Mathf.FloorToInt((float)pieceBoundMin.x / subs) * subs,
+                        Mathf.FloorToInt((float)pieceBoundMin.y / subs) * subs);
+                    Vector2Int coarseClick = new Vector2Int(
+                        Mathf.FloorToInt((float)cell.x / subs) * subs,
+                        Mathf.FloorToInt((float)cell.y / subs) * subs);
+                    dragOffset = coarsePieceAnchor - coarseClick;
                     return;
                 }
-            }
-
-            int pin = level.pins.FindIndex(p => p.cell == cell);
-            if (pin >= 0)
-            {
-                selectedPiece = -1;
-                selectedObstacle = -1;
-                selectedShredder = -1;
-                selectedPin = pin;
-                dragOffset = level.pins[pin].cell - cell;
-                return;
             }
 
             int shredder = FindShredderAt(cell);
@@ -1084,13 +1049,16 @@ namespace GravityPuzzle.Editor
             {
                 Undo.RecordObject(level, "Move puzzle piece");
                 PieceDefinition piece = level.pieces[selectedPiece];
-                piece.origin = targetFineCell;
-                MarkDirty();
-            }
-            else if (selectedPin >= 0 && selectedPin < level.pins.Count)
-            {
-                Undo.RecordObject(level, "Move pin");
-                level.pins[selectedPin].cell = targetFineCell;
+                int subs = Mathf.Max(1, level.subdivisions);
+                Vector2Int snappedBoundMin = new Vector2Int(
+                    Mathf.RoundToInt((float)targetFineCell.x / subs) * subs,
+                    Mathf.RoundToInt((float)targetFineCell.y / subs) * subs);
+                Vector2Int rotMin = GetPieceFineMinimumRotated(piece);
+                Vector2Int rotMax = GetPieceFineMaximumRotated(piece);
+                Vector2Int newOrigin = snappedBoundMin - rotMin;
+                newOrigin.x = Mathf.Clamp(newOrigin.x, -rotMin.x, level.FineColumns - 1 - rotMax.x);
+                newOrigin.y = Mathf.Clamp(newOrigin.y, -rotMin.y, level.FineRows - 1 - rotMax.y);
+                piece.origin = newOrigin;
                 MarkDirty();
             }
             else if (selectedObstacle >= 0 && selectedObstacle < level.obstacles.Count)
@@ -1111,20 +1079,6 @@ namespace GravityPuzzle.Editor
             }
         }
 
-        private void AddPin(Vector2Int cell)
-        {
-            if (!IsInside(cell))
-                return;
-
-            Undo.RecordObject(level, "Add pin");
-            level.pins.Add(new PinDefinition { name = $"Pin {level.pins.Count + 1}", cell = cell });
-            selectedPiece = -1;
-            selectedObstacle = -1;
-            selectedShredder = -1;
-            selectedPin = level.pins.Count - 1;
-            MarkDirty();
-        }
-
         private void AddObstacle(Vector2Int cell)
         {
             if (!IsInside(cell))
@@ -1141,29 +1095,6 @@ namespace GravityPuzzle.Editor
                 usesGridCells = true,
                 gridCell = gridCell,
                 sizeInGridCells = Vector2Int.one
-            });
-            selectedPiece = -1;
-            selectedPin = -1;
-            selectedShredder = -1;
-            selectedObstacle = level.obstacles.Count - 1;
-            MarkDirty();
-        }
-
-        private void AddThinObstacle(Vector2Int cell)
-        {
-            if (!IsInside(cell))
-                return;
-
-            if (level.obstacles.Exists(o => !o.usesGridCells && o.centreCell == cell))
-                return;
-
-            Undo.RecordObject(level, "Add thin obstacle");
-            level.obstacles.Add(new ObstacleDefinition
-            {
-                name = $"Thin Obstacle {level.obstacles.Count + 1}",
-                usesGridCells = false,
-                centreCell = cell,
-                sizeInFineCells = Vector2Int.one
             });
             selectedPiece = -1;
             selectedPin = -1;

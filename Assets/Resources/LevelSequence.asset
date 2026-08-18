@@ -13,13 +13,20 @@ MonoBehaviour:
   m_Name: LevelSequence
   m_EditorClassIdentifier: 
   levels:
-  - {fileID: 11400000, guid: b9d5c39cfaaee4a048ec8291d531b9ee, type: 2}
-  - {fileID: 11400000, guid: af9e38a84b90a4628b136e269dd07204, type: 2}
-  - {fileID: 11400000, guid: 33a56a306bb4b4925ad903cf9f29b873, type: 2}
-  - {fileID: 11400000, guid: cdf3a39d1480744b2918ed332c957a0a, type: 2}
-  - {fileID: 11400000, guid: f85ac01dc94214b66b8455d4c96f698f, type: 2}
-  - {fileID: 11400000, guid: 86e77f71298564850b60e2f562f9504e, type: 2}
+  - {fileID: 11400000, guid: 8ee35108573fa4971a18df2b5321ee37, type: 2}
+  - {fileID: 11400000, guid: 5138be799e96242f787b52971b2a245e, type: 2}
+  - {fileID: 11400000, guid: 0d92c6ebf540942cd915e1b3fafe6309, type: 2}
+  - {fileID: 11400000, guid: 8bfdf7eb902fb488f9e60ac90e9de040, type: 2}
+  - {fileID: 11400000, guid: 15b6cb737c904455680f5b0434a3853a, type: 2}
   - {fileID: 11400000, guid: b9d5c39cfaaee4a048ec8291d531b9ee, type: 2}
   - {fileID: 11400000, guid: 25f6dcd2f2e7049af8756ca90e18d8dd, type: 2}
-  - {fileID: 11400000, guid: c36eebbef23294004a5ae2a35c02c86e, type: 2}
   - {fileID: 11400000, guid: f363abb2c20f945dd93c86531c26f1c3, type: 2}
+  - {fileID: 11400000, guid: a680218896745459b8e0b1493c77d4b4, type: 2}
+  - {fileID: 11400000, guid: b5e3720685a394323a446bc973ebd376, type: 2}
+  - {fileID: 11400000, guid: cae69c5f495ac4cd09abff9dd3496711, type: 2}
+  - {fileID: 11400000, guid: 9707f3f01e5094ef889f255c394795af, type: 2}
+  - {fileID: 11400000, guid: 82a38d31576554f2486dffce9de48689, type: 2}
+  - {fileID: 11400000, guid: 657722b56411447fb9b6d7f8422b6ae5, type: 2}
+  - {fileID: 11400000, guid: f85ac01dc94214b66b8455d4c96f698f, type: 2}
+  - {fileID: 11400000, guid: 86e77f71298564850b60e2f562f9504e, type: 2}
+  - {fileID: 11400000, guid: cdf3a39d1480744b2918ed332c957a0a, type: 2}

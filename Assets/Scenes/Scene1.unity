@@ -1888,6 +1888,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: caea5bcd7e3c94c7d9a168210a18f715, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  tweenConfig: {fileID: 0}
   pressScale: 0.9
   pressDuration: 0.1
   pressEase: 6
@@ -2371,6 +2372,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: caea5bcd7e3c94c7d9a168210a18f715, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  tweenConfig: {fileID: 0}
   pressScale: 0.9
   pressDuration: 0.1
   pressEase: 6
@@ -2792,6 +2794,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: caea5bcd7e3c94c7d9a168210a18f715, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  tweenConfig: {fileID: 0}
   pressScale: 0.9
   pressDuration: 0.1
   pressEase: 6
@@ -2925,7 +2928,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: a981d982a8ab843c5869a6979b2d5e9f, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 1308214a49df94f089046a0c9877e0bb, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3342,7 +3345,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!198 &1305452136
 ParticleSystem:
   m_ObjectHideFlags: 0
@@ -8519,6 +8522,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: caea5bcd7e3c94c7d9a168210a18f715, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  tweenConfig: {fileID: 0}
   pressScale: 0.9
   pressDuration: 0.1
   pressEase: 6
@@ -8728,7 +8732,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!225 &1550275967
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -8934,6 +8938,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: caea5bcd7e3c94c7d9a168210a18f715, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  tweenConfig: {fileID: 0}
   pressScale: 0.9
   pressDuration: 0.1
   pressEase: 6
