@@ -8,7 +8,6 @@ namespace GravityPuzzle
     {
         private static Transform poolRoot;
         private static readonly Queue<GameObject> flyingVoxelUiPool = new Queue<GameObject>();
-        private static readonly Queue<GameObject> sandGrainPool = new Queue<GameObject>();
         private static readonly Queue<GameObject> particleCubePool = new Queue<GameObject>();
 
         private static void EnsurePoolRoot()
@@ -55,46 +54,6 @@ namespace GravityPuzzle
             if (poolRoot != null)
                 obj.transform.SetParent(poolRoot, false);
             flyingVoxelUiPool.Enqueue(obj);
-        }
-
-        // ──────────────────────────────────────────────────────────
-        //  Sand Grain Pool (ShredderVoxelHandoff)
-        // ──────────────────────────────────────────────────────────
-
-        public static GameObject GetSandGrain(Vector2 position, Vector2 size, Color color)
-        {
-            EnsurePoolRoot();
-            GameObject obj = null;
-            while (sandGrainPool.Count > 0)
-            {
-                obj = sandGrainPool.Dequeue();
-                if (obj != null)
-                {
-                    obj.transform.SetParent(null, false);
-                    obj.transform.position = position;
-                    obj.transform.localScale = new Vector3(size.x, size.y, 1f);
-                    obj.transform.localRotation = Quaternion.identity;
-                    SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
-                    if (sr != null) sr.color = color;
-                    obj.SetActive(true);
-                    return obj;
-                }
-            }
-
-            obj = PrototypeBootstrap.CreateVisualBlock("Shredder Sand Grain", position, size, color);
-            obj.AddComponent<Rigidbody2D>();
-            obj.AddComponent<ShredderVoxelHandoff>();
-            return obj;
-        }
-
-        public static void ReturnSandGrain(GameObject obj)
-        {
-            if (obj == null) return;
-            EnsurePoolRoot();
-            obj.SetActive(false);
-            if (poolRoot != null)
-                obj.transform.SetParent(poolRoot, false);
-            sandGrainPool.Enqueue(obj);
         }
 
         // ──────────────────────────────────────────────────────────

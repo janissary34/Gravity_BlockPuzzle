@@ -803,13 +803,19 @@ namespace GravityPuzzle
             if (level == null || !TryGetPieceModel(fragments[0], out PieceModel sourceModel))
                 return false;
 
+            // The retained runtime root keeps the source id.  Leaving the old
+            // model in the snapshot and assigning every fragment a new id made
+            // the grid and visual roots disagree after a hammer split.
             List<PieceModel> fragmentModels = new List<PieceModel>(fragments.Count);
             int nextId = BoardSnapshot.NextPieceId;
             for (int index = 0; index < fragments.Count; index++)
             {
                 PuzzlePiece fragment = fragments[index];
+                int fragmentId = index == 0
+                    ? sourceModel.Id
+                    : nextId + index - 1;
                 if (fragment == null ||
-                    !fragment.TryCreateGridModel(level, nextId + index, out PieceModel model))
+                    !fragment.TryCreateGridModel(level, fragmentId, out PieceModel model))
                     return false;
 
                 model.SetState(initialState);
@@ -833,16 +839,30 @@ namespace GravityPuzzle
                 return false;
             }
 
-            for (int index = 0; index < fragmentModels.Count; index++)
+            // Replace the source entry first, then append only newly created
+            // roots. This makes the snapshot's model id match the retained
+            // PuzzlePiece and lets gravity resolve every remainder separately.
+            if (!BoardSnapshot.TryReplacePlacedPiece(fragmentModels[0]))
             {
-                if (!BoardSnapshot.TryRegisterPlacedPiece(fragmentModels[index]))
-                {
-                    Debug.LogError("[GridSplit] Registered fragment id sequence was invalid.", this);
-                    return false;
-                }
+                for (int rollbackIndex = 0; rollbackIndex < fragmentModels.Count; rollbackIndex++)
+                    BoardSnapshot.Grid.ClearPiece(fragmentModels[rollbackIndex]);
 
-                fragments[index].ConfigureSourcePieceId(fragmentModels[index].Id);
+                BoardSnapshot.Grid.TryPlace(sourceModel);
+                Debug.LogError("[GridSplit] The retained fragment could not replace its source model.", this);
+                return false;
             }
+
+            for (int index = 1; index < fragmentModels.Count; index++)
+            {
+                if (BoardSnapshot.TryRegisterPlacedPiece(fragmentModels[index]))
+                    continue;
+
+                Debug.LogError("[GridSplit] Registered fragment id sequence was invalid.", this);
+                return false;
+            }
+
+            for (int index = 0; index < fragmentModels.Count; index++)
+                fragments[index].ConfigureSourcePieceId(fragmentModels[index].Id);
 
             return true;
         }
@@ -883,6 +903,7 @@ namespace GravityPuzzle
                 return false;
             }
 
+            PuzzleDragController.WakeUpGravity();
             return true;
         }
 

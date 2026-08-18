@@ -74,6 +74,14 @@ namespace GravityPuzzle
             ? tweenConfig.GemUiPunchDuration
             : uiPunchDuration;
 
+        private int UiPunchVibrato => tweenConfig != null
+            ? tweenConfig.GemUiPunchVibrato
+            : 5;
+
+        private float UiPunchElasticity => tweenConfig != null
+            ? tweenConfig.GemUiPunchElasticity
+            : .5f;
+
         private void Awake()
         {
             if (rb2D == null) rb2D = GetComponent<Rigidbody2D>();
@@ -198,7 +206,7 @@ namespace GravityPuzzle
 
             if (targetRectTransform != null)
             {
-                targetRectTransform.DOPunchScale(uiPunchScale, UiPunchDuration, 5, 0.5f)
+                targetRectTransform.DOPunchScale(uiPunchScale, UiPunchDuration, UiPunchVibrato, UiPunchElasticity)
                     .SetLink(targetRectTransform.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
             }

@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using GravityPuzzle.Config;
 
 namespace GravityPuzzle
 {
@@ -38,15 +39,7 @@ namespace GravityPuzzle
         [Header("Rocket Visual & Launch Settings")]
         [Tooltip("Optional rocket visual prefab. A runtime procedurally generated rocket is used when omitted.")]
         [SerializeField] private GameObject rocketVisualPrefab;
-
-        [SerializeField, Tooltip("Duration in seconds for rocket to travel from bottom off-screen to piece center.")]
-        private float entranceDuration = 0.75f;
-
-        [SerializeField, Tooltip("Pause duration in seconds at piece center before blasting off.")]
-        private float piecePauseDuration = 1.0f;
-
-        [SerializeField, Tooltip("Rocket launch animation duration in seconds.")]
-        private float launchDuration = 0.55f;
+        [SerializeField] private TweenConfig tweenConfig;
 
         [SerializeField, Tooltip("Rocket scale multiplier.")]
         private Vector3 rocketScale = Vector3.one;
@@ -223,13 +216,15 @@ namespace GravityPuzzle
 
         private IEnumerator PlayRocketLaunchSequence(PuzzlePiece piece)
         {
-            if (piece == null)
+            if (piece == null || tweenConfig == null)
             {
+                if (tweenConfig == null)
+                    Debug.LogError("[RocketBooster] TweenConfig is required for rocket presentation.", this);
                 launchInProgress = false;
                 yield break;
             }
 
-            piece.TryBeginShredding();
+            piece.TryBeginShredderHandoff();
             piece.SetSelected(false);
             piece.PrepareForShredderPhysics();
 
@@ -249,9 +244,9 @@ namespace GravityPuzzle
             rocket.transform.rotation = Quaternion.identity;
             SetSortingOrder(rocket, rocketSortingOrder);
 
-            // 2. Animate rocket from screen bottom up to piece center (entranceDuration)
-            Tween entranceTween = rocket.transform.DOMove(centerPos, entranceDuration)
-                .SetEase(Ease.OutCubic)
+            // 2. Animate rocket from screen bottom up to piece center.
+            Tween entranceTween = rocket.transform.DOMove(centerPos, tweenConfig.RocketEntranceDuration)
+                .SetEase(tweenConfig.RocketEntranceEase)
                 .SetLink(rocket, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
             yield return entranceTween.WaitForCompletion();
@@ -265,11 +260,15 @@ namespace GravityPuzzle
 
             // 3. Attach piece transform to rocket at piece center
             piece.transform.SetParent(rocket.transform, true);
+            // The carrier must remain visibly in front of the carried piece
+            // for the entire flight.  The piece keeps a high order so it stays
+            // above the board, while the rocket is one step higher.
+            SetPieceSortingOrder(piece, rocketSortingOrder - 1);
 
-            // 4. Pause at piece center for piecePauseDuration (with engine ignition micro-rumble)
+            // 4. Pause at piece center for target-pause duration (with engine ignition micro-rumble)
             Vector3 initialPos = rocket.transform.position;
             float elapsed = 0f;
-            while (piece != null && rocket != null && elapsed < piecePauseDuration)
+            while (piece != null && rocket != null && elapsed < tweenConfig.RocketTargetPauseDuration)
             {
                 elapsed += Time.deltaTime;
                 rocket.transform.position = initialPos + new Vector3(Random.Range(-0.06f, 0.06f), Random.Range(-0.03f, 0.03f), 0f);
@@ -288,10 +287,9 @@ namespace GravityPuzzle
             Color pieceColor = piece.VisualColor;
             float targetY = camY + camOrtho + 7f;
 
-            ShredderParticleEffects.SpawnBurst(rocket.transform.position, pieceColor, 25, 14, 10);
 
-            Tween launchTween = rocket.transform.DOMoveY(targetY, launchDuration)
-                .SetEase(Ease.InQuad)
+            Tween launchTween = rocket.transform.DOMoveY(targetY, tweenConfig.RocketLaunchDuration)
+                .SetEase(tweenConfig.RocketLaunchEase)
                 .SetLink(rocket, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
             yield return launchTween.WaitForCompletion();
@@ -312,13 +310,11 @@ namespace GravityPuzzle
             // 7. Award progress & despawn
             if (LevelProgressManager.Instance != null && piece != null)
             {
-                int grainCount = 10;
-                float progressPerGrain = piece.RemainingProgressUnits / Mathf.Max(1, grainCount);
-                ShredderVoxelHandoff.SpawnStream(
+                LevelProgressManager.Instance.SpawnFlyingVoxelBurst(
                     new Vector2(piecePos.x, targetY),
                     pieceColor,
-                    grainCount,
-                    progressPerGrain);
+                    piece.RemainingProgressUnits,
+                    piece.ActiveVoxelPresentationCount);
             }
 
             if (piece != null)
@@ -440,6 +436,22 @@ namespace GravityPuzzle
                     c.sortingOrder = order;
                 }
             }
+        }
+
+        private static void SetPieceSortingOrder(PuzzlePiece piece, int order)
+        {
+            if (piece == null)
+                return;
+
+            SpriteRenderer[] renderers = piece.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int index = 0; index < renderers.Length; index++)
+            {
+                if (renderers[index] != null)
+                    renderers[index].sortingOrder = order;
+            }
+
+            if (piece.Outline != null)
+                piece.Outline.sortingOrder = order + 1;
         }
 
         private void EnsureReferences()

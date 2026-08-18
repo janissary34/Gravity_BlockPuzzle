@@ -103,7 +103,7 @@ namespace GravityPuzzle
         private void OnTriggerStay2D(Collider2D other)
         {
             // Covers a fast body that is already overlapping the gear trigger when
-            // the simulation advances; TryBeginShredding makes this idempotent.
+            // the simulation advances; the handoff guard makes this idempotent.
             TryShredBlock(other, transform.position);
         }
 
@@ -150,7 +150,7 @@ namespace GravityPuzzle
         public void TryShredBlock(Collider2D targetCollider, Vector2 shredderCenter)
         {
             PuzzlePiece piece = targetCollider.GetComponentInParent<PuzzlePiece>();
-            if (piece == null || !piece.TryBeginShredding())
+            if (piece == null || !piece.TryBeginShredderHandoff())
                 return;
 
             StartCoroutine(FeedPieceIntoShredder(piece, shredderCenter.y));
@@ -298,15 +298,12 @@ namespace GravityPuzzle
                             grinderExitSeamY);
                         Color shardColor = tileColor;
 
-                        // One lightweight grain per rendered voxel. It only simulates
-                        // in the small space below the grinder, then hands off to UI.
-                        ShredderVoxelHandoff.SpawnStream(
+                        // The already pooled shard owns its post-grinder presentation
+                        // and returns itself to VoxelBlockBuilder when its UI flight ends.
+                        shard.BeginProgressHandoff(
                             exitSeamPosition,
                             shardColor,
-                            LevelProgressManager.SandGrainsPerRenderedVoxel,
-                            progressPerGrain);
-
-                        shard.Recycle();
+                            progressPerGrain * LevelProgressManager.SandGrainsPerRenderedVoxel);
                     }
                 }
 
@@ -335,11 +332,14 @@ namespace GravityPuzzle
                         if (LevelProgressManager.Instance != null && shardList.Count == 0)
                         {
                             Debug.Log($"[Shredder] PuzzlePiece {piece.GetInstanceID()} fallback color=#{ColorUtility.ToHtmlStringRGBA(Opaque(tileColor))}");
-                            ShredderVoxelHandoff.SpawnStream(
+                            // Legacy render-only pieces have no VoxelShard to animate.
+                            // Preserve their progress without manufacturing a temporary
+                            // runtime grain; the regular UI-flight presenter owns it.
+                            LevelProgressManager.Instance.SpawnFlyingVoxel(
                                 exitSeamPosition,
                                 Opaque(tileColor),
-                                1,
-                                piece.RemainingProgressUnits);
+                                piece.RemainingProgressUnits,
+                                null);
                         }
                     }
                     else
@@ -408,139 +408,6 @@ namespace GravityPuzzle
         {
             targetUISlider = slider;
             targetUIRectTransform = targetRect != null ? targetRect : (slider != null ? slider.GetComponent<RectTransform>() : null);
-        }
-    }
-
-    /// <summary>
-    /// A deliberately small and short-lived world-physics phase for a shred voxel.
-    /// It has no collider and exists only below the grinder before its UI hand-off.
-    /// </summary>
-    [RequireComponent(typeof(SpriteRenderer), typeof(Rigidbody2D))]
-    public sealed class ShredderVoxelHandoff : MonoBehaviour
-    {
-        private static Material unlitMaterial;
-
-        private Rigidbody2D body;
-        private SpriteRenderer spriteRenderer;
-        private float handoffY;
-        private float elapsed;
-        private bool handedOff;
-        private Color voxelColor;
-        private float progressAmount;
-
-        private void Awake()
-        {
-            spriteRenderer = GetComponent<SpriteRenderer>();
-            body = GetComponent<Rigidbody2D>();
-        }
-
-        public static void SpawnStream(Vector2 position, Color color, int grainCount, float progressPerGrain)
-        {
-            for (int i = 0; i < Mathf.Max(1, grainCount); i++)
-            {
-                // Keep the spawn point on the grinder seam. A small horizontal
-                // variation spreads grains across the tooth that cut the block,
-                // but never creates a second artificial vertical spawn line.
-                Vector2 offset = new Vector2(UnityEngine.Random.Range(-.13f, .13f), 0f);
-                Vector2 size = Vector2.one * UnityEngine.Random.Range(.08f, .12f);
-                GameObject grain = PuzzleObjectPool.GetSandGrain(position + offset, size, color);
-
-                // Each grain falls to its own depth before transitioning to the
-                // UI flight. This removes the old invisible flat landing line.
-                float dropDepth = UnityEngine.Random.Range(-1.2f, -.5f);
-                float individualHandoffY = position.y + dropDepth;
-                ShredderVoxelHandoff handoff = grain.GetComponent<ShredderVoxelHandoff>();
-                if (handoff == null) handoff = grain.AddComponent<ShredderVoxelHandoff>();
-                handoff.Initialize(
-                    color,
-                    individualHandoffY,
-                    UnityEngine.Random.Range(0f, .12f),
-                    progressPerGrain);
-            }
-        }
-
-        private float launchDelay;
-        private float physicsElapsed;
-        private bool physicsStarted;
-
-        public void Initialize(Color color, float targetHandoffY, float delay, float grainProgressAmount)
-        {
-            voxelColor = new Color(color.r, color.g, color.b, 1f);
-            handoffY = targetHandoffY;
-            launchDelay = delay;
-            progressAmount = grainProgressAmount;
-            elapsed = 0f;
-            physicsElapsed = 0f;
-            physicsStarted = false;
-            handedOff = false;
-
-            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.enabled = true;
-                spriteRenderer.color = voxelColor;
-                spriteRenderer.maskInteraction = SpriteMaskInteraction.None;
-                spriteRenderer.sortingOrder = 4;
-                if (unlitMaterial == null)
-                {
-                    Shader shader = Shader.Find("Sprites/Default");
-                    if (shader != null)
-                        unlitMaterial = new Material(shader) { name = "Shredder Voxel Unlit" };
-                }
-                if (unlitMaterial != null)
-                    spriteRenderer.sharedMaterial = unlitMaterial;
-            }
-
-            if (body == null) body = GetComponent<Rigidbody2D>();
-            if (body == null) body = gameObject.AddComponent<Rigidbody2D>();
-            body.simulated = false;
-            body.gravityScale = .42f;
-            body.velocity = new Vector2(UnityEngine.Random.Range(-.22f, .22f), UnityEngine.Random.Range(-1.35f, -1.0f));
-            body.angularVelocity = UnityEngine.Random.Range(-220f, 220f);
-        }
-
-        private void Update()
-        {
-            if (handedOff)
-                return;
-
-            elapsed += Time.deltaTime;
-            if (!physicsStarted)
-            {
-                if (elapsed < launchDelay)
-                    return;
-
-                physicsStarted = true;
-                if (body != null) body.simulated = true;
-            }
-
-            physicsElapsed += Time.deltaTime;
-            // The timeout is only a safety net; the randomized handoff depth is
-            // what determines where each voxel begins its upward UI curve.
-            if (transform.position.y <= handoffY || physicsElapsed >= 1.25f)
-                HandOffToUi();
-        }
-
-        private void HandOffToUi()
-        {
-            if (handedOff)
-                return;
-
-            handedOff = true;
-            if (body != null)
-                body.simulated = false;
-            if (spriteRenderer != null)
-                spriteRenderer.enabled = false;
-
-            LevelProgressManager manager = LevelProgressManager.Instance;
-            if (manager != null)
-            {
-                manager.SpawnFlyingVoxel(transform.position, voxelColor, progressAmount, () => PuzzleObjectPool.ReturnSandGrain(gameObject));
-            }
-            else
-            {
-                PuzzleObjectPool.ReturnSandGrain(gameObject);
-            }
         }
     }
 

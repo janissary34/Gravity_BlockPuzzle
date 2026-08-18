@@ -56,6 +56,11 @@ namespace GravityPuzzle
         public int SourcePieceId { get; private set; } = -1;
         /// <summary>Authored board-block units represented by this draggable piece.</summary>
         public int ProgressUnits { get; private set; } = 1;
+        /// <summary>Number of visible voxel shards currently represented by this root.</summary>
+        public int ActiveVoxelPresentationCount => Mathf.Max(
+            1,
+            (collisionCellVisuals != null ? collisionCellVisuals.Count : 0) *
+            VoxelBlockBuilder.Subdivisions * VoxelBlockBuilder.Subdivisions);
         /// <summary>Unclaimed progress remaining after cell-level booster hits.</summary>
         public float RemainingProgressUnits { get; private set; } = 1f;
         /// <summary>Source colour from the authored piece definition.</summary>
@@ -694,6 +699,16 @@ namespace GravityPuzzle
             if (targetIndex < 0)
                 return false;
 
+            // Keep the complete pre-hit shape until the grid accepts the new
+            // topology. A damaged visual with the old grid footprint is never
+            // a valid gameplay state: it causes suspended fragments, overlap
+            // with obstacles and an incomplete selection outline.
+            List<int> preHitIndices = new List<int>(collisionCells.Count);
+            for (int index = 0; index < collisionCells.Count; index++)
+                preHitIndices.Add(index);
+            List<RuntimePieceFragmentCell> preHitCells = BuildFragmentCells(preHitIndices);
+            float remainingBeforeHit = RemainingProgressUnits;
+
             SpriteRenderer targetVisual = collisionCellVisuals[targetIndex];
             int cellCountBeforeRemoval = Mathf.Max(1, collisionCellVisuals.Count);
             removedCell = new RemovedCell(
@@ -741,25 +756,62 @@ namespace GravityPuzzle
             }
             else
             {
-                // Interim hammer rule: preserve a single puzzle root even when
-                // the removed cell disconnects its silhouette.  The grid
-                // receives the exact edited footprint, so no other piece can
-                // enter the visible shape.  Independent fragment spawning is
-                // deferred until its lifecycle/grid transaction is rebuilt.
-                PrototypeBoard.Active?.TryRefreshHammerPieceGeometry(this);
-                ApplyCollisionProfile();
-                PrototypeBoard board = PrototypeBoard.Active;
-                RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+                List<List<int>> components = FindConnectedComponents();
+                bool topologyCommitted;
+                if (components.Count > 1)
+                {
+                    topologyCommitted = SplitDisconnectedCells(components);
+                }
+                else
+                {
+                    topologyCommitted = PrototypeBoard.Active != null &&
+                        PrototypeBoard.Active.TryRefreshHammerPieceGeometry(this);
+                }
+
+                if (!topologyCommitted)
+                {
+                    RestoreRejectedHammerHit(preHitCells, remainingBeforeHit);
+                    removedCell = default;
+                    return false;
+                }
+
+                if (components.Count <= 1)
+                {
+                    ApplyCollisionProfile();
+                    PrototypeBoard board = PrototypeBoard.Active;
+                    RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+                }
             }
 
             return true;
         }
 
-        private void SplitDisconnectedCells()
+        private void RestoreRejectedHammerHit(
+            IReadOnlyList<RuntimePieceFragmentCell> preHitCells,
+            float remainingBeforeHit)
         {
-            List<List<int>> components = FindConnectedComponents();
-            if (components.Count <= 1)
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null || preHitCells == null || preHitCells.Count == 0)
                 return;
+
+            RuntimePieceFactory.RebuildFragment(
+                this,
+                level,
+                preHitCells,
+                VisualColor,
+                remainingBeforeHit);
+            ConfigureRemainingProgress(remainingBeforeHit);
+            SetSelected(false);
+            ApplyCollisionProfile();
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+        }
+
+        private bool SplitDisconnectedCells(List<List<int>> components)
+        {
+            if (components == null || components.Count <= 1)
+                return false;
 
             int largestIndex = 0;
             for (int i = 1; i < components.Count; i++)
@@ -782,7 +834,7 @@ namespace GravityPuzzle
             List<PuzzlePiece> fragments = new List<PuzzlePiece>(components.Count);
             GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
             if (level == null)
-                return;
+                return false;
 
             float primaryProgress = remainingBeforeSplit * components[0].Count / totalCellCount;
             RuntimePieceFactory.RebuildFragment(
@@ -808,8 +860,21 @@ namespace GravityPuzzle
                 fragments.Add(fragment);
             }
 
-            PrototypeBoard.Active?.TryRegisterHammerFragments(fragments, PieceState.Falling);
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board == null || !board.TryRegisterHammerFragments(fragments, PieceState.Falling))
+            {
+                // The caller restores the complete pre-hit source root. Do not
+                // rebuild this root as disconnected presentation geometry.
+                for (int index = 1; index < fragments.Count; index++)
+                {
+                    if (fragments[index] != null)
+                        fragments[index].ReleaseInstance();
+                }
+                return false;
+            }
+
             PuzzleDragController.WakeUpGravity();
+            return true;
         }
 
         private List<List<int>> FindConnectedComponents()
@@ -900,14 +965,30 @@ namespace GravityPuzzle
                 Body.WakeUp();
         }
 
-        public bool TryBeginShredding()
+        /// <summary>
+        /// Atomically hands this piece from normal board ownership to the
+        /// shredder. Its current grid footprint is reserved before the visual
+        /// feed begins, so no gravity move or placement can enter it.
+        /// </summary>
+        public bool TryBeginShredderHandoff()
         {
             if (beingShredded)
                 return false;
 
             beingShredded = true;
             SetSelected(false);
-            PrototypeBoard.Active?.TryLockFinalShredderOutcome(this);
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board != null)
+            {
+                if (!board.TryReservePieceInGrid(this, PieceState.HandoffToPhysics))
+                {
+                    beingShredded = false;
+                    return false;
+                }
+
+                board.TryLockFinalShredderOutcome(this);
+            }
+
             ReportDestroyed();
             return true;
         }
@@ -1034,8 +1115,8 @@ namespace GravityPuzzle
                     .Append(renderer.transform.DOPunchScale(
                         restingScale * tweenConfig.IceCrackScaleMultiplier,
                         tweenConfig.IceCrackDuration,
-                        5,
-                        .55f))
+                        tweenConfig.IceCrackVibrato,
+                        tweenConfig.IceCrackElasticity))
                     .Join(renderer.DOFade(targetAlpha, tweenConfig.IceCrackDuration));
                 crack.SetLink(renderer.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
@@ -1065,8 +1146,8 @@ namespace GravityPuzzle
                 release.Join(renderer.transform.DOPunchScale(
                     renderer.transform.localScale * tweenConfig.IceReleaseScaleMultiplier,
                     tweenConfig.IceReleaseDuration,
-                    6,
-                    .55f));
+                    tweenConfig.IceReleaseVibrato,
+                    tweenConfig.IceReleaseElasticity));
                 release.Join(renderer.DOFade(0f, tweenConfig.IceReleaseDuration));
             }
 

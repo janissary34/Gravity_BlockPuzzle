@@ -109,6 +109,22 @@ namespace GravityPuzzle
             ? tweenConfig.ProgressSliderPunchDuration
             : sliderPunchDuration;
 
+        private float VoxelRotationRange => tweenConfig != null
+            ? tweenConfig.ProgressVoxelRotationRange
+            : 160f;
+
+        private int SliderPunchVibrato => tweenConfig != null
+            ? tweenConfig.ProgressSliderPunchVibrato
+            : 6;
+
+        private float SliderPunchElasticity => tweenConfig != null
+            ? tweenConfig.ProgressSliderPunchElasticity
+            : .5f;
+
+        private float SliderPulseCooldown => tweenConfig != null
+            ? tweenConfig.ProgressSliderPulseCooldown
+            : .09f;
+
         public bool HasActiveFlyingVoxels => activeFlyingVoxelCount > 0;
         public bool HasPendingProgressPresentation => HasActiveFlyingVoxels ||
                                                       (sliderFillTween != null && sliderFillTween.IsActive());
@@ -340,7 +356,7 @@ namespace GravityPuzzle
                 .SetDelay(UnityEngine.Random.Range(0f, .12f));
             flightSequence.Append(DOVirtual.Float(0f, 1f, flightDuration, progress =>
                 voxelRect.anchoredPosition = QuadraticBezier(start, control, target, progress)).SetEase(VoxelFlightEase));
-            flightSequence.Join(voxelRect.DORotate(new Vector3(0f, 0f, UnityEngine.Random.Range(-160f, 160f)), flightDuration, RotateMode.FastBeyond360));
+            flightSequence.Join(voxelRect.DORotate(new Vector3(0f, 0f, UnityEngine.Random.Range(-VoxelRotationRange, VoxelRotationRange)), flightDuration, RotateMode.FastBeyond360));
             flightSequence.OnComplete(() =>
             {
                 // Trigger UI Slider Punch Scale feedback on each voxel arrival.
@@ -349,10 +365,10 @@ namespace GravityPuzzle
                     if (sliderPunchTween != null && sliderPunchTween.IsActive())
                         sliderPunchTween.Kill(true);
 
-                    sliderPunchTween = progressSlider.transform.DOPunchScale(sliderPunchScale, SliderPunchDuration, 6, 0.5f)
+                    sliderPunchTween = progressSlider.transform.DOPunchScale(sliderPunchScale, SliderPunchDuration, SliderPunchVibrato, SliderPunchElasticity)
                         .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
                         .SetAutoKill(true);
-                    nextSliderPulseTime = Time.unscaledTime + .09f;
+                    nextSliderPulseTime = Time.unscaledTime + SliderPulseCooldown;
                 }
 
                 // The flight voxel is recycled only after reaching the bar.
@@ -366,6 +382,18 @@ namespace GravityPuzzle
                 AddProgress(progressAmount);
                 onArrival?.Invoke();
             });
+        }
+
+        /// <summary>
+        /// Presents one logical reward as several pooled UI voxels while keeping
+        /// the total gameplay progress exactly equal to totalProgressAmount.
+        /// </summary>
+        public void SpawnFlyingVoxelBurst(Vector3 startWorldPos, Color voxelColor, float totalProgressAmount, int flightCount)
+        {
+            int count = Mathf.Max(1, flightCount);
+            float progressPerFlight = totalProgressAmount / count;
+            for (int i = 0; i < count; i++)
+                SpawnFlyingVoxel(startWorldPos, voxelColor, progressPerFlight, null);
         }
 
         private static Vector2 ScreenToCanvasPoint(RectTransform canvasRect, Vector2 screenPoint, Camera uiCamera)

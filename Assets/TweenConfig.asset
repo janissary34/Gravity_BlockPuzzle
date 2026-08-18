@@ -22,19 +22,68 @@ MonoBehaviour:
   shredEase: 5
   iceCrackDuration: 0.16
   iceCrackScaleMultiplier: 0.12
+  iceCrackVibrato: 5
+  iceCrackElasticity: 0.55
   iceReleaseDuration: 0.2
   iceReleaseScaleMultiplier: 0.16
+  iceReleaseVibrato: 6
+  iceReleaseElasticity: 0.55
   progressSliderFillDuration: 0.12
   progressSliderFillEase: 6
   progressVoxelFlightDuration: 0.55
   progressVoxelFlightEase: 3
+  progressVoxelRotationRange: 160
   progressSliderPunchDuration: 0.12
+  progressSliderPunchVibrato: 6
+  progressSliderPunchElasticity: 0.5
+  progressSliderPulseCooldown: 0.09
   gemFlightDuration: 0.75
   gemFlightEase: 26
   gemUiPunchDuration: 0.22
+  gemUiPunchVibrato: 5
+  gemUiPunchElasticity: 0.5
   timerEntranceDuration: 0.75
   timerEntranceEase: 9
   timerFreezeFillDuration: 0.6
   timerFreezeFillEase: 1
   timerFlyToTargetDuration: 0.5
   timerFlyToTargetEase: 5
+  hammerEntranceDuration: 0.35
+  hammerEntranceMoveEase: 13
+  hammerEntranceScaleEase: 6
+  hammerApproachDuration: 0.45
+  hammerApproachEase: 6
+  hammerWindUpDelay: 0.1
+  hammerStrikeDuration: 0.12
+  hammerStrikeEase: 1
+  hammerExitDuration: 0.2
+  hammerExitEase: 6
+  hammerExitScaleEase: 26
+  hammerCameraShakeDuration: 0.15
+  hammerCameraShakeStrength: 0.12
+  hammerCameraShakeVibrato: 18
+  hammerCameraShakeRandomness: 90
+  rocketEntranceDuration: 0.75
+  rocketEntranceEase: 9
+  rocketTargetPauseDuration: 1
+  rocketLaunchDuration: 0.55
+  rocketLaunchEase: 5
+  buttonPressDuration: 0.1
+  buttonPressEase: 6
+  buttonReleaseDuration: 0.25
+  buttonReleaseEase: 24
+  timerCenterPauseDuration: 1
+  timerUrgencyFadeInDuration: 0.45
+  timerUrgencyFadeInEase: 6
+  timerUrgencyFadeOutDuration: 0.45
+  timerUrgencyFadeOutEase: 15
+  timerImpactDuration: 0.42
+  timerImpactScaleEase: 6
+  timerImpactStartScale: 0.22
+  timerImpactFadeInFraction: 0.22
+  timerImpactScaleFraction: 0.55
+  timerImpactFadeOutFraction: 0.45
+  timerFreezeGlowFadeInDuration: 0.25
+  timerFreezeGlowFadeInEase: 6
+  timerFreezeGlowFadeOutDuration: 0.35
+  timerFreezeGlowFadeOutEase: 15

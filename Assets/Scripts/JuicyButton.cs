@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using DG.Tweening;
+using GravityPuzzle.Config;
 
 namespace GravityPuzzle
 {
@@ -11,6 +12,9 @@ namespace GravityPuzzle
     [DisallowMultipleComponent]
     public class JuicyButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
     {
+        [Header("Presentation Config")]
+        [SerializeField] private TweenConfig tweenConfig;
+
         [Header("Press Animation Settings")]
         [SerializeField, Tooltip("Target scale multiplier when the pointer presses down (e.g. 0.9 for 90%).")]
         private float pressScale = 0.9f;
@@ -88,8 +92,8 @@ namespace GravityPuzzle
 
             Vector3 targetScale = Vector3.Scale(originalScale, Vector3.one * pressScale);
 
-            transform.DOScale(targetScale, pressDuration)
-                .SetEase(pressEase)
+            transform.DOScale(targetScale, PressDuration)
+                .SetEase(PressEase)
                 .SetUpdate(ignoreTimeScale)
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
@@ -122,15 +126,15 @@ namespace GravityPuzzle
             if (usePunchBounce)
             {
                 transform.localScale = originalScale;
-                transform.DOPunchScale(punchScaleStrength, releaseDuration, punchVibrato, punchElasticity)
+                transform.DOPunchScale(punchScaleStrength, ReleaseDuration, punchVibrato, punchElasticity)
                     .SetUpdate(ignoreTimeScale)
                     .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
             }
             else
             {
-                transform.DOScale(originalScale, releaseDuration)
-                    .SetEase(releaseEase)
+                transform.DOScale(originalScale, ReleaseDuration)
+                    .SetEase(ReleaseEase)
                     .SetUpdate(ignoreTimeScale)
                     .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
@@ -147,7 +151,7 @@ namespace GravityPuzzle
 
                 Vector3 rotationPunchVector = new Vector3(0f, 0f, randomZAngle);
 
-                transform.DOPunchRotation(rotationPunchVector, releaseDuration, rotationVibrato)
+                transform.DOPunchRotation(rotationPunchVector, ReleaseDuration, rotationVibrato)
                     .SetUpdate(ignoreTimeScale)
                     .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
@@ -161,6 +165,11 @@ namespace GravityPuzzle
         {
             transform.DOKill(complete);
         }
+
+        private float PressDuration => tweenConfig != null ? tweenConfig.ButtonPressDuration : pressDuration;
+        private Ease PressEase => tweenConfig != null ? tweenConfig.ButtonPressEase : pressEase;
+        private float ReleaseDuration => tweenConfig != null ? tweenConfig.ButtonReleaseDuration : releaseDuration;
+        private Ease ReleaseEase => tweenConfig != null ? tweenConfig.ButtonReleaseEase : releaseEase;
 
         /// <summary>
         /// Instantly restores the transform to its baseline scale and rotation.

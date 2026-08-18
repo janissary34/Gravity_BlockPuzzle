@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using DG.Tweening;
 using UnityEngine;
@@ -29,6 +30,7 @@ namespace GravityPuzzle
 
         public bool IsFreezeActive => freezeRoutine != null;
         public bool HasBeenUsedThisLevel => usedThisLevel;
+        public event Action<FreezeTimerBooster> FreezeEnded;
 
         private PrototypeBoard boundBoard;
         private Coroutine freezeRoutine;
@@ -113,6 +115,7 @@ namespace GravityPuzzle
 
             freezeRoutine = null;
             SetUrgencyVignetteVisible(false, false);
+            FreezeEnded?.Invoke(this);
             RefreshButtonState();
         }
 
@@ -130,6 +133,7 @@ namespace GravityPuzzle
 
         private void CancelOwnedFreeze()
         {
+            bool wasFreezeActive = freezeRoutine != null;
             if (freezeRoutine != null)
             {
                 StopCoroutine(freezeRoutine);
@@ -140,6 +144,9 @@ namespace GravityPuzzle
                 boundBoard.ResumeTimer(this);
 
             SetUrgencyVignetteVisible(false, true);
+
+            if (wasFreezeActive)
+                FreezeEnded?.Invoke(this);
         }
 
         private void CacheUrgencyCanvasGroup()

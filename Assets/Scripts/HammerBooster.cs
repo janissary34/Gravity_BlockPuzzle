@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using DG.Tweening;
+using GravityPuzzle.Config;
 
 namespace GravityPuzzle
 {
@@ -11,12 +12,9 @@ namespace GravityPuzzle
     /// </summary>
     public sealed class HammerBooster : MonoBehaviour
     {
-        // Hammer topology editing is intentionally paused while the board uses
-        // the legacy/runtime hybrid.  A hit must not mutate colliders or grid
-        // occupancy until disconnected-component splitting has one atomic
-        // lifecycle transaction.  The targeting animation remains available
-        // as harmless feedback and does not consume an inventory use.
-        private static readonly bool TopologyEditingEnabled = false;
+        // A valid hammer hit removes its targeted runtime cell, then commits
+        // the remaining topology to the authoritative board grid.
+        private const bool TopologyEditingEnabled = true;
 
         public static bool IsTargeting =>
             activeBooster != null || Time.frameCount <= suppressGameplayThroughFrame;
@@ -27,9 +25,8 @@ namespace GravityPuzzle
 
         [Tooltip("Optional world-space hammer visual. A simple runtime hammer is used when omitted.")]
         [SerializeField] private GameObject hammerVisualPrefab;
+        [SerializeField] private TweenConfig tweenConfig;
 
-        [SerializeField, Range(.15f, .2f)] private float impactDuration = .18f;
-        [SerializeField] private float hammerHeight = 1.25f;
         [SerializeField] private float popScaleMultiplier = 1.7f;
         [Tooltip("Local offset from the prefab pivot to the striking face of the hammer head.")]
         [SerializeField] private Vector2 hammerHeadLocalOffset = new Vector2(0f, .45f);
@@ -184,6 +181,13 @@ namespace GravityPuzzle
 
         private void PlayHammerSwing(PuzzlePiece piece, Vector2 impactPosition)
         {
+            if (tweenConfig == null)
+            {
+                Debug.LogError("[HammerBooster] TweenConfig is required for hammer presentation.", this);
+                impactInProgress = false;
+                return;
+            }
+
             GameObject hammer = CreateHammerVisual();
             Transform hammerTransform = hammer.transform;
             Vector3 defaultScale = hammerTransform.localScale;
@@ -211,21 +215,28 @@ namespace GravityPuzzle
                 .SetLink(hammer, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
             // Phase 1: royal-style pop from the bottom of the play area.
-            swing.Append(hammerTransform.DOMove(screenCentre, .35f).SetEase(Ease.OutQuart));
-            swing.Join(hammerTransform.DOScale(impactScale, .35f).SetEase(Ease.OutSine));
+            swing.Append(hammerTransform.DOMove(screenCentre, tweenConfig.HammerEntranceDuration)
+                .SetEase(tweenConfig.HammerEntranceMoveEase));
+            swing.Join(hammerTransform.DOScale(impactScale, tweenConfig.HammerEntranceDuration)
+                .SetEase(tweenConfig.HammerEntranceScaleEase));
             // Phase 2: arrive above the block, settle, then swing only around
             // the local pivot so the head traces a clean rotational arc.
-            swing.Append(hammerTransform.DOMove(hoverPoint, .45f).SetEase(Ease.OutSine));
-            swing.Join(hammerTransform.DORotate(new Vector3(0f, facingYAngle, windUpAngle), .45f).SetEase(Ease.OutSine));
-            swing.AppendInterval(.1f);
-            swing.Append(hammerTransform.DORotate(new Vector3(0f, facingYAngle, impactAngle), .12f).SetEase(Ease.InQuad));
+            swing.Append(hammerTransform.DOMove(hoverPoint, tweenConfig.HammerApproachDuration)
+                .SetEase(tweenConfig.HammerApproachEase));
+            swing.Join(hammerTransform.DORotate(new Vector3(0f, facingYAngle, windUpAngle), tweenConfig.HammerApproachDuration)
+                .SetEase(tweenConfig.HammerApproachEase));
+            swing.AppendInterval(tweenConfig.HammerWindUpDelay);
+            swing.Append(hammerTransform.DORotate(new Vector3(0f, facingYAngle, impactAngle), tweenConfig.HammerStrikeDuration)
+                .SetEase(tweenConfig.HammerStrikeEase));
             swing.AppendCallback(() => ApplyHammerImpact(piece, impactPosition));
             // Phase 4: shrink along an exit arc once the hit has registered.
-            swing.Append(DOVirtual.Float(0f, 1f, .2f, progress =>
+            swing.Append(DOVirtual.Float(0f, 1f, tweenConfig.HammerExitDuration, progress =>
                 hammerTransform.position = QuadraticBezier(hoverPoint, exitControl, exitPoint, progress))
-                .SetEase(Ease.OutSine));
-            swing.Join(hammerTransform.DOScale(Vector3.zero, .2f).SetEase(Ease.InBack));
-            swing.Join(hammerTransform.DORotate(new Vector3(0f, facingYAngle, 0f), .2f).SetEase(Ease.OutSine));
+                .SetEase(tweenConfig.HammerExitEase));
+            swing.Join(hammerTransform.DOScale(Vector3.zero, tweenConfig.HammerExitDuration)
+                .SetEase(tweenConfig.HammerExitScaleEase));
+            swing.Join(hammerTransform.DORotate(new Vector3(0f, facingYAngle, 0f), tweenConfig.HammerExitDuration)
+                .SetEase(tweenConfig.HammerExitEase));
             swing.OnComplete(() =>
             {
                 Destroy(hammer);
@@ -260,25 +271,24 @@ namespace GravityPuzzle
                 piece != null && piece.TryRemoveCellAt(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
                 Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
-                // Match the shredder exactly: every original rendered voxel
-                // emits the same number of slider-bound grains on a hammer hit.
-                int grainCount = cell.renderedVoxelCount * LevelProgressManager.SandGrainsPerRenderedVoxel;
-                ShredderParticleEffects.SpawnBurst(
-                    cell.worldPosition,
-                    color,
-                    cell.renderedVoxelCount,
-                    cell.renderedVoxelCount,
-                    cell.renderedVoxelCount);
-                ShredderVoxelHandoff.SpawnStream(
-                    cell.worldPosition,
-                    color,
-                    grainCount,
-                    cell.progressUnits / Mathf.Max(1, grainCount));
+                LevelProgressManager manager = LevelProgressManager.Instance;
+                if (manager != null)
+                    manager.SpawnFlyingVoxelBurst(
+                        cell.worldPosition,
+                        color,
+                        cell.progressUnits,
+                        cell.renderedVoxelCount);
             }
 
             Camera camera = Camera.main;
             if (camera != null)
-                camera.transform.DOShakePosition(.15f, .12f, 18, 90f, false, true)
+                camera.transform.DOShakePosition(
+                        tweenConfig.HammerCameraShakeDuration,
+                        tweenConfig.HammerCameraShakeStrength,
+                        tweenConfig.HammerCameraShakeVibrato,
+                        tweenConfig.HammerCameraShakeRandomness,
+                        false,
+                        true)
                     .SetLink(camera.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
         }

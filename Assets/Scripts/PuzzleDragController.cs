@@ -53,8 +53,30 @@ namespace GravityPuzzle
 
         public static void WakeUpGravity()
         {
-            if (Instance != null)
-                Instance.hasMovingPieces = true;
+            if (Instance == null)
+                return;
+
+            // A topology edit (hammer split/remove) changes both the set of
+            // pieces and the cells owned by each piece. Any already queued
+            // cascade was calculated against the pre-edit snapshot and can
+            // otherwise move a newly-created fragment to an old piece's
+            // target. Drop that stale presentation work and calculate the
+            // next cascade exclusively from the committed grid state.
+            Instance.pendingGridGravityMoves.Clear();
+            Instance.hasMovingPieces = true;
+
+            // Topology changes must not wait for an unrelated input/fixed
+            // update to resume gravity.  In particular, hammer-created
+            // remainders can have no physical support after their shared cell
+            // is removed. Start their new grid-owned cascade immediately when
+            // no existing fall presentation is in flight.
+            if (Instance.selectedPiece == null &&
+                (Instance.gridFallingPiece == null ||
+                 Instance.gridFallingPiece.GridFallView == null ||
+                 !Instance.gridFallingPiece.GridFallView.IsAnimating))
+            {
+                Instance.AdvanceGridGravityPresentation();
+            }
         }
 
         private void Awake()
