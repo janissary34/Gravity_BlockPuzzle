@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -21,20 +20,12 @@ namespace GravityPuzzle
         [Min(.1f)]
         public float freezeDuration = 5f;
 
-        [Header("Urgency Presentation")]
-        [Tooltip("Full-screen UI overlay shown only while this timer-freeze booster is active. Assign the inactive TimerUrgencyVignette GameObject here.")]
-        [SerializeField] private GameObject timerUrgencyVignette;
-        [SerializeField] private CanvasGroup timerUrgencyCanvasGroup;
-        [Min(.01f)] [SerializeField] private float urgencyFadeOutDuration = .45f;
-        [SerializeField] private Ease urgencyFadeOutEase = Ease.InSine;
-
         public bool IsFreezeActive => freezeRoutine != null;
         public bool HasBeenUsedThisLevel => usedThisLevel;
         public event Action<FreezeTimerBooster> FreezeEnded;
 
         private PrototypeBoard boundBoard;
         private Coroutine freezeRoutine;
-        private Tween urgencyFadeTween;
         private CanvasGroup buttonCanvasGroup;
         private bool usedThisLevel;
 
@@ -44,8 +35,6 @@ namespace GravityPuzzle
                 boosterButton.onClick.AddListener(ActivateFreezeBooster);
 
             SynchronizeLevel();
-            CacheUrgencyCanvasGroup();
-            SetUrgencyVignetteVisible(false, true);
             RefreshButtonState();
         }
 
@@ -65,7 +54,6 @@ namespace GravityPuzzle
                 boosterButton.onClick.RemoveListener(ActivateFreezeBooster);
 
             CancelOwnedFreeze();
-            SetUrgencyVignetteVisible(false, true);
         }
 
         /// <summary>
@@ -77,7 +65,7 @@ namespace GravityPuzzle
             SynchronizeLevel();
 
             if (boundBoard == null || usedThisLevel || IsFreezeActive ||
-                LevelTimerUI.IsGameOver || !boundBoard.IsTimerActive ||
+                LevelTimerUI.IsGameOver || !boundBoard.IsTimerActive || !boundBoard.IsTimerStarted ||
                 boundBoard.TimeRemaining <= 0f)
             {
                 RefreshButtonState();
@@ -90,7 +78,6 @@ namespace GravityPuzzle
                 return;
 
             usedThisLevel = true;
-            SetUrgencyVignetteVisible(true, false);
             freezeRoutine = StartCoroutine(FreezeTimerRoutine(boundBoard));
             RefreshButtonState();
         }
@@ -114,7 +101,6 @@ namespace GravityPuzzle
                 targetBoard.ResumeTimer(this);
 
             freezeRoutine = null;
-            SetUrgencyVignetteVisible(false, false);
             FreezeEnded?.Invoke(this);
             RefreshButtonState();
         }
@@ -143,73 +129,8 @@ namespace GravityPuzzle
             if (boundBoard != null)
                 boundBoard.ResumeTimer(this);
 
-            SetUrgencyVignetteVisible(false, true);
-
             if (wasFreezeActive)
                 FreezeEnded?.Invoke(this);
-        }
-
-        private void CacheUrgencyCanvasGroup()
-        {
-            if (timerUrgencyVignette != null && timerUrgencyCanvasGroup == null)
-                timerUrgencyCanvasGroup = timerUrgencyVignette.GetComponent<CanvasGroup>();
-        }
-
-        private void SetUrgencyVignetteVisible(bool visible, bool immediate)
-        {
-            if (timerUrgencyVignette == null)
-                return;
-
-            CacheUrgencyCanvasGroup();
-            urgencyFadeTween?.Kill();
-
-            if (visible)
-            {
-                // The presentation can be assigned either as its root or as
-                // the vignette child. Make its hierarchy visible so an
-                // inactive effects parent cannot hide the configured overlay.
-                Transform current = timerUrgencyVignette.transform;
-                while (current != null)
-                {
-                    if (!current.gameObject.activeSelf)
-                        current.gameObject.SetActive(true);
-
-                    current = current.parent;
-                }
-
-                if (timerUrgencyCanvasGroup != null)
-                {
-                    urgencyFadeTween = timerUrgencyCanvasGroup
-                        .DOFade(1f, .35f)
-                        .SetEase(Ease.OutSine)
-                        .SetLink(timerUrgencyVignette, LinkBehaviour.KillOnDisable)
-                        .SetAutoKill(true);
-                }
-
-                return;
-            }
-
-            if (immediate || timerUrgencyCanvasGroup == null)
-            {
-                if (timerUrgencyCanvasGroup != null)
-                    timerUrgencyCanvasGroup.alpha = 0f;
-
-                if (timerUrgencyVignette.activeSelf)
-                    timerUrgencyVignette.SetActive(false);
-
-                return;
-            }
-
-            urgencyFadeTween = timerUrgencyCanvasGroup
-                .DOFade(0f, urgencyFadeOutDuration)
-                .SetEase(urgencyFadeOutEase)
-                .SetLink(timerUrgencyVignette, LinkBehaviour.KillOnDisable)
-                .SetAutoKill(true)
-                .OnComplete(() =>
-                {
-                    if (timerUrgencyVignette != null)
-                        timerUrgencyVignette.SetActive(false);
-                });
         }
 
         private void RefreshButtonState()
@@ -238,6 +159,7 @@ namespace GravityPuzzle
                 !IsFreezeActive &&
                 !LevelTimerUI.IsGameOver &&
                 boundBoard.IsTimerActive &&
+                boundBoard.IsTimerStarted &&
                 boundBoard.TimeRemaining > 0f;
         }
     }

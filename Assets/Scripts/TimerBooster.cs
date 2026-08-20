@@ -27,6 +27,9 @@ namespace GravityPuzzle
         [Tooltip("Optional UI Button to trigger the Timer Booster.")]
         [SerializeField] private Button boosterButton;
 
+        [Tooltip("Optional FreezeTimerBooster reference. Auto-cached in Awake if unassigned.")]
+        [SerializeField] private FreezeTimerBooster freezeTimerBooster;
+
         [SerializeField, Tooltip("Owns timer-booster tween timing and easing.")]
         private TweenConfig tweenConfig;
 
@@ -288,11 +291,45 @@ namespace GravityPuzzle
             SetUrgencyPresentationVisible(false, true);
         }
 
+        private void Update()
+        {
+            RefreshButtonInteractable();
+        }
+
+        private void RefreshButtonInteractable()
+        {
+            if (boosterButton == null)
+                return;
+
+            if (freezeTimerBooster != null)
+                return;
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            bool isSequenceRunning = activeSequence != null && activeSequence.IsActive();
+            bool isFreezeActive = activeFreezeBooster != null && activeFreezeBooster.IsFreezeActive;
+
+            boosterButton.interactable =
+                board != null &&
+                board.IsTimerActive &&
+                board.IsTimerStarted &&
+                board.TimeRemaining > 0f &&
+                !LevelTimerUI.IsGameOver &&
+                !isSequenceRunning &&
+                !isFreezeActive;
+        }
+
         /// <summary>
         /// Public entry point to trigger the Timer Booster animation sequence.
         /// </summary>
         public void PlayTimerBoosterSequence()
         {
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            if (activeBoard == null || !activeBoard.IsTimerActive || !activeBoard.IsTimerStarted || activeBoard.TimeRemaining <= 0f || LevelTimerUI.IsGameOver)
+            {
+                Debug.LogWarning("[TimerBooster] Cannot play sequence: timer has not started or is inactive.");
+                return;
+            }
+
             if (timer_obj == null || timer_txt == null)
             {
                 Debug.LogWarning("[TimerBooster] Cannot play sequence: timer_obj or timer_txt reference is missing in Inspector.");
@@ -587,7 +624,7 @@ namespace GravityPuzzle
             GetTimerBoosterButton()?.TryConsumeUse();
 
             // Freeze timer for 8 seconds
-            FreezeTimerBooster freeze = GetComponent<FreezeTimerBooster>() ?? Object.FindObjectOfType<FreezeTimerBooster>();
+            FreezeTimerBooster freeze = freezeTimerBooster;
             if (freeze != null)
             {
                 freeze.freezeDuration = freezeDuration;
@@ -600,7 +637,7 @@ namespace GravityPuzzle
             }
             else
             {
-                PrototypeBoard activeBoard = PrototypeBoard.Active ?? Object.FindObjectOfType<PrototypeBoard>();
+                PrototypeBoard activeBoard = PrototypeBoard.Active;
                 if (activeBoard != null)
                 {
                     if (freezeRoutine != null) StopCoroutine(freezeRoutine);
