@@ -971,12 +971,18 @@ namespace GravityPuzzle
             // A shredder feed is still a physical object until the last voxel
             // has crossed the cutter. Keep its cells reserved during that
             // interval so a grid-driven falling piece cannot enter it.
-            if (destroyedPiece.IsBeingShredded)
+            bool keepsGridReservation = destroyedPiece.IsBeingShredded;
+            if (keepsGridReservation)
                 TryReservePieceInGrid(destroyedPiece, PieceState.Shredding);
             else
                 TryClearPieceFromGrid(destroyedPiece, PieceState.Shredding);
             DestroyedPieceCount++;
-            PuzzleDragController.WakeUpGravity();
+            // A shredding piece still occupies its grid footprint until its
+            // final voxel has cleared the cutter and its pool return releases
+            // that reservation. Waking gravity here would let upper pieces
+            // target the same cells while the feed is still visible.
+            if (!keepsGridReservation)
+                PuzzleDragController.WakeUpGravity();
             IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
             for (int i = 0; i < pieces.Count; i++)
             {

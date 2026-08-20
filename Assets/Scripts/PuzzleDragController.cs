@@ -120,10 +120,43 @@ namespace GravityPuzzle
                 return;
             }
 
+            CapturePiecesAtShredderBoundary();
+
             if (Input.touchCount > 0)
                 ProcessTouchInput();
             else
                 ProcessMouseInput();
+        }
+
+        private void CapturePiecesAtShredderBoundary()
+        {
+            BlockShredder shredder = BlockShredder.Instance;
+            IReadOnlyList<ShredderCatchZone> zones = ShredderCatchZone.ActiveZones;
+            if (shredder == null || zones.Count == 0)
+                return;
+
+            IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
+            {
+                PuzzlePiece piece = pieces[pieceIndex];
+                if (piece == null || piece.IsBeingShredded || piece.IsFrozen)
+                    continue;
+
+                for (int zoneIndex = 0; zoneIndex < zones.Count; zoneIndex++)
+                {
+                    ShredderCatchZone zone = zones[zoneIndex];
+                    if (zone == null || !zone.ContainsCaptureFootprint(piece))
+                        continue;
+
+                    if (shredder.TryCapturePiece(piece, zone.ShredY) && selectedPiece == piece)
+                    {
+                        selectedPiece = null;
+                        activeFingerId = -1;
+                    }
+
+                    break;
+                }
+            }
         }
 
         private void FixedUpdate()

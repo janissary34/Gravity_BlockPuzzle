@@ -95,18 +95,6 @@ namespace GravityPuzzle
                 targetUIRectTransform = targetUISlider.GetComponent<RectTransform>();
         }
 
-        private void OnTriggerEnter2D(Collider2D other)
-        {
-            TryShredBlock(other, transform.position);
-        }
-
-        private void OnTriggerStay2D(Collider2D other)
-        {
-            // Covers a fast body that is already overlapping the gear trigger when
-            // the simulation advances; the handoff guard makes this idempotent.
-            TryShredBlock(other, transform.position);
-        }
-
         [Header("Öğütme Ayarları (Tuning)")]
         [SerializeField, Tooltip("Shredlenme Hızı: Bloğun öğütücüye çekilme ve inme hızı (birim/saniye). Varsayılan: 0.7")]
         private float shredlenmeHizi = 0.7f;
@@ -145,15 +133,17 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Attempts to shred an entering PuzzlePiece into Stone and Gem voxels slowly/progressively with high-density particle effects.
+        /// Starts the coordinate-authorized handoff into the shredder. The
+        /// caller has already established that the piece footprint reached a
+        /// configured catch zone; physics triggers never decide this transition.
         /// </summary>
-        public void TryShredBlock(Collider2D targetCollider, Vector2 shredderCenter)
+        public bool TryCapturePiece(PuzzlePiece piece, float shredderY)
         {
-            PuzzlePiece piece = targetCollider.GetComponentInParent<PuzzlePiece>();
             if (piece == null || !piece.TryBeginShredderHandoff())
-                return;
+                return false;
 
-            StartCoroutine(FeedPieceIntoShredder(piece, shredderCenter.y));
+            StartCoroutine(FeedPieceIntoShredder(piece, shredderY));
+            return true;
         }
 
         private static GameObject globalShredderMaskObject;

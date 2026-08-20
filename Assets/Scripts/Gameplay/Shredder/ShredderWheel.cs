@@ -82,18 +82,5 @@ namespace GravityPuzzle
             transform.localRotation = Quaternion.identity;
         }
 
-        private void OnTriggerEnter2D(Collider2D other) => TryShred(other, transform.position);
-
-        internal static void TryShred(Collider2D other, Vector2 shredderCentre)
-        {
-            BlockShredder shredder = BlockShredder.Instance;
-            if (shredder != null)
-            {
-                shredder.TryShredBlock(other, shredderCentre);
-                return;
-            }
-
-            Debug.LogError("[ShredderPool] No BlockShredder is available to process a wheel trigger.");
-        }
     }
 }

@@ -112,6 +112,7 @@ namespace GravityPuzzle
         private List<SpriteRenderer> collisionCellVisuals;
         private Collider2D[] solidColliders;
         private bool beingShredded;
+        private bool gridDespawned;
         private bool useFullCollisionGeometry;
         private bool isSelected;
         private bool destructionReported;
@@ -218,6 +219,7 @@ namespace GravityPuzzle
         public void OnSpawn()
         {
             beingShredded = false;
+            gridDespawned = false;
             destructionReported = false;
             iceReleaseAnimating = false;
             previousFrozenRemaining = -1;
@@ -262,12 +264,19 @@ namespace GravityPuzzle
 
         private void MarkDespawnedInBoard()
         {
+            if (gridDespawned)
+                return;
+
             PrototypeBoard board = PrototypeBoard.Active;
             if (board == null)
                 return;
 
             bool releasedShredderReservation = beingShredded;
-            if (board.TryDespawnPieceFromGrid(this) && releasedShredderReservation)
+            if (!board.TryDespawnPieceFromGrid(this))
+                return;
+
+            gridDespawned = true;
+            if (releasedShredderReservation)
                 PuzzleDragController.WakeUpGravity();
         }
 
