@@ -16,12 +16,16 @@ namespace GravityPuzzle
         [Tooltip("Optional. Assign a UI Button to wire its click automatically.")]
         public Button boosterButton;
 
+        [Tooltip("Optional BoosterButton component reference for multi-use tracking.")]
+        [SerializeField] private BoosterButton boosterButtonRef;
+
         [Tooltip("How many real-time seconds the countdown remains frozen.")]
         [Min(.1f)]
         public float freezeDuration = 5f;
 
         public bool IsFreezeActive => freezeRoutine != null;
         public bool HasBeenUsedThisLevel => usedThisLevel;
+        public bool HasUses => boosterButtonRef != null ? boosterButtonRef.HasUses : !usedThisLevel;
         public event Action<FreezeTimerBooster> FreezeEnded;
 
         private PrototypeBoard boundBoard;
@@ -29,8 +33,15 @@ namespace GravityPuzzle
         private CanvasGroup buttonCanvasGroup;
         private bool usedThisLevel;
 
+        private void Awake()
+        {
+            EnsureReferences();
+        }
+
         private void OnEnable()
         {
+            EnsureReferences();
+
             if (boosterButton != null)
                 boosterButton.onClick.AddListener(ActivateFreezeBooster);
 
@@ -64,7 +75,7 @@ namespace GravityPuzzle
         {
             SynchronizeLevel();
 
-            if (boundBoard == null || usedThisLevel || IsFreezeActive ||
+            if (boundBoard == null || !HasUses || IsFreezeActive ||
                 LevelTimerUI.IsGameOver || !boundBoard.IsTimerActive || !boundBoard.IsTimerStarted ||
                 boundBoard.TimeRemaining <= 0f)
             {
@@ -114,6 +125,10 @@ namespace GravityPuzzle
             CancelOwnedFreeze();
             boundBoard = activeBoard;
             usedThisLevel = false;
+            if (boosterButtonRef != null)
+            {
+                boosterButtonRef.ResetCount();
+            }
             RefreshButtonState();
         }
 
@@ -135,6 +150,8 @@ namespace GravityPuzzle
 
         private void RefreshButtonState()
         {
+            EnsureReferences();
+
             if (boosterButton == null)
                 return;
 
@@ -148,7 +165,7 @@ namespace GravityPuzzle
                     buttonCanvasGroup = boosterButton.gameObject.AddComponent<CanvasGroup>();
             }
 
-            bool visible = !usedThisLevel;
+            bool visible = HasUses;
             buttonCanvasGroup.alpha = visible ? 1f : 0f;
             buttonCanvasGroup.interactable = visible;
             buttonCanvasGroup.blocksRaycasts = visible;
@@ -161,6 +178,27 @@ namespace GravityPuzzle
                 boundBoard.IsTimerActive &&
                 boundBoard.IsTimerStarted &&
                 boundBoard.TimeRemaining > 0f;
+        }
+
+        private void EnsureReferences()
+        {
+            if (boosterButtonRef == null)
+            {
+                if (boosterButton != null)
+                {
+                    boosterButtonRef = boosterButton.GetComponent<BoosterButton>();
+                }
+
+                if (boosterButtonRef == null)
+                {
+                    boosterButtonRef = GetComponent<BoosterButton>();
+                }
+            }
+
+            if (boosterButton == null && boosterButtonRef != null)
+            {
+                boosterButton = boosterButtonRef.ButtonComponent;
+            }
         }
     }
 }
