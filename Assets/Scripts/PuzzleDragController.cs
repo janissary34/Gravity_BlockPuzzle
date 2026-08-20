@@ -729,13 +729,17 @@ namespace GravityPuzzle
 
         private static void PrepareKinematicBody(Rigidbody2D body)
         {
+            body.simulated = true;
             body.bodyType = RigidbodyType2D.Kinematic;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
             body.useFullKinematicContacts = true;
             body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
             body.velocity = Vector2.zero;
             body.angularVelocity = 0f;
+            body.angularDrag = 0f;
+            body.rotation = 0f;
         }
 
         private static void MoveBody(Rigidbody2D body, Vector2 targetPosition)

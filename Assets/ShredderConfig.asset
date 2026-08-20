@@ -18,6 +18,7 @@ MonoBehaviour:
   catchZonePoolCapacity: 1
   wheelRadiusMultiplier: 1
   wheelRotationSpeedMultiplier: 1
+  captureApproachDistance: 0.04
   feedSpeed: 2
   tremorIntensity: 0.045
   tremorFrequency: 55

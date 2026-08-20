@@ -187,13 +187,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             DOTween.Kill(piece.gameObject);
             ClearGeneratedContent(piece.transform);
 
-            Rigidbody2D body = piece.Body;
-            if (body != null)
-            {
-                body.velocity = Vector2.zero;
-                body.angularVelocity = 0f;
-                body.simulated = false;
-            }
+            piece.ResetToPooledPhysics();
 
             if (piece.CompositeCollider != null)
                 piece.CompositeCollider.enabled = false;
@@ -229,6 +223,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             body.velocity = Vector2.zero;
             body.angularVelocity = 0f;
             body.rotation = 0f;
+            body.angularDrag = 0f;
         }
 
         private static void ConfigureFragment(

@@ -522,7 +522,8 @@ namespace GravityPuzzle
                 (leftEdge + rightEdge) * .5f,
                 topY - thickness * .5f),
                 new Vector2(width, thickness),
-                topY);
+                topY,
+                shredderConfig.CaptureApproachDistance);
         }
 
         private static void CreateObstacle(GravityLevelDefinition level, ObstacleDefinition obstacle)

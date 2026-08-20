@@ -156,7 +156,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 268}
+  m_AnchoredPosition: {x: 0, y: 836}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!199 &12663787
@@ -369,8 +369,8 @@ ParticleSystem:
     startSpeed:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 45
-      minScalar: 25
+      scalar: 0.9
+      minScalar: 0.2
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -10676,7 +10676,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 268}
+  m_AnchoredPosition: {x: 0, y: 836}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!199 &577962464
@@ -10889,8 +10889,8 @@ ParticleSystem:
     startSpeed:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 22
-      minScalar: 10
+      scalar: 0.5
+      minScalar: 0.2
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -26730,7 +26730,7 @@ ParticleSystem:
   ringBufferMode: 0
   ringBufferLoopRange: {x: 0, y: 1}
   emitterVelocityMode: 1
-  looping: 0
+  looping: 1
   prewarm: 0
   playOnAwake: 0
   useUnscaledTime: 0
@@ -27662,7 +27662,7 @@ ParticleSystem:
       countCurve:
         serializedVersion: 2
         minMaxState: 0
-        scalar: 4
+        scalar: 1
         minScalar: 30
         maxCurve:
           serializedVersion: 2
@@ -27727,7 +27727,7 @@ ParticleSystem:
         m_Curve:
         - serializedVersion: 3
           time: 0
-          value: 0.69999695
+          value: 0
           inSlope: 0
           outSlope: 0
           tangentMode: 0
@@ -32089,7 +32089,7 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1550275966}
   m_Enabled: 1
-  m_Alpha: 0
+  m_Alpha: 1
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
@@ -37367,7 +37367,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1835077769
 RectTransform:
   m_ObjectHideFlags: 0
@@ -37476,7 +37476,7 @@ ParticleSystem:
   ringBufferMode: 0
   ringBufferLoopRange: {x: 0, y: 1}
   emitterVelocityMode: 1
-  looping: 0
+  looping: 1
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
@@ -42607,7 +42607,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 268}
+  m_AnchoredPosition: {x: 0, y: 836}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!199 &2002521965
@@ -42820,8 +42820,8 @@ ParticleSystem:
     startSpeed:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 32
-      minScalar: 18
+      scalar: 0.8
+      minScalar: 0.4
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -47916,6 +47916,18 @@ PrefabInstance:
     m_TransformParent: {fileID: 97391122}
     m_Modifications:
     - target: {fileID: 1832572822291872815, guid: 6b6ddae6b00d94a08aafd4803d7c2b12, type: 3}
+      propertyPath: snowTop
+      value: 
+      objectReference: {fileID: 22514697}
+    - target: {fileID: 1832572822291872815, guid: 6b6ddae6b00d94a08aafd4803d7c2b12, type: 3}
+      propertyPath: snowLeft
+      value: 
+      objectReference: {fileID: 826077189}
+    - target: {fileID: 1832572822291872815, guid: 6b6ddae6b00d94a08aafd4803d7c2b12, type: 3}
+      propertyPath: snowRight
+      value: 
+      objectReference: {fileID: 946162843}
+    - target: {fileID: 1832572822291872815, guid: 6b6ddae6b00d94a08aafd4803d7c2b12, type: 3}
       propertyPath: timer_obj
       value: 
       objectReference: {fileID: 1286762672}
@@ -47923,6 +47935,10 @@ PrefabInstance:
       propertyPath: timer_txt
       value: 
       objectReference: {fileID: 1778561674}
+    - target: {fileID: 1832572822291872815, guid: 6b6ddae6b00d94a08aafd4803d7c2b12, type: 3}
+      propertyPath: snowBottom
+      value: 
+      objectReference: {fileID: 1595426463}
     - target: {fileID: 1832572822291872815, guid: 6b6ddae6b00d94a08aafd4803d7c2b12, type: 3}
       propertyPath: baseClockImage
       value: 

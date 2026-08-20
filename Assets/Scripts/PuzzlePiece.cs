@@ -563,6 +563,29 @@ namespace GravityPuzzle
         }
 
         /// <summary>
+        /// Returns this root to an inert pool state. This clears every setting
+        /// that the shredder handoff is allowed to mutate, so a later renter
+        /// cannot inherit angular motion or an unlocked rigidbody profile.
+        /// </summary>
+        public void ResetToPooledPhysics()
+        {
+            if (Body == null)
+                return;
+
+            Body.velocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+            Body.rotation = 0f;
+            Body.angularDrag = 0f;
+            Body.gravityScale = 0f;
+            Body.bodyType = RigidbodyType2D.Kinematic;
+            Body.constraints = RigidbodyConstraints2D.FreezeAll;
+            Body.interpolation = RigidbodyInterpolation2D.None;
+            Body.useFullKinematicContacts = false;
+            Body.sleepMode = RigidbodySleepMode2D.StartAsleep;
+            Body.simulated = false;
+        }
+
+        /// <summary>
         /// Applies the only runtime physics profile allowed for a board piece:
         /// the captured shredder feed. Normal drag and grid gravity retain
         /// their deterministic kinematic presentation ownership.

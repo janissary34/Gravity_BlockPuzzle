@@ -15,6 +15,8 @@ namespace GravityPuzzle.Config
         [Header("Runtime Shredder Wheels")]
         [Min(0.01f)] [SerializeField] private float wheelRadiusMultiplier = 1f;
         [Min(0f)] [SerializeField] private float wheelRotationSpeedMultiplier = 1f;
+        [Tooltip("Small board-space tolerance above the cutter line used to capture a piece on the final legal grid row.")]
+        [Range(0f, .25f)] [SerializeField] private float captureApproachDistance = .04f;
 
         [Header("Piece Feed")]
         [Min(0.01f)] [SerializeField] private float feedSpeed = 2f;
@@ -43,6 +45,7 @@ namespace GravityPuzzle.Config
         public ShredderCatchZone CatchZonePrefab => catchZonePrefab;
         public int CatchZonePoolCapacity => catchZonePoolCapacity;
         public float WheelRotationSpeedMultiplier => wheelRotationSpeedMultiplier;
+        public float CaptureApproachDistance => captureApproachDistance;
         public float FeedSpeed => feedSpeed;
         public float TremorIntensity => tremorIntensity;
         public float TremorFrequency => tremorFrequency;

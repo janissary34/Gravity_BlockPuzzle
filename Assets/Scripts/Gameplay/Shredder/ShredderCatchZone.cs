@@ -15,13 +15,14 @@ namespace GravityPuzzle
         private float leftX;
         private float rightX;
         private float captureTopY;
+        private float captureApproachDistance;
 
         private void Awake()
         {
             trigger = GetComponent<BoxCollider2D>();
         }
 
-        public void Configure(Vector2 position, Vector2 size, float shredY)
+        public void Configure(Vector2 position, Vector2 size, float shredY, float approachDistance)
         {
             transform.position = position;
             trigger.size = size;
@@ -31,6 +32,7 @@ namespace GravityPuzzle
             leftX = position.x - size.x * .5f;
             rightX = position.x + size.x * .5f;
             captureTopY = position.y + size.y * .5f;
+            captureApproachDistance = Mathf.Max(0f, approachDistance);
             gameObject.name = "Shredder Catch Zone";
         }
 
@@ -47,7 +49,10 @@ namespace GravityPuzzle
             Bounds bounds = piece.CollisionBounds;
             return bounds.max.x >= leftX &&
                    bounds.min.x <= rightX &&
-                   bounds.min.y <= captureTopY;
+                   // Grid movement intentionally stops on the last legal board
+                   // row. Capture there, before an out-of-board move would be
+                   // required to cross the visual cutter edge.
+                   bounds.min.y <= captureTopY + captureApproachDistance;
         }
 
         public void OnSpawn()
@@ -56,6 +61,7 @@ namespace GravityPuzzle
             leftX = 0f;
             rightX = 0f;
             captureTopY = 0f;
+            captureApproachDistance = 0f;
         }
 
         public void OnDespawn()
@@ -65,6 +71,7 @@ namespace GravityPuzzle
             leftX = 0f;
             rightX = 0f;
             captureTopY = 0f;
+            captureApproachDistance = 0f;
         }
 
         private void OnEnable()
