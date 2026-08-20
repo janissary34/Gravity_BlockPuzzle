@@ -67,6 +67,60 @@ namespace GravityPuzzle
         [Tooltip("Sorting order used to keep the timer-freeze particles above the timer canvas.")]
         [SerializeField] private int freezeVfxSortingOrder = 100;
 
+        [Header("Freeze FX \u2014 FreezeFXRoot atmosphere")]
+        [Tooltip("FreezeFrostBorder CanvasGroup.")]
+        [SerializeField] private CanvasGroup freezeFrostBorder;
+
+        [Tooltip("FreezeEdgeGlow CanvasGroup.")]
+        [SerializeField] private CanvasGroup freezeEdgeGlow;
+
+        [Tooltip("FreezeDarkVignette CanvasGroup.")]
+        [SerializeField] private CanvasGroup freezeDarkVignette;
+
+        [Tooltip("FreezeTimerGlow RectTransform (for pulse scale).")]
+        [SerializeField] private RectTransform freezeTimerGlowRect;
+
+        [Tooltip("FreezeTimerGlow CanvasGroup (for pulse alpha and fade).")]
+        [SerializeField] private CanvasGroup freezeTimerGlow;
+
+        [Tooltip("FreezeImpactImage RectTransform (for burst scale).")]
+        [SerializeField] private RectTransform freezeImpactImageRect;
+
+        [Tooltip("FreezeImpactImage CanvasGroup (for burst fade).")]
+        [SerializeField] private CanvasGroup freezeImpactImageCG;
+
+        [Tooltip("FreezeTimerIndicator CanvasGroup. Null-safe \u2014 leave unassigned to skip.")]
+        [SerializeField] private CanvasGroup freezeTimerIndicator;
+
+        [Tooltip("FreezeTimerIndicator RectTransform for scale animation. Null-safe.")]
+        [SerializeField] private RectTransform freezeTimerIndicatorRect;
+
+        [Header("Freeze FX \u2014 Impact Particles")]
+        [Tooltip("ImpactShard_Long ParticleSystem.")]
+        [SerializeField] private ParticleSystem impactShardLong;
+
+        [Tooltip("ImpactShard_Diamond ParticleSystem.")]
+        [SerializeField] private ParticleSystem impactShardDiamond;
+
+        [Tooltip("ImpactShard_Chunk ParticleSystem.")]
+        [SerializeField] private ParticleSystem impactShardChunk;
+
+        [Tooltip("FreezeImpactVapor ParticleSystem.")]
+        [SerializeField] private ParticleSystem freezeImpactVapor;
+
+        [Header("Freeze FX \u2014 Ambient Snow")]
+        [Tooltip("SnowTop ParticleSystem.")]
+        [SerializeField] private ParticleSystem snowTop;
+
+        [Tooltip("SnowBottom ParticleSystem.")]
+        [SerializeField] private ParticleSystem snowBottom;
+
+        [Tooltip("SnowLeft ParticleSystem.")]
+        [SerializeField] private ParticleSystem snowLeft;
+
+        [Tooltip("SnowRight ParticleSystem.")]
+        [SerializeField] private ParticleSystem snowRight;
+
         [Tooltip("Soft UI glow placed behind the timer countdown.")]
         [SerializeField] private GameObject timerFreezeGlow;
 
@@ -120,6 +174,11 @@ namespace GravityPuzzle
         private FreezeTimerBooster activeFreezeBooster;
         private ParticleSystemRenderer timerImpactParticlesRenderer;
         private ParticleSystemRenderer freezeSnowParticlesRenderer;
+
+        // Freeze FX sequences and looping pulse tween
+        private Sequence _freezeFXSequence;
+        private Sequence _freezeCleanupSequence;
+        private Tween _timerGlowPulseTween;
 
         private float EntranceDuration => tweenConfig != null
             ? tweenConfig.TimerEntranceDuration
@@ -205,6 +264,18 @@ namespace GravityPuzzle
             ? tweenConfig.TimerFreezeGlowFadeOutEase
             : timerFreezeGlowFadeOutEase;
 
+        // Freeze FX presentation timing shortcuts
+        private float AnticipationDuration    => tweenConfig != null ? tweenConfig.TimerAnticipationDuration    : 0.12f;
+        private float FlightScaleTarget       => tweenConfig != null ? tweenConfig.TimerFlightScaleTarget       : 0.60f;
+        private float FreezeImpactStartSc     => tweenConfig != null ? tweenConfig.FreezeImpactStartScale       : 0.40f;
+        private float FreezeImpactPeakSc      => tweenConfig != null ? tweenConfig.FreezeImpactPeakScale        : 1.40f;
+        private float FreezeGlowPulseDur      => tweenConfig != null ? tweenConfig.FreezeGlowPulseDuration      : 1.50f;
+        private float FreezeGlowPulseMinA     => tweenConfig != null ? tweenConfig.FreezeGlowPulseMinAlpha      : 0.65f;
+        private float FreezeGlowPulseMaxA     => tweenConfig != null ? tweenConfig.FreezeGlowPulseMaxAlpha      : 0.85f;
+        private float FreezeIndicatorFadeDur  => tweenConfig != null ? tweenConfig.FreezeIndicatorFadeDuration  : 0.25f;
+        private float FreezeAtmoFadeInDur     => tweenConfig != null ? tweenConfig.FreezeAtmoFadeInDuration     : 0.28f;
+        private float FreezeAtmoFadeOutDur    => tweenConfig != null ? tweenConfig.FreezeAtmoFadeOutDuration    : 0.35f;
+
         private void Awake()
         {
             if (timer_obj != null)
@@ -243,6 +314,8 @@ namespace GravityPuzzle
             SetUrgencyPresentationVisible(false, true);
             SetTimerFreezeGlowVisible(false, true);
             SetTimerImpactImageVisible(false);
+
+            ResetFreezeFXState();
         }
 
         private void OnEnable()
@@ -282,6 +355,13 @@ namespace GravityPuzzle
             StopFreezeAmbientPresentation(true);
             timerImpactSequence?.Kill();
             SetTimerImpactImageVisible(false);
+
+            // Kill Freeze FX sequences and pulse loop; particles are stopped by StopFreezeAmbientPresentation
+            _freezeFXSequence?.Kill();
+            _freezeCleanupSequence?.Kill();
+            KillTimerGlowPulse();
+            StopNewAmbientSnow(true);
+            StopNewImpactParticles();
 
             if (frozenClockImage != null)
             {
@@ -459,7 +539,7 @@ namespace GravityPuzzle
                 .SetAutoKill(true);
             activeSequence = seq;
 
-            // Step 1: Move from bottom off-screen to screen center position smoothly (0.85s)
+            // Step 1: Move from bottom off-screen to screen center position smoothly
             if (rectTransform != null)
             {
                 seq.Append(rectTransform.DOAnchorPos(centerPos, EntranceDuration).SetEase(EntranceEase));
@@ -468,6 +548,10 @@ namespace GravityPuzzle
             {
                 seq.Append(timer_obj.transform.DOMove(centerPos, EntranceDuration).SetEase(EntranceEase));
             }
+
+            // Step 1b: Anticipation scale punch on arrival at center (1.0 \u2192 ~1.07 \u2192 ~0.96)
+            seq.Append(timer_obj.transform
+                .DOPunchScale(Vector3.one * 0.07f, AnticipationDuration, 1, 0.5f));
 
             // Step 2: Pause at center & animate 360 degree radial fill over freezeFillDuration
             if (frozenClockImage != null)
@@ -485,8 +569,11 @@ namespace GravityPuzzle
                 seq.AppendInterval(CenterPauseDuration);
             }
 
-            // Step 3: Move timer_obj directly to exact World position of timer_txt (0.5s Ease.InQuad)
+            // Step 3: Fly to timer_txt; simultaneously shrink scale for a receding look
             seq.Append(timer_obj.transform.DOMove(timer_txt.position, FlyToTargetDuration).SetEase(FlyToTargetEase));
+            seq.Join(timer_obj.transform
+                .DOScale(originalScale * FlightScaleTarget, FlyToTargetDuration)
+                .SetEase(FlyToTargetEase));
 
             // Step 4: Arrival Event (Particle Burst + Deactivate)
             seq.AppendCallback(() =>
@@ -498,6 +585,7 @@ namespace GravityPuzzle
                 PlayTimerImpactParticles();
                 StartFreezeAmbientPresentation();
                 BeginFreezePresentationLifetime();
+                PlayFreezeFXImpact();          // FAZ 4+5: new FreezeFXRoot sequence
 
                 // FreezeSnowParticles used to be assigned to this legacy impact
                 // slot as well. Do not move/restart the ambient snow as a burst.
@@ -692,6 +780,7 @@ namespace GravityPuzzle
             }
 
             freezeRoutine = null;
+            PlayFreezeExpirationSequence();    // FAZ 7: staggered new FX cleanup
             SetUrgencyPresentationVisible(false, false);
             StopFreezeAmbientPresentation(false);
         }
@@ -840,6 +929,7 @@ namespace GravityPuzzle
             }
 
             SetUrgencyPresentationVisible(false, false);
+            PlayFreezeExpirationSequence();    // FAZ 7: staggered new FX cleanup
             StopFreezeAmbientPresentation(false);
             UnsubscribeFromFreezeCompletion();
         }
@@ -977,6 +1067,241 @@ namespace GravityPuzzle
                     if (timerUrgencyPresentation != null)
                         timerUrgencyPresentation.SetActive(false);
                 });
+        }
+
+        // ── Freeze FX Helpers (FreezeFXRoot) ────────────────────────────────
+
+        /// <summary>
+        /// Resets all FreezeFXRoot visual objects to their pre-activation hidden state.
+        /// Safe to call from Awake or before re-triggering the sequence.
+        /// </summary>
+        private void ResetFreezeFXState()
+        {
+            _freezeFXSequence?.Kill();
+            _freezeCleanupSequence?.Kill();
+            KillTimerGlowPulse();
+
+            // Impact image
+            if (freezeImpactImageCG != null)   freezeImpactImageCG.alpha = 0f;
+            if (freezeImpactImageRect != null)  freezeImpactImageRect.localScale = Vector3.one * FreezeImpactStartSc;
+
+            // Atmosphere
+            if (freezeTimerGlow != null)        freezeTimerGlow.alpha = 0f;
+            if (freezeFrostBorder != null)      freezeFrostBorder.alpha = 0f;
+            if (freezeEdgeGlow != null)         freezeEdgeGlow.alpha = 0f;
+            if (freezeDarkVignette != null)     freezeDarkVignette.alpha = 0f;
+
+            // Indicator
+            if (freezeTimerIndicator != null)     freezeTimerIndicator.alpha = 0f;
+            if (freezeTimerIndicatorRect != null) freezeTimerIndicatorRect.localScale = Vector3.one * 0.8f;
+
+            StopNewAmbientSnow(true);
+            StopNewImpactParticles();
+        }
+
+        /// <summary>
+        /// Builds and plays the FAZ 4 impact + FAZ 5 atmosphere DOTween Sequence for the
+        /// FreezeFXRoot hierarchy. Called at the exact moment the clock reaches the timer display.
+        /// Uses SetUpdate(true) so it is immune to timeScale changes.
+        /// </summary>
+        private void PlayFreezeFXImpact()
+        {
+            _freezeFXSequence?.Kill();
+
+            bool hasAnyFX = freezeImpactImageCG != null || freezeTimerGlow != null ||
+                            freezeFrostBorder != null || freezeEdgeGlow != null || freezeDarkVignette != null;
+            if (!hasAnyFX)
+                return;
+
+            // Ensure a clean starting state before building the sequence
+            if (freezeImpactImageCG != null)    freezeImpactImageCG.alpha = 0f;
+            if (freezeImpactImageRect != null)  freezeImpactImageRect.localScale = Vector3.one * FreezeImpactStartSc;
+            if (freezeTimerGlow != null)        freezeTimerGlow.alpha = 0f;
+            if (freezeFrostBorder != null)      freezeFrostBorder.alpha = 0f;
+            if (freezeEdgeGlow != null)         freezeEdgeGlow.alpha = 0f;
+            if (freezeDarkVignette != null)     freezeDarkVignette.alpha = 0f;
+            if (freezeTimerIndicator != null)     freezeTimerIndicator.alpha = 0f;
+            if (freezeTimerIndicatorRect != null) freezeTimerIndicatorRect.localScale = Vector3.one * 0.8f;
+
+            _freezeFXSequence = DOTween.Sequence()
+                .SetUpdate(true)
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
+
+            // ── FAZ 4: IMPACT ───────────────────────────────────────────────
+            // t=0.00  FreezeImpactImage: alpha 0 → 1, scale 0.40 → 1.40
+            if (freezeImpactImageCG != null)
+                _freezeFXSequence.Insert(0f,    freezeImpactImageCG.DOFade(1f, 0.06f));
+            if (freezeImpactImageRect != null)
+                _freezeFXSequence.Insert(0f,    freezeImpactImageRect
+                    .DOScale(Vector3.one * FreezeImpactPeakSc, 0.20f).SetEase(Ease.OutQuad));
+
+            // t=0.02  Impact shard particles
+            _freezeFXSequence.InsertCallback(0.02f, () =>
+            {
+                impactShardLong?.Play();
+                impactShardDiamond?.Play();
+                impactShardChunk?.Play();
+            });
+
+            // t=0.03  Cold vapor
+            _freezeFXSequence.InsertCallback(0.03f, () => freezeImpactVapor?.Play());
+
+            // t=0.14  FreezeImpactImage fade out
+            if (freezeImpactImageCG != null)
+                _freezeFXSequence.Insert(0.14f, freezeImpactImageCG.DOFade(0f, 0.14f));
+
+            // ── FAZ 5: ATMOSPHERE (staggered wave) ──────────────────────────
+            float atmoIn = FreezeAtmoFadeInDur;
+
+            // t=0.06  FreezeTimerGlow
+            if (freezeTimerGlow != null)
+                _freezeFXSequence.Insert(0.06f, freezeTimerGlow.DOFade(1f, atmoIn));
+
+            // t=0.10  FreezeFrostBorder
+            if (freezeFrostBorder != null)
+                _freezeFXSequence.Insert(0.10f, freezeFrostBorder.DOFade(1f, atmoIn));
+
+            // t=0.12  FreezeEdgeGlow
+            if (freezeEdgeGlow != null)
+                _freezeFXSequence.Insert(0.12f, freezeEdgeGlow.DOFade(1f, atmoIn));
+
+            // t=0.14  FreezeDarkVignette
+            if (freezeDarkVignette != null)
+                _freezeFXSequence.Insert(0.14f, freezeDarkVignette.DOFade(1f, atmoIn));
+
+            // t=0.18  Ambient snow (looping PSystems)
+            _freezeFXSequence.InsertCallback(0.18f, () =>
+            {
+                snowTop?.Play();
+                snowBottom?.Play();
+                snowLeft?.Play();
+                snowRight?.Play();
+            });
+
+            // t=0.24  FreezeTimerIndicator — fully null-safe, OutCubic with scale
+            if (freezeTimerIndicator != null)
+                _freezeFXSequence.Insert(0.24f, freezeTimerIndicator
+                    .DOFade(1f, FreezeIndicatorFadeDur).SetEase(Ease.OutCubic));
+            if (freezeTimerIndicatorRect != null)
+                _freezeFXSequence.Insert(0.24f, freezeTimerIndicatorRect
+                    .DOScale(Vector3.one, FreezeIndicatorFadeDur).SetEase(Ease.OutCubic));
+
+            // When all atmosphere elements have faded in, start the ambient pulse
+            _freezeFXSequence.OnComplete(() => StartTimerGlowPulse());
+        }
+
+        /// <summary>
+        /// Starts the looping TimerGlow alpha + scale pulse that runs throughout the freeze duration.
+        /// Uses SetAutoKill(false) so the loop survives sequence completion.
+        /// </summary>
+        private void StartTimerGlowPulse()
+        {
+            KillTimerGlowPulse();
+            if (freezeTimerGlow == null)
+                return;
+
+            float halfDur = FreezeGlowPulseDur * 0.5f;
+
+            Sequence pulseSeq = DOTween.Sequence()
+                .SetLoops(-1, LoopType.Restart)
+                .SetUpdate(true)
+                .SetAutoKill(false)
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable);
+
+            // Alpha: min → max → (loop) min
+            pulseSeq.Append(freezeTimerGlow.DOFade(FreezeGlowPulseMaxA, halfDur).SetEase(Ease.InOutSine));
+            pulseSeq.Append(freezeTimerGlow.DOFade(FreezeGlowPulseMinA, halfDur).SetEase(Ease.InOutSine));
+
+            // Scale pulse joined in the same sequence
+            if (freezeTimerGlowRect != null)
+            {
+                pulseSeq.Insert(0f,      freezeTimerGlowRect.DOScale(Vector3.one * 1.05f, halfDur).SetEase(Ease.InOutSine));
+                pulseSeq.Insert(halfDur, freezeTimerGlowRect.DOScale(Vector3.one,         halfDur).SetEase(Ease.InOutSine));
+            }
+
+            _timerGlowPulseTween = pulseSeq;
+        }
+
+        /// <summary>Kills the TimerGlow pulse loop and resets its scale to Vector3.one.</summary>
+        private void KillTimerGlowPulse()
+        {
+            if (_timerGlowPulseTween != null && _timerGlowPulseTween.IsActive())
+                _timerGlowPulseTween.Kill();
+            _timerGlowPulseTween = null;
+
+            // Reset scale so the glow doesn't stay mid-pulse after kill
+            if (freezeTimerGlowRect != null)
+                freezeTimerGlowRect.localScale = Vector3.one;
+        }
+
+        /// <summary>
+        /// FAZ 7: staggered DOTween cleanup sequence for all FreezeFXRoot objects.
+        /// Called when the freeze timer expires (via FreezeTimerBooster.FreezeEnded or FreezeTimerRoutine).
+        /// Snow particles are stopped immediately (StopEmitting) so existing particles finish naturally.
+        /// </summary>
+        private void PlayFreezeExpirationSequence()
+        {
+            _freezeCleanupSequence?.Kill();
+
+            // Stop snow emitters; existing particles finish their lifetime
+            StopNewAmbientSnow(false);
+
+            bool hasAnyNewFX = freezeTimerGlow != null || freezeFrostBorder != null ||
+                               freezeEdgeGlow != null || freezeDarkVignette != null ||
+                               freezeTimerIndicator != null;
+            if (!hasAnyNewFX)
+                return;
+
+            float fadeDur = FreezeAtmoFadeOutDur;
+
+            _freezeCleanupSequence = DOTween.Sequence()
+                .SetUpdate(true)
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
+
+            // t=0.05  FreezeTimerIndicator fade out
+            if (freezeTimerIndicator != null)
+                _freezeCleanupSequence.Insert(0.05f, freezeTimerIndicator.DOFade(0f, fadeDur));
+
+            // t=0.08  Kill glow pulse, then fade FreezeTimerGlow out
+            _freezeCleanupSequence.InsertCallback(0.08f, KillTimerGlowPulse);
+            if (freezeTimerGlow != null)
+                _freezeCleanupSequence.Insert(0.08f, freezeTimerGlow.DOFade(0f, fadeDur));
+
+            // t=0.12  FreezeEdgeGlow fade out
+            if (freezeEdgeGlow != null)
+                _freezeCleanupSequence.Insert(0.12f, freezeEdgeGlow.DOFade(0f, fadeDur));
+
+            // t=0.16  FreezeFrostBorder fade out
+            if (freezeFrostBorder != null)
+                _freezeCleanupSequence.Insert(0.16f, freezeFrostBorder.DOFade(0f, fadeDur));
+
+            // t=0.18  FreezeDarkVignette fade out (slightly longer trailing edge)
+            if (freezeDarkVignette != null)
+                _freezeCleanupSequence.Insert(0.18f, freezeDarkVignette.DOFade(0f, fadeDur + 0.05f));
+        }
+
+        /// <summary>Stops the four ambient snow PSystems used during the freeze atmosphere.</summary>
+        private void StopNewAmbientSnow(bool immediate)
+        {
+            var behavior = immediate
+                ? ParticleSystemStopBehavior.StopEmittingAndClear
+                : ParticleSystemStopBehavior.StopEmitting;
+
+            snowTop?.Stop(true, behavior);
+            snowBottom?.Stop(true, behavior);
+            snowLeft?.Stop(true, behavior);
+            snowRight?.Stop(true, behavior);
+        }
+
+        /// <summary>Stops and clears all one-shot impact PSystems.</summary>
+        private void StopNewImpactParticles()
+        {
+            impactShardLong?.Stop(true,    ParticleSystemStopBehavior.StopEmittingAndClear);
+            impactShardDiamond?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            impactShardChunk?.Stop(true,   ParticleSystemStopBehavior.StopEmittingAndClear);
+            freezeImpactVapor?.Stop(true,  ParticleSystemStopBehavior.StopEmittingAndClear);
         }
     }
 }

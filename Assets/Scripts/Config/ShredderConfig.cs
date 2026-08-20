@@ -22,6 +22,7 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float tremorFrequency = 55f;
         [FormerlySerializedAs("tremorVelocityMultiplier")]
         [Min(0f)] [SerializeField] private float feedShakeAmplitude = 2.5f;
+        [Min(0f)] [SerializeField] private float feedAngularDrag = 6f;
         [Min(0f)] [SerializeField] private float tumbleTorque = .35f;
         [Range(0f, 20f)] [SerializeField] private float maxFeedTiltAngle = 5f;
 
@@ -46,6 +47,7 @@ namespace GravityPuzzle.Config
         public float TremorIntensity => tremorIntensity;
         public float TremorFrequency => tremorFrequency;
         public float FeedShakeAmplitude => feedShakeAmplitude;
+        public float FeedAngularDrag => feedAngularDrag;
         public float TumbleTorque => tumbleTorque;
         public float MaxFeedTiltAngle => maxFeedTiltAngle;
         public float FinalPieceTimerGraceSeconds => finalPieceTimerGraceSeconds;

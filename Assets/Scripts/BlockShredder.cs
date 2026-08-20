@@ -190,27 +190,9 @@ namespace GravityPuzzle
             // the cutter line below, preventing a feed from passing through an
             // obstacle or another falling piece.
             piece.SetSelected(false);
-            piece.PrepareForShredderPhysics();
+            piece.EnterShredderPhysics(shredderConfig);
             ApplyShredderFeedMaterial(piece);
             Rigidbody2D rb = piece.Body;
-            if (rb != null)
-            {
-                // The board frame is a presentation boundary, not a shredder
-                // blocker. Feed this already-captured piece kinematically through
-                // the cutter so it cannot lodge against that frame. Its modular
-                // colliders remain enabled until their individual cells cross
-                // the cutter line below.
-                rb.bodyType = RigidbodyType2D.Kinematic;
-                rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-                rb.constraints = RigidbodyConstraints2D.None;
-                rb.velocity = Vector2.down * shredlenmeHizi;
-                rb.angularDrag = 6f;
-
-                // Apply a gentle initial tilt angle (-15 to +15 deg/sec)
-                float gentleTilt = Random.Range(-maxFeedTiltAngle, maxFeedTiltAngle);
-                rb.angularVelocity = gentleTilt;
-                rb.AddTorque(Random.Range(-1f, 1f) * shredderTumbleTorque, ForceMode2D.Impulse);
-            }
 
             // 2. Sprite Masking / Visual Clipping: mask out any portion moving below shredderY
             SpriteRenderer[] pieceRenderers = piece.GetComponentsInChildren<SpriteRenderer>(true);

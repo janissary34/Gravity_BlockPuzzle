@@ -22,6 +22,7 @@ MonoBehaviour:
   tremorIntensity: 0.045
   tremorFrequency: 55
   feedShakeAmplitude: 1
+  feedAngularDrag: 6
   tumbleTorque: 7.5
   maxFeedTiltAngle: 5
   finalPieceTimerGraceSeconds: 1.8

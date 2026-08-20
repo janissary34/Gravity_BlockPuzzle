@@ -553,6 +553,34 @@ namespace GravityPuzzle
             ApplyCollisionProfile();
         }
 
+        /// <summary>
+        /// Applies the only runtime physics profile allowed for a board piece:
+        /// the captured shredder feed. Normal drag and grid gravity retain
+        /// their deterministic kinematic presentation ownership.
+        /// </summary>
+        public void EnterShredderPhysics(ShredderConfig config)
+        {
+            if (config == null)
+                return;
+
+            PrepareForShredderPhysics();
+            if (Body == null)
+                return;
+
+            Body.simulated = true;
+            Body.bodyType = RigidbodyType2D.Kinematic;
+            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            Body.constraints = RigidbodyConstraints2D.None;
+            Body.velocity = Vector2.down * config.FeedSpeed;
+            Body.angularDrag = config.FeedAngularDrag;
+            Body.angularVelocity = UnityEngine.Random.Range(
+                -config.MaxFeedTiltAngle,
+                config.MaxFeedTiltAngle);
+            Body.AddTorque(
+                UnityEngine.Random.Range(-1f, 1f) * config.TumbleTorque,
+                ForceMode2D.Impulse);
+        }
+
         public void ReleaseCollisionCellsAtOrBelow(float worldY)
         {
             if (collisionCells == null)

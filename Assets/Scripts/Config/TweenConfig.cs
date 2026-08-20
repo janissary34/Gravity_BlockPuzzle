@@ -98,6 +98,28 @@ namespace GravityPuzzle.Config
         [Min(.001f)] [SerializeField] private float timerFreezeGlowFadeOutDuration = .35f;
         [SerializeField] private Ease timerFreezeGlowFadeOutEase = Ease.InSine;
 
+        [Header("Freeze FX Presentation")]
+        [Tooltip("Duration of the subtle scale punch when the clock arrives at center (anticipation).")]
+        [Min(.001f)] [SerializeField] private float timerAnticipationDuration = .12f;
+        [Tooltip("Target localScale multiplier applied to timer_obj while it flies toward the timer display.")]
+        [Min(0f)] [SerializeField] private float timerFlightScaleTarget = .60f;
+        [Tooltip("FreezeImpactImage starting scale (before burst).")]
+        [Min(0f)] [SerializeField] private float freezeImpactStartScale = .40f;
+        [Tooltip("FreezeImpactImage peak scale at burst apex.")]
+        [Min(0f)] [SerializeField] private float freezeImpactPeakScale = 1.40f;
+        [Tooltip("Full period of one TimerGlow alpha+scale pulse loop.")]
+        [Min(.001f)] [SerializeField] private float freezeGlowPulseDuration = 1.50f;
+        [Tooltip("TimerGlow alpha at the trough of the pulse.")]
+        [Range(0f, 1f)] [SerializeField] private float freezeGlowPulseMinAlpha = .65f;
+        [Tooltip("TimerGlow alpha at the peak of the pulse.")]
+        [Range(0f, 1f)] [SerializeField] private float freezeGlowPulseMaxAlpha = .85f;
+        [Tooltip("FreezeTimerIndicator fade-in duration.")]
+        [Min(.001f)] [SerializeField] private float freezeIndicatorFadeDuration = .25f;
+        [Tooltip("Atmosphere elements (Glow/FrostBorder/EdgeGlow/Vignette) fade-in duration.")]
+        [Min(.001f)] [SerializeField] private float freezeAtmoFadeInDuration = .28f;
+        [Tooltip("Atmosphere elements fade-out duration during expiration.")]
+        [Min(.001f)] [SerializeField] private float freezeAtmoFadeOutDuration = .35f;
+
         public int TweenCapacity => tweenCapacity;
         public int SequenceCapacity => sequenceCapacity;
         public float PieceMoveDuration => pieceMoveDuration;
@@ -173,5 +195,15 @@ namespace GravityPuzzle.Config
         public Ease TimerFreezeGlowFadeInEase => timerFreezeGlowFadeInEase;
         public float TimerFreezeGlowFadeOutDuration => timerFreezeGlowFadeOutDuration;
         public Ease TimerFreezeGlowFadeOutEase => timerFreezeGlowFadeOutEase;
+        public float TimerAnticipationDuration => timerAnticipationDuration;
+        public float TimerFlightScaleTarget => timerFlightScaleTarget;
+        public float FreezeImpactStartScale => freezeImpactStartScale;
+        public float FreezeImpactPeakScale => freezeImpactPeakScale;
+        public float FreezeGlowPulseDuration => freezeGlowPulseDuration;
+        public float FreezeGlowPulseMinAlpha => freezeGlowPulseMinAlpha;
+        public float FreezeGlowPulseMaxAlpha => freezeGlowPulseMaxAlpha;
+        public float FreezeIndicatorFadeDuration => freezeIndicatorFadeDuration;
+        public float FreezeAtmoFadeInDuration => freezeAtmoFadeInDuration;
+        public float FreezeAtmoFadeOutDuration => freezeAtmoFadeOutDuration;
     }
 }
