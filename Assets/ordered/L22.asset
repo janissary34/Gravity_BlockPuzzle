@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
-  m_Name: sel - 17
+  m_Name: L22
   m_EditorClassIdentifier: 
   levelName: New Level
   timeLimit: 60
@@ -20,12 +20,20 @@ MonoBehaviour:
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   gravityScale: 1.5
+  useAutomaticCameraFit: 1
+  fixedCameraSize: 6
+  cameraViewportWidth: 0.88
+  cameraViewportHeight: 0.7
+  useRuntimeSafeAreaForCameraFit: 0
   exitWidth: 3
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
+  shredlenmeHizi: 0.7
+  titremeMiktari: 0.045
   pieces:
   - name: Piece 1
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 18}
     quarterTurns: 0
@@ -165,6 +173,7 @@ MonoBehaviour:
     - localCell: {x: 9, y: 13}
       type: 0
   - name: Piece 2
+    visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 18, y: 24}
     quarterTurns: 0
@@ -272,6 +281,7 @@ MonoBehaviour:
     - localCell: {x: -11, y: 11}
       type: 0
   - name: Piece 3
+    visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 18, y: 24}
     quarterTurns: 0
@@ -411,6 +421,7 @@ MonoBehaviour:
     - localCell: {x: 1, y: -9}
       type: 0
   - name: Piece 4
+    visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 18, y: 24}
     quarterTurns: 0
@@ -518,6 +529,7 @@ MonoBehaviour:
     - localCell: {x: -7, y: -9}
       type: 0
   - name: Piece 5
+    visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 10, y: 28}
     quarterTurns: 0
@@ -561,6 +573,7 @@ MonoBehaviour:
     - localCell: {x: -3, y: -1}
       type: 0
   - name: Piece 6
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
     origin: {x: 18, y: 16}
     quarterTurns: 0

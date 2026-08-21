@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
-  m_Name: sel - 08
+  m_Name: L19
   m_EditorClassIdentifier: 
   levelName: New Level
   timeLimit: 500
@@ -20,12 +20,20 @@ MonoBehaviour:
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   gravityScale: 1.5
+  useAutomaticCameraFit: 1
+  fixedCameraSize: 6
+  cameraViewportWidth: 0.88
+  cameraViewportHeight: 0.7
+  useRuntimeSafeAreaForCameraFit: 0
   exitWidth: 3
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
+  shredlenmeHizi: 0.7
+  titremeMiktari: 0.045
   pieces:
   - name: Piece 9
+    visualId: 
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
     origin: {x: 18, y: 16}
     quarterTurns: 0
@@ -165,10 +173,11 @@ MonoBehaviour:
     - localCell: {x: -15, y: -5}
       type: 0
   - name: Piece 10
+    visualId: 
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
-    origin: {x: 18, y: 16}
+    origin: {x: 18, y: 15}
     quarterTurns: 0
-    frozenMoveCount: 0
+    frozenMoveCount: 1
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -304,6 +313,7 @@ MonoBehaviour:
     - localCell: {x: -15, y: 3}
       type: 0
   - name: Piece 11
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
     origin: {x: 18, y: 16}
     quarterTurns: 0
@@ -443,8 +453,9 @@ MonoBehaviour:
     - localCell: {x: -7, y: -1}
       type: 0
   - name: Piece 12
+    visualId: 
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
-    origin: {x: 18, y: 12}
+    origin: {x: 18, y: 11}
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
@@ -486,6 +497,7 @@ MonoBehaviour:
     - localCell: {x: -15, y: 15}
       type: 0
   - name: Piece 5
+    visualId: 
     color: {r: 1, g: 0.9929482, b: 0.2980392, a: 1}
     origin: {x: 18, y: 16}
     quarterTurns: 0
@@ -625,6 +637,7 @@ MonoBehaviour:
     - localCell: {x: 5, y: 11}
       type: 0
   - name: Piece 6
+    visualId: 
     color: {r: 0.9528302, g: 0.022472408, b: 0.064152695, a: 1}
     origin: {x: 2, y: 16}
     quarterTurns: 0
@@ -764,6 +777,7 @@ MonoBehaviour:
     - localCell: {x: 13, y: 11}
       type: 0
   - name: Piece 7
+    visualId: 
     color: {r: 0.19425267, g: 0.6792453, b: 0.086507656, a: 1}
     origin: {x: 10, y: 16}
     quarterTurns: 0

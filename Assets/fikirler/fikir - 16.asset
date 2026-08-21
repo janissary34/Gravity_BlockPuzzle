@@ -20,12 +20,20 @@ MonoBehaviour:
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   gravityScale: 1.5
+  useAutomaticCameraFit: 1
+  fixedCameraSize: 6
+  cameraViewportWidth: 0.88
+  cameraViewportHeight: 0.7
+  useRuntimeSafeAreaForCameraFit: 0
   exitWidth: 3
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
+  shredlenmeHizi: 0.7
+  titremeMiktari: 0.045
   pieces:
   - name: Piece 1
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 2}
     quarterTurns: 0
@@ -165,6 +173,7 @@ MonoBehaviour:
     - localCell: {x: 9, y: 13}
       type: 0
   - name: Piece 2
+    visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -304,6 +313,7 @@ MonoBehaviour:
     - localCell: {x: -3, y: 7}
       type: 0
   - name: Piece 3
+    visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -347,6 +357,7 @@ MonoBehaviour:
     - localCell: {x: -15, y: 3}
       type: 0
   - name: Piece 4
+    visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -454,6 +465,7 @@ MonoBehaviour:
     - localCell: {x: -11, y: 7}
       type: 0
   - name: Piece 5
+    visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -561,6 +573,7 @@ MonoBehaviour:
     - localCell: {x: -11, y: -9}
       type: 0
   - name: Piece 6
+    visualId: 
     color: {r: 0.2980392, g: 1, b: 0.97223103, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -604,6 +617,7 @@ MonoBehaviour:
     - localCell: {x: -15, y: -5}
       type: 0
   - name: Piece 7
+    visualId: 
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -743,6 +757,7 @@ MonoBehaviour:
     - localCell: {x: 13, y: -5}
       type: 0
   - name: Piece 8
+    visualId: 
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -850,6 +865,7 @@ MonoBehaviour:
     - localCell: {x: 17, y: -13}
       type: 0
   - name: Piece 9
+    visualId: 
     color: {r: 0.9932256, g: 0.2980392, b: 1, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -893,6 +909,7 @@ MonoBehaviour:
     - localCell: {x: 17, y: -5}
       type: 0
   - name: Piece 10
+    visualId: 
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -1032,6 +1049,7 @@ MonoBehaviour:
     - localCell: {x: 13, y: 11}
       type: 0
   - name: Piece 11
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0
@@ -1139,6 +1157,7 @@ MonoBehaviour:
     - localCell: {x: 13, y: 7}
       type: 0
   - name: Piece 12
+    visualId: 
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
     origin: {x: 22, y: 24}
     quarterTurns: 0

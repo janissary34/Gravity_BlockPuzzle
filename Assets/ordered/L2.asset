@@ -32,18 +32,6 @@ MonoBehaviour:
   shredlenmeHizi: 0.7
   titremeMiktari: 0.045
   pieces:
-  - name: Piece 1
-    visualId: 
-    color: {r: 1, g: 0.3, b: 0.3, a: 1}
-    origin: {x: 14, y: 14}
-    quarterTurns: 0
-    frozenMoveCount: 0
-    iceCounterFontSize: 36
-    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
-    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
-    iceCounterOutlineWidth: 0.18
-    iceCounterOffset: {x: 0, y: 0}
-    cells: []
   - name: Piece 2
     visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
@@ -120,18 +108,6 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 9}
       type: 0
-  - name: Piece 3
-    visualId: 
-    color: {r: 0.3, g: 1, b: 0.496, a: 1}
-    origin: {x: 8, y: 12}
-    quarterTurns: 0
-    frozenMoveCount: 0
-    iceCounterFontSize: 36
-    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
-    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
-    iceCounterOutlineWidth: 0.18
-    iceCounterOffset: {x: 0, y: 0}
-    cells: []
   - name: Piece 4
     visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
