@@ -26,6 +26,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static Material sharedOutlineMaterial;
         private static IRuntimePieceRootProvider rootProvider;
         private static PieceVisualConfig pieceVisualConfig;
+        private static readonly HashSet<string> warnedMissingVisualIds = new HashSet<string>();
 
         public static void SetRootProvider(IRuntimePieceRootProvider provider)
         {
@@ -44,6 +45,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             rootProvider = null;
             sharedOutlineMaterial = null;
             pieceVisualConfig = null;
+            warnedMissingVisualIds.Clear();
         }
 
         public static PuzzlePiece Create(
@@ -54,6 +56,18 @@ namespace GravityPuzzle.Gameplay.Pieces
             if (rootProvider == null)
                 throw new System.InvalidOperationException(
                     "[PiecePool] RuntimePieceFactory has not been configured by RuntimePieceFactoryBootstrap.");
+
+            if (definition == null)
+                throw new System.ArgumentNullException(nameof(definition));
+
+            // The level editor can retain an empty entry after its final cell is
+            // removed. It has no geometry to shred, so renting a BlockPiece for
+            // it would create an unreachable progress unit.
+            if (!HasBlockCells(definition))
+            {
+                Debug.LogWarning($"[PiecePool] Ignoring empty authored piece '{definition.name}' (id: {sourcePieceId}).");
+                return null;
+            }
 
             RuntimePieceRoot root = rootProvider.Create(definition.name);
             GameObject piece = root.GameObject;
@@ -270,6 +284,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             piece.ConfigureCollisionGeometry(composite, collisionCells, cellVisuals);
             piece.ConfigureRemainingProgress(remainingProgress);
             ConfigureOutline(outline, composite);
+            ConfigureOutlinePresentation(piece);
         }
 
         private static void ConfigureComposite(CompositeCollider2D pieceComposite)
@@ -301,6 +316,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 definition.iceCounterOutlineColor,
                 definition.iceCounterOutlineWidth,
                 definition.iceCounterOffset));
+            ConfigureOutlinePresentation(puzzlePiece);
         }
 
         private static PieceRuntimeContent BuildRuntimeContent(
@@ -418,17 +434,31 @@ namespace GravityPuzzle.Gameplay.Pieces
             return parts;
         }
 
+        private static bool HasBlockCells(PieceDefinition definition)
+        {
+            if (definition.cells == null)
+                return false;
+
+            for (int index = 0; index < definition.cells.Count; index++)
+            {
+                if (definition.cells[index].type == PieceCellType.Block)
+                    return true;
+            }
+
+            return false;
+        }
+
         private static void ConfigureOutline(LineRenderer outline, CompositeCollider2D pieceComposite)
         {
             outline.enabled = true;
             outline.useWorldSpace = false;
             outline.loop = true;
             outline.positionCount = 0;
-            outline.startWidth = 0.05f;
-            outline.endWidth = 0.05f;
-            outline.numCornerVertices = 4;
-            outline.numCapVertices = 4;
-            outline.sortingOrder = 10;
+            outline.startWidth = GetRestingOutlineWidth();
+            outline.endWidth = GetRestingOutlineWidth();
+            outline.numCornerVertices = GetOutlineCornerVertices();
+            outline.numCapVertices = GetOutlineCapVertices();
+            outline.sortingOrder = GetRestingOutlineSortingOrder();
 
             if (sharedOutlineMaterial == null)
             {
@@ -440,8 +470,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             if (sharedOutlineMaterial != null)
                 outline.sharedMaterial = sharedOutlineMaterial;
 
-            outline.startColor = Color.black;
-            outline.endColor = Color.black;
+            outline.startColor = GetRestingOutlineColor();
+            outline.endColor = GetRestingOutlineColor();
 
             if (pieceComposite.pathCount <= 0)
                 return;
@@ -454,6 +484,29 @@ namespace GravityPuzzle.Gameplay.Pieces
             for (int index = 0; index < pointCount; index++)
                 outline.SetPosition(index, new Vector3(path[index].x, path[index].y, 0f));
         }
+
+        private static void ConfigureOutlinePresentation(PuzzlePiece piece)
+        {
+            if (piece == null)
+                return;
+
+            piece.ConfigureOutlinePresentation(
+                GetRestingOutlineWidth(),
+                GetSelectedOutlineWidth(),
+                GetRestingOutlineColor(),
+                GetSelectedOutlineColor(),
+                GetRestingOutlineSortingOrder(),
+                GetSelectedOutlineSortingOrder());
+        }
+
+        private static float GetRestingOutlineWidth() => pieceVisualConfig != null ? pieceVisualConfig.RestingOutlineWidth : 0.05f;
+        private static float GetSelectedOutlineWidth() => pieceVisualConfig != null ? pieceVisualConfig.SelectedOutlineWidth : 0.08f;
+        private static Color GetRestingOutlineColor() => pieceVisualConfig != null ? pieceVisualConfig.RestingOutlineColor : Color.black;
+        private static Color GetSelectedOutlineColor() => pieceVisualConfig != null ? pieceVisualConfig.SelectedOutlineColor : Color.white;
+        private static int GetRestingOutlineSortingOrder() => pieceVisualConfig != null ? pieceVisualConfig.RestingOutlineSortingOrder : 10;
+        private static int GetSelectedOutlineSortingOrder() => pieceVisualConfig != null ? pieceVisualConfig.SelectedOutlineSortingOrder : 20;
+        private static int GetOutlineCornerVertices() => pieceVisualConfig != null ? pieceVisualConfig.OutlineCornerVertices : 4;
+        private static int GetOutlineCapVertices() => pieceVisualConfig != null ? pieceVisualConfig.OutlineCapVertices : 4;
 
         private static int FindOuterPathIndex(CompositeCollider2D pieceComposite)
         {
@@ -503,7 +556,20 @@ namespace GravityPuzzle.Gameplay.Pieces
             VoxelBlockBuilder.BuildVoxelGrid(slot.transform, part.Name, part.Size, color, voxelSprite);
 
             BoxCollider2D partCollider = slot.Collision;
-            partCollider.transform.localPosition = part.LocalPosition;
+            // The authored collider lives on the slot itself (or beneath it).
+            // The slot already owns the part offset, so applying that offset to
+            // the collider as well moves its hit/physics geometry twice as far
+            // as the rendered voxel grid. Besides making collisions incorrect,
+            // that left booster taps testing an invisible, displaced shape.
+            if (partCollider.transform == slot.transform ||
+                partCollider.transform.IsChildOf(slot.transform))
+            {
+                partCollider.transform.localPosition = Vector3.zero;
+            }
+            else
+            {
+                partCollider.transform.localPosition = part.LocalPosition;
+            }
             partCollider.transform.localScale = Vector3.one;
             partCollider.size = part.Size;
             partCollider.edgeRadius = 0f;
@@ -519,12 +585,31 @@ namespace GravityPuzzle.Gameplay.Pieces
         {
             color = definition.color;
             voxelSprite = null;
-            if (pieceVisualConfig == null || string.IsNullOrWhiteSpace(definition.visualId) ||
-                !pieceVisualConfig.TryGet(definition.visualId, out PieceVisualDefinition visual))
+            if (string.IsNullOrWhiteSpace(definition.visualId))
                 return;
+
+            if (pieceVisualConfig == null ||
+                !pieceVisualConfig.TryGet(definition.visualId, out PieceVisualDefinition visual))
+            {
+                WarnMissingVisualDefinition(definition.visualId);
+                return;
+            }
 
             color = visual.Tint;
             voxelSprite = visual.Sprite;
+        }
+
+        private static void WarnMissingVisualDefinition(string visualId)
+        {
+            if (!warnedMissingVisualIds.Add(visualId))
+                return;
+
+            string source = pieceVisualConfig == null
+                ? "no PieceVisualConfig is assigned"
+                : $"'{pieceVisualConfig.name}' has no matching definition";
+            Debug.LogWarning(
+                $"[PieceVisualConfig] visualId '{visualId}' cannot be resolved because {source}. " +
+                "The authored level color is being used as the safe fallback.");
         }
 
         private static void GetPiecePartBounds(

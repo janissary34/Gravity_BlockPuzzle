@@ -44,9 +44,7 @@ namespace GravityPuzzle.Bootstrap
 
             Transform parent = poolParent != null ? poolParent : transform;
             poolService = new PoolService();
-            int requiredPieceCapacity = selectedLevel != null && selectedLevel.pieces != null
-                ? selectedLevel.pieces.Count
-                : 0;
+            int requiredPieceCapacity = CountRuntimePieceRoots(selectedLevel);
             int pieceCapacity = Mathf.Max(poolConfig.BlockPieceCapacity, requiredPieceCapacity);
             if (pieceCapacity > poolConfig.BlockPieceCapacity)
             {
@@ -107,12 +105,19 @@ namespace GravityPuzzle.Bootstrap
                 return false;
             }
 
+            PieceGridFallView gridFallView = prefab.GetComponent<PieceGridFallView>();
             if (prefab.GetComponent<Rigidbody2D>() == null ||
                 prefab.GetComponent<CompositeCollider2D>() == null ||
                 prefab.GetComponent<LineRenderer>() == null ||
-                prefab.GetComponent<PieceGridFallView>() == null)
+                gridFallView == null)
             {
                 error = "BlockPiece prefab is missing a required root component (Rigidbody2D, CompositeCollider2D, LineRenderer or PieceGridFallView).";
+                return false;
+            }
+
+            if (gridFallView.Config == null)
+            {
+                error = "BlockPiece prefab PieceGridFallView is missing its TweenConfig.";
                 return false;
             }
 
@@ -144,11 +149,14 @@ namespace GravityPuzzle.Bootstrap
 
         private static bool IsVoxelShardPrefabReady(VoxelShard prefab)
         {
-            return prefab != null &&
-                   prefab.GetComponent<SpriteRenderer>() != null &&
-                   prefab.GetComponent<Rigidbody2D>() != null &&
-                   prefab.GetComponent<BoxCollider2D>() != null &&
-                   prefab.GetComponent<GemFlyToUI>() != null;
+            if (prefab == null ||
+                prefab.GetComponent<SpriteRenderer>() == null ||
+                prefab.GetComponent<Rigidbody2D>() == null ||
+                prefab.GetComponent<BoxCollider2D>() == null)
+                return false;
+
+            GemFlyToUI gemFly = prefab.GetComponent<GemFlyToUI>();
+            return gemFly != null && gemFly.Config != null;
         }
 
         private static int GetMaximumRequiredPartSlots(GravityLevelDefinition level)
@@ -165,6 +173,34 @@ namespace GravityPuzzle.Bootstrap
             }
 
             return maximum;
+        }
+
+        // A definition without a Block cell is ignored by RuntimePieceFactory and must not
+        // consume a prewarmed root. Hook-only/empty authoring mistakes therefore cannot make
+        // the configured pool appear undersized.
+        private static int CountRuntimePieceRoots(GravityLevelDefinition level)
+        {
+            if (level == null || level.pieces == null)
+                return 0;
+
+            int count = 0;
+            for (int pieceIndex = 0; pieceIndex < level.pieces.Count; pieceIndex++)
+            {
+                PieceDefinition piece = level.pieces[pieceIndex];
+                if (piece == null || piece.cells == null)
+                    continue;
+
+                for (int cellIndex = 0; cellIndex < piece.cells.Count; cellIndex++)
+                {
+                    if (piece.cells[cellIndex].type != PieceCellType.Block)
+                        continue;
+
+                    count++;
+                    break;
+                }
+            }
+
+            return count;
         }
 
         private void WarnForUnresolvedVisualIds(GravityLevelDefinition level)

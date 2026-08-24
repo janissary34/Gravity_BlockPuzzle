@@ -3,6 +3,29 @@ using System.Collections.Generic;
 
 namespace GravityPuzzle.Core.StateMachine
 {
+    public enum GameState
+    {
+        Initialize,
+        Ready,
+        Playing,
+        LevelComplete,
+        Result
+    }
+
+    public static class GameStateTransitionRules
+    {
+        public static IEnumerable<StateTransition<GameState>> Create()
+        {
+            yield return new StateTransition<GameState>(GameState.Initialize, GameState.Ready);
+            yield return new StateTransition<GameState>(GameState.Ready, GameState.Playing);
+            yield return new StateTransition<GameState>(GameState.Ready, GameState.LevelComplete);
+            yield return new StateTransition<GameState>(GameState.Ready, GameState.Result);
+            yield return new StateTransition<GameState>(GameState.Playing, GameState.LevelComplete);
+            yield return new StateTransition<GameState>(GameState.Playing, GameState.Result);
+            yield return new StateTransition<GameState>(GameState.LevelComplete, GameState.Result);
+        }
+    }
+
     public sealed class StateMachine<TState> where TState : struct, Enum
     {
         private readonly HashSet<StateTransition<TState>> allowedTransitions;

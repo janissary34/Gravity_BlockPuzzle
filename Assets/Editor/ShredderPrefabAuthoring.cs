@@ -9,6 +9,7 @@ namespace GravityPuzzle.EditorTools
         private const string PrefabFolder = "Assets/Prefabs";
         private const string PrefabPath = PrefabFolder + "/ShredderWheel.prefab";
         private const string CatchZonePrefabPath = PrefabFolder + "/ShredderCatchZone.prefab";
+        private const string FeedMaskPrefabPath = PrefabFolder + "/ShredderFeedMask.prefab";
 
         [MenuItem("Gravity Puzzle/Refactor/Create Shredder Wheel Prefab")]
         private static void CreatePrefab()
@@ -19,24 +20,24 @@ namespace GravityPuzzle.EditorTools
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
             if (existing != null)
             {
-                AssetDatabase.DeleteAsset(PrefabPath);
+                Selection.activeObject = existing;
+                Debug.Log("[ShredderPrefab] Existing ShredderWheel.prefab was preserved. Edit its art directly; the create command will not overwrite authored sprites.");
+                return;
             }
+
+            ShredderConfig config = LoadOrCreateConfig();
 
             GameObject root = new GameObject("ShredderWheel");
             try
             {
                 ShredderWheel wheel = root.AddComponent<ShredderWheel>();
-                wheel.BuildAuthoredPrefabHierarchy();
+                wheel.BuildAuthoredPrefabHierarchy(config);
                 GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-                ShredderConfig config = AssetDatabase.LoadAssetAtPath<ShredderConfig>("Assets/ShredderConfig.asset");
-                if (config != null)
-                {
-                    SerializedObject serializedConfig = new SerializedObject(config);
-                    serializedConfig.FindProperty("wheelPrefab").objectReferenceValue = prefab.GetComponent<ShredderWheel>();
-                    serializedConfig.ApplyModifiedPropertiesWithoutUndo();
-                    EditorUtility.SetDirty(config);
-                    AssetDatabase.SaveAssets();
-                }
+                SerializedObject serializedConfig = new SerializedObject(config);
+                serializedConfig.FindProperty("wheelPrefab").objectReferenceValue = prefab.GetComponent<ShredderWheel>();
+                serializedConfig.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(config);
+                AssetDatabase.SaveAssets();
                 Selection.activeObject = prefab;
                 Debug.Log("[ShredderPrefab] Created Assets/Prefabs/ShredderWheel.prefab. Edit its Disc, Hub, and Tooth children before Play.");
             }
@@ -79,12 +80,50 @@ namespace GravityPuzzle.EditorTools
             }
         }
 
+        [MenuItem("Gravity Puzzle/Refactor/Create And Configure Shredder Feed Mask")]
+        private static void CreateFeedMaskPrefab()
+        {
+            if (!AssetDatabase.IsValidFolder(PrefabFolder))
+                AssetDatabase.CreateFolder("Assets", "Prefabs");
+
+            GameObject root = new GameObject("ShredderFeedMask");
+            try
+            {
+                SpriteMask mask = root.AddComponent<SpriteMask>();
+                mask.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/exec-dced8d92-19b9-4407-ba20-eb6bcd4d5bac.png");
+                mask.frontSortingLayerID = SortingLayer.NameToID("Default");
+                mask.frontSortingOrder = 32767;
+                mask.backSortingLayerID = SortingLayer.NameToID("Default");
+                mask.backSortingOrder = -32768;
+                root.AddComponent<ShredderFeedMask>();
+
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, FeedMaskPrefabPath);
+                ShredderConfig config = AssetDatabase.LoadAssetAtPath<ShredderConfig>("Assets/ShredderConfig.asset");
+                if (config != null)
+                {
+                    SerializedObject serializedConfig = new SerializedObject(config);
+                    serializedConfig.FindProperty("feedMaskPrefab").objectReferenceValue = prefab.GetComponent<ShredderFeedMask>();
+                    serializedConfig.ApplyModifiedPropertiesWithoutUndo();
+                    EditorUtility.SetDirty(config);
+                    AssetDatabase.SaveAssets();
+                }
+
+                Selection.activeObject = prefab;
+                Debug.Log("[ShredderPrefab] Created and assigned Assets/Prefabs/ShredderFeedMask.prefab.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
         [MenuItem("Gravity Puzzle/Refactor/Set Shredder Art Scale To 0.04")]
         private static void SetArtScale()
         {
             GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
             try
             {
+                ShredderConfig config = LoadOrCreateConfig();
                 SpriteRenderer[] renderers = root.GetComponentsInChildren<SpriteRenderer>(true);
                 for (int index = 0; index < renderers.Length; index++)
                 {
@@ -92,14 +131,14 @@ namespace GravityPuzzle.EditorTools
                     switch (visual.name)
                     {
                         case "Shredder Disc":
-                            visual.localScale = Vector3.one * (1.65f * .04f);
+                            visual.localScale = Vector3.one * (config.DiscArtScale * config.WheelArtScale);
                             break;
                         case "Shredder Hub":
-                            visual.localScale = Vector3.one * (.48f * .04f);
+                            visual.localScale = Vector3.one * (config.HubArtScale * config.WheelArtScale);
                             break;
                         default:
                             if (visual.name.StartsWith("Tooth"))
-                                visual.localScale = new Vector3(.42f * .04f, .24f * .04f, 1f);
+                                visual.localScale = Vector3.one * config.WheelArtScale;
                             break;
                     }
                 }
@@ -111,6 +150,17 @@ namespace GravityPuzzle.EditorTools
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
+        }
+
+        private static ShredderConfig LoadOrCreateConfig()
+        {
+            ShredderConfig config = AssetDatabase.LoadAssetAtPath<ShredderConfig>("Assets/ShredderConfig.asset");
+            if (config != null)
+                return config;
+
+            config = ScriptableObject.CreateInstance<ShredderConfig>();
+            AssetDatabase.CreateAsset(config, "Assets/ShredderConfig.asset");
+            return config;
         }
     }
 }

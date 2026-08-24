@@ -807,9 +807,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da43c23eb5a9140989e58faccb6d97ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  shredderConfig: {fileID: 11400000, guid: 52cdf33a2b8bb4afbb63c2343d3c8e7d, type: 2}
   shredExplosionForce: 1.4
-  shredForceDirection: {x: 0, y: -1.2}
-  ejectionSpreadAngle: 40
   gemRatio: 0.25
   targetUISlider: {fileID: 260815293}
   targetUIRectTransform: {fileID: 260815292}
@@ -817,7 +816,6 @@ MonoBehaviour:
   gemFlyDuration: 1.1
   gemFlyEase: 26
   blockFeedSpeed: 1.6
-  shredderTumbleTorque: 7.5
 --- !u!4 &254861992
 Transform:
   m_ObjectHideFlags: 0

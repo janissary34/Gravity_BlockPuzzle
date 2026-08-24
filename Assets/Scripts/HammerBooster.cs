@@ -3,6 +3,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using DG.Tweening;
 using GravityPuzzle.Config;
+using GravityPuzzle.Core.StateMachine;
+using GravityPuzzle.Gameplay.Input;
 
 namespace GravityPuzzle
 {
@@ -26,6 +28,8 @@ namespace GravityPuzzle
         [Tooltip("Optional world-space hammer visual. A simple runtime hammer is used when omitted.")]
         [SerializeField] private GameObject hammerVisualPrefab;
         [SerializeField] private TweenConfig tweenConfig;
+        [SerializeField, Tooltip("Gameplay camera used for hammer presentation. Defaults to the tagged main camera once during Awake.")]
+        private Camera gameplayCamera;
 
         [SerializeField] private float popScaleMultiplier = 1.7f;
         [Tooltip("Local offset from the prefab pivot to the striking face of the hammer head.")]
@@ -41,8 +45,21 @@ namespace GravityPuzzle
         private static HammerBooster activeBooster;
         private static int suppressGameplayThroughFrame = -1;
         private PrototypeBoard boundBoard;
+        private BoosterButton boosterButtonRef;
         private CanvasGroup buttonCanvasGroup;
         private bool impactInProgress;
+
+        private void Awake()
+        {
+            if (gameplayCamera == null)
+                gameplayCamera = Camera.main;
+
+            if (boosterButton == null)
+                boosterButton = GetComponent<Button>();
+
+            boosterButtonRef = GetComponent<BoosterButton>();
+            buttonCanvasGroup = boosterButton != null ? boosterButton.GetComponent<CanvasGroup>() : null;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetActiveBooster()
@@ -76,6 +93,9 @@ namespace GravityPuzzle
             if (boosterButton != null)
                 boosterButton.onClick.RemoveListener(ActivateHammerBooster);
 
+            if (boundBoard != null)
+                boundBoard.GameStateChanged -= HandleGameStateChanged;
+
             CancelHammerSelection();
         }
 
@@ -86,14 +106,29 @@ namespace GravityPuzzle
         public void ActivateHammerBooster()
         {
             SynchronizeLevel();
-            if (boundBoard == null || !boundBoard.IsLevelRunning ||
-                LevelTimerUI.IsGameOver || IsTargeting)
+            // A player may change their mind after arming the rocket. Selection
+            // belongs to one tool at a time, so cancel the other tool first.
+            RocketBooster.CancelActiveSelection();
+
+            if (activeBooster == this)
             {
+                // Both the Button and BoosterButton compatibility component
+                // can forward one UI click. The second delivery must be a
+                // no-op; toggling here would immediately cancel the first.
+                return;
+            }
+
+            if (boundBoard == null || !boundBoard.IsLevelRunning || LevelTimerUI.IsGameOver)
+            {
+                Debug.LogWarning(
+                    $"[HammerBooster] Activation rejected. board={(boundBoard != null)}, running={(boundBoard != null && boundBoard.IsLevelRunning)}, gameOver={LevelTimerUI.IsGameOver}, targeting={IsTargeting}.",
+                    this);
                 RefreshButtonState();
                 return;
             }
 
             activeBooster = this;
+            Debug.Log("[HammerBooster] Targeting enabled.", this);
             RefreshButtonState();
         }
 
@@ -104,6 +139,13 @@ namespace GravityPuzzle
                 activeBooster = null;
 
             RefreshButtonState();
+        }
+
+        /// <summary>Cancels whichever hammer instance currently owns targeting.</summary>
+        public static void CancelActiveSelection()
+        {
+            if (activeBooster != null)
+                activeBooster.CancelHammerSelection();
         }
 
         private void ProcessTargetInput()
@@ -129,24 +171,13 @@ namespace GravityPuzzle
                 screenPosition = Input.mousePosition;
             }
 
-            Camera gameCamera = Camera.main;
-            if (gameCamera == null)
+            if (!PuzzleDragController.TryScreenToBoardWorld(screenPosition, out Vector2 worldPosition))
                 return;
 
-            Vector3 pointer = screenPosition;
-            pointer.z = -gameCamera.transform.position.z;
-            Vector2 worldPosition = gameCamera.ScreenToWorldPoint(pointer);
-
-            // Iterate backwards so the most recently registered visible piece
-            // wins if malformed level data overlaps two cells.
-            var pieces = PuzzlePiece.ActivePieces;
-            for (int i = pieces.Count - 1; i >= 0; i--)
+            if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target) &&
+                TryStartHammerImpact(target.Piece, target.Cell, target.WorldPosition))
             {
-                PuzzlePiece piece = pieces[i];
-                if (piece == null || !TryStartHammerImpact(piece, worldPosition))
-                    continue;
-
-                boundBoard?.StartTimer();
+                boundBoard.StartTimer();
                 activeBooster = null;
                 // Update order between UI/booster/drag components is not fixed.
                 // Suppress the rest of this frame so the target tap cannot also
@@ -155,31 +186,31 @@ namespace GravityPuzzle
                 RefreshButtonState();
                 return;
             }
+
+            Debug.LogWarning(
+                "[HammerBooster] No occupied board cell found at target.",
+                this);
         }
 
-        private bool TryStartHammerImpact(PuzzlePiece piece, Vector2 worldPosition)
+        private bool TryStartHammerImpact(
+            PuzzlePiece piece,
+            Core.Grid.GridCoordinate targetCell,
+            Vector2 impactPosition)
         {
             // Validate before consuming the booster. The actual removal happens
             // at the animation impact frame, not at target selection.
-            Collider2D[] hits = Physics2D.OverlapPointAll(worldPosition);
-            bool belongsToPiece = false;
-            for (int i = 0; i < hits.Length; i++)
-            {
-                if (hits[i] != null && hits[i].GetComponentInParent<PuzzlePiece>() == piece)
-                {
-                    belongsToPiece = true;
-                    break;
-                }
-            }
-            if (!belongsToPiece || impactInProgress)
+            if (piece == null || impactInProgress)
                 return false;
 
             impactInProgress = true;
-            PlayHammerSwing(piece, worldPosition);
+            PlayHammerSwing(piece, targetCell, impactPosition);
             return true;
         }
 
-        private void PlayHammerSwing(PuzzlePiece piece, Vector2 impactPosition)
+        private void PlayHammerSwing(
+            PuzzlePiece piece,
+            Core.Grid.GridCoordinate targetCell,
+            Vector2 impactPosition)
         {
             if (tweenConfig == null)
             {
@@ -192,7 +223,7 @@ namespace GravityPuzzle
             Transform hammerTransform = hammer.transform;
             Vector3 defaultScale = hammerTransform.localScale;
             Vector3 impactScale = defaultScale * popScaleMultiplier;
-            Camera camera = Camera.main;
+            Camera camera = gameplayCamera;
             Vector3 impact = impactPosition;
             bool targetIsLeft = impact.x < 0f;
             float facingYAngle = targetIsLeft ? 0f : -180f;
@@ -228,7 +259,7 @@ namespace GravityPuzzle
             swing.AppendInterval(tweenConfig.HammerWindUpDelay);
             swing.Append(hammerTransform.DORotate(new Vector3(0f, facingYAngle, impactAngle), tweenConfig.HammerStrikeDuration)
                 .SetEase(tweenConfig.HammerStrikeEase));
-            swing.AppendCallback(() => ApplyHammerImpact(piece, impactPosition));
+            swing.AppendCallback(() => ApplyHammerImpact(piece, targetCell));
             // Phase 4: shrink along an exit arc once the hit has registered.
             swing.Append(DOVirtual.Float(0f, 1f, tweenConfig.HammerExitDuration, progress =>
                 hammerTransform.position = QuadraticBezier(hoverPoint, exitControl, exitPoint, progress))
@@ -248,27 +279,13 @@ namespace GravityPuzzle
 
         private BoosterButton GetHammerBoosterButton()
         {
-            if (boosterButton != null)
-            {
-                var b = boosterButton.GetComponent<BoosterButton>();
-                if (b != null) return b;
-            }
-
-            BoosterButton[] allButtons = Object.FindObjectsOfType<BoosterButton>();
-            foreach (var b in allButtons)
-            {
-                if (b != null && b.gameObject.name.ToLower().Contains("hammer"))
-                {
-                    return b;
-                }
-            }
-            return null;
+            return boosterButtonRef;
         }
 
-        private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)
+        private void ApplyHammerImpact(PuzzlePiece piece, Core.Grid.GridCoordinate targetCell)
         {
             if (TopologyEditingEnabled &&
-                piece != null && piece.TryRemoveCellAt(impactPosition, out PuzzlePiece.RemovedCell cell))
+                piece != null && piece.TryRemoveCellAt(targetCell, out PuzzlePiece.RemovedCell cell))
             {
                 Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
                 LevelProgressManager manager = LevelProgressManager.Instance;
@@ -280,7 +297,7 @@ namespace GravityPuzzle
                         cell.renderedVoxelCount);
             }
 
-            Camera camera = Camera.main;
+            Camera camera = gameplayCamera;
             if (camera != null)
                 camera.transform.DOShakePosition(
                         tweenConfig.HammerCameraShakeDuration,
@@ -374,8 +391,20 @@ namespace GravityPuzzle
             if (activeBoard == null || activeBoard == boundBoard)
                 return;
 
+            if (boundBoard != null)
+                boundBoard.GameStateChanged -= HandleGameStateChanged;
+
             CancelHammerSelection();
             boundBoard = activeBoard;
+            boundBoard.GameStateChanged += HandleGameStateChanged;
+            RefreshButtonState();
+        }
+
+        private void HandleGameStateChanged(GameState previousState, GameState nextState)
+        {
+            if (nextState == GameState.LevelComplete || nextState == GameState.Result)
+                CancelHammerSelection();
+
             RefreshButtonState();
         }
 
@@ -384,17 +413,13 @@ namespace GravityPuzzle
             if (boosterButton == null)
                 return;
 
-            if (buttonCanvasGroup == null)
-            {
-                buttonCanvasGroup = boosterButton.GetComponent<CanvasGroup>();
-                if (buttonCanvasGroup == null)
-                    buttonCanvasGroup = boosterButton.gameObject.AddComponent<CanvasGroup>();
-            }
-
             bool visible = true;
-            buttonCanvasGroup.alpha = visible ? 1f : 0f;
-            buttonCanvasGroup.interactable = visible;
-            buttonCanvasGroup.blocksRaycasts = visible;
+            if (buttonCanvasGroup != null)
+            {
+                buttonCanvasGroup.alpha = visible ? 1f : 0f;
+                buttonCanvasGroup.interactable = visible;
+                buttonCanvasGroup.blocksRaycasts = visible;
+            }
             boosterButton.interactable =
                 visible &&
                 activeBooster != this &&

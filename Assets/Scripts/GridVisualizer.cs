@@ -17,6 +17,15 @@ namespace GravityPuzzle
         public int gridRadiusY = 20;
         public bool showGizmos = true;
 
+        [SerializeField, Tooltip("Camera used by the optional runtime debug overlay. Cached once when unassigned.")]
+        private Camera debugCamera;
+
+        private void Awake()
+        {
+            if (debugCamera == null)
+                debugCamera = Camera.main;
+        }
+
         private void OnDrawGizmos()
         {
             if (!showGizmos || cellSize.x <= 0f || cellSize.y <= 0f) return;
@@ -49,7 +58,7 @@ namespace GravityPuzzle
         private void OnGUI()
         {
             if (!showGizmos || cellSize.x <= 0f || cellSize.y <= 0f) return;
-            if (Camera.main == null) return;
+            if (debugCamera == null) return;
 
             if (dotTexture == null)
             {
@@ -70,7 +79,7 @@ namespace GravityPuzzle
                         0f
                     );
 
-                    Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
+                    Vector3 screenPos = debugCamera.WorldToScreenPoint(worldPos);
                     
                     if (screenPos.z < 0) continue;
 

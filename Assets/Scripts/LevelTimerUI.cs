@@ -37,6 +37,7 @@ namespace GravityPuzzle
 
         private PrototypeBoard board;
         private int lastDisplayedSecond = -1;
+        private bool timerPresentationLocked;
 
         private void Awake()
         {
@@ -47,10 +48,13 @@ namespace GravityPuzzle
         private void OnEnable()
         {
             Active = this;
+            BindBoard(PrototypeBoard.Active);
         }
 
         private void OnDisable()
         {
+            BindBoard(null);
+
             if (Active == this)
                 Active = null;
         }
@@ -71,18 +75,55 @@ namespace GravityPuzzle
 
         private void Update()
         {
-            if (board != PrototypeBoard.Active)
-            {
-                board = PrototypeBoard.Active;
-                lastDisplayedSecond = -1;
-            }
+            BindBoard(PrototypeBoard.Active);
 
-            bool hasTimeLimit = board != null && board.TimeLimit > 0f;
+            bool hasTimeLimit = board != null && board.TimeLimit > 0f && !timerPresentationLocked;
             SetTimerVisible(hasTimeLimit);
             if (!hasTimeLimit)
                 return;
 
             UpdateTimerDisplay(board.TimeRemaining);
+        }
+
+        private void BindBoard(PrototypeBoard nextBoard)
+        {
+            if (board == nextBoard)
+                return;
+
+            if (board != null)
+            {
+                board.LevelFailed -= HandleLevelFailed;
+                board.GameStateChanged -= HandleGameStateChanged;
+            }
+
+            board = nextBoard;
+            lastDisplayedSecond = -1;
+            timerPresentationLocked = board != null &&
+                (board.GameState == GravityPuzzle.Core.StateMachine.GameState.LevelComplete ||
+                 board.GameState == GravityPuzzle.Core.StateMachine.GameState.Result);
+
+            if (board != null)
+            {
+                board.LevelFailed += HandleLevelFailed;
+                board.GameStateChanged += HandleGameStateChanged;
+            }
+        }
+
+        private void HandleLevelFailed()
+        {
+            ShowFailPopup();
+        }
+
+        private void HandleGameStateChanged(
+            GravityPuzzle.Core.StateMachine.GameState previousState,
+            GravityPuzzle.Core.StateMachine.GameState nextState)
+        {
+            timerPresentationLocked =
+                nextState == GravityPuzzle.Core.StateMachine.GameState.LevelComplete ||
+                nextState == GravityPuzzle.Core.StateMachine.GameState.Result;
+
+            if (timerPresentationLocked)
+                SetTimerVisible(false);
         }
 
         private void SetTimerVisible(bool visible)

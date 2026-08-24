@@ -42,25 +42,6 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Owns the timing and easing of progress presentation tweens.")]
         private TweenConfig tweenConfig;
 
-        [SerializeField, Tooltip("Duration of the slider DOValue fill animation.")]
-        private float sliderFillDuration = 0.12f;
-
-        [SerializeField, Tooltip("Punch scale applied to the slider upon voxel arrival.")]
-        private Vector3 sliderPunchScale = new Vector3(0.045f, 0.045f, 0f);
-
-        [SerializeField, Tooltip("Duration of the slider punch scale effect.")]
-        private float sliderPunchDuration = 0.12f;
-
-        [Header("Flying Voxel FX Setup")]
-        [SerializeField, Tooltip("Flight duration of voxel flying from shredder to UI Slider.")]
-        private float voxelFlyDuration = 0.55f;
-
-        [SerializeField, Tooltip("Arched jump height for the flying voxel trajectory.")]
-        private float voxelJumpPower = 0.8f;
-
-        [SerializeField, Tooltip("Size of the spawned flying voxel cube in world units.")]
-        private float voxelSize = 0.32f;
-
         [Header("Progress State (Read-Only)")]
         [SerializeField] private int totalBlockUnitsInLevel;
         [SerializeField] private float currentShreddedUnits;
@@ -88,42 +69,20 @@ namespace GravityPuzzle
         private int activeFlyingVoxelCount;
         private bool hasAuthoredLevelTotal;
         private float nextSliderPulseTime;
+        private bool hasTweenConfig;
 
-        private float SliderFillDuration => tweenConfig != null
-            ? tweenConfig.ProgressSliderFillDuration
-            : sliderFillDuration;
-
-        private Ease SliderFillEase => tweenConfig != null
-            ? tweenConfig.ProgressSliderFillEase
-            : Ease.OutQuad;
-
-        private float VoxelFlightDuration => tweenConfig != null
-            ? tweenConfig.ProgressVoxelFlightDuration
-            : voxelFlyDuration;
-
-        private Ease VoxelFlightEase => tweenConfig != null
-            ? tweenConfig.ProgressVoxelFlightEase
-            : Ease.InOutSine;
-
-        private float SliderPunchDuration => tweenConfig != null
-            ? tweenConfig.ProgressSliderPunchDuration
-            : sliderPunchDuration;
-
-        private float VoxelRotationRange => tweenConfig != null
-            ? tweenConfig.ProgressVoxelRotationRange
-            : 160f;
-
-        private int SliderPunchVibrato => tweenConfig != null
-            ? tweenConfig.ProgressSliderPunchVibrato
-            : 6;
-
-        private float SliderPunchElasticity => tweenConfig != null
-            ? tweenConfig.ProgressSliderPunchElasticity
-            : .5f;
-
-        private float SliderPulseCooldown => tweenConfig != null
-            ? tweenConfig.ProgressSliderPulseCooldown
-            : .09f;
+        private float SliderFillDuration => tweenConfig.ProgressSliderFillDuration;
+        private Ease SliderFillEase => tweenConfig.ProgressSliderFillEase;
+        private float VoxelFlightDuration => tweenConfig.ProgressVoxelFlightDuration;
+        private Ease VoxelFlightEase => tweenConfig.ProgressVoxelFlightEase;
+        private float SliderPunchDuration => tweenConfig.ProgressSliderPunchDuration;
+        private float VoxelRotationRange => tweenConfig.ProgressVoxelRotationRange;
+        private int SliderPunchVibrato => tweenConfig.ProgressSliderPunchVibrato;
+        private float SliderPunchElasticity => tweenConfig.ProgressSliderPunchElasticity;
+        private float SliderPulseCooldown => tweenConfig.ProgressSliderPulseCooldown;
+        private Vector3 SliderPunchScale => tweenConfig.ProgressSliderPunchScale;
+        private float ProgressVoxelCurveDropMultiplier => tweenConfig.ProgressVoxelCurveDropMultiplier;
+        private float ProgressVoxelUiSize => tweenConfig.ProgressVoxelUiSize;
 
         public bool HasActiveFlyingVoxels => activeFlyingVoxelCount > 0;
         public bool HasPendingProgressPresentation => HasActiveFlyingVoxels ||
@@ -138,6 +97,9 @@ namespace GravityPuzzle
             }
 
             Instance = this;
+            hasTweenConfig = tweenConfig != null;
+            if (!hasTweenConfig)
+                Debug.LogWarning("[LevelProgress] TweenConfig is missing; progress will update without tween presentation.", this);
             EnsureSliderReference();
         }
 
@@ -286,6 +248,13 @@ namespace GravityPuzzle
                 return;
             }
 
+            if (!hasTweenConfig)
+            {
+                AddProgress(progressAmount);
+                onArrival?.Invoke();
+                return;
+            }
+
             EnsureSliderReference();
             Canvas canvas = progressSlider != null
                 ? progressSlider.GetComponentInParent<Canvas>()
@@ -332,7 +301,7 @@ namespace GravityPuzzle
             RectTransform voxelRect = flyingVoxel.GetComponent<RectTransform>();
             voxelRect.anchorMin = new Vector2(.5f, .5f);
             voxelRect.anchorMax = new Vector2(.5f, .5f);
-            voxelRect.sizeDelta = Vector2.one * Mathf.Max(18f, voxelSize * 58f);
+            voxelRect.sizeDelta = Vector2.one * Mathf.Max(18f, ProgressVoxelUiSize * 58f);
             voxelRect.anchoredPosition = start;
             Image voxelImage = flyingVoxel.GetComponent<Image>();
             if (voxelImage == null) voxelImage = flyingVoxel.AddComponent<Image>();
@@ -345,7 +314,7 @@ namespace GravityPuzzle
             // Continue the real free-fall motion for a short distance in UI
             // space, then curve upward toward the bar. The Bezier's first
             // tangent points down, so there is no abrupt stop-and-go corner.
-            float curveDrop = Mathf.Max(42f, voxelJumpPower * 85f);
+            float curveDrop = Mathf.Max(42f, ProgressVoxelCurveDropMultiplier * 85f);
             Vector2 control = start + new Vector2(
                 UnityEngine.Random.Range(-28f, 28f),
                 -curveDrop);
@@ -365,7 +334,7 @@ namespace GravityPuzzle
                     if (sliderPunchTween != null && sliderPunchTween.IsActive())
                         sliderPunchTween.Kill(true);
 
-                    sliderPunchTween = progressSlider.transform.DOPunchScale(sliderPunchScale, SliderPunchDuration, SliderPunchVibrato, SliderPunchElasticity)
+                    sliderPunchTween = progressSlider.transform.DOPunchScale(SliderPunchScale, SliderPunchDuration, SliderPunchVibrato, SliderPunchElasticity)
                         .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
                         .SetAutoKill(true);
                     nextSliderPulseTime = Time.unscaledTime + SliderPulseCooldown;
@@ -437,7 +406,7 @@ namespace GravityPuzzle
                     currentShreddedUnits = totalBlockUnitsInLevel;
             }
 
-            if (progressSlider != null)
+            if (progressSlider != null && hasTweenConfig)
             {
                 progressSlider.minValue = 0f;
                 // Keep the authored denominator locked. No scene object can change this at runtime.
@@ -455,6 +424,10 @@ namespace GravityPuzzle
 
                 Debug.Log($"[LevelProgress] AddProgress(+{amount:0.###}): value={currentShreddedUnits:0.###}/{progressSlider.maxValue:0.###}, " +
                           $"authored={authoredBlockUnits}.");
+            }
+            else if (progressSlider != null)
+            {
+                progressSlider.value = currentShreddedUnits;
             }
 
             OnProgressChanged?.Invoke(currentShreddedUnits, totalBlockUnitsInLevel);
@@ -528,8 +501,10 @@ namespace GravityPuzzle
             int total = 0;
             foreach (PuzzlePiece piece in FindObjectsOfType<PuzzlePiece>())
             {
-                if (piece != null && !piece.IsBeingShredded)
-                    total += Mathf.Max(1, piece.ProgressUnits);
+                // Empty authored entries are invalid level data and cannot emit any
+                // shredding progress. They must not make the level target unreachable.
+                if (piece != null && !piece.IsBeingShredded && piece.HasRuntimeBlockCells)
+                    total += piece.ProgressUnits;
             }
             return total;
         }

@@ -7,7 +7,6 @@ namespace GravityPuzzle.Config
     {
         [Min(0)] [SerializeField] private int blockPieceCapacity = 32;
         [Min(0)] [SerializeField] private int shredVoxelCapacity = 128;
-        [Min(0)] [SerializeField] private int particleCapacity = 128;
 
         [Header("Voxel Presentation")]
         [Tooltip("Voxel grid resolution per authored block cell. 3 creates 3x3 = 9 voxels per cell.")]
@@ -15,7 +14,6 @@ namespace GravityPuzzle.Config
 
         public int BlockPieceCapacity => blockPieceCapacity;
         public int ShredVoxelCapacity => shredVoxelCapacity;
-        public int ParticleCapacity => particleCapacity;
         public int VoxelSubdivisions => voxelSubdivisions;
     }
 }

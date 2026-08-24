@@ -33,7 +33,10 @@ MonoBehaviour:
   progressVoxelFlightDuration: 0.55
   progressVoxelFlightEase: 3
   progressVoxelRotationRange: 160
+  progressVoxelCurveDropMultiplier: 0.8
+  progressVoxelUiSize: 0.32
   progressSliderPunchDuration: 0.12
+  progressSliderPunchScale: {x: 0.045, y: 0.045, z: 0}
   progressSliderPunchVibrato: 6
   progressSliderPunchElasticity: 0.5
   progressSliderPulseCooldown: 0.09

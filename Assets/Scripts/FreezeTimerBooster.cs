@@ -36,6 +36,7 @@ namespace GravityPuzzle
         private void Awake()
         {
             EnsureReferences();
+            buttonCanvasGroup = boosterButton != null ? boosterButton.GetComponent<CanvasGroup>() : null;
         }
 
         private void OnEnable()
@@ -150,25 +151,19 @@ namespace GravityPuzzle
 
         private void RefreshButtonState()
         {
-            EnsureReferences();
-
             if (boosterButton == null)
                 return;
 
             // Keep the GameObject active so this coroutine continues even when
             // the booster component lives directly on the Button. CanvasGroup
             // hides the whole visual hierarchy without disabling the component.
-            if (buttonCanvasGroup == null)
-            {
-                buttonCanvasGroup = boosterButton.GetComponent<CanvasGroup>();
-                if (buttonCanvasGroup == null)
-                    buttonCanvasGroup = boosterButton.gameObject.AddComponent<CanvasGroup>();
-            }
-
             bool visible = HasUses;
-            buttonCanvasGroup.alpha = visible ? 1f : 0f;
-            buttonCanvasGroup.interactable = visible;
-            buttonCanvasGroup.blocksRaycasts = visible;
+            if (buttonCanvasGroup != null)
+            {
+                buttonCanvasGroup.alpha = visible ? 1f : 0f;
+                buttonCanvasGroup.interactable = visible;
+                buttonCanvasGroup.blocksRaycasts = visible;
+            }
 
             boosterButton.interactable =
                 visible &&

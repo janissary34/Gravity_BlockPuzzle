@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
@@ -11,7 +12,7 @@ namespace GravityPuzzle
     /// decrements count by 1 when booster animation completes, and locks button when count reaches 0.
     /// </summary>
     [RequireComponent(typeof(Button))]
-    public class BoosterButton : MonoBehaviour
+    public class BoosterButton : MonoBehaviour, IPointerClickHandler
     {
         [Header("Booster Count Settings")]
         [SerializeField, Tooltip("Starting number of booster uses per level.")]
@@ -29,7 +30,11 @@ namespace GravityPuzzle
         public UnityEvent onBoosterClicked;
 
         private Button button;
+        private RocketBooster rocketBooster;
+        private HammerBooster hammerBooster;
+        private TimerBooster timerBooster;
         private int remainingCount = 3;
+        private int lastDispatchFrame = -1;
 
         public int RemainingCount => remainingCount;
         public bool HasUses => remainingCount > 0;
@@ -38,6 +43,9 @@ namespace GravityPuzzle
         private void Awake()
         {
             button = GetComponent<Button>();
+            rocketBooster = GetComponent<RocketBooster>();
+            hammerBooster = GetComponent<HammerBooster>();
+            timerBooster = GetComponent<TimerBooster>();
             remainingCount = initialCount;
             FindCountTextReferences();
         }
@@ -99,48 +107,45 @@ namespace GravityPuzzle
 
         private void HandleButtonClick()
         {
+            DispatchBoosterClick();
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData.button == PointerEventData.InputButton.Left)
+            {
+                DispatchBoosterClick();
+            }
+        }
+
+        private void DispatchBoosterClick()
+        {
+            if (lastDispatchFrame == Time.frameCount)
+            {
+                return;
+            }
+
+            lastDispatchFrame = Time.frameCount;
+
             if (remainingCount <= 0)
             {
                 RefreshButtonState();
                 return;
             }
 
-            string objName = gameObject.name.ToLower();
-
-            // 1. Trigger RocketBooster only if this button is attached to or named for Rocket Booster
-            RocketBooster rocket = GetComponent<RocketBooster>();
-            if (rocket == null && (objName.Contains("rocket") || objName.Contains("booster_btn")))
+            // A button controls only the booster component on the same prefab.
+            // This avoids routing a click to a stale or unrelated booster instance.
+            if (rocketBooster != null)
             {
-                rocket = Object.FindObjectOfType<RocketBooster>();
+                rocketBooster.ActivateRocketBooster();
             }
-
-            if (rocket != null && (GetComponent<RocketBooster>() != null || objName.Contains("rocket")))
+            else if (hammerBooster != null)
             {
-                rocket.ActivateRocketBooster();
+                hammerBooster.ActivateHammerBooster();
             }
-
-            // 2. Trigger HammerBooster only if this button is attached to or named for Hammer Booster
-            HammerBooster hammer = GetComponent<HammerBooster>();
-            if (hammer == null && objName.Contains("hammer"))
+            else if (timerBooster != null)
             {
-                hammer = Object.FindObjectOfType<HammerBooster>();
-            }
-
-            if (hammer != null && (GetComponent<HammerBooster>() != null || objName.Contains("hammer")))
-            {
-                hammer.ActivateHammerBooster();
-            }
-
-            // 3. Trigger TimerBooster only if this button is attached to or named for Timer Booster
-            TimerBooster timer = GetComponent<TimerBooster>();
-            if (timer == null && (objName.Contains("time") || objName.Contains("timer")))
-            {
-                timer = Object.FindObjectOfType<TimerBooster>();
-            }
-
-            if (timer != null && (GetComponent<TimerBooster>() != null || objName.Contains("time") || objName.Contains("timer")))
-            {
-                timer.PlayTimerBoosterSequence();
+                timerBooster.PlayTimerBoosterSequence();
             }
 
             onBoosterClicked?.Invoke();

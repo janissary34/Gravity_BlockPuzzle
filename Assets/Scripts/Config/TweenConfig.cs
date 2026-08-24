@@ -31,7 +31,10 @@ namespace GravityPuzzle.Config
         [Min(.001f)] [SerializeField] private float progressVoxelFlightDuration = .55f;
         [SerializeField] private Ease progressVoxelFlightEase = Ease.InOutSine;
         [Min(0f)] [SerializeField] private float progressVoxelRotationRange = 160f;
+        [Min(0f)] [SerializeField] private float progressVoxelCurveDropMultiplier = .8f;
+        [Min(.001f)] [SerializeField] private float progressVoxelUiSize = .32f;
         [Min(.001f)] [SerializeField] private float progressSliderPunchDuration = .12f;
+        [SerializeField] private Vector3 progressSliderPunchScale = new Vector3(.045f, .045f, 0f);
         [Min(1)] [SerializeField] private int progressSliderPunchVibrato = 6;
         [Range(0f, 1f)] [SerializeField] private float progressSliderPunchElasticity = .5f;
         [Min(0f)] [SerializeField] private float progressSliderPulseCooldown = .09f;
@@ -118,7 +121,7 @@ namespace GravityPuzzle.Config
         [Tooltip("Atmosphere elements (Glow/FrostBorder/EdgeGlow/Vignette) fade-in duration.")]
         [Min(.001f)] [SerializeField] private float freezeAtmoFadeInDuration = .28f;
         [Tooltip("Atmosphere elements fade-out duration during expiration.")]
-        [Min(.001f)] [SerializeField] private float freezeAtmoFadeOutDuration = .35f;
+        [Min(.001f)] [SerializeField] private float freezeAtmoFadeOutDuration = .70f;
 
         public int TweenCapacity => tweenCapacity;
         public int SequenceCapacity => sequenceCapacity;
@@ -141,7 +144,10 @@ namespace GravityPuzzle.Config
         public float ProgressVoxelFlightDuration => progressVoxelFlightDuration;
         public Ease ProgressVoxelFlightEase => progressVoxelFlightEase;
         public float ProgressVoxelRotationRange => progressVoxelRotationRange;
+        public float ProgressVoxelCurveDropMultiplier => progressVoxelCurveDropMultiplier;
+        public float ProgressVoxelUiSize => progressVoxelUiSize;
         public float ProgressSliderPunchDuration => progressSliderPunchDuration;
+        public Vector3 ProgressSliderPunchScale => progressSliderPunchScale;
         public int ProgressSliderPunchVibrato => progressSliderPunchVibrato;
         public float ProgressSliderPunchElasticity => progressSliderPunchElasticity;
         public float ProgressSliderPulseCooldown => progressSliderPulseCooldown;

@@ -27,7 +27,6 @@ namespace GravityPuzzle.Core.Grid
                         FormatPlacementWarning(level, definition, model, placementResult),
                         level);
                 }
-
                 pieces.Add(model);
             }
 

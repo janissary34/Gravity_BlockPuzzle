@@ -9,6 +9,7 @@ namespace GravityPuzzle
     public sealed class FreeDragPiece : MonoBehaviour
     {
         private Rigidbody2D body;
+        private Camera gameplayCamera;
         private Vector2 grabOffset;
         private bool isDragging;
 
@@ -17,6 +18,7 @@ namespace GravityPuzzle
         private void Awake()
         {
             body = GetComponentInParent<Rigidbody2D>();
+            gameplayCamera = Camera.main;
 
             if (body == null)
                 Debug.LogError($"{name} needs a Rigidbody2D on its parent hook piece.");
@@ -48,11 +50,14 @@ namespace GravityPuzzle
             body.bodyType = RigidbodyType2D.Dynamic;
         }
 
-        private static Vector2 PointerWorldPosition()
+        private Vector2 PointerWorldPosition()
         {
+            if (gameplayCamera == null)
+                return Vector2.zero;
+
             Vector3 screenPoint = Input.mousePosition;
-            screenPoint.z = -Camera.main.transform.position.z;
-            return Camera.main.ScreenToWorldPoint(screenPoint);
+            screenPoint.z = -gameplayCamera.transform.position.z;
+            return gameplayCamera.ScreenToWorldPoint(screenPoint);
         }
     }
 }

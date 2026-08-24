@@ -6,6 +6,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using GravityPuzzle.Config;
+using GravityPuzzle.Core.StateMachine;
+using GravityPuzzle.Gameplay.Input;
 
 namespace GravityPuzzle
 {
@@ -40,6 +42,8 @@ namespace GravityPuzzle
         [Tooltip("Optional rocket visual prefab. A runtime procedurally generated rocket is used when omitted.")]
         [SerializeField] private GameObject rocketVisualPrefab;
         [SerializeField] private TweenConfig tweenConfig;
+        [SerializeField, Tooltip("Gameplay camera used for rocket presentation. Defaults to the tagged main camera once during Awake.")]
+        private Camera gameplayCamera;
 
         [SerializeField, Tooltip("Rocket scale multiplier.")]
         private Vector3 rocketScale = Vector3.one;
@@ -59,7 +63,11 @@ namespace GravityPuzzle
         private void Awake()
         {
             remainingCount = initialCount;
+            if (gameplayCamera == null)
+                gameplayCamera = Camera.main;
+
             EnsureReferences();
+            buttonCanvasGroup = boosterButton != null ? boosterButton.GetComponent<CanvasGroup>() : null;
         }
 
         private void OnEnable()
@@ -107,14 +115,31 @@ namespace GravityPuzzle
                 boosterButton.onClick.RemoveListener(ActivateRocketBooster);
             }
 
+            if (boundBoard != null)
+                boundBoard.GameStateChanged -= HandleGameStateChanged;
+
             CancelRocketSelection();
         }
 
         public void ActivateRocketBooster()
         {
             SynchronizeLevel();
+            // Only one board-targeting tool may own the next board tap.
+            HammerBooster.CancelActiveSelection();
+
+            if (activeBooster == this)
+            {
+                // The BoosterButton event can be delivered after this
+                // component's direct Button listener for the same UI press.
+                // Keep the selection armed instead of toggling it off.
+                return;
+            }
+
             int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
-            if (currentUses <= 0 || LevelTimerUI.IsGameOver)
+            if (currentUses <= 0 ||
+                boundBoard == null ||
+                !boundBoard.IsLevelRunning ||
+                LevelTimerUI.IsGameOver)
             {
                 Debug.LogWarning($"[RocketBooster] Cannot activate: currentUses={currentUses}, IsGameOver={LevelTimerUI.IsGameOver}");
                 RefreshButtonState();
@@ -122,7 +147,7 @@ namespace GravityPuzzle
             }
 
             activeBooster = this;
-            Debug.Log($"[RocketBooster] Activated! Tap any piece to launch rocket (Remaining Uses: {currentUses})");
+            Debug.Log($"[RocketBooster] Targeting enabled. remainingUses={currentUses}.", this);
             RefreshButtonState();
         }
 
@@ -136,10 +161,20 @@ namespace GravityPuzzle
             RefreshButtonState();
         }
 
+        /// <summary>Cancels whichever rocket instance currently owns targeting.</summary>
+        public static void CancelActiveSelection()
+        {
+            if (activeBooster != null)
+                activeBooster.CancelRocketSelection();
+        }
+
         private void ProcessTargetInput()
         {
             int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
-            if (LevelTimerUI.IsGameOver || currentUses <= 0)
+            if (boundBoard == null ||
+                !boundBoard.IsLevelRunning ||
+                LevelTimerUI.IsGameOver ||
+                currentUses <= 0)
             {
                 CancelRocketSelection();
                 return;
@@ -160,45 +195,29 @@ namespace GravityPuzzle
                 screenPosition = Input.mousePosition;
             }
 
-            Camera gameCamera = Camera.main;
-            if (gameCamera == null)
+            if (!PuzzleDragController.TryScreenToBoardWorld(screenPosition, out Vector2 worldPosition))
                 return;
 
-            Vector3 pointer = screenPosition;
-            pointer.z = -gameCamera.transform.position.z;
-            Vector2 worldPosition = gameCamera.ScreenToWorldPoint(pointer);
-
-            var pieces = PuzzlePiece.ActivePieces;
-            for (int i = pieces.Count - 1; i >= 0; i--)
+            if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target) &&
+                TryStartRocketImpact(target.Piece))
             {
-                PuzzlePiece piece = pieces[i];
-                if (piece == null || piece.IsBeingShredded || !TryStartRocketImpact(piece, worldPosition))
-                    continue;
-
-                Debug.Log($"[RocketBooster] Target tap hit piece: {piece.name}");
-                boundBoard?.StartTimer();
+                Debug.Log($"[RocketBooster] Target tap hit piece: {target.Piece.name}");
+                boundBoard.StartTimer();
                 activeBooster = null;
                 suppressGameplayThroughFrame = Time.frameCount;
                 RefreshButtonState();
                 return;
             }
+
+            Debug.LogWarning(
+                "[RocketBooster] No occupied board cell found at target.",
+                this);
         }
 
-        private bool TryStartRocketImpact(PuzzlePiece piece, Vector2 worldPosition)
+        private bool TryStartRocketImpact(PuzzlePiece piece)
         {
-            Collider2D[] hits = Physics2D.OverlapPointAll(worldPosition);
-            bool belongsToPiece = false;
-            for (int i = 0; i < hits.Length; i++)
-            {
-                if (hits[i] != null && hits[i].GetComponentInParent<PuzzlePiece>() == piece)
-                {
-                    belongsToPiece = true;
-                    break;
-                }
-            }
-
             int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
-            if (!belongsToPiece || launchInProgress || currentUses <= 0)
+            if (piece == null || piece.IsBeingShredded || launchInProgress || currentUses <= 0)
                 return false;
 
             // Decrement remaining count if standalone
@@ -224,11 +243,15 @@ namespace GravityPuzzle
                 yield break;
             }
 
-            piece.TryBeginShredderHandoff();
-            piece.SetSelected(false);
-            piece.PrepareForShredderPhysics();
+            if (!piece.TryBeginShredderHandoff())
+            {
+                launchInProgress = false;
+                yield break;
+            }
 
-            Camera camera = Camera.main;
+            piece.PrepareForPresentationRemoval();
+
+            Camera camera = gameplayCamera;
             Vector3 piecePos = GetPieceCenter(piece);
 
             float camY = camera != null ? camera.transform.position.y : 0f;
@@ -319,8 +342,7 @@ namespace GravityPuzzle
 
             if (piece != null)
             {
-                piece.ReportDestroyed();
-                piece.gameObject.SetActive(false);
+                piece.ReleaseInstance();
             }
 
             if (rocket != null)
@@ -458,7 +480,7 @@ namespace GravityPuzzle
         {
             if (boosterButtonRef == null)
             {
-                boosterButtonRef = GetRocketBoosterButton();
+                boosterButtonRef = GetComponent<BoosterButton>();
             }
 
             if (boosterButton == null)
@@ -478,22 +500,6 @@ namespace GravityPuzzle
 
         private BoosterButton GetRocketBoosterButton()
         {
-            if (boosterButtonRef != null) return boosterButtonRef;
-
-            boosterButtonRef = GetComponent<BoosterButton>();
-            if (boosterButtonRef != null) return boosterButtonRef;
-
-            BoosterButton[] allButtons = Object.FindObjectsOfType<BoosterButton>();
-            foreach (var b in allButtons)
-            {
-                if (b != null && b.gameObject.name.ToLower().Contains("rocket"))
-                {
-                    boosterButtonRef = b;
-                    return b;
-                }
-            }
-
-            if (allButtons.Length > 0) boosterButtonRef = allButtons[0];
             return boosterButtonRef;
         }
 
@@ -522,8 +528,12 @@ namespace GravityPuzzle
             if (activeBoard == null || activeBoard == boundBoard)
                 return;
 
+            if (boundBoard != null)
+                boundBoard.GameStateChanged -= HandleGameStateChanged;
+
             CancelRocketSelection();
             boundBoard = activeBoard;
+            boundBoard.GameStateChanged += HandleGameStateChanged;
             if (boosterButtonRef != null)
             {
                 boosterButtonRef.ResetCount(initialCount);
@@ -533,6 +543,14 @@ namespace GravityPuzzle
                 remainingCount = initialCount;
                 UpdateCountUI();
             }
+            RefreshButtonState();
+        }
+
+        private void HandleGameStateChanged(GameState previousState, GameState nextState)
+        {
+            if (nextState == GameState.LevelComplete || nextState == GameState.Result)
+                CancelRocketSelection();
+
             RefreshButtonState();
         }
 
@@ -547,21 +565,20 @@ namespace GravityPuzzle
             if (boosterButton == null)
                 return;
 
-            if (buttonCanvasGroup == null)
-            {
-                buttonCanvasGroup = boosterButton.GetComponent<CanvasGroup>();
-                if (buttonCanvasGroup == null)
-                    buttonCanvasGroup = boosterButton.gameObject.AddComponent<CanvasGroup>();
-            }
-
             bool visible = true;
-            buttonCanvasGroup.alpha = visible ? 1f : 0.4f;
-            buttonCanvasGroup.interactable = visible;
-            buttonCanvasGroup.blocksRaycasts = visible;
+            if (buttonCanvasGroup != null)
+            {
+                buttonCanvasGroup.alpha = visible ? 1f : 0.4f;
+                buttonCanvasGroup.interactable = visible;
+                buttonCanvasGroup.blocksRaycasts = visible;
+            }
+            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
             boosterButton.interactable =
                 visible &&
-                remainingCount > 0 &&
+                currentUses > 0 &&
                 activeBooster != this &&
+                boundBoard != null &&
+                boundBoard.IsLevelRunning &&
                 !LevelTimerUI.IsGameOver;
         }
 

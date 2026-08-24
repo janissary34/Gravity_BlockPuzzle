@@ -144,7 +144,7 @@ namespace GravityPuzzle
         public static void Build(GravityLevelDefinition level)
         {
             float halfHeight = level.boardRows * .5f;
-            float cameraSize = 10f;
+            float cameraSize = ResolveCameraSize(level);
             PrototypeBootstrap.ConfigureCamera(cameraSize, level.backgroundColor);
 
             GameObject board = new GameObject($"Level - {level.levelName}");
@@ -181,7 +181,6 @@ namespace GravityPuzzle
 
             // The manager creates its UI fallback when this scene does not provide one.
             LevelProgressManager.EnsureInstance().InitializeLevelProgress(level);
-            SettingsPanelButton.EnsureConnected();
         }
 
         private static float ResolveCameraSize(GravityLevelDefinition level)

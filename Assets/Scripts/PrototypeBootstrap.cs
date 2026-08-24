@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using GravityPuzzle.Core.Grid;
+using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
@@ -650,8 +651,15 @@ namespace GravityPuzzle
         private bool boardFailed;
         private bool sequentialLevelsEnabled = true;
         private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
+        private readonly StateMachine<GameState> gameStateMachine = new StateMachine<GameState>(
+            GameState.Initialize,
+            GameStateTransitionRules.Create());
 
         public static event System.Action OnLevelCleared;
+        public event System.Action<GameState, GameState> GameStateChanged;
+        public event System.Action<int, PieceState, PieceState> PieceStateChanged;
+        public event System.Action LevelCleared;
+        public event System.Action LevelFailed;
 
         [Header("Win UI Scene Configuration")]
         [Tooltip("If set, this scene will be loaded when the level is cleared instead of the default auto-reload behavior.")]
@@ -666,7 +674,8 @@ namespace GravityPuzzle
         public bool IsTimerStarted { get; private set; }
         public bool IsTimerActive => TimeLimit > 0f && IsTimerStarted && !boardCleared && !boardFailed;
         public bool IsTimerPaused => timerPauseOwners.Count > 0;
-        public bool IsLevelRunning => !boardCleared && !boardFailed;
+        public bool IsLevelRunning => GameState == GameState.Ready || GameState == GameState.Playing;
+        public GameState GameState => gameStateMachine.Current;
         public LevelBoardSnapshot BoardSnapshot { get; private set; }
 
         private void OnEnable()
@@ -726,6 +735,7 @@ namespace GravityPuzzle
         public void InitializeBoardSnapshot(LevelBoardSnapshot snapshot)
         {
             BoardSnapshot = snapshot;
+            TryTransitionGameState(GameState.Ready);
         }
 
         public bool TryGetPieceModel(PuzzlePiece piece, out PieceModel model)
@@ -741,8 +751,7 @@ namespace GravityPuzzle
             if (!TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
-            model.SetState(state);
-            return true;
+            return TryTransitionPieceState(model, state);
         }
 
         public bool TryClearPieceFromGrid(PuzzlePiece piece, PieceState state)
@@ -751,8 +760,7 @@ namespace GravityPuzzle
                 return false;
 
             BoardSnapshot.Grid.ClearPiece(model);
-            model.SetState(state);
-            return true;
+            return TryTransitionPieceState(model, state);
         }
 
         /// <summary>
@@ -768,8 +776,30 @@ namespace GravityPuzzle
             if (!BoardSnapshot.Grid.TryReserve(model))
                 return false;
 
-            model.SetState(state);
-            return true;
+            return TryTransitionPieceState(model, state);
+        }
+
+        /// <summary>
+        /// Restores the authoritative occupancy for a model that is still
+        /// present in the snapshot but was temporarily cleared by an earlier
+        /// drag or presentation transition. Targeted boosters use this small
+        /// recovery transaction before acting, so their board decision remains
+        /// model/grid based instead of falling back to collider hit testing.
+        /// </summary>
+        public bool TryRestorePieceGridOccupancy(PuzzlePiece piece)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            GridPlacementResult placement = BoardSnapshot.Grid.CheckPlacementIgnoringPiece(
+                model,
+                model.Anchor,
+                model.Id);
+            if (!placement.IsSuccess)
+                return false;
+
+            BoardSnapshot.Grid.ClearPiece(model);
+            return BoardSnapshot.Grid.TryPlace(model);
         }
 
         /// <summary>
@@ -783,8 +813,7 @@ namespace GravityPuzzle
                 return false;
 
             BoardSnapshot.Grid.ClearPiece(model);
-            model.SetState(PieceState.Despawned);
-            return true;
+            return TryTransitionPieceState(model, PieceState.Despawned);
         }
 
         /// <summary>
@@ -818,7 +847,8 @@ namespace GravityPuzzle
                     !fragment.TryCreateGridModel(level, fragmentId, out PieceModel model))
                     return false;
 
-                model.SetState(initialState);
+                if (!TryTransitionPieceState(model, initialState))
+                    return false;
                 fragmentModels.Add(model);
             }
 
@@ -884,7 +914,8 @@ namespace GravityPuzzle
                 !piece.TryCreateGridModel(level, existingModel.Id, out PieceModel refreshedModel))
                 return false;
 
-            refreshedModel.SetState(PieceState.Placed);
+            if (!TryTransitionPieceState(refreshedModel, PieceState.Placed))
+                return false;
             BoardSnapshot.Grid.ClearPiece(existingModel);
             if (!BoardSnapshot.Grid.TryPlace(refreshedModel))
             {
@@ -928,7 +959,7 @@ namespace GravityPuzzle
                 out result);
 
             if (moved)
-                model.SetState(PieceState.Placed);
+                TryTransitionPieceState(model, PieceState.Placed);
 
             return moved;
         }
@@ -953,13 +984,35 @@ namespace GravityPuzzle
                 move.PieceId,
                 out result);
             if (moved)
-                piece.SetState(PieceState.Falling);
+                TryTransitionPieceState(piece, PieceState.Falling);
 
             return moved;
         }
 
+        private bool TryTransitionPieceState(PieceModel model, PieceState nextState)
+        {
+            if (model == null)
+                return false;
+
+            PieceState previousState = model.State;
+            if (model.TrySetState(nextState))
+            {
+                if (previousState != nextState)
+                    PieceStateChanged?.Invoke(model.Id, previousState, nextState);
+                return true;
+            }
+
+            Debug.LogWarning(
+                $"[PieceState] Rejected transition for piece {model.Id}: {previousState} -> {nextState}.",
+                this);
+            return false;
+        }
+
         public void StartTimer()
         {
+            if (!TryTransitionGameState(GameState.Playing))
+                return;
+
             IsTimerStarted = true;
         }
 
@@ -1047,6 +1100,11 @@ namespace GravityPuzzle
                     continue;
 
                 livePieceCount++;
+                // A shredder feed owns its own completion and pooled release.
+                // The generic off-board cleanup must not race that coroutine.
+                if (piece.IsBeingShredded)
+                    continue;
+
                 if (piece.transform.position.y < removalHeight)
                 {
                     piece.ReportDestroyed();
@@ -1063,9 +1121,11 @@ namespace GravityPuzzle
                 if (livePieceCount == 0 && !BlockShredder.HasActiveGemFlights && progressReady)
                 {
                     boardCleared = true;
+                    TryTransitionGameState(GameState.LevelComplete);
                     Debug.Log("LEVEL CLEARED!");
 
                     OnLevelCleared?.Invoke();
+                    LevelCleared?.Invoke();
 
                     if (!string.IsNullOrEmpty(winSceneName))
                     {
@@ -1074,6 +1134,10 @@ namespace GravityPuzzle
                     else if (sequentialLevelsEnabled && GravityLevelRuntime.HasNextLevel)
                     {
                         StartCoroutine(LoadNextLevel());
+                    }
+                    else
+                    {
+                        StartCoroutine(EnterResultAfterDelay());
                     }
                 }
                 else if (TimeLimit > 0f && TimeRemaining <= 0f)
@@ -1104,15 +1168,9 @@ namespace GravityPuzzle
                     if (allSettled)
                     {
                         boardFailed = true;
+                        TryTransitionGameState(GameState.Result);
                         Debug.Log("LEVEL FAILED!");
-                        
-                        PuzzleDragController dragController = GetComponent<PuzzleDragController>();
-                        if (dragController != null)
-                            dragController.enabled = false;
-                            
-                        LevelTimerUI timerUI = LevelTimerUI.Active;
-                        if (timerUI != null)
-                            timerUI.ShowFailPopup();
+                        LevelFailed?.Invoke();
                     }
                 }
             }
@@ -1121,6 +1179,7 @@ namespace GravityPuzzle
         private IEnumerator LoadWinScene(string sceneName)
         {
             yield return new WaitForSecondsRealtime(NextLevelDelay);
+            TryTransitionGameState(GameState.Result);
             GravityLevelRuntime.TryAdvanceToNextLevel();
             SceneManager.LoadScene(sceneName);
         }
@@ -1128,12 +1187,37 @@ namespace GravityPuzzle
         private IEnumerator LoadNextLevel()
         {
             yield return new WaitForSecondsRealtime(NextLevelDelay);
+            TryTransitionGameState(GameState.Result);
 
             if (!GravityLevelRuntime.TryAdvanceToNextLevel())
                 yield break;
 
             Scene activeScene = SceneManager.GetActiveScene();
             SceneManager.LoadScene(activeScene.name);
+        }
+
+        private IEnumerator EnterResultAfterDelay()
+        {
+            yield return new WaitForSecondsRealtime(NextLevelDelay);
+            TryTransitionGameState(GameState.Result);
+        }
+
+        private bool TryTransitionGameState(GameState nextState)
+        {
+            if (GameState == nextState)
+                return true;
+
+            GameState previousState = GameState;
+            if (gameStateMachine.TryTransition(nextState))
+            {
+                GameStateChanged?.Invoke(previousState, nextState);
+                return true;
+            }
+
+            Debug.LogWarning(
+                $"[GameState] Rejected transition: {previousState} -> {nextState}.",
+                this);
+            return false;
         }
 
         private void OnGUI()

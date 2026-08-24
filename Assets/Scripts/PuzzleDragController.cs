@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using GravityPuzzle.Core.Grid;
+using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
@@ -50,6 +51,8 @@ namespace GravityPuzzle
 
         public static PuzzleDragController Instance { get; private set; }
         private bool hasMovingPieces = true;
+        private PrototypeBoard subscribedBoard;
+        private bool inputLockedByGameState;
 
         public static void WakeUpGravity()
         {
@@ -79,6 +82,26 @@ namespace GravityPuzzle
             }
         }
 
+        /// <summary>
+        /// Converts pointer screen coordinates using the controller's cached
+        /// gameplay camera. Targeting tools must use this instead of resolving
+        /// Camera.main independently on every tap.
+        /// </summary>
+        public static bool TryScreenToBoardWorld(Vector2 screenPosition, out Vector2 worldPosition)
+        {
+            worldPosition = default;
+            if (Instance == null || Instance.gameCamera == null)
+                return false;
+
+            Camera camera = Instance.gameCamera;
+            Vector3 screenPoint = new Vector3(
+                screenPosition.x,
+                screenPosition.y,
+                -camera.transform.position.z);
+            worldPosition = camera.ScreenToWorldPoint(screenPoint);
+            return true;
+        }
+
         private void Awake()
         {
             Instance = this;
@@ -89,8 +112,29 @@ namespace GravityPuzzle
             solidContactFilter.useTriggers = false;
         }
 
+        private void OnEnable()
+        {
+            BindBoardEvents(PrototypeBoard.Active);
+        }
+
+        private void OnDisable()
+        {
+            BindBoardEvents(null);
+
+            if (Instance == this)
+                Instance = null;
+        }
+
         private void Update()
         {
+            BindBoardEvents(PrototypeBoard.Active);
+
+            if (inputLockedByGameState)
+            {
+                ClearInputSelection();
+                return;
+            }
+
             // The shredder can capture a piece while it is still held. Drop the
             // drag controller's reference immediately so it cannot move the
             // piece again or queue a release snap during the shred animation.
@@ -128,6 +172,62 @@ namespace GravityPuzzle
                 ProcessMouseInput();
         }
 
+        private void BindBoardEvents(PrototypeBoard nextBoard)
+        {
+            if (subscribedBoard == nextBoard)
+                return;
+
+            if (subscribedBoard != null)
+                subscribedBoard.GameStateChanged -= HandleGameStateChanged;
+
+            subscribedBoard = nextBoard;
+            inputLockedByGameState = IsGameplayInteractionLocked(subscribedBoard);
+
+            if (subscribedBoard != null)
+                subscribedBoard.GameStateChanged += HandleGameStateChanged;
+        }
+
+        private void HandleGameStateChanged(GameState previousState, GameState nextState)
+        {
+            inputLockedByGameState = IsGameplayInteractionLocked(subscribedBoard);
+
+            if (inputLockedByGameState)
+                StopGameplayPresentation();
+        }
+
+        private static bool IsGameplayInteractionLocked(PrototypeBoard board)
+        {
+            return board == null || !board.IsLevelRunning;
+        }
+
+        // Result and bootstrap states have no gameplay owner. Clear every
+        // input/gravity presentation owned by this controller together so an
+        // old drag or fall tween cannot continue after the board has reached
+        // a terminal state.
+        private void StopGameplayPresentation()
+        {
+            ClearInputSelection();
+            HammerBooster.CancelActiveSelection();
+            RocketBooster.CancelActiveSelection();
+            pendingGridGravityMoves.Clear();
+
+            if (gridFallingPiece != null)
+            {
+                gridFallingPiece.GridFallView?.Cancel();
+                gridFallingPiece = null;
+            }
+
+            fallingSpeeds.Clear();
+            snappingTargetsX.Clear();
+        }
+
+        private void ClearInputSelection()
+        {
+            selectedPiece = null;
+            activeFingerId = -1;
+            hasSelectedPieceStartAnchor = false;
+        }
+
         private void CapturePiecesAtShredderBoundary()
         {
             BlockShredder shredder = BlockShredder.Instance;
@@ -161,6 +261,9 @@ namespace GravityPuzzle
 
         private void FixedUpdate()
         {
+            if (inputLockedByGameState)
+                return;
+
             Physics2D.SyncTransforms();
             // Player movement has priority for this tick. Every other piece then
             // advances under deterministic manual gravity, so holding one piece

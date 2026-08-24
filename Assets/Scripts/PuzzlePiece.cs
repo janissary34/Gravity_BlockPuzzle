@@ -61,6 +61,12 @@ namespace GravityPuzzle
             1,
             (collisionCellVisuals != null ? collisionCellVisuals.Count : 0) *
             VoxelBlockBuilder.Subdivisions * VoxelBlockBuilder.Subdivisions);
+        /// <summary>
+        /// True only when this pooled root represents at least one authored
+        /// board block. Empty level-editor entries must never contribute to a
+        /// level's progress target.
+        /// </summary>
+        public bool HasRuntimeBlockCells => collisionCellVisuals != null && collisionCellVisuals.Count > 0;
         /// <summary>Unclaimed progress remaining after cell-level booster hits.</summary>
         public float RemainingProgressUnits { get; private set; } = 1f;
         /// <summary>Source colour from the authored piece definition.</summary>
@@ -111,6 +117,16 @@ namespace GravityPuzzle
         private List<Vector2> fullCollisionCellSizes;
         private List<SpriteRenderer> collisionCellVisuals;
         private Collider2D[] solidColliders;
+        private PhysicsMaterial2D[] defaultSolidColliderMaterials;
+        private SpriteRenderer[] shredderPresentationRenderers;
+        private float restingOutlineWidth = 0.05f;
+        private float selectedOutlineWidth = 0.08f;
+        private Color restingOutlineColor = Color.black;
+        private Color selectedOutlineColor = Color.white;
+        private int restingOutlineSortingOrder = 10;
+        private int selectedOutlineSortingOrder = 20;
+        private bool[] shredderPresentationEnabledStates;
+        private SpriteMaskInteraction[] shredderPresentationMaskStates;
         private bool beingShredded;
         private bool gridDespawned;
         private bool useFullCollisionGeometry;
@@ -218,6 +234,7 @@ namespace GravityPuzzle
 
         public void OnSpawn()
         {
+            RestoreShredderPresentation();
             beingShredded = false;
             gridDespawned = false;
             destructionReported = false;
@@ -231,6 +248,7 @@ namespace GravityPuzzle
                 rootOutline.enabled = true;
             if (compositeCollider != null)
                 compositeCollider.enabled = true;
+            RestoreDefaultCollisionMaterials();
             InvalidateVoxelCache();
         }
 
@@ -239,6 +257,8 @@ namespace GravityPuzzle
             isSelected = false;
             returnToPool = null;
             ClearIceVisuals();
+            RestoreShredderPresentation();
+            RestoreDefaultCollisionMaterials();
             RuntimePieceFactory.ResetPooledPiece(this);
             InvalidateVoxelCache();
         }
@@ -395,13 +415,31 @@ namespace GravityPuzzle
 
             if (rootOutline != null)
             {
-                rootOutline.startWidth = isSelected ? 0.08f : 0.05f;
-                rootOutline.endWidth = isSelected ? 0.08f : 0.05f;
-                Color outlineColor = isSelected ? Color.white : Color.black;
+                float outlineWidth = isSelected ? selectedOutlineWidth : restingOutlineWidth;
+                rootOutline.startWidth = outlineWidth;
+                rootOutline.endWidth = outlineWidth;
+                Color outlineColor = isSelected ? selectedOutlineColor : restingOutlineColor;
                 rootOutline.startColor = outlineColor;
                 rootOutline.endColor = outlineColor;
-                rootOutline.sortingOrder = isSelected ? 20 : 10;
+                rootOutline.sortingOrder = isSelected ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
             }
+        }
+
+        public void ConfigureOutlinePresentation(
+            float restingWidth,
+            float selectedWidth,
+            Color restingColor,
+            Color selectedColor,
+            int restingSortingOrder,
+            int selectedSortingOrder)
+        {
+            restingOutlineWidth = Mathf.Max(0.001f, restingWidth);
+            selectedOutlineWidth = Mathf.Max(0.001f, selectedWidth);
+            restingOutlineColor = restingColor;
+            selectedOutlineColor = selectedColor;
+            restingOutlineSortingOrder = restingSortingOrder;
+            selectedOutlineSortingOrder = selectedSortingOrder;
+            SetSelected(isSelected);
         }
 
         public void ConfigureCollisionGeometry(
@@ -563,6 +601,23 @@ namespace GravityPuzzle
         }
 
         /// <summary>
+        /// Keeps a piece visually available for a presentation-only removal
+        /// such as the rocket booster. Board physics and colliders must not
+        /// participate while the transform is carried by the presentation.
+        /// </summary>
+        public void PrepareForPresentationRemoval()
+        {
+            SetSelected(false);
+
+            if (Body == null)
+                return;
+
+            Body.velocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+            Body.simulated = false;
+        }
+
+        /// <summary>
         /// Returns this root to an inert pool state. This clears every setting
         /// that the shredder handoff is allowed to mutate, so a later renter
         /// cannot inherit angular motion or an unlocked rigidbody profile.
@@ -613,6 +668,99 @@ namespace GravityPuzzle
                 ForceMode2D.Impulse);
         }
 
+        /// <summary>
+        /// Applies the authored shredder-feed material to colliders already
+        /// cached by this piece. No hierarchy search occurs during feed.
+        /// </summary>
+        public void ApplyShredderCollisionMaterial(PhysicsMaterial2D material)
+        {
+            if (material == null || solidColliders == null)
+                return;
+
+            for (int index = 0; index < solidColliders.Length; index++)
+            {
+                if (solidColliders[index] != null)
+                    solidColliders[index].sharedMaterial = material;
+            }
+        }
+
+        /// <summary>
+        /// Captures the authored renderer state immediately before a shredder
+        /// feed changes clipping or visibility. Pool return restores this state
+        /// before the next piece rents the prefab root.
+        /// </summary>
+        public void BeginShredderPresentation(SpriteRenderer[] renderers)
+        {
+            RestoreShredderPresentation();
+            if (renderers == null || renderers.Length == 0)
+                return;
+
+            shredderPresentationRenderers = renderers;
+            shredderPresentationEnabledStates = new bool[renderers.Length];
+            shredderPresentationMaskStates = new SpriteMaskInteraction[renderers.Length];
+            for (int index = 0; index < renderers.Length; index++)
+            {
+                SpriteRenderer renderer = renderers[index];
+                if (renderer == null)
+                    continue;
+
+                shredderPresentationEnabledStates[index] = renderer.enabled;
+                shredderPresentationMaskStates[index] = renderer.maskInteraction;
+            }
+        }
+
+        public void ApplyShredderPresentationClipping()
+        {
+            if (shredderPresentationRenderers == null)
+                return;
+
+            for (int index = 0; index < shredderPresentationRenderers.Length; index++)
+            {
+                SpriteRenderer renderer = shredderPresentationRenderers[index];
+                if (renderer != null && renderer.transform.IsChildOf(transform))
+                    renderer.maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
+            }
+        }
+
+        public void HideShredderRenderer(SpriteRenderer renderer)
+        {
+            if (renderer != null && renderer.transform.IsChildOf(transform))
+                renderer.enabled = false;
+        }
+
+        private void RestoreDefaultCollisionMaterials()
+        {
+            if (solidColliders == null || defaultSolidColliderMaterials == null)
+                return;
+
+            int count = Mathf.Min(solidColliders.Length, defaultSolidColliderMaterials.Length);
+            for (int index = 0; index < count; index++)
+            {
+                if (solidColliders[index] != null)
+                    solidColliders[index].sharedMaterial = defaultSolidColliderMaterials[index];
+            }
+        }
+
+        private void RestoreShredderPresentation()
+        {
+            if (shredderPresentationRenderers == null)
+                return;
+
+            for (int index = 0; index < shredderPresentationRenderers.Length; index++)
+            {
+                SpriteRenderer renderer = shredderPresentationRenderers[index];
+                if (renderer == null || !renderer.transform.IsChildOf(transform))
+                    continue;
+
+                renderer.enabled = shredderPresentationEnabledStates[index];
+                renderer.maskInteraction = shredderPresentationMaskStates[index];
+            }
+
+            shredderPresentationRenderers = null;
+            shredderPresentationEnabledStates = null;
+            shredderPresentationMaskStates = null;
+        }
+
         public void ReleaseCollisionCellsAtOrBelow(float worldY)
         {
             if (collisionCells == null)
@@ -655,7 +803,7 @@ namespace GravityPuzzle
             fullCollisionCellSizes = new List<Vector2>(cellSizes);
 
             ApplyCollisionProfile();
-            CacheSolidColliders();
+            CacheSolidColliders(true);
         }
 
         public void ConfigureFreeze(
@@ -731,6 +879,16 @@ namespace GravityPuzzle
         }
 
         /// <summary>
+        /// Returns whether a visible modular cell owns the supplied board-space
+        /// point. Booster targeting must use this presentation geometry rather
+        /// than the disabled normal-play physics colliders.
+        /// </summary>
+        public bool ContainsVisibleCellAt(Vector2 worldPosition)
+        {
+            return !beingShredded && TryGetCellIndexAt(worldPosition, out _);
+        }
+
+        /// <summary>
         /// Removes a cell and returns its exact visual/progress payload for a
         /// booster impact or another effect that must preserve the voxel reward.
         /// </summary>
@@ -740,23 +898,34 @@ namespace GravityPuzzle
             if (beingShredded || collisionCells == null || collisionCellVisuals == null)
                 return false;
 
-            int targetIndex = -1;
-            float closestDistance = float.PositiveInfinity;
-            for (int i = 0; i < collisionCellVisuals.Count; i++)
-            {
-                SpriteRenderer visual = collisionCellVisuals[i];
-                if (visual == null || !visual.bounds.Contains(worldPosition))
-                    continue;
+            if (!TryGetCellIndexAt(worldPosition, out int targetIndex))
+                return false;
 
-                float distance = ((Vector2)visual.bounds.center - worldPosition).sqrMagnitude;
-                if (distance < closestDistance)
-                {
-                    closestDistance = distance;
-                    targetIndex = i;
-                }
-            }
+            return TryRemoveCellAtIndex(targetIndex, out removedCell);
+        }
 
-            if (targetIndex < 0)
+        /// <summary>
+        /// Removes the modular visual cell that owns an already-authoritative
+        /// grid coordinate. The grid resolves ownership first; this method
+        /// only maps the confirmed fine cell back to its prefab part slot.
+        /// </summary>
+        public bool TryRemoveCellAt(GridCoordinate coordinate, out RemovedCell removedCell)
+        {
+            removedCell = default;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null)
+                return false;
+
+            return TryRemoveCellAt(
+                GravityLevelGridCoordinates.FineCellToWorld(level, coordinate),
+                out removedCell);
+        }
+
+        private bool TryRemoveCellAtIndex(int targetIndex, out RemovedCell removedCell)
+        {
+            removedCell = default;
+            if (targetIndex < 0 || collisionCells == null || collisionCellVisuals == null ||
+                targetIndex >= collisionCells.Count || targetIndex >= collisionCellVisuals.Count)
                 return false;
 
             // Keep the complete pre-hit shape until the grid accepts the new
@@ -770,10 +939,11 @@ namespace GravityPuzzle
             float remainingBeforeHit = RemainingProgressUnits;
 
             SpriteRenderer targetVisual = collisionCellVisuals[targetIndex];
+            BoxCollider2D targetCollider = collisionCells[targetIndex];
             int cellCountBeforeRemoval = Mathf.Max(1, collisionCellVisuals.Count);
             removedCell = new RemovedCell(
-                targetVisual != null ? (Vector2)targetVisual.bounds.center : worldPosition,
-                targetVisual != null ? (Vector2)targetVisual.bounds.size : Vector2.one,
+                GetCellWorldCenter(targetCollider, targetVisual),
+                GetCellWorldSize(targetCollider, targetVisual),
                 VisualColor,
                 RemainingProgressUnits / cellCountBeforeRemoval,
                 targetVisual != null
@@ -844,6 +1014,60 @@ namespace GravityPuzzle
             }
 
             return true;
+        }
+
+        // The rendered voxel grid is intentionally made of child VoxelShard
+        // objects. Its parent SpriteRenderer is a disabled placeholder, so it
+        // cannot be used as hit-test authority. The authored cell geometry is
+        // stable both while normal-play colliders are disabled and while a
+        // booster is selecting a target.
+        private bool TryGetCellIndexAt(Vector2 worldPosition, out int targetIndex)
+        {
+            targetIndex = -1;
+            if (collisionCells == null || collisionCells.Count == 0)
+                return false;
+
+            float closestDistance = float.PositiveInfinity;
+            for (int index = 0; index < collisionCells.Count; index++)
+            {
+                BoxCollider2D cell = collisionCells[index];
+                if (cell == null || !cell.gameObject.activeInHierarchy)
+                    continue;
+
+                Vector2 localPoint = cell.transform.InverseTransformPoint(worldPosition);
+                Vector2 delta = localPoint - cell.offset;
+                Vector2 halfSize = cell.size * .5f;
+                if (Mathf.Abs(delta.x) > halfSize.x || Mathf.Abs(delta.y) > halfSize.y)
+                    continue;
+
+                float distance = delta.sqrMagnitude;
+                if (distance >= closestDistance)
+                    continue;
+
+                closestDistance = distance;
+                targetIndex = index;
+            }
+
+            return targetIndex >= 0;
+        }
+
+        private static Vector2 GetCellWorldCenter(BoxCollider2D cell, SpriteRenderer visual)
+        {
+            if (cell != null)
+                return cell.transform.TransformPoint(cell.offset);
+
+            return visual != null ? (Vector2)visual.bounds.center : Vector2.zero;
+        }
+
+        private static Vector2 GetCellWorldSize(BoxCollider2D cell, SpriteRenderer visual)
+        {
+            if (cell != null)
+            {
+                Vector3 scale = cell.transform.lossyScale;
+                return Vector2.Scale(cell.size, new Vector2(Mathf.Abs(scale.x), Mathf.Abs(scale.y)));
+            }
+
+            return visual != null ? (Vector2)visual.bounds.size : Vector2.one;
         }
 
         private void RestoreRejectedHammerHit(
@@ -975,8 +1199,12 @@ namespace GravityPuzzle
 
         private bool CellsAreConnected(int first, int second, float tolerance)
         {
-            Vector2 firstCentre = collisionCells[first].transform.localPosition;
-            Vector2 secondCentre = collisionCells[second].transform.localPosition;
+            // A cell collider can be a child of its authored part slot. Its
+            // transform.localPosition is then relative to that slot, rather
+            // than this piece. Compare all cells in the common piece space so
+            // hammer topology splitting follows the rendered shape.
+            Vector2 firstCentre = GetCellLocalCenter(collisionCells[first]);
+            Vector2 secondCentre = GetCellLocalCenter(collisionCells[second]);
             Vector2 firstHalf = fullCollisionCellSizes[first] * .5f;
             Vector2 secondHalf = fullCollisionCellSizes[second] * .5f;
             float xDistance = Mathf.Abs(firstCentre.x - secondCentre.x);
@@ -994,6 +1222,14 @@ namespace GravityPuzzle
                 xDistance < xReach - tolerance &&
                 yDistance < yReach - tolerance;
             return sharesVerticalEdge || sharesHorizontalEdge || overlaps;
+        }
+
+        private Vector2 GetCellLocalCenter(BoxCollider2D cell)
+        {
+            if (cell == null)
+                return Vector2.zero;
+
+            return transform.InverseTransformPoint(cell.transform.TransformPoint(cell.offset));
         }
 
         private void ApplyCollisionProfile()
@@ -1035,6 +1271,10 @@ namespace GravityPuzzle
             if (beingShredded)
                 return false;
 
+            // A grid fall tween can still be in flight when the coordinate
+            // catch zone captures this piece. Stop it before the feed becomes
+            // the sole movement owner of the Rigidbody.
+            GridFallView?.Cancel();
             beingShredded = true;
             SetSelected(false);
             PrototypeBoard board = PrototypeBoard.Active;
@@ -1265,9 +1505,19 @@ namespace GravityPuzzle
             return lowest;
         }
 
-        private void CacheSolidColliders()
+        private void CacheSolidColliders(bool captureDefaultMaterials = false)
         {
             solidColliders = GetComponentsInChildren<Collider2D>();
+            if (!captureDefaultMaterials)
+                return;
+
+            defaultSolidColliderMaterials = new PhysicsMaterial2D[solidColliders.Length];
+            for (int index = 0; index < solidColliders.Length; index++)
+            {
+                defaultSolidColliderMaterials[index] = solidColliders[index] != null
+                    ? solidColliders[index].sharedMaterial
+                    : null;
+            }
         }
     }
 }

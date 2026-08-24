@@ -27,6 +27,19 @@ namespace GravityPuzzle
         [Tooltip("Optional UI Button to trigger the Timer Booster.")]
         [SerializeField] private Button boosterButton;
 
+        [Tooltip("Booster count component on this timer booster button.")]
+        [SerializeField] private BoosterButton boosterButtonRef;
+
+        [Tooltip("Camera used for timer presentation. Cached once during Awake when unassigned.")]
+        [SerializeField] private Camera presentationCamera;
+
+        [Tooltip("Optional Canvas authored on timer_obj when its flight must render above every other UI element.")]
+        [SerializeField] private Canvas timerPresentationCanvas;
+
+        [Tooltip("Render priority for the travelling clock and its arrival VFX. Canvas orders are limited to 32767.")]
+        [Range(0, short.MaxValue)]
+        [SerializeField] private int timerPresentationSortingOrder = 32000;
+
         [Tooltip("Optional FreezeTimerBooster reference. Auto-cached in Awake if unassigned.")]
         [SerializeField] private FreezeTimerBooster freezeTimerBooster;
 
@@ -34,7 +47,7 @@ namespace GravityPuzzle
         private TweenConfig tweenConfig;
 
         [Header("Visual Effects (VFX)")]
-        [Tooltip("Blue particle explosion VFX system triggered when clock arrives at timer_txt.")]
+        [Tooltip("Scene-authored blue particle explosion triggered when the clock arrives at timer_txt. Assign an active-scene instance, not a prefab asset.")]
         [SerializeField] private ParticleSystem blueParticleVFX;
 
         [Header("Urgency Presentation")]
@@ -105,8 +118,11 @@ namespace GravityPuzzle
         [Tooltip("ImpactShard_Chunk ParticleSystem.")]
         [SerializeField] private ParticleSystem impactShardChunk;
 
-        [Tooltip("FreezeImpactVapor ParticleSystem.")]
-        [SerializeField] private ParticleSystem freezeImpactVapor;
+        [Tooltip("FreezeImpactVapor UI Image RectTransform (for DOTween scale animation).")]
+        [SerializeField] private RectTransform freezeImpactVaporRect;
+
+        [Tooltip("FreezeImpactVapor CanvasGroup (for DOTween alpha animation).")]
+        [SerializeField] private CanvasGroup freezeImpactVaporCG;
 
         [Header("Freeze FX \u2014 Ambient Snow")]
         [Tooltip("SnowTop ParticleSystem.")]
@@ -125,6 +141,19 @@ namespace GravityPuzzle
         [SerializeField] private GameObject timerFreezeGlow;
 
         [SerializeField] private CanvasGroup timerFreezeGlowCanvasGroup;
+
+        [Header("Freeze Slider Presentation")]
+        [Tooltip("Optional UI Slider that shows the remaining/elapsed freeze duration.")]
+        [SerializeField] private Slider freezeSlider;
+
+        [Tooltip("Optional UI Image with Image Type: Filled that shows the freeze duration.")]
+        [SerializeField] private Image freezeFillImage;
+
+        [Tooltip("Optional CanvasGroup on the freeze slider root for smooth fade-in and fade-out.")]
+        [SerializeField] private CanvasGroup freezeSliderCanvasGroup;
+
+        [Tooltip("If true, slider starts full (1.0) and drains to 0.0 as freeze time passes. If false, fills from 0 to 1.")]
+        [SerializeField] private bool freezeSliderDrains = true;
         [Tooltip("UI-canvas pixel size of the soft glow behind the countdown. Set to zero to preserve the RectTransform's authored size.")]
         [SerializeField] private Vector2 timerFreezeGlowSize = new Vector2(420f, 190f);
         [Min(.01f)] [SerializeField] private float timerFreezeGlowFadeInDuration = .25f;
@@ -174,11 +203,25 @@ namespace GravityPuzzle
         private FreezeTimerBooster activeFreezeBooster;
         private ParticleSystemRenderer timerImpactParticlesRenderer;
         private ParticleSystemRenderer freezeSnowParticlesRenderer;
+        private RectTransform blueParticleVfxRect;
+        private ParticleSystemRenderer blueParticleVfxRenderer;
+        private Canvas blueParticleVfxCanvas;
+        // Cached renderers for FreezeFXRoot impact shards and ambient snow
+        private ParticleSystemRenderer _impactShardLongRenderer;
+        private ParticleSystemRenderer _impactShardDiamondRenderer;
+        private ParticleSystemRenderer _impactShardChunkRenderer;
+        private ParticleSystemRenderer _snowTopRenderer;
+        private ParticleSystemRenderer _snowBottomRenderer;
+        private ParticleSystemRenderer _snowLeftRenderer;
+        private ParticleSystemRenderer _snowRightRenderer;
 
         // Freeze FX sequences and looping pulse tween
         private Sequence _freezeFXSequence;
         private Sequence _freezeCleanupSequence;
         private Tween _timerGlowPulseTween;
+        private Tween _vaporTween;
+        private Coroutine _sliderRoutine;
+        private Tween _sliderFadeTween;
 
         private float EntranceDuration => tweenConfig != null
             ? tweenConfig.TimerEntranceDuration
@@ -274,12 +317,25 @@ namespace GravityPuzzle
         private float FreezeGlowPulseMaxA     => tweenConfig != null ? tweenConfig.FreezeGlowPulseMaxAlpha      : 0.85f;
         private float FreezeIndicatorFadeDur  => tweenConfig != null ? tweenConfig.FreezeIndicatorFadeDuration  : 0.25f;
         private float FreezeAtmoFadeInDur     => tweenConfig != null ? tweenConfig.FreezeAtmoFadeInDuration     : 0.28f;
-        private float FreezeAtmoFadeOutDur    => tweenConfig != null ? tweenConfig.FreezeAtmoFadeOutDuration    : 0.35f;
+        private float FreezeAtmoFadeOutDur    => tweenConfig != null ? tweenConfig.FreezeAtmoFadeOutDuration    : 0.70f;
 
         private void Awake()
         {
+            if (presentationCamera == null)
+                presentationCamera = Camera.main;
+
+            if (boosterButtonRef == null)
+            {
+                boosterButtonRef = boosterButton != null
+                    ? boosterButton.GetComponent<BoosterButton>()
+                    : GetComponent<BoosterButton>();
+            }
+
             if (timer_obj != null)
             {
+                if (timerPresentationCanvas == null)
+                    timerPresentationCanvas = timer_obj.GetComponent<Canvas>();
+
                 originalScale = timer_obj.transform.localScale;
                 if (originalScale.sqrMagnitude < 0.0001f)
                 {
@@ -294,6 +350,11 @@ namespace GravityPuzzle
                 frozenClockImage.fillAmount = 0f;
             }
 
+            if (freezeTimerBooster == null)
+            {
+                freezeTimerBooster = GetComponent<FreezeTimerBooster>();
+            }
+
             if (timerUrgencyPresentation != null && timerUrgencyCanvasGroup == null)
                 timerUrgencyCanvasGroup = timerUrgencyPresentation.GetComponent<CanvasGroup>();
 
@@ -303,11 +364,27 @@ namespace GravityPuzzle
             if (timerImpactParticles != null)
                 timerImpactParticlesRenderer = timerImpactParticles.GetComponent<ParticleSystemRenderer>();
 
+            if (blueParticleVFX != null)
+            {
+                blueParticleVfxRect = blueParticleVFX.GetComponent<RectTransform>();
+                blueParticleVfxRenderer = blueParticleVFX.GetComponent<ParticleSystemRenderer>();
+                blueParticleVfxCanvas = blueParticleVFX.GetComponent<Canvas>();
+            }
+
             if (timerImpactImage != null && timerImpactCanvasGroup == null)
                 timerImpactCanvasGroup = timerImpactImage.GetComponent<CanvasGroup>();
 
             if (freezeSnowParticles != null)
                 freezeSnowParticlesRenderer = freezeSnowParticles.GetComponent<ParticleSystemRenderer>();
+
+            // Cache impact shard and ambient snow renderers for sorting
+            if (impactShardLong    != null) _impactShardLongRenderer    = impactShardLong.GetComponent<ParticleSystemRenderer>();
+            if (impactShardDiamond != null) _impactShardDiamondRenderer = impactShardDiamond.GetComponent<ParticleSystemRenderer>();
+            if (impactShardChunk   != null) _impactShardChunkRenderer   = impactShardChunk.GetComponent<ParticleSystemRenderer>();
+            if (snowTop    != null) _snowTopRenderer    = snowTop.GetComponent<ParticleSystemRenderer>();
+            if (snowBottom != null) _snowBottomRenderer = snowBottom.GetComponent<ParticleSystemRenderer>();
+            if (snowLeft   != null) _snowLeftRenderer   = snowLeft.GetComponent<ParticleSystemRenderer>();
+            if (snowRight  != null) _snowRightRenderer  = snowRight.GetComponent<ParticleSystemRenderer>();
 
             ApplyFreezeVfxSorting();
 
@@ -322,6 +399,10 @@ namespace GravityPuzzle
         {
             if (boosterButton != null)
             {
+                if (freezeTimerBooster != null)
+                {
+                    boosterButton.onClick.RemoveListener(freezeTimerBooster.ActivateFreezeBooster);
+                }
                 boosterButton.onClick.RemoveListener(PlayTimerBoosterSequence);
                 boosterButton.onClick.AddListener(PlayTimerBoosterSequence);
             }
@@ -360,6 +441,8 @@ namespace GravityPuzzle
             _freezeFXSequence?.Kill();
             _freezeCleanupSequence?.Kill();
             KillTimerGlowPulse();
+            KillVaporTween(immediate: true);
+            StopFreezeSlider(immediate: true);
             StopNewAmbientSnow(true);
             StopNewImpactParticles();
 
@@ -426,28 +509,21 @@ namespace GravityPuzzle
             // Bring timer_obj to front of Canvas hierarchy so it is rendered on top of all panels
             timer_obj.transform.SetAsLastSibling();
 
-            // Force Canvas sorting order to 30000 so clock renders ON TOP of all puzzle blocks and boards
-            Canvas objCanvas = timer_obj.GetComponent<Canvas>();
-            if (objCanvas == null)
+            // The presentation Canvas is authored on the timer prefab/scene object. Gameplay must never add
+            // UI components at runtime: the visual can still use its parent Canvas when no dedicated overlay is needed.
+            if (timerPresentationCanvas != null)
             {
-                objCanvas = timer_obj.gameObject.AddComponent<Canvas>();
-            }
-            objCanvas.overrideSorting = true;
-            objCanvas.sortingOrder = 30000;
-
-            GraphicRaycaster raycaster = timer_obj.GetComponent<GraphicRaycaster>();
-            if (raycaster == null && timer_obj.GetComponentInParent<Canvas>() != null)
-            {
-                timer_obj.gameObject.AddComponent<GraphicRaycaster>();
+                timerPresentationCanvas.overrideSorting = true;
+                timerPresentationCanvas.sortingOrder = GetSafeTimerPresentationSortingOrder();
             }
 
-            // Force SpriteRenderer sorting order to 30000 if timer_obj uses SpriteRenderers
+            // Keep SpriteRenderer-based clock variants above board presentation.
             SpriteRenderer[] srs = timer_obj.GetComponentsInChildren<SpriteRenderer>(true);
             foreach (var sr in srs)
             {
                 if (sr != null)
                 {
-                    sr.sortingOrder = 30000;
+                    sr.sortingOrder = GetSafeTimerPresentationSortingOrder();
                 }
             }
 
@@ -489,7 +565,7 @@ namespace GravityPuzzle
                 frozenClockImage.gameObject.SetActive(true);
             }
 
-            Camera cam = Camera.main;
+            Camera cam = presentationCamera;
             Vector3 centerPos = Vector3.zero;
             float offscreenOffsetY = 8f;
 
@@ -593,58 +669,31 @@ namespace GravityPuzzle
                     blueParticleVFX != freezeSnowParticles &&
                     blueParticleVFX != timerImpactParticles)
                 {
-                    ParticleSystem vfxInstance = blueParticleVFX;
-                    bool isPrefabAsset = !blueParticleVFX.gameObject.scene.IsValid();
-
-                    if (isPrefabAsset)
+                    if (!blueParticleVFX.gameObject.scene.IsValid())
                     {
-                        // Dynamically instantiate prefab if assigned from Project window
-                        vfxInstance = Instantiate(blueParticleVFX);
-                    }
-
-                    RectTransform vfxRect = vfxInstance.GetComponent<RectTransform>();
-                    if (vfxRect != null)
-                    {
-                        // Position in UI Canvas Space
-                        Vector3 targetAnchored = GetTargetAnchoredPosition(vfxRect, timer_txt);
-                        vfxRect.anchoredPosition = targetAnchored;
+                        Debug.LogWarning("[TimerBooster] Blue Particle VFX must reference a scene-authored ParticleSystem; prefab assets are not instantiated at runtime.", this);
                     }
                     else
                     {
-                        // Position in Camera World Space
-                        Vector3 vfxWorldPos = GetTargetWorldPosition(timer_txt, timer_obj.transform);
-                        vfxInstance.transform.position = vfxWorldPos;
-                    }
+                        if (blueParticleVfxRect != null)
+                            blueParticleVfxRect.anchoredPosition = GetTargetAnchoredPosition(blueParticleVfxRect, timer_txt);
+                        else
+                            blueParticleVFX.transform.position = GetTargetWorldPosition(timer_txt, timer_obj.transform);
 
-                    // Ensure scale is native Vector3.one
-                    if (vfxInstance.transform.localScale.sqrMagnitude < 0.0001f)
-                    {
-                        vfxInstance.transform.localScale = Vector3.one;
-                    }
+                        if (blueParticleVFX.transform.localScale.sqrMagnitude < 0.0001f)
+                            blueParticleVFX.transform.localScale = Vector3.one;
 
-                    // Force active and play
-                    vfxInstance.gameObject.SetActive(true);
+                        blueParticleVFX.gameObject.SetActive(true);
+                        if (blueParticleVfxRenderer != null)
+                            blueParticleVfxRenderer.sortingOrder = GetSafeTimerPresentationSortingOrder();
+                        if (blueParticleVfxCanvas != null)
+                        {
+                            blueParticleVfxCanvas.overrideSorting = true;
+                            blueParticleVfxCanvas.sortingOrder = GetSafeTimerPresentationSortingOrder();
+                        }
 
-                    // Force sorting order so particles render ON TOP of UI Canvas elements
-                    ParticleSystemRenderer psr = vfxInstance.GetComponent<ParticleSystemRenderer>();
-                    if (psr != null)
-                    {
-                        psr.sortingOrder = 30000;
-                    }
-
-                    Canvas c = vfxInstance.GetComponent<Canvas>();
-                    if (c != null)
-                    {
-                        c.overrideSorting = true;
-                        c.sortingOrder = 30000;
-                    }
-
-                    vfxInstance.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                    vfxInstance.Play(true);
-
-                    if (isPrefabAsset)
-                    {
-                        Destroy(vfxInstance.gameObject, 3.5f);
+                        blueParticleVFX.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                        blueParticleVFX.Play(true);
                     }
                 }
             });
@@ -665,7 +714,7 @@ namespace GravityPuzzle
             if (target == null) return Vector3.zero;
 
             Canvas targetCanvas = target.GetComponentInParent<Canvas>();
-            Camera cam = Camera.main;
+            Camera cam = presentationCamera;
 
             if (targetCanvas != null && targetCanvas.renderMode == RenderMode.ScreenSpaceOverlay && cam != null)
             {
@@ -687,15 +736,20 @@ namespace GravityPuzzle
             if (parentRect == null)
                 return mover.anchoredPosition;
 
-            Canvas canvas = mover.GetComponentInParent<Canvas>();
-            Camera uiCam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-                ? canvas.worldCamera
+            Canvas moverCanvas = mover.GetComponentInParent<Canvas>();
+            Camera moverCam = (moverCanvas != null && moverCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                ? moverCanvas.worldCamera
                 : null;
 
-            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(uiCam, target.position);
+            Canvas targetCanvas = target.GetComponentInParent<Canvas>();
+            Camera targetCam = (targetCanvas != null && targetCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                ? targetCanvas.worldCamera
+                : null;
+
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(targetCam, target.position);
 
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    parentRect, screenPoint, uiCam, out Vector2 localPoint))
+                    parentRect, screenPoint, moverCam, out Vector2 localPoint))
                 return mover.anchoredPosition;
 
             Vector2 anchorCenter = (mover.anchorMin + mover.anchorMax) * 0.5f;
@@ -711,11 +765,13 @@ namespace GravityPuzzle
         {
             GetTimerBoosterButton()?.TryConsumeUse();
 
-            // Freeze timer for 8 seconds
+            float effectiveDuration = GetEffectiveFreezeDuration();
+
+            // Freeze timer for authoritative duration
             FreezeTimerBooster freeze = freezeTimerBooster;
             if (freeze != null)
             {
-                freeze.freezeDuration = freezeDuration;
+                freeze.freezeDuration = effectiveDuration;
                 SubscribeToFreezeCompletion(freeze);
                 freeze.ActivateFreezeBooster();
                 if (!freeze.IsFreezeActive)
@@ -729,28 +785,14 @@ namespace GravityPuzzle
                 if (activeBoard != null)
                 {
                     if (freezeRoutine != null) StopCoroutine(freezeRoutine);
-                    freezeRoutine = StartCoroutine(FreezeTimerRoutine(activeBoard, freezeDuration));
+                    freezeRoutine = StartCoroutine(FreezeTimerRoutine(activeBoard, effectiveDuration));
                 }
             }
         }
 
         private BoosterButton GetTimerBoosterButton()
         {
-            if (boosterButton != null)
-            {
-                var b = boosterButton.GetComponent<BoosterButton>();
-                if (b != null) return b;
-            }
-
-            BoosterButton[] allButtons = Object.FindObjectsOfType<BoosterButton>();
-            foreach (var b in allButtons)
-            {
-                if (b != null && (b.gameObject.name.ToLower().Contains("time") || b.gameObject.name.ToLower().Contains("timer")))
-                {
-                    return b;
-                }
-            }
-            return null;
+            return boosterButtonRef;
         }
 
         private IEnumerator FreezeTimerRoutine(PrototypeBoard targetBoard, float duration)
@@ -813,7 +855,7 @@ namespace GravityPuzzle
 
         private IEnumerator FreezePresentationLifetime()
         {
-            yield return new WaitForSecondsRealtime(Mathf.Max(.1f, freezeDuration));
+            yield return new WaitForSecondsRealtime(GetEffectiveFreezeDuration());
             freezePresentationRoutine = null;
             SetUrgencyPresentationVisible(false, false);
             StopFreezeAmbientPresentation(false);
@@ -896,6 +938,17 @@ namespace GravityPuzzle
 
             if (freezeSnowParticlesRenderer != null)
                 freezeSnowParticlesRenderer.sortingOrder = freezeVfxSortingOrder;
+
+            // FreezeFXRoot impact shards
+            if (_impactShardLongRenderer    != null) _impactShardLongRenderer.sortingOrder    = freezeVfxSortingOrder;
+            if (_impactShardDiamondRenderer != null) _impactShardDiamondRenderer.sortingOrder = freezeVfxSortingOrder;
+            if (_impactShardChunkRenderer   != null) _impactShardChunkRenderer.sortingOrder   = freezeVfxSortingOrder;
+
+            // Ambient snow
+            if (_snowTopRenderer    != null) _snowTopRenderer.sortingOrder    = freezeVfxSortingOrder;
+            if (_snowBottomRenderer != null) _snowBottomRenderer.sortingOrder = freezeVfxSortingOrder;
+            if (_snowLeftRenderer   != null) _snowLeftRenderer.sortingOrder   = freezeVfxSortingOrder;
+            if (_snowRightRenderer  != null) _snowRightRenderer.sortingOrder  = freezeVfxSortingOrder;
         }
 
         private void SubscribeToFreezeCompletion(FreezeTimerBooster freeze)
@@ -1071,6 +1124,11 @@ namespace GravityPuzzle
 
         // ── Freeze FX Helpers (FreezeFXRoot) ────────────────────────────────
 
+        private int GetSafeTimerPresentationSortingOrder()
+        {
+            return Mathf.Clamp(timerPresentationSortingOrder, 0, short.MaxValue);
+        }
+
         /// <summary>
         /// Resets all FreezeFXRoot visual objects to their pre-activation hidden state.
         /// Safe to call from Awake or before re-triggering the sequence.
@@ -1084,6 +1142,12 @@ namespace GravityPuzzle
             // Impact image
             if (freezeImpactImageCG != null)   freezeImpactImageCG.alpha = 0f;
             if (freezeImpactImageRect != null)  freezeImpactImageRect.localScale = Vector3.one * FreezeImpactStartSc;
+
+            // Vapor UI Image
+            KillVaporTween(immediate: true);
+
+            // Freeze Slider
+            StopFreezeSlider(immediate: true);
 
             // Atmosphere
             if (freezeTimerGlow != null)        freezeTimerGlow.alpha = 0f;
@@ -1113,6 +1177,19 @@ namespace GravityPuzzle
             if (!hasAnyFX)
                 return;
 
+            // Align timer-local effects to the actual timer target
+            if (timer_txt != null)
+            {
+                if (freezeTimerGlowRect != null)
+                    freezeTimerGlowRect.anchoredPosition = GetTargetAnchoredPosition(freezeTimerGlowRect, timer_txt);
+
+                if (freezeTimerIndicatorRect != null)
+                    freezeTimerIndicatorRect.anchoredPosition = GetTargetAnchoredPosition(freezeTimerIndicatorRect, timer_txt);
+
+                if (freezeImpactImageRect != null)
+                    freezeImpactImageRect.anchoredPosition = GetTargetAnchoredPosition(freezeImpactImageRect, timer_txt);
+            }
+
             // Ensure a clean starting state before building the sequence
             if (freezeImpactImageCG != null)    freezeImpactImageCG.alpha = 0f;
             if (freezeImpactImageRect != null)  freezeImpactImageRect.localScale = Vector3.one * FreezeImpactStartSc;
@@ -1129,12 +1206,12 @@ namespace GravityPuzzle
                 .SetAutoKill(true);
 
             // ── FAZ 4: IMPACT ───────────────────────────────────────────────
-            // t=0.00  FreezeImpactImage: alpha 0 → 1, scale 0.40 → 1.40
+            // Phase 1 (0.00 - 0.40s): Burst expansion + fade in
             if (freezeImpactImageCG != null)
-                _freezeFXSequence.Insert(0f,    freezeImpactImageCG.DOFade(1f, 0.06f));
+                _freezeFXSequence.Insert(0f, freezeImpactImageCG.DOFade(1f, 0.10f).SetEase(Ease.OutQuad));
             if (freezeImpactImageRect != null)
-                _freezeFXSequence.Insert(0f,    freezeImpactImageRect
-                    .DOScale(Vector3.one * FreezeImpactPeakSc, 0.20f).SetEase(Ease.OutQuad));
+                _freezeFXSequence.Insert(0f, freezeImpactImageRect
+                    .DOScale(Vector3.one * 1.25f, 0.40f).SetEase(Ease.OutCubic));
 
             // t=0.02  Impact shard particles
             _freezeFXSequence.InsertCallback(0.02f, () =>
@@ -1144,12 +1221,21 @@ namespace GravityPuzzle
                 impactShardChunk?.Play();
             });
 
-            // t=0.03  Cold vapor
-            _freezeFXSequence.InsertCallback(0.03f, () => freezeImpactVapor?.Play());
+            // t=0.03  Cold vapor: UI Image DOTween — fade in, expand in place, then fade out
+            _freezeFXSequence.InsertCallback(0.03f, () => PlayVaporAnimation());
 
-            // t=0.14  FreezeImpactImage fade out
+            // Phase 2 (0.40 - 0.55s): Gentle hold / swell (tam görünür kalır)
+            if (freezeImpactImageRect != null)
+                _freezeFXSequence.Insert(0.40f, freezeImpactImageRect
+                    .DOScale(Vector3.one * 1.32f, 0.15f).SetEase(Ease.InOutSine));
+
+            // Phase 3 (0.55 - 0.95s): Slow expand & soft fade out
+            if (freezeImpactImageRect != null)
+                _freezeFXSequence.Insert(0.55f, freezeImpactImageRect
+                    .DOScale(Vector3.one * 1.45f, 0.40f).SetEase(Ease.OutQuad));
             if (freezeImpactImageCG != null)
-                _freezeFXSequence.Insert(0.14f, freezeImpactImageCG.DOFade(0f, 0.14f));
+                _freezeFXSequence.Insert(0.55f, freezeImpactImageCG
+                    .DOFade(0f, 0.40f).SetEase(Ease.OutQuad));
 
             // ── FAZ 5: ATMOSPHERE (staggered wave) ──────────────────────────
             float atmoIn = FreezeAtmoFadeInDur;
@@ -1169,6 +1255,9 @@ namespace GravityPuzzle
             // t=0.14  FreezeDarkVignette
             if (freezeDarkVignette != null)
                 _freezeFXSequence.Insert(0.14f, freezeDarkVignette.DOFade(1f, atmoIn));
+
+            // t=0.00  Start freeze duration slider progression synchronously with impact
+            _freezeFXSequence.InsertCallback(0f, () => StartFreezeSlider());
 
             // t=0.18  Ambient snow (looping PSystems)
             _freezeFXSequence.InsertCallback(0.18f, () =>
@@ -1247,6 +1336,9 @@ namespace GravityPuzzle
             // Stop snow emitters; existing particles finish their lifetime
             StopNewAmbientSnow(false);
 
+            // Stop freeze slider with a fade out
+            StopFreezeSlider(immediate: false);
+
             bool hasAnyNewFX = freezeTimerGlow != null || freezeFrostBorder != null ||
                                freezeEdgeGlow != null || freezeDarkVignette != null ||
                                freezeTimerIndicator != null;
@@ -1260,26 +1352,26 @@ namespace GravityPuzzle
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
 
-            // t=0.05  FreezeTimerIndicator fade out
+            // t=0.04  FreezeTimerIndicator fade out
             if (freezeTimerIndicator != null)
-                _freezeCleanupSequence.Insert(0.05f, freezeTimerIndicator.DOFade(0f, fadeDur));
+                _freezeCleanupSequence.Insert(0.04f, freezeTimerIndicator.DOFade(0f, fadeDur * 0.7f).SetEase(Ease.OutQuad));
 
             // t=0.08  Kill glow pulse, then fade FreezeTimerGlow out
             _freezeCleanupSequence.InsertCallback(0.08f, KillTimerGlowPulse);
             if (freezeTimerGlow != null)
-                _freezeCleanupSequence.Insert(0.08f, freezeTimerGlow.DOFade(0f, fadeDur));
+                _freezeCleanupSequence.Insert(0.08f, freezeTimerGlow.DOFade(0f, fadeDur).SetEase(Ease.OutQuad));
 
             // t=0.12  FreezeEdgeGlow fade out
             if (freezeEdgeGlow != null)
-                _freezeCleanupSequence.Insert(0.12f, freezeEdgeGlow.DOFade(0f, fadeDur));
+                _freezeCleanupSequence.Insert(0.12f, freezeEdgeGlow.DOFade(0f, fadeDur).SetEase(Ease.OutQuad));
 
-            // t=0.16  FreezeFrostBorder fade out
+            // t=0.16  FreezeFrostBorder fade out (köşe buz bordürü)
             if (freezeFrostBorder != null)
-                _freezeCleanupSequence.Insert(0.16f, freezeFrostBorder.DOFade(0f, fadeDur));
+                _freezeCleanupSequence.Insert(0.16f, freezeFrostBorder.DOFade(0f, fadeDur).SetEase(Ease.OutQuad));
 
-            // t=0.18  FreezeDarkVignette fade out (slightly longer trailing edge)
+            // t=0.20  FreezeDarkVignette fade out (karanlık vinyet en son yumuşakça kaybolur)
             if (freezeDarkVignette != null)
-                _freezeCleanupSequence.Insert(0.18f, freezeDarkVignette.DOFade(0f, fadeDur + 0.05f));
+                _freezeCleanupSequence.Insert(0.20f, freezeDarkVignette.DOFade(0f, fadeDur + 0.10f).SetEase(Ease.OutQuad));
         }
 
         /// <summary>Stops the four ambient snow PSystems used during the freeze atmosphere.</summary>
@@ -1301,7 +1393,213 @@ namespace GravityPuzzle
             impactShardLong?.Stop(true,    ParticleSystemStopBehavior.StopEmittingAndClear);
             impactShardDiamond?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             impactShardChunk?.Stop(true,   ParticleSystemStopBehavior.StopEmittingAndClear);
-            freezeImpactVapor?.Stop(true,  ParticleSystemStopBehavior.StopEmittingAndClear);
+            // Vapor is now a UI Image; kill its tween and reset state
+            KillVaporTween(immediate: true);
+        }
+
+        // ── Vapor UI Image helpers ───────────────────────────────────────────
+
+        /// <summary>
+        /// Positions the vapor UI Image at the same anchored position as the timer target,
+        /// then plays a 3-phase DOTween animation: fade-in + expand -> hold -> fade-out + drift expand.
+        /// </summary>
+        private void PlayVaporAnimation()
+        {
+            if (freezeImpactVaporRect == null || freezeImpactVaporCG == null)
+                return;
+
+            // Ensure the vapor's hierarchy is visible
+            for (Transform t = freezeImpactVaporRect.transform; t != null; t = t.parent)
+            {
+                if (!t.gameObject.activeSelf)
+                    t.gameObject.SetActive(true);
+            }
+
+            // Align to timer target using the same coordinate system as the other impact elements
+            if (timer_txt != null)
+            {
+                freezeImpactVaporRect.anchoredPosition = GetTargetAnchoredPosition(freezeImpactVaporRect, timer_txt);
+            }
+
+            // Reset to clean starting state (do NOT touch sizeDelta — Inspector controls base size)
+            KillVaporTween(immediate: false);
+            freezeImpactVaporCG.alpha        = 0f;
+            freezeImpactVaporRect.localScale = Vector3.one * 0.55f;
+
+            // Phase 1  (0.00 – 0.55s)  fade-in + expand
+            //   alpha:  0 → 0.75  over 0.10s  OutQuad
+            //   scale:  0.55 → 1.25  over 0.55s  OutCubic
+            // Phase 2  (0.35 – 0.90s)  fade-out + gentle final expand (overlap with Phase 1 end)
+            //   alpha:  0.75 → 0  over 0.55s  OutQuad
+            //   scale:  1.25 → 1.40  over 0.55s
+            Sequence vaporSeq = DOTween.Sequence()
+                .SetUpdate(true)
+                .SetAutoKill(true)
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable);
+
+            // Phase 1 — simultaneous fade-in and scale-up
+            vaporSeq.Insert(0.00f, freezeImpactVaporCG
+                .DOFade(0.75f, 0.10f)
+                .SetEase(Ease.OutQuad));
+            vaporSeq.Insert(0.00f, freezeImpactVaporRect
+                .DOScale(Vector3.one * 1.25f, 0.55f)
+                .SetEase(Ease.OutCubic));
+
+            // Phase 2 — fade-out + drift expansion, starts at t=0.35s
+            vaporSeq.Insert(0.35f, freezeImpactVaporCG
+                .DOFade(0f, 0.55f)
+                .SetEase(Ease.OutQuad));
+            vaporSeq.Insert(0.35f, freezeImpactVaporRect
+                .DOScale(Vector3.one * 1.40f, 0.55f)
+                .SetEase(Ease.OutQuad));
+
+            _vaporTween = vaporSeq;
+        }
+
+        /// <summary>
+        /// Kills the active vapor tween and optionally resets the visual state immediately.
+        /// </summary>
+        private void KillVaporTween(bool immediate)
+        {
+            if (_vaporTween != null && _vaporTween.IsActive())
+                _vaporTween.Kill();
+            _vaporTween = null;
+
+            if (immediate)
+            {
+                if (freezeImpactVaporCG != null)   freezeImpactVaporCG.alpha = 0f;
+                if (freezeImpactVaporRect != null) freezeImpactVaporRect.localScale = Vector3.one * 0.55f;
+            }
+        }
+
+        // ── Freeze Slider Helpers ────────────────────────────────────────────
+
+        /// <summary>
+        /// Gets the single authoritative freeze duration configured in either FreezeTimerBooster or TimerBooster.
+        /// </summary>
+        private float GetEffectiveFreezeDuration()
+        {
+            if (activeFreezeBooster != null && activeFreezeBooster.freezeDuration > 0.05f)
+                return activeFreezeBooster.freezeDuration;
+
+            if (freezeTimerBooster != null && freezeTimerBooster.freezeDuration > 0.05f)
+                return freezeTimerBooster.freezeDuration;
+
+            return Mathf.Max(0.1f, freezeDuration);
+        }
+
+        /// <summary>
+        /// Starts the proportional freeze progress animation on freezeSlider and/or freezeFillImage.
+        /// Runs a real-time unscaled coroutine so slider value is 100% synchronized with the actual freeze window.
+        /// </summary>
+        private void StartFreezeSlider()
+        {
+            StopFreezeSlider(immediate: true);
+
+            bool hasSlider = freezeSlider != null || freezeFillImage != null;
+            if (!hasSlider)
+                return;
+
+            float duration = GetEffectiveFreezeDuration();
+            float startVal = freezeSliderDrains ? 1f : 0f;
+
+            // Ensure GameObject hierarchy is active
+            if (freezeSlider != null)
+            {
+                freezeSlider.gameObject.SetActive(true);
+                freezeSlider.minValue = 0f;
+                freezeSlider.maxValue = 1f;
+                freezeSlider.value = startVal;
+            }
+
+            if (freezeFillImage != null)
+            {
+                freezeFillImage.gameObject.SetActive(true);
+                freezeFillImage.fillAmount = startVal;
+            }
+
+            // Smooth fade-in
+            if (freezeSliderCanvasGroup != null)
+            {
+                freezeSliderCanvasGroup.gameObject.SetActive(true);
+                freezeSliderCanvasGroup.alpha = 0f;
+                _sliderFadeTween = freezeSliderCanvasGroup
+                    .DOFade(1f, 0.20f)
+                    .SetUpdate(true)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable);
+            }
+
+            _sliderRoutine = StartCoroutine(FreezeSliderProgressRoutine(duration));
+        }
+
+        private IEnumerator FreezeSliderProgressRoutine(float totalDuration)
+        {
+            float elapsed = 0f;
+            totalDuration = Mathf.Max(0.1f, totalDuration);
+
+            while (elapsed < totalDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float progress = Mathf.Clamp01(elapsed / totalDuration);
+                float val = freezeSliderDrains ? (1f - progress) : progress;
+
+                if (freezeSlider != null)
+                    freezeSlider.value = val;
+
+                if (freezeFillImage != null)
+                    freezeFillImage.fillAmount = val;
+
+                yield return null;
+            }
+
+            // Ensure it settles cleanly at final value
+            float finalVal = freezeSliderDrains ? 0f : 1f;
+            if (freezeSlider != null)
+                freezeSlider.value = finalVal;
+
+            if (freezeFillImage != null)
+                freezeFillImage.fillAmount = finalVal;
+
+            _sliderRoutine = null;
+        }
+
+        /// <summary>
+        /// Stops the freeze slider progression and fades out / resets the UI elements.
+        /// </summary>
+        private void StopFreezeSlider(bool immediate)
+        {
+            if (_sliderRoutine != null)
+            {
+                StopCoroutine(_sliderRoutine);
+                _sliderRoutine = null;
+            }
+
+            if (_sliderFadeTween != null && _sliderFadeTween.IsActive())
+                _sliderFadeTween.Kill();
+            _sliderFadeTween = null;
+
+            if (immediate)
+            {
+                if (freezeSliderCanvasGroup != null)
+                    freezeSliderCanvasGroup.alpha = 0f;
+
+                if (freezeSlider != null)
+                    freezeSlider.value = freezeSliderDrains ? 1f : 0f;
+
+                if (freezeFillImage != null)
+                    freezeFillImage.fillAmount = freezeSliderDrains ? 1f : 0f;
+
+                return;
+            }
+
+            if (freezeSliderCanvasGroup != null)
+            {
+                _sliderFadeTween = freezeSliderCanvasGroup
+                    .DOFade(0f, FreezeAtmoFadeOutDur)
+                    .SetEase(Ease.OutQuad)
+                    .SetUpdate(true)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable);
+            }
         }
     }
 }

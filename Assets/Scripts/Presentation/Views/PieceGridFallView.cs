@@ -45,5 +45,15 @@ namespace GravityPuzzle.Presentation.Views
                 });
             return true;
         }
+
+        /// <summary>
+        /// Stops a grid-fall presentation when another lifecycle owner takes
+        /// control of the piece, such as the shredder handoff.
+        /// </summary>
+        public void Cancel()
+        {
+            activeFallTween?.Kill();
+            activeFallTween = null;
+        }
     }
 }

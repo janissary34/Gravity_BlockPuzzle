@@ -19,24 +19,12 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Target scale multiplier when the pointer presses down (e.g. 0.9 for 90%).")]
         private float pressScale = 0.9f;
 
-        [SerializeField, Tooltip("Duration of the press-down scaling animation in seconds.")]
-        private float pressDuration = 0.1f;
-
-        [SerializeField, Tooltip("Easing type for the press-down animation.")]
-        private Ease pressEase = Ease.OutQuad;
-
         [Header("Release & Bounce Settings")]
-        [SerializeField, Tooltip("If true, uses DOPunchScale for an elastic click bounce; otherwise uses DOScale with releaseEase.")]
+        [SerializeField, Tooltip("If true, uses DOPunchScale for an elastic click bounce; otherwise uses the shared TweenConfig release ease.")]
         private bool usePunchBounce = true;
 
         [SerializeField, Tooltip("Punch scale vector added to original scale on release/click.")]
         private Vector3 punchScaleStrength = new Vector3(0.15f, 0.15f, 0f);
-
-        [SerializeField, Tooltip("Duration of the release/click bounce animation in seconds.")]
-        private float releaseDuration = 0.25f;
-
-        [SerializeField, Tooltip("Easing type for release animation if punch bounce is disabled.")]
-        private Ease releaseEase = Ease.OutBack;
 
         [SerializeField, Tooltip("Vibrato count for scale punch bounce.")]
         private int punchVibrato = 10;
@@ -62,12 +50,17 @@ namespace GravityPuzzle
         private Vector3 originalScale;
         private Quaternion originalRotation;
         private bool isPressed;
+        private bool hasTweenConfig;
 
         private void Awake()
         {
             // Store native initial transform state
             originalScale = transform.localScale;
             originalRotation = transform.localRotation;
+            hasTweenConfig = tweenConfig != null;
+
+            if (!hasTweenConfig)
+                Debug.LogWarning("[JuicyButton] TweenConfig is missing; press presentation is disabled.", this);
         }
 
         private void OnDisable()
@@ -86,6 +79,9 @@ namespace GravityPuzzle
         public void OnPointerDown(PointerEventData eventData)
         {
             isPressed = true;
+
+            if (!hasTweenConfig)
+                return;
 
             // Spam protection: kill active tweens before starting a new one
             KillActiveTweens(complete: true);
@@ -119,6 +115,12 @@ namespace GravityPuzzle
 
         private void AnimateRelease()
         {
+            if (!hasTweenConfig)
+            {
+                ResetTransform();
+                return;
+            }
+
             // Spam protection: clear previous scaling/rotation tweens instantly
             KillActiveTweens(complete: true);
 
@@ -166,10 +168,10 @@ namespace GravityPuzzle
             transform.DOKill(complete);
         }
 
-        private float PressDuration => tweenConfig != null ? tweenConfig.ButtonPressDuration : pressDuration;
-        private Ease PressEase => tweenConfig != null ? tweenConfig.ButtonPressEase : pressEase;
-        private float ReleaseDuration => tweenConfig != null ? tweenConfig.ButtonReleaseDuration : releaseDuration;
-        private Ease ReleaseEase => tweenConfig != null ? tweenConfig.ButtonReleaseEase : releaseEase;
+        private float PressDuration => tweenConfig.ButtonPressDuration;
+        private Ease PressEase => tweenConfig.ButtonPressEase;
+        private float ReleaseDuration => tweenConfig.ButtonReleaseDuration;
+        private Ease ReleaseEase => tweenConfig.ButtonReleaseEase;
 
         /// <summary>
         /// Instantly restores the transform to its baseline scale and rotation.

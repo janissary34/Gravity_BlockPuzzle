@@ -10,49 +10,44 @@ namespace GravityPuzzle
         private const string SoundPreferenceKey = "GravityPuzzle.SoundEnabled";
         private const string MusicPreferenceKey = "GravityPuzzle.MusicEnabled";
 
+        [Header("Authored UI References")]
         [SerializeField] private GameObject settingsPanel;
-        private Button settingsButton;
-        private Button soundButton;
-        private Button musicButton;
+        [SerializeField] private Button settingsButton;
+        [SerializeField] private Button soundButton;
+        [SerializeField] private Button musicButton;
+
+        [Header("Authored Audio References")]
+        [SerializeField] private AudioSource[] soundSources;
+        [SerializeField] private AudioSource[] musicSources;
         private bool soundEnabled;
         private bool musicEnabled;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void ConnectAuthoredSettingsUi()
-        {
-            EnsureConnected();
-        }
-
-        /// <summary>Re-applies the settings button hookup after every level reload.</summary>
-        public static void EnsureConnected()
-        {
-            GameObject settingsObject = FindSceneObject("Settings_btn");
-            if (settingsObject != null && settingsObject.GetComponent<SettingsPanelButton>() == null)
-                settingsObject.AddComponent<SettingsPanelButton>();
-        }
 
         private void Awake()
         {
             soundEnabled = PlayerPrefs.GetInt(SoundPreferenceKey, 1) == 1;
             musicEnabled = PlayerPrefs.GetInt(MusicPreferenceKey, 1) == 1;
 
-            settingsButton = GetComponent<Button>();
             if (settingsButton == null)
-            {
-                settingsButton = gameObject.AddComponent<Button>();
-                settingsButton.targetGraphic = GetComponent<Graphic>();
-            }
-
-            settingsPanel = settingsPanel != null
-                ? settingsPanel
-                : FindSceneObject("Setting_panel");
+                settingsButton = GetComponent<Button>();
 
             if (settingsPanel != null)
                 settingsPanel.SetActive(false);
 
-            settingsButton.onClick.AddListener(ToggleSettingsPanel);
-            ConnectAudioButton("Sound_btn", ToggleSound, out soundButton);
-            ConnectAudioButton("Music_btn", ToggleMusic, out musicButton);
+            if (settingsButton != null)
+                settingsButton.onClick.AddListener(ToggleSettingsPanel);
+            else
+                Debug.LogWarning("[Settings] Settings button reference is missing.", this);
+
+            if (soundButton != null)
+                soundButton.onClick.AddListener(ToggleSound);
+            else
+                Debug.LogWarning("[Settings] Sound button reference is missing.", this);
+
+            if (musicButton != null)
+                musicButton.onClick.AddListener(ToggleMusic);
+            else
+                Debug.LogWarning("[Settings] Music button reference is missing.", this);
+
             ApplyAudioState();
         }
 
@@ -88,31 +83,23 @@ namespace GravityPuzzle
             ApplyAudioState();
         }
 
-        private void ConnectAudioButton(string objectName, UnityEngine.Events.UnityAction action, out Button button)
-        {
-            GameObject buttonObject = FindSceneObject(objectName);
-            button = buttonObject != null ? buttonObject.GetComponent<Button>() : null;
-            if (button != null)
-                button.onClick.AddListener(action);
-        }
-
         private void ApplyAudioState()
         {
-            // Looping sources are treated as music; all other sources are SFX.
-            // This lets the two UI controls be toggled independently.
-            foreach (AudioSource source in FindObjectsOfType<AudioSource>(true))
-                source.mute = source.loop ? !musicEnabled : !soundEnabled;
+            ApplyMuteState(soundSources, !soundEnabled);
+            ApplyMuteState(musicSources, !musicEnabled);
         }
 
-        private static GameObject FindSceneObject(string objectName)
+        private static void ApplyMuteState(AudioSource[] sources, bool muted)
         {
-            foreach (GameObject candidate in Resources.FindObjectsOfTypeAll<GameObject>())
-            {
-                if (candidate.scene.IsValid() && candidate.name == objectName)
-                    return candidate;
-            }
+            if (sources == null)
+                return;
 
-            return null;
+            for (int index = 0; index < sources.Length; index++)
+            {
+                AudioSource source = sources[index];
+                if (source != null)
+                    source.mute = muted;
+            }
         }
     }
 }

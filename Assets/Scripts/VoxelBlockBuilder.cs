@@ -54,8 +54,14 @@ namespace GravityPuzzle
             for (int index = 0; index < level.pieces.Count; index++)
             {
                 PieceDefinition piece = level.pieces[index];
-                if (piece != null && piece.cells != null)
-                    total += piece.cells.Count * voxelsPerCell;
+                if (piece == null || piece.cells == null)
+                    continue;
+
+                for (int cellIndex = 0; cellIndex < piece.cells.Count; cellIndex++)
+                {
+                    if (piece.cells[cellIndex].type == PieceCellType.Block)
+                        total += voxelsPerCell;
+                }
             }
 
             return total;

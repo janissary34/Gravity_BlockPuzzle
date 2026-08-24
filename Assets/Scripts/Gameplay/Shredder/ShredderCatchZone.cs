@@ -33,7 +33,6 @@ namespace GravityPuzzle
             rightX = position.x + size.x * .5f;
             captureTopY = position.y + size.y * .5f;
             captureApproachDistance = Mathf.Max(0f, approachDistance);
-            gameObject.name = "Shredder Catch Zone";
         }
 
         /// <summary>

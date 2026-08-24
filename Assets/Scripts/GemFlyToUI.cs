@@ -29,30 +29,19 @@ namespace GravityPuzzle
         private TweenConfig tweenConfig;
 
         [Header("Stage Timings & Easing")]
-        [SerializeField, Tooltip("Initial pop-out jump power/height.")]
-        private float popPower = 1.2f;
-
         [SerializeField, Tooltip("Duration of initial physical pop jump before magnetic fly mode (0 = no jump).")]
         private float popDuration = 0.0f;
-
-        [SerializeField, Tooltip("Duration of the flight from shredder to UI target.")]
-        private float flyDuration = 0.75f;
-
-        [SerializeField, Tooltip("Ease curve for magnetic flight to UI bar.")]
-        private Ease flyEase = Ease.InBack;
 
         [Header("UI Feedback")]
         [SerializeField, Tooltip("Punch scale strength applied to target UI bar on arrival.")]
         private Vector3 uiPunchScale = new Vector3(0.18f, 0.18f, 0f);
-
-        [SerializeField, Tooltip("Duration of UI punch bounce effect on collection.")]
-        private float uiPunchDuration = 0.22f;
 
         [SerializeField, Tooltip("Amount by which target Slider value increases per collected gem voxel.")]
         private float sliderValueGain = 1f;
 
         private RectTransform targetRectTransform;
         private Slider targetSlider;
+        private Camera fallbackCamera;
         private Camera targetCamera;
         private Action<GemFlyToUI> onRecycleCallback;
 
@@ -61,33 +50,26 @@ namespace GravityPuzzle
         private Vector3 defaultScale = Vector3.one;
         private float activeFlightDuration;
         private Ease activeFlightEase;
+        private bool hasTweenConfig;
 
-        private float DefaultFlightDuration => tweenConfig != null
-            ? tweenConfig.GemFlightDuration
-            : flyDuration;
+        public TweenConfig Config => tweenConfig;
 
-        private Ease DefaultFlightEase => tweenConfig != null
-            ? tweenConfig.GemFlightEase
-            : flyEase;
-
-        private float UiPunchDuration => tweenConfig != null
-            ? tweenConfig.GemUiPunchDuration
-            : uiPunchDuration;
-
-        private int UiPunchVibrato => tweenConfig != null
-            ? tweenConfig.GemUiPunchVibrato
-            : 5;
-
-        private float UiPunchElasticity => tweenConfig != null
-            ? tweenConfig.GemUiPunchElasticity
-            : .5f;
+        private float DefaultFlightDuration => tweenConfig.GemFlightDuration;
+        private Ease DefaultFlightEase => tweenConfig.GemFlightEase;
+        private float UiPunchDuration => tweenConfig.GemUiPunchDuration;
+        private int UiPunchVibrato => tweenConfig.GemUiPunchVibrato;
+        private float UiPunchElasticity => tweenConfig.GemUiPunchElasticity;
 
         private void Awake()
         {
             if (rb2D == null) rb2D = GetComponent<Rigidbody2D>();
             if (col2D == null) col2D = GetComponent<Collider2D>();
             if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+            fallbackCamera = Camera.main;
             defaultScale = transform.localScale;
+            hasTweenConfig = tweenConfig != null;
+            if (!hasTweenConfig)
+                Debug.LogWarning("[GemFlyToUI] TweenConfig is missing; gem flight presentation is disabled.", this);
         }
 
         /// <summary>
@@ -106,6 +88,13 @@ namespace GravityPuzzle
             // Kill existing tweens if recycled
             KillTweens();
 
+            if (!hasTweenConfig)
+            {
+                onRecycle?.Invoke(this);
+                gameObject.SetActive(false);
+                return;
+            }
+
             transform.position = startWorldPos;
             transform.localScale = defaultScale;
             if (spriteRenderer != null)
@@ -117,7 +106,7 @@ namespace GravityPuzzle
 
             targetRectTransform = uiTargetRect;
             targetSlider = uiTargetSlider;
-            targetCamera = cam != null ? cam : Camera.main;
+            targetCamera = cam != null ? cam : fallbackCamera;
             onRecycleCallback = onRecycle;
             activeFlightDuration = customFlyDuration > 0f
                 ? customFlyDuration
@@ -185,7 +174,7 @@ namespace GravityPuzzle
                 ? (rootCanvas.worldCamera != null ? rootCanvas.worldCamera : targetCamera)
                 : targetCamera;
 
-            if (cam == null) cam = Camera.main;
+            if (cam == null) cam = fallbackCamera;
 
             Vector3 uiScreenPoint = RectTransformUtility.WorldToScreenPoint(cam, targetRectTransform.position);
             Vector3 worldPoint = cam != null
