@@ -16,7 +16,7 @@ namespace GravityPuzzle.Gameplay.Gravity
             if (level == null || snapshot == null || runtimePieces == null)
                 return;
 
-            int authoredPieceCount = level.pieces.Count;
+            int authoredPieceCount = CountAuthoredBreakablePieces(level);
             int authoredProgressUnits = CountAuthoredProgressUnits(level);
             int snapshotPieceCount = snapshot.Pieces.Count;
             int snapshotIssueCount = snapshot.Issues.Count;
@@ -90,16 +90,30 @@ namespace GravityPuzzle.Gameplay.Gravity
             Object context)
         {
             int mismatchCount = 0;
-            int comparableCount = Mathf.Min(
-                Mathf.Min(snapshot.Pieces.Count, runtimePieces.Count),
-                level.pieces.Count);
-            for (int index = 0; index < comparableCount; index++)
+            Dictionary<int, PuzzlePiece> runtimePiecesBySourceId =
+                new Dictionary<int, PuzzlePiece>(runtimePieces.Count);
+            for (int index = 0; index < runtimePieces.Count; index++)
             {
                 PuzzlePiece runtimePiece = runtimePieces[index];
-                if (runtimePiece == null)
+                if (runtimePiece == null || runtimePiece.SourcePieceId < 0)
                     continue;
 
+                runtimePiecesBySourceId[runtimePiece.SourcePieceId] = runtimePiece;
+            }
+
+            for (int index = 0; index < snapshot.Pieces.Count; index++)
+            {
                 PieceModel model = snapshot.Pieces[index];
+                if (!runtimePiecesBySourceId.TryGetValue(model.Id, out PuzzlePiece runtimePiece))
+                {
+                    mismatchCount++;
+                    Debug.LogWarning(
+                        $"[LevelSnapshot] Runtime piece is missing for snapshot id={model.Id}. " +
+                        $"Level='{level.levelName}'.",
+                        context);
+                    continue;
+                }
+
                 GridCoordinate runtimePivot = GravityLevelGridCoordinates.WorldToFineCell(
                     level,
                     runtimePiece.transform.position);
@@ -109,10 +123,12 @@ namespace GravityPuzzle.Gameplay.Gravity
                     continue;
 
                 mismatchCount++;
-                string pieceName = level.pieces[index].name;
+                string pieceName = model.Id >= 0 && model.Id < level.pieces.Count
+                    ? level.pieces[model.Id].name
+                    : runtimePiece.name;
                 Debug.LogWarning(
                     $"[LevelSnapshot] Piece anchor mismatch. Level='{level.levelName}', " +
-                    $"piece='{pieceName}', id={snapshot.Pieces[index].Id}, " +
+                    $"piece='{pieceName}', id={model.Id}, " +
                     $"snapshotAnchor={Format(snapshotAnchor)}, runtimeAnchor={Format(runtimeAnchor)}, " +
                     $"runtimePosition={runtimePiece.transform.position}.",
                     context);
@@ -129,6 +145,9 @@ namespace GravityPuzzle.Gameplay.Gravity
             for (int pieceIndex = 0; pieceIndex < level.pieces.Count; pieceIndex++)
             {
                 PieceDefinition piece = level.pieces[pieceIndex];
+                if (!HasBlockCells(piece))
+                    continue;
+
                 occupiedBoardCells.Clear();
 
                 for (int cellIndex = 0; cellIndex < piece.cells.Count; cellIndex++)
@@ -149,6 +168,32 @@ namespace GravityPuzzle.Gameplay.Gravity
             }
 
             return total;
+        }
+
+        private static int CountAuthoredBreakablePieces(GravityLevelDefinition level)
+        {
+            int count = 0;
+            for (int index = 0; index < level.pieces.Count; index++)
+            {
+                if (HasBlockCells(level.pieces[index]))
+                    count++;
+            }
+
+            return count;
+        }
+
+        private static bool HasBlockCells(PieceDefinition piece)
+        {
+            if (piece == null || piece.cells == null)
+                return false;
+
+            for (int index = 0; index < piece.cells.Count; index++)
+            {
+                if (piece.cells[index].type == PieceCellType.Block)
+                    return true;
+            }
+
+            return false;
         }
 
         private static string Format(GridCoordinate coordinate)

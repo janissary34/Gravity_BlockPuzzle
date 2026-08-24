@@ -116,6 +116,8 @@ namespace GravityPuzzle
         private List<BoxCollider2D> collisionCells;
         private List<Vector2> fullCollisionCellSizes;
         private List<SpriteRenderer> collisionCellVisuals;
+        private readonly List<VoxelShard> configuredVoxelShards = new List<VoxelShard>();
+        private SpriteRenderer[] configuredShredderRenderers;
         private Collider2D[] solidColliders;
         private PhysicsMaterial2D[] defaultSolidColliderMaterials;
         private SpriteRenderer[] shredderPresentationRenderers;
@@ -261,6 +263,62 @@ namespace GravityPuzzle
             RestoreDefaultCollisionMaterials();
             RuntimePieceFactory.ResetPooledPiece(this);
             InvalidateVoxelCache();
+        }
+
+        /// <summary>
+        /// Captures the pooled voxel presentation generated for this root.
+        /// Shredder feeds consume this cache rather than discovering children
+        /// after the piece enters its handoff state.
+        /// </summary>
+        public void ConfigureVoxelPresentation(IReadOnlyList<VoxelShard> voxels)
+        {
+            configuredVoxelShards.Clear();
+            if (voxels == null || voxels.Count == 0)
+            {
+                configuredShredderRenderers = null;
+                return;
+            }
+
+            for (int index = 0; index < voxels.Count; index++)
+            {
+                VoxelShard voxel = voxels[index];
+                if (voxel != null)
+                    configuredVoxelShards.Add(voxel);
+            }
+
+            configuredShredderRenderers = new SpriteRenderer[configuredVoxelShards.Count];
+            for (int index = 0; index < configuredVoxelShards.Count; index++)
+                configuredShredderRenderers[index] = configuredVoxelShards[index].Renderer;
+        }
+
+        public IReadOnlyList<VoxelShard> ConfiguredVoxelShards => configuredVoxelShards;
+        public SpriteRenderer[] ConfiguredShredderRenderers => configuredShredderRenderers;
+        public IReadOnlyList<PiecePartSlot> PartSlots => partSlots;
+
+        public void ClearVoxelPresentation()
+        {
+            configuredVoxelShards.Clear();
+            configuredShredderRenderers = null;
+        }
+
+        public void RemoveVoxelPresentation(IReadOnlyList<VoxelShard> voxels)
+        {
+            if (voxels == null || voxels.Count == 0 || configuredVoxelShards.Count == 0)
+                return;
+
+            for (int voxelIndex = 0; voxelIndex < voxels.Count; voxelIndex++)
+            {
+                VoxelShard voxel = voxels[voxelIndex];
+                for (int configuredIndex = configuredVoxelShards.Count - 1; configuredIndex >= 0; configuredIndex--)
+                {
+                    if (configuredVoxelShards[configuredIndex] == voxel)
+                        configuredVoxelShards.RemoveAt(configuredIndex);
+                }
+            }
+
+            configuredShredderRenderers = new SpriteRenderer[configuredVoxelShards.Count];
+            for (int index = 0; index < configuredVoxelShards.Count; index++)
+                configuredShredderRenderers[index] = configuredVoxelShards[index].Renderer;
         }
 
         public void SetPoolReturnHandler(Action<PuzzlePiece> returnHandler)
@@ -946,9 +1004,7 @@ namespace GravityPuzzle
                 GetCellWorldSize(targetCollider, targetVisual),
                 VisualColor,
                 RemainingProgressUnits / cellCountBeforeRemoval,
-                targetVisual != null
-                    ? Mathf.Max(1, targetVisual.GetComponentsInChildren<VoxelShard>(true).Length)
-                    : 1);
+                Mathf.Max(1, VoxelBlockBuilder.Subdivisions * VoxelBlockBuilder.Subdivisions));
             RemainingProgressUnits = Mathf.Max(0f, RemainingProgressUnits - removedCell.progressUnits);
 
             if (isSelected)
@@ -968,7 +1024,7 @@ namespace GravityPuzzle
             // The cells belong to authored prefab slots. Reset the slot and
             // return its pooled voxels instead of destroying the hierarchy;
             // it can then be rebuilt safely if this hit splits the piece.
-            RuntimePieceFactory.ResetPiecePartSlot(FindPartSlot(removedCollider, removedVisual));
+            RuntimePieceFactory.ResetPiecePartSlot(this, FindPartSlot(removedCollider, removedVisual));
 
             if (compositeCollider != null)
                 compositeCollider.GenerateGeometry();
@@ -1018,29 +1074,30 @@ namespace GravityPuzzle
 
         // The rendered voxel grid is intentionally made of child VoxelShard
         // objects. Its parent SpriteRenderer is a disabled placeholder, so it
-        // cannot be used as hit-test authority. The authored cell geometry is
-        // stable both while normal-play colliders are disabled and while a
-        // booster is selecting a target.
+        // cannot be used as hit-test authority. Use the authored part-slot
+        // transform and its cached visual size instead. This remains valid
+        // while normal-play colliders are disabled and never queries physics.
         private bool TryGetCellIndexAt(Vector2 worldPosition, out int targetIndex)
         {
             targetIndex = -1;
-            if (collisionCells == null || collisionCells.Count == 0)
+            if (collisionCellVisuals == null || fullCollisionCellSizes == null ||
+                collisionCellVisuals.Count == 0)
                 return false;
 
             float closestDistance = float.PositiveInfinity;
-            for (int index = 0; index < collisionCells.Count; index++)
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
             {
-                BoxCollider2D cell = collisionCells[index];
-                if (cell == null || !cell.gameObject.activeInHierarchy)
+                SpriteRenderer visual = collisionCellVisuals[index];
+                if (visual == null || !visual.gameObject.activeInHierarchy ||
+                    index >= fullCollisionCellSizes.Count)
                     continue;
 
-                Vector2 localPoint = cell.transform.InverseTransformPoint(worldPosition);
-                Vector2 delta = localPoint - cell.offset;
-                Vector2 halfSize = cell.size * .5f;
-                if (Mathf.Abs(delta.x) > halfSize.x || Mathf.Abs(delta.y) > halfSize.y)
+                Vector2 localPoint = visual.transform.InverseTransformPoint(worldPosition);
+                Vector2 halfSize = fullCollisionCellSizes[index] * .5f;
+                if (Mathf.Abs(localPoint.x) > halfSize.x || Mathf.Abs(localPoint.y) > halfSize.y)
                     continue;
 
-                float distance = delta.sqrMagnitude;
+                float distance = localPoint.sqrMagnitude;
                 if (distance >= closestDistance)
                     continue;
 

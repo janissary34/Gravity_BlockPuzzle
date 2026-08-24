@@ -5,6 +5,8 @@ using DG.Tweening;
 using GravityPuzzle.Config;
 using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Gameplay.Input;
+using GravityPuzzle.Infrastructure.Pooling;
+using GravityPuzzle.Presentation.Views;
 
 namespace GravityPuzzle
 {
@@ -25,10 +27,10 @@ namespace GravityPuzzle
         [Tooltip("Optional. Assign a Button to wire its click automatically.")]
         public Button boosterButton;
 
-        [Tooltip("Optional world-space hammer visual. A simple runtime hammer is used when omitted.")]
+        [Tooltip("Optional authored hammer visual prefab. Add BoosterVisualView to its root to enable pooled presentation.")]
         [SerializeField] private GameObject hammerVisualPrefab;
         [SerializeField] private TweenConfig tweenConfig;
-        [SerializeField, Tooltip("Gameplay camera used for hammer presentation. Defaults to the tagged main camera once during Awake.")]
+        [SerializeField, Tooltip("Gameplay camera used for hammer presentation. Defaults to the camera supplied by Runtime Piece Factory Bootstrap.")]
         private Camera gameplayCamera;
 
         [SerializeField] private float popScaleMultiplier = 1.7f;
@@ -48,17 +50,26 @@ namespace GravityPuzzle
         private BoosterButton boosterButtonRef;
         private CanvasGroup buttonCanvasGroup;
         private bool impactInProgress;
+        private BoosterVisualView hammerVisualPrefabView;
+        private GameObjectPool<BoosterVisualView> hammerVisualPool;
 
         private void Awake()
         {
-            if (gameplayCamera == null)
-                gameplayCamera = Camera.main;
-
             if (boosterButton == null)
                 boosterButton = GetComponent<Button>();
 
             boosterButtonRef = GetComponent<BoosterButton>();
             buttonCanvasGroup = boosterButton != null ? boosterButton.GetComponent<CanvasGroup>() : null;
+            InitializeHammerVisualPool();
+        }
+
+        private void Start()
+        {
+            if (gameplayCamera == null)
+                gameplayCamera = PrototypeBootstrap.SceneCamera;
+
+            if (gameplayCamera == null)
+                Debug.LogError("[HammerBooster] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -175,7 +186,7 @@ namespace GravityPuzzle
                 return;
 
             if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target) &&
-                TryStartHammerImpact(target.Piece, target.Cell, target.WorldPosition))
+                TryStartHammerImpact(target.Piece, target.WorldPosition))
             {
                 boundBoard.StartTimer();
                 activeBooster = null;
@@ -194,7 +205,6 @@ namespace GravityPuzzle
 
         private bool TryStartHammerImpact(
             PuzzlePiece piece,
-            Core.Grid.GridCoordinate targetCell,
             Vector2 impactPosition)
         {
             // Validate before consuming the booster. The actual removal happens
@@ -202,14 +212,18 @@ namespace GravityPuzzle
             if (piece == null || impactInProgress)
                 return false;
 
+            // A falling piece has already committed its destination in the
+            // board model while its visible cells are still travelling. The
+            // hammer is intentionally aimed at the visible cell, so stop the
+            // presentation owner before scheduling the strike.
+            PuzzleDragController.CancelGridFallForTargetedAction(piece);
             impactInProgress = true;
-            PlayHammerSwing(piece, targetCell, impactPosition);
+            PlayHammerSwing(piece, impactPosition);
             return true;
         }
 
         private void PlayHammerSwing(
             PuzzlePiece piece,
-            Core.Grid.GridCoordinate targetCell,
             Vector2 impactPosition)
         {
             if (tweenConfig == null)
@@ -219,7 +233,16 @@ namespace GravityPuzzle
                 return;
             }
 
-            GameObject hammer = CreateHammerVisual();
+            if (!TryRentHammerVisual(out BoosterVisualView hammerView))
+            {
+                ApplyHammerImpact(piece, impactPosition);
+                impactInProgress = false;
+                if (TopologyEditingEnabled)
+                    GetHammerBoosterButton()?.TryConsumeUse();
+                return;
+            }
+
+            GameObject hammer = hammerView.gameObject;
             Transform hammerTransform = hammer.transform;
             Vector3 defaultScale = hammerTransform.localScale;
             Vector3 impactScale = defaultScale * popScaleMultiplier;
@@ -259,7 +282,7 @@ namespace GravityPuzzle
             swing.AppendInterval(tweenConfig.HammerWindUpDelay);
             swing.Append(hammerTransform.DORotate(new Vector3(0f, facingYAngle, impactAngle), tweenConfig.HammerStrikeDuration)
                 .SetEase(tweenConfig.HammerStrikeEase));
-            swing.AppendCallback(() => ApplyHammerImpact(piece, targetCell));
+            swing.AppendCallback(() => ApplyHammerImpact(piece, impactPosition));
             // Phase 4: shrink along an exit arc once the hit has registered.
             swing.Append(DOVirtual.Float(0f, 1f, tweenConfig.HammerExitDuration, progress =>
                 hammerTransform.position = QuadraticBezier(hoverPoint, exitControl, exitPoint, progress))
@@ -270,7 +293,7 @@ namespace GravityPuzzle
                 .SetEase(tweenConfig.HammerExitEase));
             swing.OnComplete(() =>
             {
-                Destroy(hammer);
+                hammerVisualPool.Return(hammerView);
                 impactInProgress = false;
                 if (TopologyEditingEnabled)
                     GetHammerBoosterButton()?.TryConsumeUse();
@@ -282,10 +305,10 @@ namespace GravityPuzzle
             return boosterButtonRef;
         }
 
-        private void ApplyHammerImpact(PuzzlePiece piece, Core.Grid.GridCoordinate targetCell)
+        private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)
         {
             if (TopologyEditingEnabled &&
-                piece != null && piece.TryRemoveCellAt(targetCell, out PuzzlePiece.RemovedCell cell))
+                piece != null && piece.TryRemoveCellAt(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
                 Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
                 LevelProgressManager manager = LevelProgressManager.Instance;
@@ -345,15 +368,20 @@ namespace GravityPuzzle
             return inverse * inverse * start + 2f * inverse * progress * control + progress * progress * end;
         }
 
-        private GameObject CreateHammerVisual()
+        private void InitializeHammerVisualPool()
         {
-            if (hammerVisualPrefab != null)
-                return Instantiate(hammerVisualPrefab);
+            if (hammerVisualPrefab == null)
+                return;
 
-            GameObject hammer = new GameObject("Hammer Booster Impact");
-            CreateHammerPart(hammer.transform, "Handle", new Vector2(0f, -.22f), new Vector2(.13f, .68f), new Color(.38f, .20f, .08f));
-            CreateHammerPart(hammer.transform, "Head", new Vector2(0f, .16f), new Vector2(.62f, .24f), new Color(.62f, .66f, .72f));
-            return hammer;
+            hammerVisualPrefabView = hammerVisualPrefab.GetComponent<BoosterVisualView>();
+            if (hammerVisualPrefabView == null)
+            {
+                Debug.LogWarning("[HammerBooster] Hammer visual prefab has no BoosterVisualView; hammer will run without a presentation visual.", this);
+                return;
+            }
+
+            hammerVisualPool = new GameObjectPool<BoosterVisualView>(hammerVisualPrefabView, transform, 1);
+            hammerVisualPool.Prewarm();
         }
 
         private void SetHammerSortingOrder(GameObject hammer)
@@ -363,16 +391,10 @@ namespace GravityPuzzle
                 renderers[i].sortingOrder = hammerSortingOrder + i;
         }
 
-        private static void CreateHammerPart(Transform parent, string partName, Vector2 localPosition, Vector2 size, Color color)
+        private bool TryRentHammerVisual(out BoosterVisualView hammerView)
         {
-            GameObject part = new GameObject(partName);
-            part.transform.SetParent(parent, false);
-            part.transform.localPosition = localPosition;
-            part.transform.localScale = new Vector3(size.x, size.y, 1f);
-            SpriteRenderer renderer = part.AddComponent<SpriteRenderer>();
-            renderer.sprite = PrototypeBootstrap.GetSquareSprite();
-            renderer.color = color;
-            renderer.sortingOrder = 50;
+            hammerView = null;
+            return hammerVisualPool != null && hammerVisualPool.TryRent(out hammerView);
         }
 
         private static bool IsPointerOverUI(int fingerId = -1)

@@ -10,8 +10,13 @@ namespace GravityPuzzle.Config
         [Min(1)] [SerializeField] private int sequenceCapacity = 125;
         [SerializeField] private float pieceMoveDuration = .12f;
         [SerializeField] private Ease pieceMoveEase = Ease.OutQuad;
-        [Min(.001f)] [SerializeField] private float gridFallDuration = .12f;
         [SerializeField] private Ease gridFallEase = Ease.OutQuad;
+        [Min(.001f)] [SerializeField] private float gridFallUnitsPerSecond = 8f;
+        [Min(.001f)] [SerializeField] private float gridFallMinimumDuration = .08f;
+        [Min(.001f)] [SerializeField] private float gridFallMaximumDuration = .4f;
+        [Min(.001f)] [SerializeField] private float gridReleaseUnitsPerSecond = 12f;
+        [Min(.001f)] [SerializeField] private float gridReleaseMinimumDuration = .06f;
+        [Min(.001f)] [SerializeField] private float gridReleaseMaximumDuration = .28f;
         [SerializeField] private float shredDuration = .3f;
         [SerializeField] private Ease shredEase = Ease.InQuad;
 
@@ -127,8 +132,22 @@ namespace GravityPuzzle.Config
         public int SequenceCapacity => sequenceCapacity;
         public float PieceMoveDuration => pieceMoveDuration;
         public Ease PieceMoveEase => pieceMoveEase;
-        public float GridFallDuration => gridFallDuration;
         public Ease GridFallEase => gridFallEase;
+        public float GetGridFallDuration(float distance)
+        {
+            return Mathf.Clamp(
+                distance / gridFallUnitsPerSecond,
+                gridFallMinimumDuration,
+                gridFallMaximumDuration);
+        }
+
+        public float GetGridReleaseDuration(float distance)
+        {
+            return Mathf.Clamp(
+                distance / gridReleaseUnitsPerSecond,
+                gridReleaseMinimumDuration,
+                gridReleaseMaximumDuration);
+        }
         public float ShredDuration => shredDuration;
         public Ease ShredEase => shredEase;
         public float IceCrackDuration => iceCrackDuration;

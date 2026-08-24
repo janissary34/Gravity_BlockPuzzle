@@ -321,9 +321,6 @@ namespace GravityPuzzle
 
         private void Awake()
         {
-            if (presentationCamera == null)
-                presentationCamera = Camera.main;
-
             if (boosterButtonRef == null)
             {
                 boosterButtonRef = boosterButton != null
@@ -393,6 +390,15 @@ namespace GravityPuzzle
             SetTimerImpactImageVisible(false);
 
             ResetFreezeFXState();
+        }
+
+        private void Start()
+        {
+            if (presentationCamera == null)
+                presentationCamera = PrototypeBootstrap.SceneCamera;
+
+            if (presentationCamera == null)
+                Debug.LogError("[TimerBooster] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
         }
 
         private void OnEnable()

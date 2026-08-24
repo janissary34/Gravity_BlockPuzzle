@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 using GravityPuzzle.Infrastructure.Pooling;
+using GravityPuzzle.Gameplay.Pieces;
 
 namespace GravityPuzzle
 {
@@ -93,7 +95,9 @@ namespace GravityPuzzle
             string namePrefix,
             Vector2 totalSize,
             Color color,
-            Sprite voxelSprite = null)
+            Sprite voxelSprite = null,
+            List<VoxelShard> spawnedShards = null,
+            PiecePartSlot ownerSlot = null)
         {
             float voxelWidth = totalSize.x / subdivisions;
             float voxelHeight = totalSize.y / subdivisions;
@@ -115,6 +119,8 @@ namespace GravityPuzzle
                     shard.gameObject.name = $"{namePrefix} Voxel_{x}_{y}";
                     
                     shard.InitializeIntact(color, voxelSize, sprite);
+                    spawnedShards?.Add(shard);
+                    ownerSlot?.RegisterVoxel(shard);
                 }
             }
         }

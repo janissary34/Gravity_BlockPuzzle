@@ -19,6 +19,9 @@ namespace GravityPuzzle.Core.Grid
             for (int pieceIndex = 0; pieceIndex < level.pieces.Count; pieceIndex++)
             {
                 PieceDefinition definition = level.pieces[pieceIndex];
+                if (!HasBlockCells(definition))
+                    continue;
+
                 PieceModel model = CreatePieceModel(pieceIndex, definition);
                 if (!grid.TryPlace(model, out GridPlacementResult placementResult))
                 {
@@ -31,6 +34,20 @@ namespace GravityPuzzle.Core.Grid
             }
 
             return new LevelBoardSnapshot(grid, pieces, issues);
+        }
+
+        private static bool HasBlockCells(PieceDefinition definition)
+        {
+            if (definition == null || definition.cells == null)
+                return false;
+
+            for (int index = 0; index < definition.cells.Count; index++)
+            {
+                if (definition.cells[index].type == PieceCellType.Block)
+                    return true;
+            }
+
+            return false;
         }
 
         private static PieceModel CreatePieceModel(int pieceId, PieceDefinition definition)

@@ -15,35 +15,31 @@ namespace GravityPuzzle
     /// </summary>
     public static class PrototypeBootstrap
     {
-        private const float BoardWidth = 6f;
-        private const float BoardHeight = 8f;
         internal const float ColliderCornerRadius = .025f;
         private static Sprite squareSprite;
         private static Sprite circleSprite;
+        private static Camera sceneCamera;
+        private static bool sceneStartupHandled;
+        private static readonly List<Collider2D> authoredObstacleColliders = new List<Collider2D>();
         // This material gives casts/contact resolution a stable, non-bouncy surface.
         private static PhysicsMaterial2D puzzleContactMaterial;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void RegisterSceneLoader()
-        {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-            SceneManager.sceneLoaded += OnSceneLoaded;
-        }
+        /// <summary>
+        /// The authored gameplay camera supplied by the scene composition root.
+        /// Runtime systems consume this cached reference instead of performing
+        /// independent Camera.main lookups.
+        /// </summary>
+        internal static Camera SceneCamera => sceneCamera;
 
-        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        /// <summary>
+        /// Invoked by the scene composition root after inspector-provided configs and pools are ready.
+        /// </summary>
+        internal static void StartForActiveScene()
         {
-            if (scene.name == "Main_Menu" || scene.name == "MainMenu")
+            if (sceneStartupHandled)
                 return;
 
-            CreatePrototype();
-        }
-
-        private static void CreatePrototype()
-        {
-            if (Object.FindObjectOfType<PrototypeBoard>() != null ||
-                Object.FindObjectOfType<GravityMainMenu>() != null ||
-                Object.FindObjectOfType<MainMenuUI>() != null)
-                return;
+            sceneStartupHandled = true;
 
             GravityLevelDefinition authoredLevel = GravityLevelRuntime.FindLevelToPlay();
             if (authoredLevel != null)
@@ -62,36 +58,14 @@ namespace GravityPuzzle
                 return;
             }
 
-            ConfigureCamera();
+            Debug.LogError("[Bootstrap] No authored level was resolved. Assign a populated Level Sequence to Runtime Piece Factory Bootstrap.");
+        }
 
-            GameObject board = new GameObject("Gravity Puzzle Prototype");
-            board.AddComponent<PrototypeBoard>();
-            board.AddComponent<PuzzleDragController>();
-
-            CreateLargeSquareBackground(
-                (int)BoardWidth,
-                (int)BoardHeight,
-                1f,
-                new Color(.075f, .09f, .17f),
-                new Color(.095f, .115f, .205f));
-
-            // Four fixed walls: this is the first version of our outer frame.
-            CreateStaticBlock("Left Wall", new Vector2(-3.25f, 0f), new Vector2(.5f, BoardHeight + .5f), new Color(.16f, .18f, .32f));
-            CreateStaticBlock("Right Wall", new Vector2(3.25f, 0f), new Vector2(.5f, BoardHeight + .5f), new Color(.16f, .18f, .32f));
-            // No floor: solved pieces leave through this opening and are removed.
-            CreateStaticBlock("Ceiling", new Vector2(0f, 4.1f), new Vector2(BoardWidth + .5f, .5f), new Color(.16f, .18f, .32f));
-
-            // Wall pins sit UNDER the pieces, so gravity presses the pieces onto them.
-            // The player must lift and guide each L-piece around its pin.
-            CreateStaticCircle("Pink Support Pin", new Vector2(.45f, -.07f), .24f, new Color(1f, .74f, .12f));
-            CreateStaticCircle("Blue Support Pin", new Vector2(-.85f, .83f), .24f, new Color(1f, .74f, .12f));
-
-            // Two L-shaped blocks. Each has a small hook tip at the end of its arm.
-            // The blue tip rests on the pink arm, so gravity keeps the pair connected.
-            CreateHookPiece("Pink upper hook", new Vector2(.7f, 1.65f), true, new Color(1f, .32f, .62f));
-            CreateHookPiece("Blue lower hook", new Vector2(-1.08f, -.05f), false, new Color(.18f, .65f, 1f));
-
-            ConfigurePuzzleColliders();
+        internal static void ConfigureSceneCamera(Camera camera)
+        {
+            sceneCamera = camera;
+            sceneStartupHandled = false;
+            authoredObstacleColliders.Clear();
         }
 
         internal static void StartAuthoredLevel(GravityLevelDefinition level)
@@ -107,8 +81,8 @@ namespace GravityPuzzle
             Physics2D.velocityIterations = Mathf.Max(Physics2D.velocityIterations, 10);
             Physics2D.positionIterations = Mathf.Max(Physics2D.positionIterations, 10);
 
-            foreach (Collider2D sceneCollider in Object.FindObjectsOfType<Collider2D>())
-                sceneCollider.sharedMaterial = puzzleContactMaterial;
+            ApplyPieceMaterials();
+            ApplyObstacleMaterials();
         }
 
         internal static void SetDraggingFriction(PuzzlePiece piece, bool isDragging)
@@ -143,17 +117,42 @@ namespace GravityPuzzle
             }
 
             Physics2D.IgnoreLayerCollision(pieceLayer, obstacleLayer, false);
-            foreach (PuzzlePiece piece in Object.FindObjectsOfType<PuzzlePiece>())
-                SetLayerRecursively(piece.gameObject, pieceLayer);
-
-            foreach (Collider2D collider in Object.FindObjectsOfType<Collider2D>())
+            IReadOnlyList<PuzzlePiece> activePieces = PuzzlePiece.ActivePieces;
+            for (int index = 0; index < activePieces.Count; index++)
             {
-                if (collider.GetComponentInParent<PuzzlePiece>() != null)
+                PuzzlePiece piece = activePieces[index];
+                if (piece == null)
                     continue;
 
-                Rigidbody2D body = collider.GetComponentInParent<Rigidbody2D>();
-                if (body != null && body.bodyType == RigidbodyType2D.Static)
+                SetLayerRecursively(piece.gameObject, pieceLayer);
+            }
+
+            for (int index = 0; index < authoredObstacleColliders.Count; index++)
+            {
+                Collider2D collider = authoredObstacleColliders[index];
+                if (collider != null)
                     SetLayerRecursively(collider.gameObject, obstacleLayer);
+            }
+        }
+
+        private static void ApplyPieceMaterials()
+        {
+            IReadOnlyList<PuzzlePiece> activePieces = PuzzlePiece.ActivePieces;
+            for (int index = 0; index < activePieces.Count; index++)
+            {
+                PuzzlePiece piece = activePieces[index];
+                if (piece != null)
+                    ApplyPieceMaterial(piece, puzzleContactMaterial);
+            }
+        }
+
+        private static void ApplyObstacleMaterials()
+        {
+            for (int index = 0; index < authoredObstacleColliders.Count; index++)
+            {
+                Collider2D collider = authoredObstacleColliders[index];
+                if (collider != null)
+                    collider.sharedMaterial = puzzleContactMaterial;
             }
         }
 
@@ -177,17 +176,16 @@ namespace GravityPuzzle
 
         internal static void ConfigureCamera(float orthographicSize, Color backgroundColor)
         {
-            Camera camera = Camera.main;
-            if (camera == null)
+            if (sceneCamera == null)
             {
-                camera = new GameObject("Main Camera").AddComponent<Camera>();
-                camera.tag = "MainCamera";
+                Debug.LogError("[Bootstrap] No gameplay camera was supplied by RuntimePieceFactoryBootstrap.");
+                return;
             }
 
-            camera.orthographic = true;
-            camera.orthographicSize = orthographicSize;
-            camera.transform.position = new Vector3(0f, 0f, -10f);
-            camera.backgroundColor = backgroundColor;
+            sceneCamera.orthographic = true;
+            sceneCamera.orthographicSize = orthographicSize;
+            sceneCamera.transform.position = new Vector3(0f, 0f, -10f);
+            sceneCamera.backgroundColor = backgroundColor;
         }
 
         internal static void CreateStaticBlock(
@@ -201,33 +199,7 @@ namespace GravityPuzzle
             BoxCollider2D collider = block.AddComponent<BoxCollider2D>();
             if (roundCorners)
                 RoundColliderCorners(collider, size);
-        }
-
-        internal static void CreateLargeSquareBackground(
-            int columns,
-            int rows,
-            float squareSize,
-            Color firstColor,
-            Color secondColor)
-        {
-            GameObject background = new GameObject("Large Square Background");
-            float startX = -(columns - 1) * squareSize * .5f;
-            float startY = -(rows - 1) * squareSize * .5f;
-
-            for (int y = 0; y < rows; y++)
-            {
-                for (int x = 0; x < columns; x++)
-                {
-                    GameObject square = CreateVisualBlock(
-                        $"Background Square {x}, {y}",
-                        new Vector2(startX + x * squareSize, startY + y * squareSize),
-                        Vector2.one * squareSize,
-                        (x + y) % 2 == 0 ? firstColor : secondColor);
-
-                    square.transform.SetParent(background.transform, true);
-                    square.GetComponent<SpriteRenderer>().sortingOrder = -10;
-                }
-            }
+            authoredObstacleColliders.Add(collider);
         }
 
         internal static void CreateStaticCircle(string obstacleName, Vector2 position, float radius, Color color)
@@ -240,48 +212,8 @@ namespace GravityPuzzle
             renderer.sprite = GetCircleSprite();
             renderer.color = color;
 
-            obstacle.AddComponent<CircleCollider2D>();
-        }
-
-        private static void CreateHookPiece(string pieceName, Vector2 position, bool opensDown, Color color)
-        {
-            GameObject piece = new GameObject(pieceName);
-            piece.transform.position = position;
-
-            Rigidbody2D body = piece.AddComponent<Rigidbody2D>();
-            body.gravityScale = 1.5f;
-            body.mass = 1f;
-            body.bodyType = RigidbodyType2D.Kinematic;
-            body.useFullKinematicContacts = true;
-            body.interpolation = RigidbodyInterpolation2D.None;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            piece.AddComponent<PuzzlePiece>();
-
-            // The stem, arm, and tip together form a J-shaped hook.
-            // A compound collider means all three child colliders act as one rigid piece.
-            if (opensDown)
-            {
-                CreateHookPart(piece.transform, "Stem", new Vector2(0f, -.45f), new Vector2(.36f, 1.9f), color);
-                CreateHookPart(piece.transform, "Arm", new Vector2(-.65f, -1.3f), new Vector2(1.65f, .36f), color);
-                CreateHookPart(piece.transform, "Small Hook Tip", new Vector2(-1.38f, -1.58f), new Vector2(.36f, .9f), color);
-            }
-            else
-            {
-                CreateHookPart(piece.transform, "Stem", new Vector2(0f, .45f), new Vector2(.36f, 1.9f), color);
-                CreateHookPart(piece.transform, "Arm", new Vector2(.65f, 1.3f), new Vector2(1.65f, .36f), color);
-                CreateHookPart(piece.transform, "Small Hook Tip", new Vector2(1.38f, 1.02f), new Vector2(.36f, .9f), color);
-            }
-        }
-
-        private static void CreateHookPart(Transform parent, string partName, Vector2 localPosition, Vector2 size, Color color)
-        {
-            GameObject part = CreateVisualBlock(partName, Vector2.zero, size, color);
-            part.transform.SetParent(parent, false);
-            part.transform.localPosition = localPosition;
-            BoxCollider2D collider = part.AddComponent<BoxCollider2D>();
-            RoundColliderCorners(collider, size);
+            CircleCollider2D collider = obstacle.AddComponent<CircleCollider2D>();
+            authoredObstacleColliders.Add(collider);
         }
 
         internal static void RoundColliderCorners(BoxCollider2D collider, Vector2 size)
@@ -496,7 +428,9 @@ namespace GravityPuzzle
 
             startingLevel = true;
             PrototypeBootstrap.StartAuthoredLevel(level);
-            Destroy(gameObject);
+            // The legacy IMGUI menu is scene-owned. Disable it after selection so
+            // the authored level can take over without a runtime Destroy call.
+            gameObject.SetActive(false);
         }
 
         private void EnsureStyles()
@@ -759,8 +693,16 @@ namespace GravityPuzzle
             if (!TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
+            // State and occupancy must change as one logical transaction.
+            // Clearing first used to leave a still-falling piece absent from
+            // the authoritative grid when Dragging was rejected. Targeted
+            // boosters then had no cell to resolve even though the piece was
+            // still visible on the board.
+            if (!TryTransitionPieceState(model, state))
+                return false;
+
             BoardSnapshot.Grid.ClearPiece(model);
-            return TryTransitionPieceState(model, state);
+            return true;
         }
 
         /// <summary>
@@ -914,23 +856,34 @@ namespace GravityPuzzle
                 !piece.TryCreateGridModel(level, existingModel.Id, out PieceModel refreshedModel))
                 return false;
 
-            if (!TryTransitionPieceState(refreshedModel, PieceState.Placed))
+            List<GridCoordinate> previousCells = new List<GridCoordinate>(existingModel.LocalCells);
+            GridCoordinate previousAnchor = existingModel.Anchor;
+            GridCoordinate previousPivotOffset = existingModel.PivotOffset;
+
+            if (!TryTransitionPieceState(existingModel, PieceState.Placed))
                 return false;
+
+            // The snapshot owns the stable PieceModel instance for this runtime
+            // root.  Replacing it with a new instance after the grid update can
+            // fail even though the visual edit is valid, leaving the booster
+            // with no authoritative target. Keep that identity and update only
+            // its geometry as one grid transaction instead.
             BoardSnapshot.Grid.ClearPiece(existingModel);
-            if (!BoardSnapshot.Grid.TryPlace(refreshedModel))
+            existingModel.ReplaceGeometry(
+                refreshedModel.Anchor,
+                refreshedModel.PivotOffset,
+                new List<GridCoordinate>(refreshedModel.LocalCells));
+
+            if (!BoardSnapshot.Grid.TryPlace(existingModel))
             {
+                existingModel.ReplaceGeometry(
+                    previousAnchor,
+                    previousPivotOffset,
+                    previousCells);
                 BoardSnapshot.Grid.TryPlace(existingModel);
                 Debug.LogWarning(
                     "[GridHammer] The edited piece footprint could not be committed; restored its previous grid shape.",
                     this);
-                return false;
-            }
-
-            if (!BoardSnapshot.TryReplacePlacedPiece(refreshedModel))
-            {
-                BoardSnapshot.Grid.ClearPiece(refreshedModel);
-                BoardSnapshot.Grid.TryPlace(existingModel);
-                Debug.LogError("[GridHammer] The edited piece model could not replace its stable id.", this);
                 return false;
             }
 
@@ -1086,6 +1039,12 @@ namespace GravityPuzzle
 
         private void Update()
         {
+            // The scene-authored board exists before the selected level has
+            // supplied its snapshot and pooled pieces. Keep it inert during
+            // Initialize so an empty runtime list is not treated as a win.
+            if (!IsLevelRunning)
+                return;
+
             if (IsTimerActive && !IsTimerPaused)
             {
                 TimeRemaining = Mathf.Max(0f, TimeRemaining - Time.deltaTime);

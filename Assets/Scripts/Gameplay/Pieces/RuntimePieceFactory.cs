@@ -72,7 +72,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             RuntimePieceRoot root = rootProvider.Create(definition.name);
             GameObject piece = root.GameObject;
             ResolveVisual(definition, out Color visualColor, out Sprite voxelSprite);
-            PrepareRoot(piece.transform, level, definition);
+            PrepareRoot(root.Piece, level, definition);
             ConfigureBody(root.Body, level);
             ConfigureComposite(root.CompositeCollider);
 
@@ -113,7 +113,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             root.Transform.position = position;
             root.Transform.rotation = rotation;
             root.Transform.localScale = scale;
-            ClearGeneratedContent(root.Transform);
+            ClearGeneratedContent(root.Piece);
             ConfigureComposite(root.CompositeCollider);
             return root;
         }
@@ -165,18 +165,13 @@ namespace GravityPuzzle.Gameplay.Pieces
                 level, cells, color, remainingProgress);
         }
 
-        public static void ResetPiecePartSlot(PiecePartSlot slot)
+        public static void ResetPiecePartSlot(PuzzlePiece piece, PiecePartSlot slot)
         {
             if (slot == null)
                 return;
 
-            VoxelShard[] voxels = slot.GetComponentsInChildren<VoxelShard>(true);
-            for (int index = 0; index < voxels.Length; index++)
-            {
-                if (voxels[index] != null)
-                    VoxelBlockBuilder.ReturnVoxel(voxels[index]);
-            }
-
+            piece?.RemoveVoxelPresentation(slot.VoxelShards);
+            slot.ReturnVoxels();
             slot.ResetSlot();
         }
 
@@ -199,7 +194,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 return;
 
             DOTween.Kill(piece.gameObject);
-            ClearGeneratedContent(piece.transform);
+            ClearGeneratedContent(piece);
 
             piece.ResetToPooledPhysics();
 
@@ -213,14 +208,15 @@ namespace GravityPuzzle.Gameplay.Pieces
         }
 
         private static void PrepareRoot(
-            Transform pieceTransform,
+            PuzzlePiece piece,
             GravityLevelDefinition level,
             PieceDefinition definition)
         {
+            Transform pieceTransform = piece.transform;
             pieceTransform.position = CellWorldPosition(level, definition.origin);
             pieceTransform.rotation = Quaternion.identity;
             pieceTransform.localScale = Vector3.one;
-            ClearGeneratedContent(pieceTransform);
+            ClearGeneratedContent(piece);
         }
 
         private static void ConfigureBody(Rigidbody2D body, GravityLevelDefinition level)
@@ -258,12 +254,14 @@ namespace GravityPuzzle.Gameplay.Pieces
                 throw new System.InvalidOperationException(
                     $"[PiecePool] BlockPiece prefab has {piece.PartSlotCount} part slots but hammer fragment needs {cells.Count}.");
 
-            ClearGeneratedContent(piece.transform);
+            ClearGeneratedContent(piece);
             ConfigureBody(body, level);
             ConfigureComposite(composite);
 
             List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(cells.Count);
             List<SpriteRenderer> cellVisuals = new List<SpriteRenderer>(cells.Count);
+            List<VoxelShard> voxelShards = new List<VoxelShard>(
+                cells.Count * VoxelBlockBuilder.Subdivisions * VoxelBlockBuilder.Subdivisions);
             for (int index = 0; index < cells.Count; index++)
             {
                 RuntimePieceFragmentCell fragmentCell = cells[index];
@@ -273,7 +271,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                     new PiecePartGeometry(BlockCellName, fragmentCell.LocalPosition, fragmentCell.Size),
                     color,
                     null,
-                    out SpriteRenderer visual);
+                    out SpriteRenderer visual,
+                    voxelShards);
                 collisionCells.Add(collider);
                 cellVisuals.Add(visual);
             }
@@ -282,6 +281,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             piece.ConfigureProgressUnits(Mathf.Max(1, Mathf.CeilToInt(remainingProgress)));
             piece.ConfigureVisualColor(color);
             piece.ConfigureCollisionGeometry(composite, collisionCells, cellVisuals);
+            piece.ConfigureVoxelPresentation(voxelShards);
             piece.ConfigureRemainingProgress(remainingProgress);
             ConfigureOutline(outline, composite);
             ConfigureOutlinePresentation(piece);
@@ -316,6 +316,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 definition.iceCounterOutlineColor,
                 definition.iceCounterOutlineWidth,
                 definition.iceCounterOffset));
+            puzzlePiece.ConfigureVoxelPresentation(content.VoxelShards);
             ConfigureOutlinePresentation(puzzlePiece);
         }
 
@@ -337,6 +338,8 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(parts.Count);
             List<SpriteRenderer> collisionCellVisuals = new List<SpriteRenderer>(parts.Count);
+            List<VoxelShard> voxelShards = new List<VoxelShard>(
+                parts.Count * VoxelBlockBuilder.Subdivisions * VoxelBlockBuilder.Subdivisions);
             for (int index = 0; index < parts.Count; index++)
             {
                 PiecePartSlot slot = puzzlePiece.GetPartSlot(index);
@@ -345,7 +348,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                     parts[index],
                     visualColor,
                     voxelSprite,
-                    out SpriteRenderer cellVisual);
+                    out SpriteRenderer cellVisual,
+                    voxelShards);
                 collisionCells.Add(collider);
                 collisionCellVisuals.Add(cellVisual);
             }
@@ -353,23 +357,27 @@ namespace GravityPuzzle.Gameplay.Pieces
             return new PieceRuntimeContent(
                 progressUnits,
                 collisionCells,
-                collisionCellVisuals);
+                collisionCellVisuals,
+                voxelShards);
         }
 
-        private static void ClearGeneratedContent(Transform pieceTransform)
+        private static void ClearGeneratedContent(PuzzlePiece piece)
         {
-            VoxelShard[] attachedVoxels = pieceTransform.GetComponentsInChildren<VoxelShard>(true);
-            for (int index = 0; index < attachedVoxels.Length; index++)
+            if (piece == null)
+                return;
+
+            IReadOnlyList<PiecePartSlot> partSlots = piece.PartSlots;
+            for (int index = 0; index < partSlots.Count; index++)
             {
-                VoxelShard voxel = attachedVoxels[index];
-                if (voxel != null)
-                    VoxelBlockBuilder.ReturnVoxel(voxel);
+                PiecePartSlot slot = partSlots[index];
+                if (slot == null)
+                    continue;
+
+                slot.ReturnVoxels();
+                slot.ResetSlot();
             }
 
-            PiecePartSlot[] partSlots = pieceTransform.GetComponentsInChildren<PiecePartSlot>(true);
-            for (int index = 0; index < partSlots.Length; index++)
-                partSlots[index].ResetSlot();
-
+            piece.ClearVoxelPresentation();
         }
 
 
@@ -544,7 +552,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             PiecePartGeometry part,
             Color color,
             Sprite voxelSprite,
-            out SpriteRenderer cellVisual)
+            out SpriteRenderer cellVisual,
+            List<VoxelShard> voxelShards = null)
         {
             cellVisual = slot.Visual;
             slot.transform.localPosition = part.LocalPosition;
@@ -553,7 +562,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             cellVisual.color = color;
             cellVisual.enabled = false;
 
-            VoxelBlockBuilder.BuildVoxelGrid(slot.transform, part.Name, part.Size, color, voxelSprite);
+            VoxelBlockBuilder.BuildVoxelGrid(slot.transform, part.Name, part.Size, color, voxelSprite, voxelShards, slot);
 
             BoxCollider2D partCollider = slot.Collision;
             // The authored collider lives on the slot itself (or beneath it).
@@ -668,16 +677,19 @@ namespace GravityPuzzle.Gameplay.Pieces
             public PieceRuntimeContent(
                 int progressUnits,
                 List<BoxCollider2D> collisionCells,
-                List<SpriteRenderer> collisionCellVisuals)
+                List<SpriteRenderer> collisionCellVisuals,
+                List<VoxelShard> voxelShards)
             {
                 ProgressUnits = progressUnits;
                 CollisionCells = collisionCells;
                 CollisionCellVisuals = collisionCellVisuals;
+                VoxelShards = voxelShards;
             }
 
             public int ProgressUnits { get; }
             public List<BoxCollider2D> CollisionCells { get; }
             public List<SpriteRenderer> CollisionCellVisuals { get; }
+            public List<VoxelShard> VoxelShards { get; }
         }
     }
 }

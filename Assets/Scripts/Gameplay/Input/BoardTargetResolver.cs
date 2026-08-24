@@ -43,6 +43,23 @@ namespace GravityPuzzle.Gameplay.Input
             GravityBoardGrid grid = board.BoardSnapshot.Grid;
             var pieces = PuzzlePiece.ActivePieces;
 
+            // Grid gravity commits its destination before the presentation
+            // tween reaches it. During that short interval, the player's tap
+            // is on the visible piece but its authoritative footprint is
+            // already at the destination. Resolve this explicitly from the
+            // authored cell presentation; it is geometry, not a physics
+            // collider/raycast decision. The gameplay mutation still goes
+            // through PrototypeBoard afterwards.
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                PuzzlePiece piece = pieces[index];
+                if (piece == null || piece.IsBeingShredded || !piece.ContainsVisibleCellAt(worldPosition))
+                    continue;
+
+                target = new Target(piece, cell, worldPosition);
+                return true;
+            }
+
             GridCellState cellState = grid.GetCellState(cell);
             if (cellState == GridCellState.Occupied || cellState == GridCellState.Reserved)
             {
@@ -56,7 +73,7 @@ namespace GravityPuzzle.Gameplay.Input
                     target = new Target(
                         piece,
                         cell,
-                        GravityLevelGridCoordinates.FineCellToWorld(level, cell));
+                        worldPosition);
                     return true;
                 }
             }
@@ -80,7 +97,7 @@ namespace GravityPuzzle.Gameplay.Input
                 target = new Target(
                     piece,
                     cell,
-                    GravityLevelGridCoordinates.FineCellToWorld(level, cell));
+                    worldPosition);
                 return true;
             }
 

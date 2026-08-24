@@ -21,7 +21,17 @@ namespace GravityPuzzle.Core.Grid
             Issues = issues;
         }
 
-        public int NextPieceId => pieces.Count;
+        public int NextPieceId
+        {
+            get
+            {
+                int nextId = 0;
+                for (int index = 0; index < pieces.Count; index++)
+                    nextId = System.Math.Max(nextId, pieces[index].Id + 1);
+
+                return nextId;
+            }
+        }
 
         /// <summary>
         /// Registers a model whose cells have already been committed to Grid.
@@ -30,7 +40,7 @@ namespace GravityPuzzle.Core.Grid
         /// </summary>
         public bool TryRegisterPlacedPiece(PieceModel piece)
         {
-            if (piece == null || piece.Id != pieces.Count || !piece.IsOnBoard)
+            if (piece == null || piece.Id != NextPieceId || !piece.IsOnBoard)
                 return false;
 
             pieces.Add(piece);
@@ -39,18 +49,30 @@ namespace GravityPuzzle.Core.Grid
 
         public bool TryReplacePlacedPiece(PieceModel piece)
         {
-            if (piece == null || piece.Id < 0 || piece.Id >= pieces.Count || !piece.IsOnBoard)
+            if (piece == null || !piece.IsOnBoard)
                 return false;
 
-            pieces[piece.Id] = piece;
-            return true;
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                if (pieces[index].Id != piece.Id)
+                    continue;
+
+                pieces[index] = piece;
+                return true;
+            }
+
+            return false;
         }
 
         public bool TryGetPiece(int pieceId, out PieceModel piece)
         {
-            if (pieceId >= 0 && pieceId < Pieces.Count)
+            for (int index = 0; index < Pieces.Count; index++)
             {
-                piece = Pieces[pieceId];
+                PieceModel candidate = Pieces[index];
+                if (candidate.Id != pieceId)
+                    continue;
+
+                piece = candidate;
                 return true;
             }
 

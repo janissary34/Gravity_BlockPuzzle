@@ -8,6 +8,8 @@ using UnityEngine.UI;
 using GravityPuzzle.Config;
 using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Gameplay.Input;
+using GravityPuzzle.Infrastructure.Pooling;
+using GravityPuzzle.Presentation.Views;
 
 namespace GravityPuzzle
 {
@@ -39,10 +41,10 @@ namespace GravityPuzzle
         private int initialCount = 3;
 
         [Header("Rocket Visual & Launch Settings")]
-        [Tooltip("Optional rocket visual prefab. A runtime procedurally generated rocket is used when omitted.")]
+        [Tooltip("Optional authored rocket visual prefab. Add BoosterVisualView to its root to enable pooled presentation.")]
         [SerializeField] private GameObject rocketVisualPrefab;
         [SerializeField] private TweenConfig tweenConfig;
-        [SerializeField, Tooltip("Gameplay camera used for rocket presentation. Defaults to the tagged main camera once during Awake.")]
+        [SerializeField, Tooltip("Gameplay camera used for rocket presentation. Defaults to the camera supplied by Runtime Piece Factory Bootstrap.")]
         private Camera gameplayCamera;
 
         [SerializeField, Tooltip("Rocket scale multiplier.")]
@@ -57,17 +59,26 @@ namespace GravityPuzzle
         private CanvasGroup buttonCanvasGroup;
         private bool launchInProgress;
         private int remainingCount = 3;
+        private BoosterVisualView rocketVisualPrefabView;
+        private GameObjectPool<BoosterVisualView> rocketVisualPool;
 
         public int RemainingCount => boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
 
         private void Awake()
         {
             remainingCount = initialCount;
-            if (gameplayCamera == null)
-                gameplayCamera = Camera.main;
-
             EnsureReferences();
             buttonCanvasGroup = boosterButton != null ? boosterButton.GetComponent<CanvasGroup>() : null;
+            InitializeRocketVisualPool();
+        }
+
+        private void Start()
+        {
+            if (gameplayCamera == null)
+                gameplayCamera = PrototypeBootstrap.SceneCamera;
+
+            if (gameplayCamera == null)
+                Debug.LogError("[RocketBooster] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
         }
 
         private void OnEnable()
@@ -220,14 +231,9 @@ namespace GravityPuzzle
             if (piece == null || piece.IsBeingShredded || launchInProgress || currentUses <= 0)
                 return false;
 
-            // Decrement remaining count if standalone
-            if (boosterButtonRef == null)
-            {
-                remainingCount--;
-                if (remainingCount < 0) remainingCount = 0;
-                UpdateCountUI();
-            }
-
+            // Prevent an in-flight grid presentation tween from continuing to
+            // move the piece after the rocket takes ownership of its transform.
+            PuzzleDragController.CancelGridFallForTargetedAction(piece);
             launchInProgress = true;
             StartCoroutine(PlayRocketLaunchSequence(piece));
             return true;
@@ -261,8 +267,16 @@ namespace GravityPuzzle
             Vector3 startPos = new Vector3(piecePos.x, offscreenBottomY, -3f);
             Vector3 centerPos = new Vector3(piecePos.x, piecePos.y, -3f);
 
-            // 1. Spawn Rocket Visual at off-screen bottom position
-            GameObject rocket = CreateRocketVisual();
+            // Visuals are optional presentation only. Gameplay must not depend
+            // on a prefab being configured.
+            if (!TryRentRocketVisual(out BoosterVisualView rocketView))
+            {
+                CompleteRocketImpact(piece, piecePos, camY + camOrtho + 7f);
+                yield break;
+            }
+
+            GameObject rocket = rocketView.gameObject;
+            // 1. Rent Rocket Visual at off-screen bottom position
             rocket.transform.position = startPos;
             rocket.transform.rotation = Quaternion.identity;
             SetSortingOrder(rocket, rocketSortingOrder);
@@ -276,7 +290,7 @@ namespace GravityPuzzle
 
             if (rocket == null || piece == null)
             {
-                if (rocket != null) Destroy(rocket);
+                if (rocket != null) rocketVisualPool.Return(rocketView);
                 launchInProgress = false;
                 yield break;
             }
@@ -307,7 +321,6 @@ namespace GravityPuzzle
             }
 
             // 5. BLAST OFF! Launch rocket + piece into the sky
-            Color pieceColor = piece.VisualColor;
             float targetY = camY + camOrtho + 7f;
 
 
@@ -317,7 +330,14 @@ namespace GravityPuzzle
                 .SetAutoKill(true);
             yield return launchTween.WaitForCompletion();
 
-            // 6. Rocket launch animation finished! Decrement count now
+            // 6. Rocket launch animation finished.
+            CompleteRocketImpact(piece, piecePos, targetY);
+            rocketVisualPool.Return(rocketView);
+        }
+
+        private void CompleteRocketImpact(PuzzlePiece piece, Vector3 piecePos, float targetY)
+        {
+            Color pieceColor = piece != null ? piece.VisualColor : Color.white;
             BoosterButton targetButton = GetRocketBoosterButton();
             if (targetButton != null)
             {
@@ -343,11 +363,6 @@ namespace GravityPuzzle
             if (piece != null)
             {
                 piece.ReleaseInstance();
-            }
-
-            if (rocket != null)
-            {
-                Destroy(rocket);
             }
 
             activeBooster = null;
@@ -390,51 +405,32 @@ namespace GravityPuzzle
             return piece.transform.position;
         }
 
-        private GameObject CreateRocketVisual()
+        private void InitializeRocketVisualPool()
         {
-            Vector3 effectiveScale = rocketScale;
-            if (effectiveScale.sqrMagnitude < 0.0001f)
+            if (rocketVisualPrefab == null)
+                return;
+
+            rocketVisualPrefabView = rocketVisualPrefab.GetComponent<BoosterVisualView>();
+            if (rocketVisualPrefabView == null)
             {
-                effectiveScale = Vector3.one;
+                Debug.LogWarning("[RocketBooster] Rocket visual prefab has no BoosterVisualView; rocket will run without a presentation visual.", this);
+                return;
             }
 
-            GameObject root;
-            if (rocketVisualPrefab != null)
-            {
-                root = Instantiate(rocketVisualPrefab);
-                root.SetActive(true);
-                Vector3 baseScale = rocketVisualPrefab.transform.localScale;
-                if (baseScale.sqrMagnitude < 0.0001f) baseScale = Vector3.one;
-                root.transform.localScale = Vector3.Scale(baseScale, effectiveScale);
-                SetSortingOrder(root, rocketSortingOrder);
-                return root;
-            }
+            rocketVisualPool = new GameObjectPool<BoosterVisualView>(rocketVisualPrefabView, transform, 1);
+            rocketVisualPool.Prewarm();
+        }
 
-            root = new GameObject("RocketVisual");
+        private bool TryRentRocketVisual(out BoosterVisualView rocketView)
+        {
+            rocketView = null;
+            if (rocketVisualPool == null || !rocketVisualPool.TryRent(out rocketView))
+                return false;
 
-            // Body (Rocket cone/body)
-            GameObject bodyObj = PrototypeBootstrap.CreateVisualBlock("RocketBody", Vector2.zero, new Vector2(0.7f, 1.4f), new Color(0.95f, 0.2f, 0.2f));
-            bodyObj.transform.SetParent(root.transform, false);
-
-            // Nose cone
-            GameObject noseObj = PrototypeBootstrap.CreateVisualBlock("RocketNose", new Vector2(0f, 0.85f), new Vector2(0.5f, 0.5f), new Color(0.98f, 0.98f, 0.98f));
-            noseObj.transform.SetParent(root.transform, false);
-
-            // Fins (Left & Right)
-            GameObject leftFin = PrototypeBootstrap.CreateVisualBlock("LeftFin", new Vector2(-0.45f, -0.4f), new Vector2(0.3f, 0.5f), new Color(0.2f, 0.25f, 0.4f));
-            leftFin.transform.SetParent(root.transform, false);
-
-            GameObject rightFin = PrototypeBootstrap.CreateVisualBlock("RightFin", new Vector2(0.45f, -0.4f), new Vector2(0.3f, 0.5f), new Color(0.2f, 0.25f, 0.4f));
-            rightFin.transform.SetParent(root.transform, false);
-
-            // Thruster flame
-            GameObject flameObj = PrototypeBootstrap.CreateVisualBlock("ThrusterFlame", new Vector2(0f, -0.9f), new Vector2(0.45f, 0.65f), new Color(1f, 0.55f, 0.1f));
-            flameObj.transform.SetParent(root.transform, false);
-
-            root.transform.localScale = Vector3.Scale(Vector3.one, effectiveScale);
-            root.SetActive(true);
-            SetSortingOrder(root, rocketSortingOrder);
-            return root;
+            Vector3 effectiveScale = rocketScale.sqrMagnitude > 0.0001f ? rocketScale : Vector3.one;
+            rocketView.transform.localScale = Vector3.Scale(rocketView.AuthoredScale, effectiveScale);
+            SetSortingOrder(rocketView.gameObject, rocketSortingOrder);
+            return true;
         }
 
         private void SetSortingOrder(GameObject go, int order)

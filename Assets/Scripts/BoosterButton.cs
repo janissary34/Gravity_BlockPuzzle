@@ -99,7 +99,6 @@ namespace GravityPuzzle
 
             remainingCount--;
             if (remainingCount < 0) remainingCount = 0;
-            Debug.Log($"[BoosterButton] Decremented count to: {remainingCount}");
             UpdateCountUI();
             RefreshButtonState();
             return true;
@@ -204,23 +203,19 @@ namespace GravityPuzzle
 
         public void UpdateCountUI()
         {
-            FindCountTextReferences();
             string str = remainingCount.ToString();
             if (countTmpText != null)
             {
                 countTmpText.text = str;
-                Debug.Log($"[BoosterButton] Updated countTmpText on '{countTmpText.gameObject.name}' to '{str}'");
             }
             if (countUiText != null)
             {
                 countUiText.text = str;
-                Debug.Log($"[BoosterButton] Updated countUiText on '{countUiText.gameObject.name}' to '{str}'");
             }
         }
 
         public void RefreshButtonState()
         {
-            if (button == null) button = GetComponent<Button>();
             if (button != null)
             {
                 button.interactable = remainingCount > 0;

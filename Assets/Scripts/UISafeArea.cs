@@ -18,7 +18,13 @@ namespace GravityPuzzle
 
         private void Awake()
         {
-            rectTransform = GetComponent<RectTransform>();
+            CacheReferences();
+            ApplySafeArea();
+        }
+
+        private void OnEnable()
+        {
+            CacheReferences();
             ApplySafeArea();
         }
 
@@ -41,7 +47,7 @@ namespace GravityPuzzle
         public void ApplySafeArea()
         {
             if (rectTransform == null)
-                rectTransform = GetComponent<RectTransform>();
+                return;
 
             Rect safeArea = Screen.safeArea;
 
@@ -64,6 +70,12 @@ namespace GravityPuzzle
             rectTransform.anchorMax = anchorMax;
             rectTransform.offsetMin = Vector2.zero;
             rectTransform.offsetMax = Vector2.zero;
+        }
+
+        private void CacheReferences()
+        {
+            if (rectTransform == null)
+                rectTransform = GetComponent<RectTransform>();
         }
     }
 }

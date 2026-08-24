@@ -15,8 +15,10 @@ namespace GravityPuzzle
     public static class GravityLevelRuntime
     {
         private const string PreviewPathKey = "GravityPuzzle.PreviewLevelPath";
-        private const string SequenceResourcePath = "LevelSequence";
         private static GravityLevelDefinition[] levels = Array.Empty<GravityLevelDefinition>();
+        private static GravityLevelSequence configuredSequence;
+        private static PrototypeBoard configuredBoard;
+        private static PuzzleDragController configuredDragController;
         private static int currentLevelIndex = -1;
         private static bool levelSequenceInitialized;
         private static bool previewLaunchRequested;
@@ -25,9 +27,53 @@ namespace GravityPuzzle
         private static void ResetLevelSequence()
         {
             levels = Array.Empty<GravityLevelDefinition>();
+            configuredSequence = null;
+            configuredBoard = null;
+            configuredDragController = null;
             currentLevelIndex = -1;
             levelSequenceInitialized = false;
             previewLaunchRequested = false;
+        }
+
+        /// <summary>
+        /// Supplies the authored campaign sequence from the scene composition root.
+        /// Runtime level selection deliberately does not load assets by path.
+        /// </summary>
+        public static void ConfigureLevelSequence(GravityLevelSequence sequence)
+        {
+            if (sequence == null)
+            {
+                Debug.LogError("[LevelSequence] RuntimePieceFactoryBootstrap is missing its Level Sequence reference.");
+                return;
+            }
+
+            if (levelSequenceInitialized && configuredSequence != sequence)
+            {
+                Debug.LogWarning("[LevelSequence] Sequence was configured after level selection had already started. The active sequence is unchanged.");
+                return;
+            }
+
+            configuredSequence = sequence;
+        }
+
+        /// <summary>
+        /// Supplies the scene-authored gameplay adapters. A level build must not
+        /// create another board or input controller at runtime: both systems
+        /// hold authoritative state and therefore have exactly one owner.
+        /// </summary>
+        public static void ConfigureSceneGameplayDependencies(
+            PrototypeBoard board,
+            PuzzleDragController dragController)
+        {
+            if (board == null || dragController == null)
+            {
+                Debug.LogError(
+                    "[Bootstrap] RuntimePieceFactoryBootstrap needs authored PrototypeBoard and PuzzleDragController references.");
+                return;
+            }
+
+            configuredBoard = board;
+            configuredDragController = dragController;
         }
 
         public static GravityLevelDefinition FindLevelToPlay()
@@ -102,11 +148,10 @@ namespace GravityPuzzle
 
         private static GravityLevelDefinition[] FindAllLevels()
         {
-            GravityLevelSequence sequence = Resources.Load<GravityLevelSequence>(SequenceResourcePath);
-            if (sequence != null)
+            if (configuredSequence != null)
             {
                 List<GravityLevelDefinition> arrangedLevels = new List<GravityLevelDefinition>();
-                foreach (GravityLevelDefinition level in sequence.levels)
+                foreach (GravityLevelDefinition level in configuredSequence.levels)
                 {
                     if (level != null)
                         arrangedLevels.Add(level);
@@ -116,44 +161,35 @@ namespace GravityPuzzle
                     return arrangedLevels.ToArray();
             }
 
-#if UNITY_EDITOR
-            string[] levelGuids = AssetDatabase.FindAssets("t:GravityLevelDefinition");
-            List<GravityLevelDefinition> foundLevels = new List<GravityLevelDefinition>();
-            foreach (string guid in levelGuids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                GravityLevelDefinition foundLevel = AssetDatabase.LoadAssetAtPath<GravityLevelDefinition>(path);
-                if (foundLevel != null)
-                    foundLevels.Add(foundLevel);
-            }
-
-            levels = foundLevels.ToArray();
-#else
-            levels = Resources.LoadAll<GravityLevelDefinition>("Levels");
-#endif
-
-            Array.Sort(levels, CompareLevels);
-            return levels;
-        }
-
-        private static int CompareLevels(GravityLevelDefinition first, GravityLevelDefinition second)
-        {
-            return string.Compare(first.name, second.name, StringComparison.OrdinalIgnoreCase);
+            Debug.LogError("[LevelSequence] No playable levels were supplied by RuntimePieceFactoryBootstrap.");
+            return Array.Empty<GravityLevelDefinition>();
         }
 
         public static void Build(GravityLevelDefinition level)
         {
+            if (level == null)
+            {
+                Debug.LogError("[LevelRuntime] Cannot build a null level.");
+                return;
+            }
+
+            if (configuredBoard == null || configuredDragController == null)
+            {
+                Debug.LogError(
+                    "[LevelRuntime] Scene gameplay dependencies were not configured. " +
+                    "Assign PrototypeBoard and PuzzleDragController on RuntimePieceFactoryBootstrap.");
+                return;
+            }
+
             float halfHeight = level.boardRows * .5f;
             float cameraSize = ResolveCameraSize(level);
             PrototypeBootstrap.ConfigureCamera(cameraSize, level.backgroundColor);
 
-            GameObject board = new GameObject($"Level - {level.levelName}");
-            PrototypeBoard boardState = board.AddComponent<PrototypeBoard>();
+            PrototypeBoard boardState = configuredBoard;
             boardState.SetRemovalHeight(-halfHeight - 15f);
             boardState.SetTimeLimit(level.timeLimit);
             boardState.EnableSequentialLevels();
             boardState.InitializeBoardSnapshot(LevelBoardSnapshotBuilder.Build(level));
-            board.AddComponent<PuzzleDragController>();
 
             float frameThickness = level.frameThickness;
             float exitWidth = Mathf.Clamp(level.exitWidth, .75f, level.boardColumns - frameThickness * 2f);
@@ -179,8 +215,10 @@ namespace GravityPuzzle
 
             ValidateLevelSnapshotRuntimeState(level, boardState);
 
-            // The manager creates its UI fallback when this scene does not provide one.
-            LevelProgressManager.EnsureInstance().InitializeLevelProgress(level);
+            // Progress UI is authored in the scene; runtime never creates a fallback.
+            LevelProgressManager progressManager = LevelProgressManager.EnsureInstance();
+            if (progressManager != null)
+                progressManager.InitializeLevelProgress(level);
         }
 
         private static float ResolveCameraSize(GravityLevelDefinition level)

@@ -12,6 +12,8 @@ namespace GravityPuzzle
     [DisallowMultipleComponent]
     public class BlockShredder : MonoBehaviour
     {
+        private static readonly SpriteRenderer[] EmptyRenderers = new SpriteRenderer[0];
+
         [Header("Configuration")]
         [Tooltip("Authoring asset used for both this feed behaviour and runtime-created shredder wheels.")]
         [SerializeField] private ShredderConfig shredderConfig;
@@ -23,7 +25,7 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Specific RectTransform target for Gem attraction (defaults to slider handle/rect if null).")]
         private RectTransform targetUIRectTransform;
 
-        [SerializeField, Tooltip("Camera used for Screen/World conversion (defaults to Camera.main).")]
+        [SerializeField, Tooltip("Camera used for Screen/World conversion (defaults to the Runtime Piece Factory Bootstrap camera).")]
         private Camera targetCamera;
 
         public static BlockShredder Instance { get; private set; }
@@ -59,11 +61,17 @@ namespace GravityPuzzle
             if (shredderConfig != null && shredderConfig.FeedMaskPrefab != null)
                 ShredderFeedMaskPool.Configure(shredderConfig.FeedMaskPrefab, transform);
 
-            if (targetCamera == null)
-                targetCamera = Camera.main;
-
             if (targetUIRectTransform == null && targetUISlider != null)
                 targetUIRectTransform = targetUISlider.GetComponent<RectTransform>();
+        }
+
+        private void Start()
+        {
+            if (targetCamera == null)
+                targetCamera = PrototypeBootstrap.SceneCamera;
+
+            if (targetCamera == null)
+                Debug.LogError("[Shredder] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
         }
 
         private void OnDestroy()
@@ -133,16 +141,28 @@ namespace GravityPuzzle
             Rigidbody2D rb = piece.Body;
 
             // 2. Sprite Masking / Visual Clipping: mask out any portion moving below shredderY
-            SpriteRenderer[] pieceRenderers = piece.GetComponentsInChildren<SpriteRenderer>(true);
+            SpriteRenderer[] pieceRenderers = piece.ConfiguredShredderRenderers ?? EmptyRenderers;
             piece.BeginShredderPresentation(pieceRenderers);
             piece.ApplyShredderPresentationClipping();
             // Always use the authored PuzzlePiece colour for debris and UI voxels.
             // Renderer colours can be temporarily changed by selection or masking.
             Color tileColor = Opaque(piece.VisualColor);
 
-            // Get all voxel shards if present
-            VoxelShard[] shards = piece.GetComponentsInChildren<VoxelShard>(true);
-            List<VoxelShard> shardList = new List<VoxelShard>(shards);
+            // The factory records all pooled shards while it configures this
+            // piece. Copy only the references needed by this concurrent feed;
+            // hierarchy traversal is not valid in a gameplay handoff.
+            IReadOnlyList<VoxelShard> configuredShards = piece.ConfiguredVoxelShards;
+            List<VoxelShard> shardList = new List<VoxelShard>(configuredShards.Count);
+            HashSet<Transform> shardTransforms = new HashSet<Transform>();
+            for (int i = 0; i < configuredShards.Count; i++)
+            {
+                VoxelShard shard = configuredShards[i];
+                if (shard == null)
+                    continue;
+
+                shardList.Add(shard);
+                shardTransforms.Add(shard.transform);
+            }
             shardList.Sort((a, b) => a.transform.position.y.CompareTo(b.transform.position.y));
 
             // Setup gems
@@ -163,8 +183,11 @@ namespace GravityPuzzle
             float grinderExitSeamY = shredderY - .06f;
 
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
-            float progressPerGrain = piece.RemainingProgressUnits /
+            float totalProgress = Mathf.Max(0f, piece.RemainingProgressUnits);
+            float progressPerGrain = totalProgress /
                                      (float)Mathf.Max(1, shardList.Count * LevelProgressManager.SandGrainsPerRenderedVoxel);
+            float scheduledProgress = 0f;
+            bool legacyProgressScheduled = false;
             float maxTime = 4.0f;
             float elapsed = 0f;
             float previousShakeOffsetX = 0f;
@@ -220,10 +243,12 @@ namespace GravityPuzzle
 
                         // The already pooled shard owns its post-grinder presentation
                         // and returns itself to VoxelBlockBuilder when its UI flight ends.
+                        float shardProgress = progressPerGrain * LevelProgressManager.SandGrainsPerRenderedVoxel;
+                        scheduledProgress += shardProgress;
                         shard.BeginProgressHandoff(
                             exitSeamPosition,
                             shardColor,
-                            progressPerGrain * LevelProgressManager.SandGrainsPerRenderedVoxel);
+                            shardProgress);
                     }
                 }
 
@@ -236,8 +261,9 @@ namespace GravityPuzzle
                     if (r == null || !r.enabled || r.gameObject.name.StartsWith("Selected Fill") || r.gameObject.name.StartsWith("White Selection"))
                         continue;
 
-                    // Exclude detached shards
-                    if (r.transform.parent != piece.transform && r.GetComponent<VoxelShard>() != null)
+                    // Voxel shards are handled by the dedicated pooled-shard
+                    // pass above. Do not perform GetComponent in this feed loop.
+                    if (shardTransforms.Contains(r.transform))
                         continue;
 
                     if (r.transform.position.y <= shredderY)
@@ -249,17 +275,22 @@ namespace GravityPuzzle
                             grinderExitSeamY);
 
                         // Fallback for legacy pieces which have no generated VoxelShards.
-                        if (LevelProgressManager.Instance != null && shardList.Count == 0)
+                        if (shardList.Count == 0 && !legacyProgressScheduled)
                         {
-                            Debug.Log($"[Shredder] PuzzlePiece {piece.GetInstanceID()} fallback color=#{ColorUtility.ToHtmlStringRGBA(Opaque(tileColor))}");
                             // Legacy render-only pieces have no VoxelShard to animate.
                             // Preserve their progress without manufacturing a temporary
                             // runtime grain; the regular UI-flight presenter owns it.
-                            LevelProgressManager.Instance.SpawnFlyingVoxel(
-                                exitSeamPosition,
-                                Opaque(tileColor),
-                                piece.RemainingProgressUnits,
-                                null);
+                            LevelProgressManager progressManager = LevelProgressManager.Instance;
+                            if (progressManager != null)
+                            {
+                                scheduledProgress = totalProgress;
+                                legacyProgressScheduled = true;
+                                progressManager.SpawnFlyingVoxel(
+                                    exitSeamPosition,
+                                    Opaque(tileColor),
+                                    totalProgress,
+                                    null);
+                            }
                         }
                     }
                     else
@@ -283,6 +314,20 @@ namespace GravityPuzzle
 
             if (piece != null)
             {
+                float outstandingProgress = Mathf.Max(0f, totalProgress - scheduledProgress);
+                if (outstandingProgress > 0.0001f)
+                {
+                    LevelProgressManager progressManager = LevelProgressManager.Instance;
+                    if (progressManager != null)
+                    {
+                        progressManager.SpawnFlyingVoxel(
+                            new Vector2(piece.transform.position.x, grinderExitSeamY),
+                            Opaque(tileColor),
+                            outstandingProgress,
+                            null);
+                    }
+                }
+
                 piece.ReleaseInstance();
             }
 

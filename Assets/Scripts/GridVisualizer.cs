@@ -23,7 +23,7 @@ namespace GravityPuzzle
         private void Awake()
         {
             if (debugCamera == null)
-                debugCamera = Camera.main;
+                debugCamera = PrototypeBootstrap.SceneCamera;
         }
 
         private void OnDrawGizmos()

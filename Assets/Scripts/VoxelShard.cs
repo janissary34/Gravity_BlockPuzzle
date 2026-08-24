@@ -14,6 +14,10 @@ namespace GravityPuzzle
         private BoxCollider2D col;
         private GemFlyToUI gemFly;
 
+        // The owning PuzzlePiece captures this during configuration so the
+        // shredder feed never needs to search the hierarchy for renderers.
+        public SpriteRenderer Renderer => spriteRenderer;
+
         private void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();

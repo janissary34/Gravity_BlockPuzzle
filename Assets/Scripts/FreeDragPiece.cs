@@ -18,10 +18,14 @@ namespace GravityPuzzle
         private void Awake()
         {
             body = GetComponentInParent<Rigidbody2D>();
-            gameplayCamera = Camera.main;
 
             if (body == null)
                 Debug.LogError($"{name} needs a Rigidbody2D on its parent hook piece.");
+        }
+
+        private void Start()
+        {
+            gameplayCamera = PrototypeBootstrap.SceneCamera;
         }
 
         private void OnMouseDown()

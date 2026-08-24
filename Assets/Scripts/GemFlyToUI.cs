@@ -65,11 +65,17 @@ namespace GravityPuzzle
             if (rb2D == null) rb2D = GetComponent<Rigidbody2D>();
             if (col2D == null) col2D = GetComponent<Collider2D>();
             if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
-            fallbackCamera = Camera.main;
             defaultScale = transform.localScale;
             hasTweenConfig = tweenConfig != null;
             if (!hasTweenConfig)
                 Debug.LogWarning("[GemFlyToUI] TweenConfig is missing; gem flight presentation is disabled.", this);
+        }
+
+        private void Start()
+        {
+            fallbackCamera = PrototypeBootstrap.SceneCamera;
+            if (fallbackCamera == null)
+                Debug.LogError("[GemFlyToUI] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
         }
 
         /// <summary>

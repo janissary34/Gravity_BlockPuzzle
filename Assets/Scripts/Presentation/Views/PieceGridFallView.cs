@@ -28,13 +28,33 @@ namespace GravityPuzzle.Presentation.Views
             activeFallTween = null;
         }
 
-        public bool PlayTo(Vector2 targetPosition, Action onComplete)
+        public bool PlayFallTo(Vector2 targetPosition, Action onComplete)
         {
             if (body == null || tweenConfig == null)
                 return false;
 
+            return PlayTo(
+                targetPosition,
+                tweenConfig.GetGridFallDuration(Vector2.Distance(body.position, targetPosition)),
+                onComplete);
+        }
+
+        public bool PlayReleaseTo(Vector2 targetPosition, Action onComplete)
+        {
+            if (body == null || tweenConfig == null)
+                return false;
+
+            return PlayTo(
+                targetPosition,
+                tweenConfig.GetGridReleaseDuration(Vector2.Distance(body.position, targetPosition)),
+                onComplete);
+        }
+
+        private bool PlayTo(Vector2 targetPosition, float duration, Action onComplete)
+        {
             activeFallTween?.Kill();
-            activeFallTween = body.DOMove(targetPosition, tweenConfig.GridFallDuration)
+            activeFallTween = body.DOMove(targetPosition, duration)
+                .SetUpdate(UpdateType.Fixed)
                 .SetEase(tweenConfig.GridFallEase)
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true)

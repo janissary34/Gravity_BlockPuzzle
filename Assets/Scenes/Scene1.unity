@@ -10331,6 +10331,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   progressSlider: {fileID: 963604833}
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
+  flyingProgressVoxelPrefab: {fileID: 3865353524642609919, guid: ed8e2c361ee854d9c934f2b4393023cd, type: 3}
+  poolConfig: {fileID: 11400000, guid: e83a15e692e0d4a49ab874c797e92f79, type: 2}
+  flyingProgressVoxelPoolParent: {fileID: 254861992}
   totalBlockUnitsInLevel: 0
   currentShreddedUnits: 0
 --- !u!1 &318062511
@@ -37115,6 +37118,21 @@ RectTransform:
   m_AnchoredPosition: {x: -131.73804, y: -6}
   m_SizeDelta: {x: 209.4611, y: 164.1226}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!115 &1455224588
+MonoScript:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  serializedVersion: 7
+  m_DefaultReferences: {}
+  m_Icon: {fileID: 0}
+  m_Type: 0
+  m_ExecutionOrder: 0
+  m_ClassName: PrototypeBoard
+  m_Namespace: GravityPuzzle
+  m_AssemblyName: Assembly-CSharp
 --- !u!1 &1478467314
 GameObject:
   m_ObjectHideFlags: 0
@@ -42890,6 +42908,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1938475611}
   - component: {fileID: 1938475612}
+  - component: {fileID: 1938475614}
+  - component: {fileID: 1938475613}
   m_Layer: 0
   m_Name: Runtime Piece Factory Bootstrap
   m_TagString: Untagged
@@ -42927,8 +42947,38 @@ MonoBehaviour:
   blockPiecePrefab: {fileID: 9164068488278492767, guid: 7f069ed2705a74c998225ef6e254fb9e, type: 3}
   voxelShardPrefab: {fileID: 5548497357006573719, guid: 407437a00a22144cd80d53c456435d6e, type: 3}
   poolConfig: {fileID: 11400000, guid: e83a15e692e0d4a49ab874c797e92f79, type: 2}
+  levelSequence: {fileID: 11400000, guid: 771ae77792b3409b8cd650df8151ceff, type: 2}
+  gameplayCamera: {fileID: 423769077}
+  prototypeBoard: {fileID: 1938475614}
+  puzzleDragController: {fileID: 1938475613}
   pieceVisualConfig: {fileID: 11400000, guid: 6ce7ef2d0321457a93c6ec7053eb6224, type: 2}
   poolParent: {fileID: 1938475611}
+--- !u!114 &1938475613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1938475610}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0df0b797e8104442ac147e08b8c3a13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1938475614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1938475610}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 1455224588}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  winSceneName: 
+  showRuntimeWinGUI: 1
 --- !u!1 &1938475620
 GameObject:
   m_ObjectHideFlags: 0

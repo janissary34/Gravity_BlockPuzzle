@@ -26,7 +26,7 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("List of pre-placed Shredder Transforms to align. If empty, the script automatically uses child transforms.")]
         private List<Transform> shredderTransforms = new List<Transform>();
 
-        [SerializeField, Tooltip("Optional Shredder Prefab to instantiate if the list count is less than columnCount.")]
+        [SerializeField, Tooltip("Legacy authoring reference. Runtime shredders are supplied by ShredderWheelPool; add any editor-preview children manually.")]
         private GameObject shredderPrefab;
 
         [Header("Position & Scaling Adjustments")]
@@ -73,18 +73,6 @@ namespace GravityPuzzle
             if (shredderTransforms == null || shredderTransforms.Count == 0)
             {
                 CollectChildShredders();
-            }
-
-            // Spawn missing shredders if prefab is assigned
-            if (shredderPrefab != null && shredderTransforms.Count < columnCount)
-            {
-                int needed = columnCount - shredderTransforms.Count;
-                for (int i = 0; i < needed; i++)
-                {
-                    GameObject spawned = Instantiate(shredderPrefab, transform);
-                    spawned.name = $"Shredder_{shredderTransforms.Count + 1}";
-                    shredderTransforms.Add(spawned.transform);
-                }
             }
 
             if (shredderTransforms.Count == 0)

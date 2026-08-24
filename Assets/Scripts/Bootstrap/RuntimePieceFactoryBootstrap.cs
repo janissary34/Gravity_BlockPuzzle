@@ -5,6 +5,10 @@ using GravityPuzzle.Presentation.Views;
 using GravityPuzzle;
 using UnityEngine;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 namespace GravityPuzzle.Bootstrap
 {
     public sealed class RuntimePieceFactoryBootstrap : MonoBehaviour
@@ -19,6 +23,20 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Controls the BlockPiece pool prewarm capacity.")]
         [SerializeField] private PoolConfig poolConfig;
 
+        [Header("Level Selection")]
+        [Tooltip("Authored campaign sequence. Runtime level selection is supplied from this scene reference.")]
+        [SerializeField] private GravityLevelSequence levelSequence;
+
+        [Tooltip("Camera used by the authored level bootstrap.")]
+        [SerializeField] private Camera gameplayCamera;
+
+        [Header("Scene Gameplay Dependencies")]
+        [Tooltip("The sole board-state owner for the active scene. Author this on the bootstrap object.")]
+        [SerializeField] private PrototypeBoard prototypeBoard;
+
+        [Tooltip("The sole gameplay input adapter for the active scene. Author this on the bootstrap object.")]
+        [SerializeField] private PuzzleDragController puzzleDragController;
+
         [Header("Piece Visuals")]
         [Tooltip("Optional visual lookup for level piece Visual Id values. Empty IDs keep their authored legacy colours.")]
         [SerializeField] private PieceVisualConfig pieceVisualConfig;
@@ -27,10 +45,27 @@ namespace GravityPuzzle.Bootstrap
         [SerializeField] private Transform poolParent;
 
         private PoolService poolService;
+        private bool isReady;
 
         private void Awake()
         {
+            if (gameplayCamera == null)
+            {
+                Debug.LogError("[Bootstrap] RuntimePieceFactoryBootstrap is missing its Gameplay Camera reference.", this);
+                return;
+            }
+
+            PrototypeBootstrap.ConfigureSceneCamera(gameplayCamera);
+            GravityLevelRuntime.ConfigureLevelSequence(levelSequence);
+            GravityLevelRuntime.ConfigureSceneGameplayDependencies(
+                prototypeBoard,
+                puzzleDragController);
             GravityLevelDefinition selectedLevel = GravityLevelRuntime.FindLevelToPlay();
+            if (selectedLevel == null)
+            {
+                Debug.LogError("[LevelSequence] RuntimePieceFactoryBootstrap could not resolve a playable level.", this);
+                return;
+            }
             string pieceValidationError = "BlockPiece prefab or PoolConfig is not assigned.";
             if (blockPiecePrefab == null || poolConfig == null ||
                 poolConfig.BlockPieceCapacity <= 0 ||
@@ -91,7 +126,39 @@ namespace GravityPuzzle.Bootstrap
             VoxelBlockBuilder.SetPoolService(poolService, poolConfig.VoxelSubdivisions);
 
             WarnForUnresolvedVisualIds(selectedLevel);
+            isReady = true;
         }
+
+        private void Start()
+        {
+            if (isReady)
+                PrototypeBootstrap.StartForActiveScene();
+        }
+
+#if UNITY_EDITOR
+        [ContextMenu("Configure Scene Gameplay Dependencies")]
+        private void ConfigureSceneGameplayDependenciesInEditor()
+        {
+            if (Application.isPlaying)
+            {
+                Debug.LogWarning("[Bootstrap] Configure scene gameplay dependencies outside Play mode.", this);
+                return;
+            }
+
+            if (prototypeBoard == null)
+                prototypeBoard = GetComponent<PrototypeBoard>();
+            if (prototypeBoard == null)
+                prototypeBoard = Undo.AddComponent<PrototypeBoard>(gameObject);
+
+            if (puzzleDragController == null)
+                puzzleDragController = GetComponent<PuzzleDragController>();
+            if (puzzleDragController == null)
+                puzzleDragController = Undo.AddComponent<PuzzleDragController>(gameObject);
+
+            EditorUtility.SetDirty(this);
+            Debug.Log("[Bootstrap] Scene PrototypeBoard and PuzzleDragController are configured.", this);
+        }
+#endif
 
         private static bool TryValidateBlockPiecePrefab(
             PuzzlePiece prefab,
