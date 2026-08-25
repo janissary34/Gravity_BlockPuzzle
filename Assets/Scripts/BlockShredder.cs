@@ -134,10 +134,10 @@ namespace GravityPuzzle
             }
             shardList.Sort((a, b) => a.transform.position.y.CompareTo(b.transform.position.y));
 
-            // Emit at the narrow seam directly beneath the rotating teeth. The
-            // grains then fall naturally from the place where the mesh is cut,
-            // instead of materialising lower down in open space.
-            float grinderExitSeamY = shredderY - .06f;
+            // Emit directly beneath the rotating shredder wheels. The grains then
+            // emerge naturally from underneath the mechanism into the open space.
+            float offsetBelow = shredderConfig != null ? shredderConfig.ExitSeamOffsetBelowShredder : 0.65f;
+            float grinderExitSeamY = shredderY - offsetBelow;
 
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
             float totalProgress = Mathf.Max(0f, piece.RemainingProgressUnits);
@@ -183,6 +183,9 @@ namespace GravityPuzzle
                     }
                 }
 
+                int targetPieceParticles = Mathf.Max(1, (int)(Mathf.Max(1f, totalProgress) * (shredderConfig != null ? shredderConfig.ParticlesPerShreddedCell : 8)));
+                int emissionStride = Mathf.Max(1, shardList.Count / targetPieceParticles);
+
                 // A) Shred voxel shards crossing the cutter line and exit at the gear seam.
                 for (int i = 0; i < shardList.Count; i++)
                 {
@@ -193,19 +196,28 @@ namespace GravityPuzzle
                     {
                         processedShards.Add(shard);
 
-                        Vector2 exitSeamPosition = new Vector2(
+                        Vector2 contactWorldPos = new Vector2(
                             shard.transform.position.x,
-                            grinderExitSeamY);
+                            shredderY);
                         Color shardColor = tileColor;
 
-                        // The already pooled shard owns its post-grinder presentation
-                        // and returns itself to VoxelBlockBuilder when its UI flight ends.
                         float shardProgress = progressPerGrain * LevelProgressManager.SandGrainsPerRenderedVoxel;
                         scheduledProgress += shardProgress;
-                        shard.BeginProgressHandoff(
-                            exitSeamPosition,
-                            shardColor,
-                            shardProgress);
+
+                        bool shouldEmitParticle = (processedShards.Count % emissionStride == 0);
+                        if (shouldEmitParticle)
+                        {
+                            shard.BeginProgressHandoff(
+                                contactWorldPos,
+                                shardColor,
+                                shardProgress,
+                                1);
+                        }
+                        else
+                        {
+                            LevelProgressManager.Instance?.AddProgress(shardProgress);
+                            shard.Recycle();
+                        }
                     }
                 }
 
@@ -227,26 +239,23 @@ namespace GravityPuzzle
                     {
                         piece.HideShredderRenderer(r);
 
-                        Vector2 exitSeamPosition = new Vector2(
+                        Vector2 contactWorldPos = new Vector2(
                             r.transform.position.x,
-                            grinderExitSeamY);
+                            shredderY);
 
-                        // Fallback for legacy pieces which have no generated VoxelShards.
-                        if (shardList.Count == 0 && !legacyProgressScheduled)
+                        if (shardList.Count == 0)
                         {
-                            // Legacy render-only pieces have no VoxelShard to animate.
-                            // Preserve their progress without manufacturing a temporary
-                            // runtime grain; the regular UI-flight presenter owns it.
                             LevelProgressManager progressManager = LevelProgressManager.Instance;
                             if (progressManager != null)
                             {
-                                scheduledProgress = totalProgress;
-                                legacyProgressScheduled = true;
-                                progressManager.SpawnFlyingVoxel(
-                                    exitSeamPosition,
+                                float cellProgress = totalProgress / Mathf.Max(1, pieceRenderers.Length);
+                                scheduledProgress += cellProgress;
+                                int burstCount = shredderConfig != null ? shredderConfig.ParticlesPerShreddedCell : 24;
+                                progressManager.SpawnFlyingVoxelBurst(
+                                    contactWorldPos,
                                     Opaque(tileColor),
-                                    totalProgress,
-                                    null);
+                                    cellProgress,
+                                    burstCount);
                             }
                         }
                     }

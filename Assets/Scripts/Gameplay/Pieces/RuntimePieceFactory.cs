@@ -26,6 +26,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static Material sharedOutlineMaterial;
         private static IRuntimePieceRootProvider rootProvider;
         private static PieceVisualConfig pieceVisualConfig;
+        private static bool useVoxelShardGrid = false;
         private static readonly HashSet<string> warnedMissingVisualIds = new HashSet<string>();
 
         public static void SetRootProvider(IRuntimePieceRootProvider provider)
@@ -36,6 +37,11 @@ namespace GravityPuzzle.Gameplay.Pieces
         public static void SetVisualConfig(PieceVisualConfig config)
         {
             pieceVisualConfig = config;
+        }
+
+        public static void SetPresentationMode(bool useVoxelGrid)
+        {
+            useVoxelShardGrid = useVoxelGrid;
         }
 
 
@@ -316,7 +322,11 @@ namespace GravityPuzzle.Gameplay.Pieces
                 definition.iceCounterOutlineColor,
                 definition.iceCounterOutlineWidth,
                 definition.iceCounterOffset));
-            puzzlePiece.ConfigureVoxelPresentation(content.VoxelShards);
+            if (content.VoxelShards != null && content.VoxelShards.Count > 0)
+                puzzlePiece.ConfigureVoxelPresentation(content.VoxelShards);
+            else if (content.CollisionCellVisuals != null)
+                puzzlePiece.ConfigureSolidCellPresentation(content.CollisionCellVisuals);
+
             ConfigureOutlinePresentation(puzzlePiece);
         }
 
@@ -558,11 +568,20 @@ namespace GravityPuzzle.Gameplay.Pieces
             cellVisual = slot.Visual;
             slot.transform.localPosition = part.LocalPosition;
             slot.transform.localScale = Vector3.one;
-            cellVisual.sprite = PrototypeBootstrap.GetSquareSprite();
+            cellVisual.sprite = voxelSprite != null ? voxelSprite : PrototypeBootstrap.GetSquareSprite();
             cellVisual.color = color;
-            cellVisual.enabled = false;
+            cellVisual.sortingOrder = 5;
+            cellVisual.transform.localScale = new Vector3(part.Size.x, part.Size.y, 1f);
 
-            VoxelBlockBuilder.BuildVoxelGrid(slot.transform, part.Name, part.Size, color, voxelSprite, voxelShards, slot);
+            if (useVoxelShardGrid)
+            {
+                cellVisual.enabled = false;
+                VoxelBlockBuilder.BuildVoxelGrid(slot.transform, part.Name, part.Size, color, voxelSprite, voxelShards, slot);
+            }
+            else
+            {
+                cellVisual.enabled = true;
+            }
 
             BoxCollider2D partCollider = slot.Collision;
             // The authored collider lives on the slot itself (or beneath it).

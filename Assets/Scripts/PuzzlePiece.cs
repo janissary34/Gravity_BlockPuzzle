@@ -291,6 +291,20 @@ namespace GravityPuzzle
                 configuredShredderRenderers[index] = configuredVoxelShards[index].Renderer;
         }
 
+        public void ConfigureSolidCellPresentation(IReadOnlyList<SpriteRenderer> visuals)
+        {
+            configuredVoxelShards.Clear();
+            if (visuals == null || visuals.Count == 0)
+            {
+                configuredShredderRenderers = null;
+                return;
+            }
+
+            configuredShredderRenderers = new SpriteRenderer[visuals.Count];
+            for (int index = 0; index < visuals.Count; index++)
+                configuredShredderRenderers[index] = visuals[index];
+        }
+
         public IReadOnlyList<VoxelShard> ConfiguredVoxelShards => configuredVoxelShards;
         public SpriteRenderer[] ConfiguredShredderRenderers => configuredShredderRenderers;
         public IReadOnlyList<PiecePartSlot> PartSlots => partSlots;

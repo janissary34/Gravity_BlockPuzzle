@@ -47,8 +47,8 @@ namespace GravityPuzzle.Config
         [Header("Timer Booster Presentation")]
         [Min(.001f)] [SerializeField] private float timerEntranceDuration = .75f;
         [SerializeField] private Ease timerEntranceEase = Ease.OutCubic;
-        [Min(.001f)] [SerializeField] private float timerFreezeFillDuration = .6f;
-        [SerializeField] private Ease timerFreezeFillEase = Ease.Linear;
+        [Min(.001f)] [SerializeField] private float timerFreezeFillDuration = .85f;
+        [SerializeField] private Ease timerFreezeFillEase = Ease.OutQuart;
         [Min(.001f)] [SerializeField] private float timerFlyToTargetDuration = .5f;
         [SerializeField] private Ease timerFlyToTargetEase = Ease.InQuad;
 

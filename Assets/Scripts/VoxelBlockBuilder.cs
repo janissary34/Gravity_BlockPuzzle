@@ -16,7 +16,7 @@ namespace GravityPuzzle
         public static void SetPoolService(PoolService pools, int configuredSubdivisions)
         {
             poolService = pools ?? throw new System.ArgumentNullException(nameof(pools));
-            subdivisions = Mathf.Clamp(configuredSubdivisions, 1, 6);
+            subdivisions = Mathf.Clamp(configuredSubdivisions, 1, 20);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -75,14 +75,9 @@ namespace GravityPuzzle
             {
                 Texture2D tex = new Texture2D(16, 16);
                 Color[] pixels = new Color[16 * 16];
-                for (int y = 0; y < 16; y++)
-                {
-                    for (int x = 0; x < 16; x++)
-                    {
-                        bool border = (x == 0 || x == 15 || y == 0 || y == 15);
-                        pixels[y * 16 + x] = border ? new Color(1f, 1f, 1f, 0.85f) : Color.white;
-                    }
-                }
+                for (int i = 0; i < pixels.Length; i++)
+                    pixels[i] = Color.white;
+
                 tex.SetPixels(pixels);
                 tex.Apply();
                 defaultVoxelSprite = Sprite.Create(tex, new Rect(0, 0, 16, 16), new Vector2(0.5f, 0.5f), 16);

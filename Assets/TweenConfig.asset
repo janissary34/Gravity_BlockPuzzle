@@ -52,8 +52,8 @@ MonoBehaviour:
   gemUiPunchElasticity: 0.5
   timerEntranceDuration: 0.75
   timerEntranceEase: 9
-  timerFreezeFillDuration: 0.6
-  timerFreezeFillEase: 1
+  timerFreezeFillDuration: 0.85
+  timerFreezeFillEase: 12
   timerFlyToTargetDuration: 0.5
   timerFlyToTargetEase: 5
   hammerEntranceDuration: 0.35

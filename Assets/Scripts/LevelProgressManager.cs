@@ -6,6 +6,7 @@ using DG.Tweening;
 using GravityPuzzle.Config;
 using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Presentation.Views;
+using GravityPuzzle.Presentation.VFX;
 
 namespace GravityPuzzle
 {
@@ -39,8 +40,13 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Owns the timing and easing of progress presentation tweens.")]
         private TweenConfig tweenConfig;
 
-        [Header("Progress Voxel Pool")]
-        [SerializeField, Tooltip("Authored UI prefab used for each progress-bar flight.")]
+        [Header("Progress Particle System")]
+        [SerializeField, Tooltip("Progress Particle System component for flying voxels.")]
+        private ParticleSystem progressParticleSystem;
+        private ProgressVoxelParticleSystem progressVoxelVfx;
+
+        [Header("Progress Voxel Pool (Fallback)")]
+        [SerializeField, Tooltip("Authored UI prefab used for fallback progress-bar flight.")]
         private FlyingProgressVoxelView flyingProgressVoxelPrefab;
         [SerializeField, Tooltip("Owns the prewarmed progress-flight capacity.")]
         private PoolConfig poolConfig;
@@ -111,8 +117,19 @@ namespace GravityPuzzle
             if (!hasTweenConfig)
                 Debug.LogWarning("[LevelProgress] TweenConfig is missing; progress will update without tween presentation.", this);
             EnsureSliderReference();
+            InitializeParticleVfxReference();
             CachePresentationReferences();
             ConfigureFlyingProgressVoxelPool();
+        }
+
+        private void InitializeParticleVfxReference()
+        {
+            if (progressParticleSystem != null)
+            {
+                progressVoxelVfx = progressParticleSystem.GetComponent<ProgressVoxelParticleSystem>();
+                if (progressVoxelVfx == null)
+                    progressVoxelVfx = progressParticleSystem.gameObject.AddComponent<ProgressVoxelParticleSystem>();
+            }
         }
 
         private void Start()
@@ -120,6 +137,9 @@ namespace GravityPuzzle
             mainCamera = PrototypeBootstrap.SceneCamera;
             if (mainCamera == null)
                 Debug.LogError("[LevelProgress] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
+
+            if (progressVoxelVfx != null)
+                progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
         }
 
         private void ConfigureFlyingProgressVoxelPool()
@@ -171,6 +191,9 @@ namespace GravityPuzzle
 
             if (progressCanvas == null || progressCanvasRect == null || progressTargetRect == null)
                 Debug.LogError("[LevelProgress] Slider presentation references are incomplete. The Slider must be inside an authored Canvas.", this);
+
+            if (progressVoxelVfx != null)
+                progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
         }
 
         /// <summary>
@@ -190,9 +213,9 @@ namespace GravityPuzzle
         {
             EnsureSliderReference();
             hasAuthoredLevelTotal = true;
-            // Count authored, breakable board blocks only. VoxelShards, background
-            // cells, UI, and pooled objects are visual implementation details.
-            authoredBlockUnits = CountActiveBlockUnitsInScene();
+            authoredBlockUnits = CountAuthoredPuzzlePieces(level);
+            if (authoredBlockUnits <= 0)
+                authoredBlockUnits = CountActiveBlockUnitsInScene();
             totalBlockUnitsInLevel = authoredBlockUnits;
             ResetProgress();
             Debug.Log($"[LevelProgress] Initialized maxValue={(progressSlider != null ? progressSlider.maxValue : -1f)}, " +
@@ -223,7 +246,7 @@ namespace GravityPuzzle
         /// </summary>
         /// <param name="startWorldPos">World position where the voxel was shredded.</param>
         /// <param name="voxelColor">Color of the block being shredded.</param>
-        public void SpawnFlyingVoxel(Vector3 startWorldPos, Color voxelColor, float progressAmount, Action onArrival = null)
+        public void SpawnFlyingVoxel(Vector3 startWorldPos, Color voxelColor, float progressAmount, Action onArrival = null, int particleCount = 1)
         {
             if (levelCompletedTriggered)
             {
@@ -238,13 +261,18 @@ namespace GravityPuzzle
                 return;
             }
 
-            EnsureSliderReference();
-            if (progressCanvas == null || progressCanvasRect == null || progressTargetRect == null || mainCamera == null)
+            if (flyingProgressVoxelPool == null && progressVoxelVfx == null)
             {
-                // Presentation can be unavailable in an incompletely authored
-                // scene, but shredding must never lose its logical reward.
-                // Apply it immediately rather than silently recycling the
                 // physical voxel without advancing the slider.
+                AddProgress(progressAmount);
+                onArrival?.Invoke();
+                return;
+            }
+
+            if (progressVoxelVfx != null)
+            {
+                progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
+                progressVoxelVfx.EmitVoxel(startWorldPos, Opaque(voxelColor), VoxelFlightDuration, Mathf.Max(1, particleCount));
                 AddProgress(progressAmount);
                 onArrival?.Invoke();
                 return;
@@ -329,10 +357,53 @@ namespace GravityPuzzle
         /// </summary>
         public void SpawnFlyingVoxelBurst(Vector3 startWorldPos, Color voxelColor, float totalProgressAmount, int flightCount)
         {
+            if (levelCompletedTriggered) return;
+
+            if (progressVoxelVfx != null)
+            {
+                progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
+                progressVoxelVfx.EmitVoxelBurst(startWorldPos, Opaque(voxelColor), flightCount, VoxelFlightDuration);
+                AddProgress(totalProgressAmount);
+                return;
+            }
+
             int count = Mathf.Max(1, flightCount);
             float progressPerFlight = totalProgressAmount / count;
             for (int i = 0; i < count; i++)
                 SpawnFlyingVoxel(startWorldPos, voxelColor, progressPerFlight, null);
+        }
+
+        public Vector3 GetTargetWorldPosition()
+        {
+            if (progressTargetRect == null)
+                return Vector3.up * 4f;
+
+            if (mainCamera == null)
+                mainCamera = PrototypeBootstrap.SceneCamera;
+
+            if (progressCanvas == null && progressSlider != null)
+                progressCanvas = progressSlider.GetComponentInParent<Canvas>();
+
+            Camera uiCamera = (progressCanvas != null && progressCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                ? progressCanvas.worldCamera
+                : null;
+
+            if (uiCamera == null)
+                uiCamera = mainCamera;
+
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(uiCamera, progressTargetRect.position);
+            if (mainCamera != null)
+            {
+                float planeDistance = Mathf.Abs(mainCamera.transform.position.z);
+                if (planeDistance < 0.1f) planeDistance = 10f;
+                Vector3 worldPoint = mainCamera.ScreenToWorldPoint(new Vector3(screenPoint.x, screenPoint.y, planeDistance));
+                worldPoint.z = 0f;
+                return worldPoint;
+            }
+
+            Vector3 fallback = progressTargetRect.position;
+            fallback.z = 0f;
+            return fallback;
         }
 
         private static Vector2 ScreenToCanvasPoint(RectTransform canvasRect, Vector2 screenPoint, Camera uiCamera)
@@ -385,12 +456,16 @@ namespace GravityPuzzle
                     : totalBlockUnitsInLevel);
 
                 if (sliderFillTween != null && sliderFillTween.IsActive())
-                    sliderFillTween.Kill();
-
-                sliderFillTween = progressSlider.DOValue(currentShreddedUnits, SliderFillDuration)
-                    .SetEase(SliderFillEase)
-                    .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
-                    .SetAutoKill(true);
+                {
+                    sliderFillTween.ChangeEndValue(currentShreddedUnits, true);
+                }
+                else
+                {
+                    sliderFillTween = progressSlider.DOValue(currentShreddedUnits, SliderFillDuration)
+                        .SetEase(SliderFillEase)
+                        .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
+                        .SetAutoKill(true);
+                }
 
             }
             else if (progressSlider != null)

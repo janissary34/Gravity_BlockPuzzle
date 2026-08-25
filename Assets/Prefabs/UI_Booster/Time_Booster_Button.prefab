@@ -525,7 +525,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2f1400596db24156a5edc4760672461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initialCount: 3
+  initialCount: 9
   countTmpText: {fileID: 3887709752190128308}
   countUiText: {fileID: 0}
   onBoosterClicked:

@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 2554996372335601371}
   - component: {fileID: 3718859599652085706}
   - component: {fileID: 3779104866993386737}
-  - component: {fileID: 5548497357006573719}
   m_Layer: 0
   m_Name: VoxelShard
   m_TagString: Untagged
@@ -161,29 +160,6 @@ BoxCollider2D:
   m_Size: {x: 0.0001, y: 0.0001}
   m_EdgeRadius: 0
 --- !u!114 &3779104866993386737
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4696259443313944567}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2a03b8be86abd42f49c501bc70afd1d4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  rb2D: {fileID: 0}
-  col2D: {fileID: 0}
-  spriteRenderer: {fileID: 0}
-  tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
-  popPower: 1.2
-  popDuration: 0
-  flyDuration: 0.75
-  flyEase: 26
-  uiPunchScale: {x: 0.18, y: 0.18, z: 0}
-  uiPunchDuration: 0.22
-  sliderValueGain: 1
---- !u!114 &5548497357006573719
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

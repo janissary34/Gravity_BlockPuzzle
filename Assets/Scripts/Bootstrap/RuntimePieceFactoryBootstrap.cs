@@ -97,33 +97,31 @@ namespace GravityPuzzle.Bootstrap
             RuntimePieceFactory.SetRootProvider(new PooledRuntimePieceRootProvider(poolService));
             RuntimePieceFactory.SetVisualConfig(pieceVisualConfig);
 
-            if (voxelShardPrefab == null || poolConfig.ShredVoxelCapacity <= 0 ||
-                !IsVoxelShardPrefabReady(voxelShardPrefab))
-            {
-                Debug.LogError(
-                    "[VoxelPool] RuntimePieceFactoryBootstrap needs a VoxelShard prefab with SpriteRenderer, Rigidbody2D, and BoxCollider2D, plus a positive ShredVoxelCapacity.",
-                    this);
-                return;
-            }
+            RuntimePieceFactory.SetPresentationMode(poolConfig.UseVoxelShardGrid);
 
-            int requiredVoxelCapacity = VoxelBlockBuilder.EstimateMaximumVoxelCount(
-                selectedLevel,
-                poolConfig.VoxelSubdivisions);
-            int voxelCapacity = Mathf.Max(poolConfig.ShredVoxelCapacity, requiredVoxelCapacity);
-            if (voxelCapacity > poolConfig.ShredVoxelCapacity)
+            if (poolConfig.UseVoxelShardGrid)
             {
-                Debug.LogWarning(
-                    $"[VoxelPool] PoolConfig capacity {poolConfig.ShredVoxelCapacity} was below this level's maximum requirement {requiredVoxelCapacity}. Prewarming {voxelCapacity} voxels.",
-                    this);
-            }
+#if UNITY_EDITOR
+                if (voxelShardPrefab == null)
+                    voxelShardPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<VoxelShard>("Assets/Prefabs/VoxelShard.prefab");
+#endif
 
-            GameObjectPool<VoxelShard> voxelPool = new GameObjectPool<VoxelShard>(
-                voxelShardPrefab,
-                parent,
-                voxelCapacity);
-            voxelPool.Prewarm();
-            poolService.Register<VoxelShard>(voxelPool);
-            VoxelBlockBuilder.SetPoolService(poolService, poolConfig.VoxelSubdivisions);
+                if (voxelShardPrefab != null && poolConfig.ShredVoxelCapacity > 0)
+                {
+                    int requiredVoxelCapacity = VoxelBlockBuilder.EstimateMaximumVoxelCount(
+                        selectedLevel,
+                        poolConfig.VoxelSubdivisions);
+                    int voxelCapacity = Mathf.Max(poolConfig.ShredVoxelCapacity, requiredVoxelCapacity);
+
+                    GameObjectPool<VoxelShard> voxelPool = new GameObjectPool<VoxelShard>(
+                        voxelShardPrefab,
+                        parent,
+                        voxelCapacity);
+                    voxelPool.Prewarm();
+                    poolService.Register<VoxelShard>(voxelPool);
+                    VoxelBlockBuilder.SetPoolService(poolService, poolConfig.VoxelSubdivisions);
+                }
+            }
 
             WarnForUnresolvedVisualIds(selectedLevel);
             isReady = true;
@@ -216,13 +214,7 @@ namespace GravityPuzzle.Bootstrap
 
         private static bool IsVoxelShardPrefabReady(VoxelShard prefab)
         {
-            if (prefab == null ||
-                prefab.GetComponent<SpriteRenderer>() == null ||
-                prefab.GetComponent<Rigidbody2D>() == null ||
-                prefab.GetComponent<BoxCollider2D>() == null)
-                return false;
-
-            return true;
+            return prefab != null;
         }
 
         private static int GetMaximumRequiredPartSlots(GravityLevelDefinition level)

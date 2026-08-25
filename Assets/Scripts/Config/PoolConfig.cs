@@ -9,13 +9,15 @@ namespace GravityPuzzle.Config
         [Min(0)] [SerializeField] private int shredVoxelCapacity = 128;
         [Min(0)] [SerializeField] private int progressVoxelCapacity = 96;
 
-        [Header("Voxel Presentation")]
-        [Tooltip("Voxel grid resolution per authored block cell. 3 creates 3x3 = 9 voxels per cell.")]
-        [Range(1, 6)] [SerializeField] private int voxelSubdivisions = 3;
+        [Header("Voxel Presentation Mode")]
+        [Tooltip("If true, pieces are composed of subdivided VoxelShards (legacy). If false (default), pieces use clean solid cells with Particle System effects.")]
+        [SerializeField] private bool useVoxelShardGrid = true;
+        [Range(1, 20)] [SerializeField] private int voxelSubdivisions = 3;
 
         public int BlockPieceCapacity => blockPieceCapacity;
         public int ShredVoxelCapacity => shredVoxelCapacity;
         public int ProgressVoxelCapacity => progressVoxelCapacity;
         public int VoxelSubdivisions => voxelSubdivisions;
+        public bool UseVoxelShardGrid => useVoxelShardGrid;
     }
 }

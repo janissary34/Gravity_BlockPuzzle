@@ -6,6 +6,12 @@ namespace GravityPuzzle.Config
     [CreateAssetMenu(fileName = "ShredderConfig", menuName = "Gravity Puzzle/Config/Shredder")]
     public sealed class ShredderConfig : ScriptableObject
     {
+        [Header("Particle System Presentation")]
+        [Tooltip("Number of flying particle voxels emitted per shredded block cell.")]
+        [Range(1, 100)] [SerializeField] private int particlesPerShreddedCell = 24;
+        [Tooltip("Distance below the shredder line where particles emerge from beneath the wheels.")]
+        [Range(0f, 2f)] [SerializeField] private float exitSeamOffsetBelowShredder = 0.65f;
+
         [Header("Prefab")]
         [SerializeField] private ShredderWheel wheelPrefab;
         [Min(1)] [SerializeField] private int wheelPoolCapacity = 16;
@@ -80,6 +86,8 @@ namespace GravityPuzzle.Config
         public int HubSortingOrder => hubSortingOrder;
         public Vector2 VoxelEjectionDirection => voxelEjectionDirection;
         public float VoxelEjectionSpreadAngle => voxelEjectionSpreadAngle;
+        public int ParticlesPerShreddedCell => particlesPerShreddedCell;
+        public float ExitSeamOffsetBelowShredder => exitSeamOffsetBelowShredder;
         public float FeedSpeed => feedSpeed;
         public float TremorIntensity => tremorIntensity;
         public float TremorFrequency => tremorFrequency;

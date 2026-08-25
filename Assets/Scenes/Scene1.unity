@@ -10299,9 +10299,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   shredderConfig: {fileID: 11400000, guid: 52cdf33a2b8bb4afbb63c2343d3c8e7d, type: 2}
-  targetUISlider: {fileID: 0}
-  targetUIRectTransform: {fileID: 0}
-  targetCamera: {fileID: 423769077}
 --- !u!4 &254861992
 Transform:
   m_ObjectHideFlags: 0
@@ -10331,6 +10328,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   progressSlider: {fileID: 963604833}
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
+  progressParticleSystem: {fileID: 1210089770}
   flyingProgressVoxelPrefab: {fileID: 3865353524642609919, guid: ed8e2c361ee854d9c934f2b4393023cd, type: 3}
   poolConfig: {fileID: 11400000, guid: e83a15e692e0d4a49ab874c797e92f79, type: 2}
   flyingProgressVoxelPoolParent: {fileID: 254861992}
@@ -10861,6 +10859,7 @@ RectTransform:
   - {fileID: 963604832}
   - {fileID: 1624066524}
   - {fileID: 1348313169}
+  - {fileID: 1210089769}
   - {fileID: 97391122}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -21271,13 +21270,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: Timer_obj
       objectReference: {fileID: 0}
+    - target: {fileID: 8797102504385255893, guid: 993d3d5faef6e40a090964f16f4d3ae5, type: 3}
+      propertyPath: m_FillMethod
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4589897246359763626, guid: 993d3d5faef6e40a090964f16f4d3ae5, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1286762676}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 993d3d5faef6e40a090964f16f4d3ae5, type: 3}
 --- !u!1 &946162840
 GameObject:
@@ -31712,6 +31712,73 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!1001 &1210089768
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 527882130}
+    m_Modifications:
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8554432926910048967, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: m_Name
+      value: ProgressVoxelParticleSystem
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+--- !u!4 &1210089769 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+  m_PrefabInstance: {fileID: 1210089768}
+  m_PrefabAsset: {fileID: 0}
+--- !u!198 &1210089770 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 7163254700503860810, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+  m_PrefabInstance: {fileID: 1210089768}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1219566072
 GameObject:
   m_ObjectHideFlags: 0
@@ -31944,29 +32011,11 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 2364918353607272407, guid: 993d3d5faef6e40a090964f16f4d3ae5, type: 3}
   m_PrefabInstance: {fileID: 877371171}
   m_PrefabAsset: {fileID: 0}
---- !u!223 &1286762676
+--- !u!223 &1286762676 stripped
 Canvas:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 5880946634293505313, guid: 993d3d5faef6e40a090964f16f4d3ae5, type: 3}
+  m_PrefabInstance: {fileID: 877371171}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1286762672}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_RenderMode: 2
-  m_Camera: {fileID: 0}
-  m_PlaneDistance: 100
-  m_PixelPerfect: 0
-  m_ReceivesEvents: 1
-  m_OverrideSorting: 1
-  m_OverridePixelPerfect: 0
-  m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
-  m_UpdateRectTransformForStandalone: 0
-  m_SortingLayerID: 0
-  m_SortingOrder: 3200
-  m_TargetDisplay: 0
 --- !u!1 &1339735204
 GameObject:
   m_ObjectHideFlags: 0
@@ -42883,7 +42932,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   blockPiecePrefab: {fileID: 9164068488278492767, guid: 7f069ed2705a74c998225ef6e254fb9e, type: 3}
-  voxelShardPrefab: {fileID: 5548497357006573719, guid: 407437a00a22144cd80d53c456435d6e, type: 3}
+  voxelShardPrefab: {fileID: 3779104866993386737, guid: 407437a00a22144cd80d53c456435d6e, type: 3}
   poolConfig: {fileID: 11400000, guid: e83a15e692e0d4a49ab874c797e92f79, type: 2}
   levelSequence: {fileID: 11400000, guid: 771ae77792b3409b8cd650df8151ceff, type: 2}
   gameplayCamera: {fileID: 423769077}
