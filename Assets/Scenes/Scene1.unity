@@ -21272,7 +21272,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8797102504385255893, guid: 993d3d5faef6e40a090964f16f4d3ae5, type: 3}
       propertyPath: m_FillMethod
-      value: 0
+      value: 4
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -31720,6 +31720,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 527882130}
     m_Modifications:
+    - target: {fileID: 4238923884158317462, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: maxDropDistance
+      value: 5.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4238923884158317462, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: minDropDistance
+      value: 4.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4238923884158317462, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
+      propertyPath: baseParticleSize
+      value: 0.1
+      objectReference: {fileID: 0}
     - target: {fileID: 7359295459523417228, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -42932,7 +42944,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   blockPiecePrefab: {fileID: 9164068488278492767, guid: 7f069ed2705a74c998225ef6e254fb9e, type: 3}
-  voxelShardPrefab: {fileID: 3779104866993386737, guid: 407437a00a22144cd80d53c456435d6e, type: 3}
+  voxelShardPrefab: {fileID: 0}
   poolConfig: {fileID: 11400000, guid: e83a15e692e0d4a49ab874c797e92f79, type: 2}
   levelSequence: {fileID: 11400000, guid: 771ae77792b3409b8cd650df8151ceff, type: 2}
   gameplayCamera: {fileID: 423769077}

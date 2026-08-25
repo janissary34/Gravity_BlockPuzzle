@@ -97,6 +97,25 @@ namespace GravityPuzzle
                 return;
 
             piece.GridFallView?.Cancel();
+
+            // Tween yarıda kesildi; görsel pozisyonu modelin gerçek anchor'ına
+            // anında sabitle, aksi halde parça ara bir noktada asılı kalır.
+            if (Instance != null &&
+                PrototypeBoard.Active != null &&
+                PrototypeBoard.Active.TryGetPieceModel(piece, out var model))
+            {
+                GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+                if (level != null && piece.Body != null)
+                {
+                    GridCoordinate pivot = new GridCoordinate(
+                        model.Anchor.X - model.PivotOffset.X,
+                        model.Anchor.Y - model.PivotOffset.Y);
+                    Vector2 correctedPosition = GravityLevelGridCoordinates.FineCellToWorld(level, pivot);
+                    piece.Body.position = correctedPosition;
+                    Physics2D.SyncTransforms();
+                }
+            }
+
             if (Instance == null)
                 return;
 
@@ -472,9 +491,8 @@ namespace GravityPuzzle
                 CompleteGridGravityPresentation(finishedGridFalls[index]);
         }
 
-        // A selected piece is deliberately absent from occupancy while held.
-        // Its presentation may move only to an anchor that the same grid can
-        // accept on release; physics is no longer placement authority.
+        // A selected piece keeps its dynamic occupancy in the grid while held so falling
+        // pieces cannot enter its footprint. It moves atomically without self-collision.
         private bool TryMoveSelectedPieceOnGrid(PuzzlePiece piece, Vector2 requestedWorldPosition)
         {
             if (piece == null || piece.Body == null || !hasSelectedPieceStartAnchor ||
@@ -487,20 +505,75 @@ namespace GravityPuzzle
             if (level == null)
                 return false;
 
-            GridCoordinate pivot = WorldToDragPivot(level, requestedWorldPosition);
-            GridCoordinate anchor = pivot.Offset(model.PivotOffset);
-            GridPlacementResult placement = snapshot.Grid.CheckPlacement(model, anchor);
-            if (!placement.IsSuccess)
+            GridCoordinate targetPivot = WorldToDragPivot(level, requestedWorldPosition);
+
+            // Önceki geçerli pivottan hedefe kadar HER ARA HÜCREYİ tek tek dene.
+            GridCoordinate fromPivot = hasSelectedDragPivot ? selectedDragPivot : targetPivot;
+            GridCoordinate lastValidPivot = fromPivot;
+            GridCoordinate currentPivot = fromPivot;
+
+            int dx = targetPivot.X - fromPivot.X;
+            int dy = targetPivot.Y - fromPivot.Y;
+            int steps = Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy));
+
+            if (steps == 0)
             {
-                LogDragPlacementRejection(piece, model, anchor, placement);
+                GridCoordinate anchor0 = targetPivot.Offset(model.PivotOffset);
+                GridPlacementResult placement0 = snapshot.Grid.CheckPlacementIgnoringPiece(model, anchor0, model.Id);
+                if (!placement0.IsSuccess)
+                {
+                    LogDragPlacementRejection(piece, model, anchor0, placement0);
+                    return false;
+                }
+                lastValidPivot = targetPivot;
+            }
+            else
+            {
+                for (int step = 1; step <= steps; step++)
+                {
+                    float t = (float)step / steps;
+                    int stepX = fromPivot.X + Mathf.RoundToInt(dx * t);
+                    int stepY = fromPivot.Y + Mathf.RoundToInt(dy * t);
+                    GridCoordinate stepPivot = new GridCoordinate(stepX, stepY);
+
+                    if (stepPivot.Equals(currentPivot))
+                        continue;
+
+                    GridCoordinate stepAnchor = stepPivot.Offset(model.PivotOffset);
+                    GridPlacementResult stepPlacement = snapshot.Grid.CheckPlacementIgnoringPiece(model, stepAnchor, model.Id);
+                    if (!stepPlacement.IsSuccess)
+                    {
+                        LogDragPlacementRejection(piece, model, stepAnchor, stepPlacement);
+                        break;
+                    }
+
+                    lastValidPivot = stepPivot;
+                    currentPivot = stepPivot;
+                }
+            }
+
+            if (lastValidPivot.Equals(fromPivot) && steps > 0 && !lastValidPivot.Equals(targetPivot))
+            {
                 return false;
             }
 
+            // Tuzak 1 & 3: Kendi kendine çakışmayı önle ve matrisi SADECE pivot gerçekten değiştiğinde atomik güncelle
+            if (!lastValidPivot.Equals(fromPivot))
+            {
+                GridCoordinate newAnchor = lastValidPivot.Offset(model.PivotOffset);
+                snapshot.Grid.TryMoveIgnoringPiece(model, newAnchor, model.Id, out _);
+            }
+
             lastLoggedDragRejectionAnchors.Remove(piece.GetInstanceID());
-            selectedDragPivot = pivot;
+            selectedDragPivot = lastValidPivot;
             hasSelectedDragPivot = true;
             PrepareKinematicBody(piece.Body);
-            piece.Body.MovePosition(requestedWorldPosition);
+
+            Vector2 destinationWorldPos = lastValidPivot.Equals(targetPivot)
+                ? requestedWorldPosition
+                : GravityLevelGridCoordinates.FineCellToWorld(level, lastValidPivot);
+
+            piece.Body.MovePosition(destinationWorldPos);
             return true;
         }
 
@@ -524,6 +597,12 @@ namespace GravityPuzzle
                 $"reason={placement.Reason}, cell=({placement.Coordinate.X},{placement.Coordinate.Y}), " +
                 $"cellState={placement.CellState}, occupant={placement.OccupantId}.",
                 piece);
+
+            if (PrototypeBoard.Active != null && PrototypeBoard.Active.BoardSnapshot != null)
+            {
+                int occupant = PrototypeBoard.Active.BoardSnapshot.Grid.GetOccupantId(placement.Coordinate);
+                Debug.Log($"[Diag] blocked cell=({placement.Coordinate.X},{placement.Coordinate.Y}) occupant piece id={occupant}");
+            }
         }
 
         private void MoveSelectedBody(PuzzlePiece piece, Vector2 requestedMove)
@@ -1164,9 +1243,8 @@ namespace GravityPuzzle
                 selectedPieceStartAnchor = selectedModel.Anchor;
 
             // A grid-owned selection is only valid after its transition to
-            // Dragging succeeds. Keep the piece visually and logically intact
-            // on failure instead of selecting an off-grid ghost.
-            if (!ClearSelectedPieceFromGrid(piece))
+            // Dragging succeeds. Keep the piece logically on the board and occupied.
+            if (PrototypeBoard.Active == null || !PrototypeBoard.Active.TrySetPieceState(piece, PieceState.Dragging))
             {
                 hasSelectedPieceStartAnchor = false;
                 return;

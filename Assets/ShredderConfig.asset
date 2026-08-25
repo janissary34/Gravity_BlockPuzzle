@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50a1c14f239a644cb9c0492628aa4e8e, type: 3}
   m_Name: ShredderConfig
   m_EditorClassIdentifier: 
+  particlesPerShreddedCell: 40
+  exitSeamOffsetBelowShredder: 2
   wheelPrefab: {fileID: 6496321627930684527, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
   wheelPoolCapacity: 16
   catchZonePrefab: {fileID: 1348796746018862400, guid: 38977ea9b7627446fb5feb095e7ae1d6, type: 3}
@@ -41,5 +43,4 @@ MonoBehaviour:
   feedAngularDrag: 6
   tumbleTorque: 7.5
   maxFeedTiltAngle: 5
-  gemVoxelRatio: 0.25
   finalPieceTimerGraceSeconds: 1.8

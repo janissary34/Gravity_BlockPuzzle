@@ -31,18 +31,6 @@ MonoBehaviour:
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
-  - name: Piece 1
-    visualId: 
-    color: {r: 1, g: 0.3, b: 0.3, a: 1}
-    origin: {x: 10, y: 18}
-    quarterTurns: 0
-    frozenMoveCount: 0
-    iceCounterFontSize: 36
-    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
-    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
-    iceCounterOutlineWidth: 0.18
-    iceCounterOffset: {x: 0, y: 0}
-    cells: []
   - name: Piece 2
     visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
@@ -531,6 +519,26 @@ MonoBehaviour:
     clockwise: 1
   - name: Shredder 4
     cell: {x: 13, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 5
+    cell: {x: 3, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 6
+    cell: {x: 7, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 0
+  - name: Shredder 7
+    cell: {x: 11, y: 0}
+    radiusInFineCells: 1.7
+    rotationSpeed: 220
+    clockwise: 1
+  - name: Shredder 8
+    cell: {x: 15, y: 0}
     radiusInFineCells: 1.7
     rotationSpeed: 220
     clockwise: 0
