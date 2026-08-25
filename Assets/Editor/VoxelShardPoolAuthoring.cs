@@ -27,7 +27,6 @@ namespace GravityPuzzle.Editor
 
                 BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
                 collider.enabled = false;
-                root.AddComponent<GemFlyToUI>();
                 prefab = root.AddComponent<VoxelShard>();
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
                 Object.DestroyImmediate(root);

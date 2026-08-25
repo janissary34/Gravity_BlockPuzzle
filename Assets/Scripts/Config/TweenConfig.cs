@@ -44,13 +44,6 @@ namespace GravityPuzzle.Config
         [Range(0f, 1f)] [SerializeField] private float progressSliderPunchElasticity = .5f;
         [Min(0f)] [SerializeField] private float progressSliderPulseCooldown = .09f;
 
-        [Header("Gem Presentation")]
-        [Min(.001f)] [SerializeField] private float gemFlightDuration = .75f;
-        [SerializeField] private Ease gemFlightEase = Ease.InBack;
-        [Min(.001f)] [SerializeField] private float gemUiPunchDuration = .22f;
-        [Min(1)] [SerializeField] private int gemUiPunchVibrato = 5;
-        [Range(0f, 1f)] [SerializeField] private float gemUiPunchElasticity = .5f;
-
         [Header("Timer Booster Presentation")]
         [Min(.001f)] [SerializeField] private float timerEntranceDuration = .75f;
         [SerializeField] private Ease timerEntranceEase = Ease.OutCubic;
@@ -170,11 +163,6 @@ namespace GravityPuzzle.Config
         public int ProgressSliderPunchVibrato => progressSliderPunchVibrato;
         public float ProgressSliderPunchElasticity => progressSliderPunchElasticity;
         public float ProgressSliderPulseCooldown => progressSliderPulseCooldown;
-        public float GemFlightDuration => gemFlightDuration;
-        public Ease GemFlightEase => gemFlightEase;
-        public float GemUiPunchDuration => gemUiPunchDuration;
-        public int GemUiPunchVibrato => gemUiPunchVibrato;
-        public float GemUiPunchElasticity => gemUiPunchElasticity;
         public float TimerEntranceDuration => timerEntranceDuration;
         public Ease TimerEntranceEase => timerEntranceEase;
         public float TimerFreezeFillDuration => timerFreezeFillDuration;

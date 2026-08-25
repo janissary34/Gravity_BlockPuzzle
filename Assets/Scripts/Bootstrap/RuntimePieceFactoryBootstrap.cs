@@ -17,7 +17,7 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Root prefab with PuzzlePiece, Rigidbody2D, CompositeCollider2D, and LineRenderer.")]
         [SerializeField] private PuzzlePiece blockPiecePrefab;
 
-        [Tooltip("Prefab with VoxelShard, SpriteRenderer, Rigidbody2D, BoxCollider2D, and GemFlyToUI.")]
+        [Tooltip("Prefab with VoxelShard, SpriteRenderer, Rigidbody2D, and BoxCollider2D.")]
         [SerializeField] private VoxelShard voxelShardPrefab;
 
         [Tooltip("Controls the BlockPiece pool prewarm capacity.")]
@@ -101,7 +101,7 @@ namespace GravityPuzzle.Bootstrap
                 !IsVoxelShardPrefabReady(voxelShardPrefab))
             {
                 Debug.LogError(
-                    "[VoxelPool] RuntimePieceFactoryBootstrap needs a VoxelShard prefab with SpriteRenderer, Rigidbody2D, BoxCollider2D and GemFlyToUI, plus a positive ShredVoxelCapacity.",
+                    "[VoxelPool] RuntimePieceFactoryBootstrap needs a VoxelShard prefab with SpriteRenderer, Rigidbody2D, and BoxCollider2D, plus a positive ShredVoxelCapacity.",
                     this);
                 return;
             }
@@ -222,8 +222,7 @@ namespace GravityPuzzle.Bootstrap
                 prefab.GetComponent<BoxCollider2D>() == null)
                 return false;
 
-            GemFlyToUI gemFly = prefab.GetComponent<GemFlyToUI>();
-            return gemFly != null && gemFly.Config != null;
+            return true;
         }
 
         private static int GetMaximumRequiredPartSlots(GravityLevelDefinition level)

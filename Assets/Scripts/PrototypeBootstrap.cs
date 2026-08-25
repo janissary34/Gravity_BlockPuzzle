@@ -1077,7 +1077,7 @@ namespace GravityPuzzle
                 bool requiresProgress = progress != null && progress.TotalBlockUnits > 0;
                 bool progressReady = !requiresProgress ||
                                      (progress.IsLevelComplete && !progress.HasPendingProgressPresentation);
-                if (livePieceCount == 0 && !BlockShredder.HasActiveGemFlights && progressReady)
+                if (livePieceCount == 0 && progressReady)
                 {
                     boardCleared = true;
                     TryTransitionGameState(GameState.LevelComplete);

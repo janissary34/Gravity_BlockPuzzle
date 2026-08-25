@@ -1,13 +1,12 @@
 using System.Collections.Generic;
 using GravityPuzzle.Config;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace GravityPuzzle
 {
     /// <summary>
     /// Handles block shredding triggers, pre-fractured composite block voxelization,
-    /// object pooling for mobile optimization, and spawning Stone debris voxels & Gem fly voxels.
+    /// and pooled shard progress handoff to the level progress manager.
     /// </summary>
     [DisallowMultipleComponent]
     public class BlockShredder : MonoBehaviour
@@ -18,29 +17,11 @@ namespace GravityPuzzle
         [Tooltip("Authoring asset used for both this feed behaviour and runtime-created shredder wheels.")]
         [SerializeField] private ShredderConfig shredderConfig;
 
-        [Header("UI Slider Attraction Target")]
-        [SerializeField, Tooltip("Top UI Slider reference to fill when Gems arrive.")]
-        private Slider targetUISlider;
-
-        [SerializeField, Tooltip("Specific RectTransform target for Gem attraction (defaults to slider handle/rect if null).")]
-        private RectTransform targetUIRectTransform;
-
-        [SerializeField, Tooltip("Camera used for Screen/World conversion (defaults to the Runtime Piece Factory Bootstrap camera).")]
-        private Camera targetCamera;
-
         public static BlockShredder Instance { get; private set; }
-        public static int ActiveGemFlightCount { get; private set; }
-        public static bool HasActiveGemFlights => ActiveGemFlightCount > 0;
         public ShredderConfig Config => shredderConfig;
 
         private ShredderFeedMask activeFeedMask;
         private int activeFeedCount;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetGemFlightCount()
-        {
-            ActiveGemFlightCount = 0;
-        }
 
         private void Awake()
         {
@@ -60,18 +41,6 @@ namespace GravityPuzzle
                     shredderConfig.CatchZonePoolCapacity);
             if (shredderConfig != null && shredderConfig.FeedMaskPrefab != null)
                 ShredderFeedMaskPool.Configure(shredderConfig.FeedMaskPrefab, transform);
-
-            if (targetUIRectTransform == null && targetUISlider != null)
-                targetUIRectTransform = targetUISlider.GetComponent<RectTransform>();
-        }
-
-        private void Start()
-        {
-            if (targetCamera == null)
-                targetCamera = PrototypeBootstrap.SceneCamera;
-
-            if (targetCamera == null)
-                Debug.LogError("[Shredder] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
         }
 
         private void OnDestroy()
@@ -164,18 +133,6 @@ namespace GravityPuzzle
                 shardTransforms.Add(shard.transform);
             }
             shardList.Sort((a, b) => a.transform.position.y.CompareTo(b.transform.position.y));
-
-            // Setup gems
-            int gemCount = Mathf.RoundToInt(shardList.Count * shredderConfig.GemVoxelRatio);
-            HashSet<VoxelShard> gemShards = new HashSet<VoxelShard>();
-            if (gemCount > 0 && shardList.Count > 0)
-            {
-                int step = Mathf.Max(1, shardList.Count / gemCount);
-                for (int i = 0; i < shardList.Count && gemShards.Count < gemCount; i += step)
-                {
-                    gemShards.Add(shardList[i]);
-                }
-            }
 
             // Emit at the narrow seam directly beneath the rotating teeth. The
             // grains then fall naturally from the place where the mesh is cut,
@@ -335,15 +292,5 @@ namespace GravityPuzzle
         }
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);
-
-        /// <summary>
-        /// Allows dynamically assigning the target UI Slider at runtime.
-        /// </summary>
-        public void SetTargetUISlider(Slider slider, RectTransform targetRect = null)
-        {
-            targetUISlider = slider;
-            targetUIRectTransform = targetRect != null ? targetRect : (slider != null ? slider.GetComponent<RectTransform>() : null);
-        }
     }
-
 }

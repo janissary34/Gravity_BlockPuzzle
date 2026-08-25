@@ -53,10 +53,6 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float tumbleTorque = .35f;
         [Range(0f, 20f)] [SerializeField] private float maxFeedTiltAngle = 5f;
 
-        [Header("Voxel Reward Presentation")]
-        [Tooltip("Fraction of a shredded piece's pooled voxel shards that use the gem-progress presentation path.")]
-        [Range(0f, 1f)] [SerializeField] private float gemVoxelRatio = .25f;
-
         [Header("Final Piece Timer Grace")]
         [Tooltip("If the final live piece enters a shredder within this many seconds of 00:00, its feed is allowed to finish and the result becomes a win.")]
         [Min(0f)] [SerializeField] private float finalPieceTimerGraceSeconds = 1f;
@@ -91,7 +87,6 @@ namespace GravityPuzzle.Config
         public float FeedAngularDrag => feedAngularDrag;
         public float TumbleTorque => tumbleTorque;
         public float MaxFeedTiltAngle => maxFeedTiltAngle;
-        public float GemVoxelRatio => gemVoxelRatio;
         public float FinalPieceTimerGraceSeconds => finalPieceTimerGraceSeconds;
     }
 }
