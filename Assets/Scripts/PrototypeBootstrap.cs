@@ -706,6 +706,21 @@ namespace GravityPuzzle
         }
 
         /// <summary>
+        /// Begins a drag without vacating the piece's grid cells. Unlike
+        /// TryClearPieceFromGrid, the footprint stays Occupied for the whole
+        /// drag so a falling piece above can never enter it. Movement during
+        /// the drag goes through TryMoveIgnoringPiece, which already ignores
+        /// this piece's own cells while checking each step.
+        /// </summary>
+        public bool TryBeginPieceDrag(PuzzlePiece piece)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            return TryTransitionPieceState(model, PieceState.Dragging);
+        }
+
+        /// <summary>
         /// Keeps a piece's current footprint occupied while it is travelling
         /// through the shredder.  Reserved cells block placement and grid
         /// gravity, but are released normally when the pooled piece despawns.

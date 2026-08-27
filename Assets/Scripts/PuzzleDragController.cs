@@ -30,13 +30,9 @@ namespace GravityPuzzle
         private ContactFilter2D solidContactFilter;
         private readonly RaycastHit2D[] castHits = new RaycastHit2D[32];
         private readonly Vector2[] contactNormals = new Vector2[32];
-        private readonly Dictionary<int, float> fallingSpeeds = new Dictionary<int, float>();
         private readonly Dictionary<int, float> snappingTargetsX = new Dictionary<int, float>();
-        private readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
         private readonly Collider2D[] selectionHits = new Collider2D[32];
-        private readonly Collider2D[] snapOverlapHits = new Collider2D[64];
         private const float MaximumDragSpeed = 10f;
-        private const float MaximumFallSpeed = 8f;
         private const int MaximumSlideIterations = 4;
         private const float MinimumMoveDistance = .0005f;
         private const float CastContactPadding = .002f;
@@ -272,7 +268,6 @@ namespace GravityPuzzle
                 gridReleasePresentationPiece = null;
             }
 
-            fallingSpeeds.Clear();
             snappingTargetsX.Clear();
         }
 
@@ -326,9 +321,6 @@ namespace GravityPuzzle
                 return;
 
             Physics2D.SyncTransforms();
-            // Player movement has priority for this tick. Every other piece then
-            // advances under deterministic manual gravity, so holding one piece
-            // never freezes the rest of the board and no body receives impulses.
             if (selectedPiece != null && !selectedPiece.IsBeingShredded)
                 TryMoveSelectedPieceOnGrid(selectedPiece, dragTarget);
 
@@ -349,25 +341,24 @@ namespace GravityPuzzle
             }
 
             RemoveFinishedGridFalls();
-            if (gridFallingPieces.Count > 0)
-                return true;
 
             PrototypeBoard activeBoard = PrototypeBoard.Active;
             LevelBoardSnapshot snapshot = activeBoard != null
                 ? activeBoard.BoardSnapshot
                 : null;
             if (snapshot == null)
-                return false;
+                return gridFallingPieces.Count > 0;
 
-            // Resolve the complete logical cascade before starting its visual
-            // presentation.  A lower piece can then vacate cells and let the
-            // next piece above it calculate its final resting anchor in this
-            // same gravity pass instead of waiting for another gameplay event.
-            if (pendingGridGravityMoves.Count == 0 &&
-                !TryBuildSettledGridGravityPlan(activeBoard, snapshot))
-                return false;
+            // Per-piece cascade: do not gate on gridFallingPieces so that new
+            // independent moves can be planned and started while other pieces
+            // are still animating.  Pieces already falling have already been
+            // committed to their target anchors in the grid, so TryGetFallTarget
+            // will not double-assign the same cell.
+            if (pendingGridGravityMoves.Count == 0)
+                TryBuildSettledGridGravityPlan(activeBoard, snapshot);
 
-            return TryPlayQueuedGridGravityMoves(activeBoard, snapshot);
+            return TryPlayQueuedGridGravityMoves(activeBoard, snapshot) ||
+                   gridFallingPieces.Count > 0;
         }
 
         private bool TryBuildSettledGridGravityPlan(
@@ -404,6 +395,7 @@ namespace GravityPuzzle
             return piece != null &&
                    !piece.IsFrozen &&
                    !piece.IsBeingShredded &&
+                   model.State != PieceState.Dragging &&
                    piece.GridFallView != null &&
                    piece.GridFallView.CanPlay;
         }
@@ -497,84 +489,93 @@ namespace GravityPuzzle
         {
             if (piece == null || piece.Body == null || !hasSelectedPieceStartAnchor ||
                 !TryGetSnapshotPiece(piece, out LevelBoardSnapshot snapshot, out PieceModel model))
-            {
                 return false;
-            }
+
+            Debug.Log($"[DragDiag] IN req=({requestedWorldPosition.x:F2},{requestedWorldPosition.y:F2}) " +
+                $"anchor=({model.Anchor.X},{model.Anchor.Y})");
 
             GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
             if (level == null)
                 return false;
 
-            GridCoordinate targetPivot = WorldToDragPivot(level, requestedWorldPosition);
+            float fineCellSize = 1f / level.subdivisions;
+            Vector2 currentPosition = piece.Body.position;
 
-            // Önceki geçerli pivottan hedefe kadar HER ARA HÜCREYİ tek tek dene.
-            GridCoordinate fromPivot = hasSelectedDragPivot ? selectedDragPivot : targetPivot;
-            GridCoordinate lastValidPivot = fromPivot;
-            GridCoordinate currentPivot = fromPivot;
+            // İstenen hareketi X ve Y eksenlerinde AYRI AYRI kelepçele.
+            // Her eksende, o yönde bir sonraki bloklu/dolu hücrenin sınırını
+            // bul ve pozisyonu o sınırın gerisinde tut — parça duvara doğru
+            // sürekli kayar, duvarda durur, parmak daha ileri gitse bile.
+            Vector2 clampedPosition = currentPosition;
+            clampedPosition.x = ClampAxis(
+                snapshot, model, level, currentPosition, requestedWorldPosition.x, fineCellSize, isXAxis: true);
+            clampedPosition.y = ClampAxis(
+                snapshot, model, level, currentPosition, requestedWorldPosition.y, fineCellSize, isXAxis: false);
 
-            int dx = targetPivot.X - fromPivot.X;
-            int dy = targetPivot.Y - fromPivot.Y;
-            int steps = Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy));
+            piece.Body.MovePosition(clampedPosition);
 
-            if (steps == 0)
-            {
-                GridCoordinate anchor0 = targetPivot.Offset(model.PivotOffset);
-                GridPlacementResult placement0 = snapshot.Grid.CheckPlacementIgnoringPiece(model, anchor0, model.Id);
-                if (!placement0.IsSuccess)
-                {
-                    LogDragPlacementRejection(piece, model, anchor0, placement0);
-                    return false;
-                }
-                lastValidPivot = targetPivot;
-            }
-            else
-            {
-                for (int step = 1; step <= steps; step++)
-                {
-                    float t = (float)step / steps;
-                    int stepX = fromPivot.X + Mathf.RoundToInt(dx * t);
-                    int stepY = fromPivot.Y + Mathf.RoundToInt(dy * t);
-                    GridCoordinate stepPivot = new GridCoordinate(stepX, stepY);
-
-                    if (stepPivot.Equals(currentPivot))
-                        continue;
-
-                    GridCoordinate stepAnchor = stepPivot.Offset(model.PivotOffset);
-                    GridPlacementResult stepPlacement = snapshot.Grid.CheckPlacementIgnoringPiece(model, stepAnchor, model.Id);
-                    if (!stepPlacement.IsSuccess)
-                    {
-                        LogDragPlacementRejection(piece, model, stepAnchor, stepPlacement);
-                        break;
-                    }
-
-                    lastValidPivot = stepPivot;
-                    currentPivot = stepPivot;
-                }
-            }
-
-            if (lastValidPivot.Equals(fromPivot) && steps > 0 && !lastValidPivot.Equals(targetPivot))
-            {
-                return false;
-            }
-
-            // Tuzak 1 & 3: Kendi kendine çakışmayı önle ve matrisi SADECE pivot gerçekten değiştiğinde atomik güncelle
-            if (!lastValidPivot.Equals(fromPivot))
-            {
-                GridCoordinate newAnchor = lastValidPivot.Offset(model.PivotOffset);
-                snapshot.Grid.TryMoveIgnoringPiece(model, newAnchor, model.Id, out _);
-            }
+            // Mantıksal grid hücresini (model.Anchor), sürekli pozisyonun şu an
+            // en çok örtüştüğü tam hücreye göre arka planda güncelle. Bu sadece
+            // hangi hücrelerin "dolu" sayıldığını etkiler, görseli etkilemez.
+            GridCoordinate pivotFromContinuous = WorldToDragPivot(level, clampedPosition);
+            GridCoordinate anchorFromContinuous = pivotFromContinuous.Offset(model.PivotOffset);
+            if (!anchorFromContinuous.Equals(model.Anchor))
+                snapshot.Grid.TryMoveIgnoringPiece(model, anchorFromContinuous, model.Id, out _);
 
             lastLoggedDragRejectionAnchors.Remove(piece.GetInstanceID());
-            selectedDragPivot = lastValidPivot;
+            selectedDragPivot = pivotFromContinuous;
             hasSelectedDragPivot = true;
-            PrepareKinematicBody(piece.Body);
-
-            Vector2 destinationWorldPos = lastValidPivot.Equals(targetPivot)
-                ? requestedWorldPosition
-                : GravityLevelGridCoordinates.FineCellToWorld(level, lastValidPivot);
-
-            piece.Body.MovePosition(destinationWorldPos);
+            Debug.Log($"[DragDiag] OUT body=({piece.Body.position.x:F2},{piece.Body.position.y:F2}) " +
+                $"anchor=({model.Anchor.X},{model.Anchor.Y}) pivot=({selectedDragPivot.X},{selectedDragPivot.Y})");
             return true;
+        }
+
+        // Tek bir eksende, hedefe doğru ne kadar ilerlenebileceğini hesaplar.
+        // O yönde ilerlerken karşılaşılan ilk dolu/bloklu hücrenin sınırında durur.
+        private float ClampAxis(
+            LevelBoardSnapshot snapshot,
+            PieceModel model,
+            GravityLevelDefinition level,
+            Vector2 currentPosition,
+            float requestedValueOnAxis,
+            float fineCellSize,
+            bool isXAxis)
+        {
+            float currentValue = isXAxis ? currentPosition.x : currentPosition.y;
+            float requested = requestedValueOnAxis;
+            if (Mathf.Approximately(requested, currentValue))
+                return currentValue;
+
+            float direction = Mathf.Sign(requested - currentValue);
+            float step = fineCellSize * 0.5f; // ince adımlarla tara, tam sınırı bul
+            float testValue = currentValue;
+
+            while (Mathf.Abs(testValue - currentValue) < Mathf.Abs(requested - currentValue))
+            {
+                float nextTest = testValue + step * direction;
+                bool overshoot = direction > 0f
+                    ? nextTest > requested
+                    : nextTest < requested;
+                if (overshoot)
+                    nextTest = requested;
+
+                Vector2 testPosition = isXAxis
+                    ? new Vector2(nextTest, currentPosition.y)
+                    : new Vector2(currentPosition.x, nextTest);
+
+                GridCoordinate testPivot = WorldToDragPivot(level, testPosition);
+                GridCoordinate testAnchor = testPivot.Offset(model.PivotOffset);
+                GridPlacementResult result = snapshot.Grid.CheckPlacementIgnoringPiece(model, testAnchor, model.Id);
+                if (!result.IsSuccess)
+                    return testValue; // engellendi, bir önceki geçerli değerde dur
+
+                testValue = nextTest;
+                Debug.Log($"[ClampDiag] axis={(isXAxis ? "X" : "Y")} test={testValue:F3} " +
+                    $"requested={requested:F3}");
+                if (nextTest == requested)
+                    break;
+            }
+
+            return testValue;
         }
 
         private void LogDragPlacementRejection(
@@ -828,164 +829,6 @@ namespace GravityPuzzle
             return false;
         }
 
-        private void AdvanceManualGravityForUnregisteredPieces()
-        {
-            if (selectedPiece == null && snappingTargetsX.Count == 0 && !hasMovingPieces)
-                return;
-
-            RefreshActivePieces();
-            activePieces.Sort(CompareGravityOrder);
-
-            bool anyPieceMoved = false;
-
-            foreach (PuzzlePiece piece in activePieces)
-            {
-                if (piece == null || piece.Body == null)
-                    continue;
-
-                if (IsRegisteredWithGrid(piece))
-                    continue;
-
-                int pieceId = piece.GetInstanceID();
-                if (piece == selectedPiece || piece.IsBeingShredded || piece.IsFrozen)
-                {
-                    fallingSpeeds[pieceId] = 0f;
-                    continue;
-                }
-
-                Rigidbody2D body = piece.Body;
-                PrepareKinematicBody(body);
-
-                fallingSpeeds.TryGetValue(pieceId, out float fallingSpeed);
-                float gravity = Mathf.Abs(Physics2D.gravity.y) * Mathf.Max(0f, body.gravityScale);
-                fallingSpeed = Mathf.Min(
-                    MaximumFallSpeed,
-                    fallingSpeed + gravity * Time.fixedDeltaTime);
-
-                float requestedDistance = fallingSpeed * Time.fixedDeltaTime;
-                
-                if (snappingTargetsX.TryGetValue(pieceId, out float targetX))
-                {
-                    float currentX = body.position.x;
-                    if (Mathf.Abs(currentX - targetX) > 0.001f)
-                    {
-                        float moveX = Mathf.MoveTowards(currentX, targetX, 20f * Time.fixedDeltaTime) - currentX;
-                        MoveSelectedBody(piece, new Vector2(moveX, 0f));
-                        anyPieceMoved = true;
-                        
-                        if (Mathf.Abs(body.position.x - currentX) < 0.0001f)
-                        {
-                            // Physically blocked! Cancel the snap.
-                            snappingTargetsX.Remove(pieceId);
-                        }
-                        else
-                        {
-                            fallingSpeeds[pieceId] = 0f; // Freeze falling while snapping horizontally
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        snappingTargetsX.Remove(pieceId);
-                        if (CanOccupySnapPosition(piece, targetX))
-                        {
-                            MoveBody(body, new Vector2(targetX, body.position.y));
-                            anyPieceMoved = true;
-                        }
-                    }
-                }
-
-                bool grounded = MovePieceDown(piece, requestedDistance);
-                if (!grounded && requestedDistance >= MinimumMoveDistance)
-                {
-                    anyPieceMoved = true;
-                    PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Falling);
-                }
-                else if (grounded)
-                {
-                    // A manual fall has no GridFallView completion callback.
-                    // Settle its lifecycle as soon as it reaches support so a
-                    // later drag or booster target is not rejected.
-                    PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Placed);
-                }
-
-                fallingSpeeds[pieceId] = grounded ? 0f : fallingSpeed;
-            }
-
-            if (!anyPieceMoved && selectedPiece == null && snappingTargetsX.Count == 0)
-            {
-                hasMovingPieces = false;
-            }
-        }
-
-        private static bool IsRegisteredWithGrid(PuzzlePiece piece)
-        {
-            return PrototypeBoard.Active != null &&
-                   PrototypeBoard.Active.TryGetPieceModel(piece, out PieceModel model) &&
-                   model.IsOnBoard;
-        }
-
-        private void RefreshActivePieces()
-        {
-            activePieces.Clear();
-            IReadOnlyList<PuzzlePiece> registeredPieces = PuzzlePiece.ActivePieces;
-            for (int i = 0; i < registeredPieces.Count; i++)
-            {
-                PuzzlePiece piece = registeredPieces[i];
-                if (piece != null)
-                    activePieces.Add(piece);
-            }
-        }
-
-        private bool MovePieceDown(PuzzlePiece piece, float requestedDistance)
-        {
-            if (requestedDistance < MinimumMoveDistance)
-                return false;
-
-            Rigidbody2D body = piece.Body;
-            float maximumClearance =
-                piece.CurrentCollisionInset +
-                GravityGridMetrics.DraggingPieceCollisionSkinInCells +
-                CastContactPadding;
-            int hitCount = body.Cast(
-                Vector2.down,
-                solidContactFilter,
-                castHits,
-                requestedDistance + maximumClearance);
-
-            bool foundBlockingHit = false;
-            float allowedDistance = requestedDistance;
-            for (int i = 0; i < hitCount; i++)
-            {
-                RaycastHit2D hit = castHits[i];
-                if (hit.collider == null || hit.collider.isTrigger ||
-                    Vector2.Dot(Vector2.down, hit.normal) >= BlockingNormalDotThreshold ||
-                    !HasBlockingCrossSection(piece, hit.collider, Vector2.down))
-                    continue;
-
-                float clearance = RequiredVisualClearance(piece, hit.collider);
-                if (hit.distance > requestedDistance + clearance)
-                    continue;
-
-                float candidateDistance = Mathf.Max(0f, hit.distance - clearance);
-                if (foundBlockingHit && candidateDistance >= allowedDistance)
-                    continue;
-
-                foundBlockingHit = true;
-                allowedDistance = candidateDistance;
-            }
-
-            if (allowedDistance >= MinimumMoveDistance)
-            {
-                MoveBody(body, body.position + Vector2.down * allowedDistance);
-            }
-
-            body.velocity = Vector2.zero;
-            body.angularVelocity = 0f;
-            return foundBlockingHit &&
-                   allowedDistance < requestedDistance - MinimumMoveDistance;
-        }
-
         private static bool HasBlockingCrossSection(
             PuzzlePiece movingPiece,
             Collider2D hitCollider,
@@ -1015,15 +858,6 @@ namespace GravityPuzzle
                    MinimumBlockingCrossSection;
         }
 
-        private static int CompareGravityOrder(PuzzlePiece first, PuzzlePiece second)
-        {
-            float firstBottom = first.LowestColliderPoint();
-            float secondBottom = second.LowestColliderPoint();
-            int verticalOrder = firstBottom.CompareTo(secondBottom);
-            return verticalOrder != 0
-                ? verticalOrder
-                : first.GetInstanceID().CompareTo(second.GetInstanceID());
-        }
 
         private static void PrepareKinematicBody(Rigidbody2D body)
         {
@@ -1050,55 +884,7 @@ namespace GravityPuzzle
             Physics2D.SyncTransforms();
         }
 
-        private bool CanOccupySnapPosition(PuzzlePiece piece, float targetX)
-        {
-            Rigidbody2D body = piece.Body;
-            Vector2 originalPosition = body.position;
-            if (Mathf.Abs(originalPosition.x - targetX) > .0001f)
-            {
-                body.position = new Vector2(targetX, originalPosition.y);
-                Physics2D.SyncTransforms();
-            }
 
-            bool overlapsSolid = false;
-            Collider2D[] pieceColliders = piece.GetComponentsInChildren<Collider2D>(true);
-            for (int i = 0; i < pieceColliders.Length && !overlapsSolid; i++)
-            {
-                Collider2D pieceCollider = pieceColliders[i];
-                if (pieceCollider == null || !pieceCollider.enabled || pieceCollider.isTrigger)
-                    continue;
-
-                int overlapCount = pieceCollider.OverlapCollider(
-                    solidContactFilter,
-                    snapOverlapHits);
-                for (int overlapIndex = 0; overlapIndex < overlapCount; overlapIndex++)
-                {
-                    Collider2D other = snapOverlapHits[overlapIndex];
-                    if (other == null || other.isTrigger ||
-                        other.GetComponentInParent<PuzzlePiece>() == piece)
-                        continue;
-
-                    overlapsSolid = true;
-                    break;
-                }
-            }
-
-            if (body.position != originalPosition)
-            {
-                body.position = originalPosition;
-                Physics2D.SyncTransforms();
-            }
-
-            return !overlapsSolid;
-        }
-
-        private static bool ClearSelectedPieceFromGrid(PuzzlePiece piece)
-        {
-            PrototypeBoard board = PrototypeBoard.Active;
-            return board == null ||
-                   !board.TryGetPieceModel(piece, out _) ||
-                   board.TryClearPieceFromGrid(piece, PieceState.Dragging);
-        }
 
         private static bool TryGetSnapshotPiece(
             PuzzlePiece piece,
@@ -1415,7 +1201,7 @@ namespace GravityPuzzle
                 {
                     GridCoordinate candidatePivot = new GridCoordinate(x, y);
                     GridCoordinate candidateAnchor = candidatePivot.Offset(model.PivotOffset);
-                    if (!snapshot.Grid.CheckPlacement(model, candidateAnchor).IsSuccess)
+                    if (!snapshot.Grid.CheckPlacementIgnoringPiece(model, candidateAnchor, model.Id).IsSuccess)
                         continue;
 
                     Vector2 candidatePosition = GravityLevelGridCoordinates.FineCellToWorld(
