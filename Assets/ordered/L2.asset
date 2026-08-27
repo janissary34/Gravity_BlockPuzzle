@@ -15,23 +15,14 @@ MonoBehaviour:
   levelName: New Level
   timeLimit: 120
   boardColumns: 4
-<<<<<<< HEAD:Assets/Levels/EasyLevel_01.asset
-  boardRows: 6
-=======
   boardRows: 5
->>>>>>> selin:Assets/ordered/L2.asset
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
-<<<<<<< HEAD:Assets/Levels/EasyLevel_01.asset
-  useAutomaticCameraFit: 0
-  fixedCameraSize: 8
-=======
   useAutomaticCameraFit: 1
   fixedCameraSize: 6
->>>>>>> selin:Assets/ordered/L2.asset
   cameraViewportWidth: 0.88
   cameraViewportHeight: 0.7
   useRuntimeSafeAreaForCameraFit: 0
@@ -43,11 +34,7 @@ MonoBehaviour:
   - name: Piece 2
     visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-<<<<<<< HEAD:Assets/Levels/EasyLevel_01.asset
-    origin: {x: 8, y: 14}
-=======
     origin: {x: 8, y: 10}
->>>>>>> selin:Assets/ordered/L2.asset
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
@@ -88,189 +75,10 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 9}
       type: 0
-<<<<<<< HEAD:Assets/Levels/EasyLevel_01.asset
-    - localCell: {x: 4, y: 6}
-      type: 0
-    - localCell: {x: 5, y: 6}
-      type: 0
-    - localCell: {x: 6, y: 6}
-      type: 0
-    - localCell: {x: 7, y: 6}
-      type: 0
-    - localCell: {x: 4, y: 7}
-      type: 0
-    - localCell: {x: 5, y: 7}
-      type: 0
-    - localCell: {x: 6, y: 7}
-      type: 0
-    - localCell: {x: 7, y: 7}
-      type: 0
-    - localCell: {x: 4, y: 8}
-      type: 0
-    - localCell: {x: 5, y: 8}
-      type: 0
-    - localCell: {x: 6, y: 8}
-      type: 0
-    - localCell: {x: 7, y: 8}
-      type: 0
-    - localCell: {x: 4, y: 9}
-      type: 0
-    - localCell: {x: 5, y: 9}
-      type: 0
-    - localCell: {x: 6, y: 9}
-      type: 0
-    - localCell: {x: 7, y: 9}
-      type: 0
-    - localCell: {x: 4, y: 2}
-      type: 0
-    - localCell: {x: 5, y: 2}
-      type: 0
-    - localCell: {x: 6, y: 2}
-      type: 0
-    - localCell: {x: 7, y: 2}
-      type: 0
-    - localCell: {x: 4, y: 3}
-      type: 0
-    - localCell: {x: 5, y: 3}
-      type: 0
-    - localCell: {x: 6, y: 3}
-      type: 0
-    - localCell: {x: 7, y: 3}
-      type: 0
-    - localCell: {x: 4, y: 4}
-      type: 0
-    - localCell: {x: 5, y: 4}
-      type: 0
-    - localCell: {x: 6, y: 4}
-      type: 0
-    - localCell: {x: 7, y: 4}
-      type: 0
-    - localCell: {x: 4, y: 5}
-      type: 0
-    - localCell: {x: 5, y: 5}
-      type: 0
-    - localCell: {x: 6, y: 5}
-      type: 0
-    - localCell: {x: 7, y: 5}
-      type: 0
-  - name: Piece 3
-    visualId: 
-    color: {r: 0.3, g: 1, b: 0.496, a: 1}
-    origin: {x: 8, y: 16}
-    quarterTurns: 0
-    frozenMoveCount: 0
-    iceCounterFontSize: 36
-    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
-    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
-    iceCounterOutlineWidth: 0.18
-    iceCounterOffset: {x: 0, y: 0}
-    cells:
-    - localCell: {x: -4, y: 4}
-      type: 0
-    - localCell: {x: -3, y: 4}
-      type: 0
-    - localCell: {x: -2, y: 4}
-      type: 0
-    - localCell: {x: -1, y: 4}
-      type: 0
-    - localCell: {x: -4, y: 5}
-      type: 0
-    - localCell: {x: -3, y: 5}
-      type: 0
-    - localCell: {x: -2, y: 5}
-      type: 0
-    - localCell: {x: -1, y: 5}
-      type: 0
-    - localCell: {x: -4, y: 6}
-      type: 0
-    - localCell: {x: -3, y: 6}
-      type: 0
-    - localCell: {x: -2, y: 6}
-      type: 0
-    - localCell: {x: -1, y: 6}
-      type: 0
-    - localCell: {x: -4, y: 7}
-      type: 0
-    - localCell: {x: -3, y: 7}
-      type: 0
-    - localCell: {x: -2, y: 7}
-      type: 0
-    - localCell: {x: -1, y: 7}
-      type: 0
-    - localCell: {x: -8, y: 4}
-      type: 0
-    - localCell: {x: -7, y: 4}
-      type: 0
-    - localCell: {x: -6, y: 4}
-      type: 0
-    - localCell: {x: -5, y: 4}
-      type: 0
-    - localCell: {x: -8, y: 5}
-      type: 0
-    - localCell: {x: -7, y: 5}
-      type: 0
-    - localCell: {x: -6, y: 5}
-      type: 0
-    - localCell: {x: -5, y: 5}
-      type: 0
-    - localCell: {x: -8, y: 6}
-      type: 0
-    - localCell: {x: -7, y: 6}
-      type: 0
-    - localCell: {x: -6, y: 6}
-      type: 0
-    - localCell: {x: -5, y: 6}
-      type: 0
-    - localCell: {x: -8, y: 7}
-      type: 0
-    - localCell: {x: -7, y: 7}
-      type: 0
-    - localCell: {x: -6, y: 7}
-      type: 0
-    - localCell: {x: -5, y: 7}
-      type: 0
-    - localCell: {x: -8, y: 0}
-      type: 0
-    - localCell: {x: -7, y: 0}
-      type: 0
-    - localCell: {x: -6, y: 0}
-      type: 0
-    - localCell: {x: -5, y: 0}
-      type: 0
-    - localCell: {x: -8, y: 1}
-      type: 0
-    - localCell: {x: -7, y: 1}
-      type: 0
-    - localCell: {x: -6, y: 1}
-      type: 0
-    - localCell: {x: -5, y: 1}
-      type: 0
-    - localCell: {x: -8, y: 2}
-      type: 0
-    - localCell: {x: -7, y: 2}
-      type: 0
-    - localCell: {x: -6, y: 2}
-      type: 0
-    - localCell: {x: -5, y: 2}
-      type: 0
-    - localCell: {x: -8, y: 3}
-      type: 0
-    - localCell: {x: -7, y: 3}
-      type: 0
-    - localCell: {x: -6, y: 3}
-      type: 0
-    - localCell: {x: -5, y: 3}
-      type: 0
-  - name: Piece 4
-    visualId: 
-    color: {r: 0.3, g: 0.706, b: 1, a: 1}
-    origin: {x: 8, y: 16}
-=======
   - name: Piece 4
     visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 8, y: 12}
->>>>>>> selin:Assets/ordered/L2.asset
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
@@ -314,11 +122,7 @@ MonoBehaviour:
   - name: Piece 5
     visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
-<<<<<<< HEAD:Assets/Levels/EasyLevel_01.asset
-    origin: {x: 8, y: 16}
-=======
     origin: {x: 4, y: 12}
->>>>>>> selin:Assets/ordered/L2.asset
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
@@ -391,126 +195,11 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
-<<<<<<< HEAD:Assets/Levels/EasyLevel_01.asset
-  - name: Piece 6
-    visualId: 
-    color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
-    origin: {x: 8, y: 12}
-    quarterTurns: 0
-    frozenMoveCount: 0
-    iceCounterFontSize: 36
-    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
-    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
-    iceCounterOutlineWidth: 0.18
-    iceCounterOffset: {x: 0, y: 0}
-    cells:
-    - localCell: {x: -8, y: -4}
-      type: 0
-    - localCell: {x: -7, y: -4}
-      type: 0
-    - localCell: {x: -6, y: -4}
-      type: 0
-    - localCell: {x: -5, y: -4}
-      type: 0
-    - localCell: {x: -8, y: -3}
-      type: 0
-    - localCell: {x: -7, y: -3}
-      type: 0
-    - localCell: {x: -6, y: -3}
-      type: 0
-    - localCell: {x: -5, y: -3}
-      type: 0
-    - localCell: {x: -8, y: -2}
-      type: 0
-    - localCell: {x: -7, y: -2}
-      type: 0
-    - localCell: {x: -6, y: -2}
-      type: 0
-    - localCell: {x: -5, y: -2}
-      type: 0
-    - localCell: {x: -8, y: -1}
-      type: 0
-    - localCell: {x: -7, y: -1}
-      type: 0
-    - localCell: {x: -6, y: -1}
-      type: 0
-    - localCell: {x: -5, y: -1}
-      type: 0
-    - localCell: {x: -4, y: -4}
-      type: 0
-    - localCell: {x: -3, y: -4}
-      type: 0
-    - localCell: {x: -2, y: -4}
-      type: 0
-    - localCell: {x: -1, y: -4}
-      type: 0
-    - localCell: {x: -4, y: -3}
-      type: 0
-    - localCell: {x: -3, y: -3}
-      type: 0
-    - localCell: {x: -2, y: -3}
-      type: 0
-    - localCell: {x: -1, y: -3}
-      type: 0
-    - localCell: {x: -4, y: -2}
-      type: 0
-    - localCell: {x: -3, y: -2}
-      type: 0
-    - localCell: {x: -2, y: -2}
-      type: 0
-    - localCell: {x: -1, y: -2}
-      type: 0
-    - localCell: {x: -4, y: -1}
-      type: 0
-    - localCell: {x: -3, y: -1}
-      type: 0
-    - localCell: {x: -2, y: -1}
-      type: 0
-    - localCell: {x: -1, y: -1}
-      type: 0
-    - localCell: {x: -4, y: 0}
-      type: 0
-    - localCell: {x: -3, y: 0}
-      type: 0
-    - localCell: {x: -2, y: 0}
-      type: 0
-    - localCell: {x: -1, y: 0}
-      type: 0
-    - localCell: {x: -4, y: 1}
-      type: 0
-    - localCell: {x: -3, y: 1}
-      type: 0
-    - localCell: {x: -2, y: 1}
-      type: 0
-    - localCell: {x: -1, y: 1}
-      type: 0
-    - localCell: {x: -4, y: 2}
-      type: 0
-    - localCell: {x: -3, y: 2}
-      type: 0
-    - localCell: {x: -2, y: 2}
-      type: 0
-    - localCell: {x: -1, y: 2}
-      type: 0
-    - localCell: {x: -4, y: 3}
-      type: 0
-    - localCell: {x: -3, y: 3}
-      type: 0
-    - localCell: {x: -2, y: 3}
-      type: 0
-    - localCell: {x: -1, y: 3}
-      type: 0
-=======
->>>>>>> selin:Assets/ordered/L2.asset
   pins: []
   obstacles:
   - name: Obstacle 1
     usesGridCells: 1
-<<<<<<< HEAD:Assets/Levels/EasyLevel_01.asset
-    gridCell: {x: 0, y: 3}
-=======
     gridCell: {x: 0, y: 2}
->>>>>>> selin:Assets/ordered/L2.asset
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}

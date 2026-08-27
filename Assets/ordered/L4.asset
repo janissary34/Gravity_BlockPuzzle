@@ -10,11 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
-<<<<<<<< HEAD:Assets/Levels/Level_04.asset
-  m_Name: Level_04
-========
   m_Name: L4
->>>>>>>> selin:Assets/ordered/L4.asset
   m_EditorClassIdentifier: 
   levelName: New Level
   timeLimit: 60

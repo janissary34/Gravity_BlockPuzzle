@@ -15,20 +15,12 @@ MonoBehaviour:
   levelName: New Level
   timeLimit: 10
   boardColumns: 4
-<<<<<<< HEAD:Assets/Levels/Level_1.asset
-  boardRows: 5
-=======
   boardRows: 4
->>>>>>> selin:Assets/ordered/L1.asset
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
-<<<<<<< HEAD:Assets/Levels/Level_1.asset
-  maxDragSpeed: 10
-=======
->>>>>>> selin:Assets/ordered/L1.asset
   useAutomaticCameraFit: 1
   fixedCameraSize: 6
   cameraViewportWidth: 0.88
@@ -44,11 +36,7 @@ MonoBehaviour:
   - name: Piece 1
     visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
-<<<<<<< HEAD:Assets/Levels/Level_1.asset
-    origin: {x: 14, y: 14}
-=======
     origin: {x: 14, y: 10}
->>>>>>> selin:Assets/ordered/L1.asset
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
@@ -92,11 +80,7 @@ MonoBehaviour:
   - name: Piece 2
     visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-<<<<<<< HEAD:Assets/Levels/Level_1.asset
-    origin: {x: 4, y: 12}
-=======
     origin: {x: 4, y: 8}
->>>>>>> selin:Assets/ordered/L1.asset
     quarterTurns: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
@@ -141,11 +125,7 @@ MonoBehaviour:
   obstacles:
   - name: Obstacle 1
     usesGridCells: 1
-<<<<<<< HEAD:Assets/Levels/Level_1.asset
-    gridCell: {x: 1, y: 2}
-=======
     gridCell: {x: 1, y: 1}
->>>>>>> selin:Assets/ordered/L1.asset
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -153,11 +133,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 2
     usesGridCells: 1
-<<<<<<< HEAD:Assets/Levels/Level_1.asset
-    gridCell: {x: 2, y: 2}
-=======
     gridCell: {x: 2, y: 1}
->>>>>>> selin:Assets/ordered/L1.asset
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
