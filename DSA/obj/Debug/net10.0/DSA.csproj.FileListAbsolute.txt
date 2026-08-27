@@ -1,0 +1,15 @@
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/bin/Debug/net10.0/DSA
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/bin/Debug/net10.0/DSA.deps.json
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/bin/Debug/net10.0/DSA.runtimeconfig.json
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/bin/Debug/net10.0/DSA.dll
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/bin/Debug/net10.0/DSA.pdb
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/DSA.GeneratedMSBuildEditorConfig.editorconfig
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/DSA.AssemblyInfoInputs.cache
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/DSA.AssemblyInfo.cs
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/DSA.csproj.CoreCompileInputs.cache
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/DSA.sourcelink.json
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/DSA.dll
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/refint/DSA.dll
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/DSA.pdb
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/DSA.genruntimeconfig.cache
+/Users/ardacelik/Documents/GitHub/Gravity_BlockPuzzle/DSA/obj/Debug/net10.0/ref/DSA.dll

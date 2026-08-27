@@ -45,11 +45,6 @@ MonoBehaviour:
   progressSliderPunchVibrato: 6
   progressSliderPunchElasticity: 0.5
   progressSliderPulseCooldown: 0.09
-  gemFlightDuration: 0.75
-  gemFlightEase: 26
-  gemUiPunchDuration: 0.22
-  gemUiPunchVibrato: 5
-  gemUiPunchElasticity: 0.5
   timerEntranceDuration: 0.75
   timerEntranceEase: 9
   timerFreezeFillDuration: 0.85
@@ -71,10 +66,10 @@ MonoBehaviour:
   hammerCameraShakeStrength: 0.12
   hammerCameraShakeVibrato: 18
   hammerCameraShakeRandomness: 90
-  rocketEntranceDuration: 0.75
+  rocketEntranceDuration: 0.4
   rocketEntranceEase: 9
-  rocketTargetPauseDuration: 1
-  rocketLaunchDuration: 0.55
+  rocketTargetPauseDuration: 0.5
+  rocketLaunchDuration: 0.2
   rocketLaunchEase: 5
   buttonPressDuration: 0.1
   buttonPressEase: 6
@@ -95,3 +90,13 @@ MonoBehaviour:
   timerFreezeGlowFadeInEase: 6
   timerFreezeGlowFadeOutDuration: 0.35
   timerFreezeGlowFadeOutEase: 15
+  timerAnticipationDuration: 0.12
+  timerFlightScaleTarget: 0.6
+  freezeImpactStartScale: 0.4
+  freezeImpactPeakScale: 1.4
+  freezeGlowPulseDuration: 1.5
+  freezeGlowPulseMinAlpha: 0.65
+  freezeGlowPulseMaxAlpha: 0.85
+  freezeIndicatorFadeDuration: 0.25
+  freezeAtmoFadeInDuration: 0.28
+  freezeAtmoFadeOutDuration: 0.7

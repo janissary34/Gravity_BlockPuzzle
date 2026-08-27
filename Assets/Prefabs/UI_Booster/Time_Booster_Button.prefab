@@ -390,7 +390,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6820492148733093303}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 1.8788468}
   m_LocalScale: {x: 3.0165737, y: 3.0165737, z: 3.0165737}
   m_ConstrainProportionsScale: 1
@@ -501,12 +501,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   pressScale: 1
-  pressDuration: 0.1
-  pressEase: 6
   usePunchBounce: 1
   punchScaleStrength: {x: 0.1, y: 0.1, z: 0}
-  releaseDuration: 0.1
-  releaseEase: 27
   punchVibrato: 1
   punchElasticity: 1
   useRotationPunch: 1
@@ -546,7 +542,11 @@ MonoBehaviour:
   timer_obj: {fileID: 0}
   timer_txt: {fileID: 0}
   boosterButton: {fileID: 4503338927469311177}
-  freezeTimerBooster: {fileID: 0}
+  boosterButtonRef: {fileID: 0}
+  presentationCamera: {fileID: 0}
+  timerPresentationCanvas: {fileID: 0}
+  timerPresentationSortingOrder: 32000
+  freezeTimerBooster: {fileID: 6837486030145292219}
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   blueParticleVFX: {fileID: 0}
   timerUrgencyPresentation: {fileID: 0}
@@ -558,13 +558,35 @@ MonoBehaviour:
   timerImpactParticles: {fileID: 0}
   timerImpactImage: {fileID: 0}
   timerImpactCanvasGroup: {fileID: 0}
-  timerImpactImageSize: {x: 180, y: 180}
-  timerImpactDuration: 0.42
+  timerImpactImageSize: {x: 600, y: 600}
+  timerImpactDuration: 1
   timerImpactScaleEase: 6
   freezeSnowParticles: {fileID: 0}
   freezeVfxSortingOrder: 100
+  freezeFrostBorder: {fileID: 0}
+  freezeEdgeGlow: {fileID: 0}
+  freezeDarkVignette: {fileID: 0}
+  freezeTimerGlowRect: {fileID: 0}
+  freezeTimerGlow: {fileID: 0}
+  freezeImpactImageRect: {fileID: 0}
+  freezeImpactImageCG: {fileID: 0}
+  freezeTimerIndicator: {fileID: 0}
+  freezeTimerIndicatorRect: {fileID: 0}
+  impactShardLong: {fileID: 0}
+  impactShardDiamond: {fileID: 0}
+  impactShardChunk: {fileID: 0}
+  freezeImpactVaporRect: {fileID: 0}
+  freezeImpactVaporCG: {fileID: 0}
+  snowTop: {fileID: 0}
+  snowBottom: {fileID: 0}
+  snowLeft: {fileID: 0}
+  snowRight: {fileID: 0}
   timerFreezeGlow: {fileID: 0}
   timerFreezeGlowCanvasGroup: {fileID: 0}
+  freezeSlider: {fileID: 0}
+  freezeFillImage: {fileID: 0}
+  freezeSliderCanvasGroup: {fileID: 0}
+  freezeSliderDrains: 1
   timerFreezeGlowSize: {x: 420, y: 190}
   timerFreezeGlowFadeInDuration: 0.25
   timerFreezeGlowFadeOutDuration: 0.35
@@ -591,9 +613,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8c59fce356774c25bba03f0620fa3b5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boosterButton: {fileID: 0}
+  boosterButton: {fileID: 4503338927469311177}
+  boosterButtonRef: {fileID: 3447769712223240199}
   freezeDuration: 5
-  timerUrgencyVignette: {fileID: 0}
-  timerUrgencyCanvasGroup: {fileID: 0}
-  urgencyFadeOutDuration: 0.45
-  urgencyFadeOutEase: 2

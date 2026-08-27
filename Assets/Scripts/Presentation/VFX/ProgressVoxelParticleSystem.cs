@@ -67,6 +67,16 @@ namespace GravityPuzzle.Presentation.VFX
 
         public ParticleSystem ParticleSystemComponent => particleSys;
 
+        /// <summary>
+        /// Returns the latest possible arrival time for a requested flight.
+        /// Progress state uses this to remain behind the visual flight rather
+        /// than advancing the slider when particles are emitted.
+        /// </summary>
+        public float MaximumFlightDuration(float requestedDuration)
+        {
+            return Mathf.Max(.01f, requestedDuration) + .04f;
+        }
+
 #if UNITY_EDITOR
         private void Reset()
         {

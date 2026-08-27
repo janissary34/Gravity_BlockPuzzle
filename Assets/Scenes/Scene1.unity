@@ -42316,6 +42316,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &1682247337 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4599625161556333484, guid: 4cb07062fd42e4405af898433f48e397, type: 3}
+  m_PrefabInstance: {fileID: 5725462752536919405}
+  m_PrefabAsset: {fileID: 0}
+--- !u!225 &1682247344
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1682247337}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1709589581
 GameObject:
   m_ObjectHideFlags: 0
@@ -48388,10 +48405,21 @@ PrefabInstance:
       propertyPath: m_Name
       value: Rocket_Booster_Button
       objectReference: {fileID: 0}
+    - target: {fileID: 8201114813977898633, guid: 4cb07062fd42e4405af898433f48e397, type: 3}
+      propertyPath: gameplayCamera
+      value: 
+      objectReference: {fileID: 423769077}
+    - target: {fileID: 8201114813977898633, guid: 4cb07062fd42e4405af898433f48e397, type: 3}
+      propertyPath: buttonCanvasGroup
+      value: 
+      objectReference: {fileID: 1682247344}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4599625161556333484, guid: 4cb07062fd42e4405af898433f48e397, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1682247344}
   m_SourcePrefab: {fileID: 100100000, guid: 4cb07062fd42e4405af898433f48e397, type: 3}
 --- !u!1001 &7253743948391469667
 PrefabInstance:

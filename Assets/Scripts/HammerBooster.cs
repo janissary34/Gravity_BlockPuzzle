@@ -27,6 +27,9 @@ namespace GravityPuzzle
         [Tooltip("Optional. Assign a Button to wire its click automatically.")]
         public Button boosterButton;
 
+        [Tooltip("Canvas group used to control the Hammer Booster button visibility and input.")]
+        [SerializeField] private CanvasGroup buttonCanvasGroup;
+
         [Tooltip("Optional authored hammer visual prefab. Add BoosterVisualView to its root to enable pooled presentation.")]
         [SerializeField] private GameObject hammerVisualPrefab;
         [SerializeField] private TweenConfig tweenConfig;
@@ -34,8 +37,6 @@ namespace GravityPuzzle
         private Camera gameplayCamera;
 
         [SerializeField] private float popScaleMultiplier = 1.7f;
-        [Tooltip("Local offset from the prefab pivot to the striking face of the hammer head.")]
-        [SerializeField] private Vector2 hammerHeadLocalOffset = new Vector2(0f, .45f);
         [SerializeField] private int hammerSortingOrder = 100;
         [Tooltip("World-space height of the hammer pivot above the selected block during the swing.")]
         [SerializeField] private float hammerHoverHeightOffset = .85f;
@@ -48,7 +49,6 @@ namespace GravityPuzzle
         private static int suppressGameplayThroughFrame = -1;
         private PrototypeBoard boundBoard;
         private BoosterButton boosterButtonRef;
-        private CanvasGroup buttonCanvasGroup;
         private bool impactInProgress;
         private BoosterVisualView hammerVisualPrefabView;
         private GameObjectPool<BoosterVisualView> hammerVisualPool;
@@ -59,7 +59,6 @@ namespace GravityPuzzle
                 boosterButton = GetComponent<Button>();
 
             boosterButtonRef = GetComponent<BoosterButton>();
-            buttonCanvasGroup = boosterButton != null ? boosterButton.GetComponent<CanvasGroup>() : null;
             InitializeHammerVisualPool();
         }
 
@@ -252,11 +251,14 @@ namespace GravityPuzzle
             float facingYAngle = targetIsLeft ? 0f : -180f;
             float windUpAngle = targetIsLeft ? 18f : -18f;
             const float impactAngle = 0f;
+            Quaternion impactRotation = Quaternion.Euler(0f, facingYAngle, impactAngle);
             Vector3 buttonAnchor = GetHammerButtonWorldPosition(camera, impact.z);
             Vector3 screenCentre = GetViewportWorldPoint(camera, .5f, .48f, impact.z);
-            // The hammer root stops above the block. From this stabilized point
-            // only its head arcs via rotation; no tween pushes it into the mesh.
-            Vector3 hoverPoint = impact + Vector3.up * hammerHoverHeightOffset;
+            Vector3 hoverPoint = GetImpactAlignedRootPosition(
+                hammerView,
+                impact,
+                impactScale,
+                impactRotation);
             Vector3 exitPoint = buttonAnchor;
             Vector3 exitControl = hoverPoint + Vector3.up * .92f + (exitPoint - hoverPoint).normalized * .42f;
 
@@ -298,6 +300,26 @@ namespace GravityPuzzle
                 if (TopologyEditingEnabled)
                     GetHammerBoosterButton()?.TryConsumeUse();
             });
+        }
+
+        private Vector3 GetImpactAlignedRootPosition(
+            BoosterVisualView hammerView,
+            Vector3 impact,
+            Vector3 impactScale,
+            Quaternion impactRotation)
+        {
+            if (hammerView == null || !hammerView.HasImpactPoint)
+            {
+                Debug.LogWarning(
+                    "[HammerBooster] Hammer visual has no HammerHeadImpactPoint; using the legacy root alignment.",
+                    this);
+                return impact + Vector3.up * hammerHoverHeightOffset;
+            }
+
+            Vector3 impactPointOffset = impactRotation * Vector3.Scale(
+                hammerView.ImpactPointLocalPosition,
+                impactScale);
+            return impact - impactPointOffset;
         }
 
         private BoosterButton GetHammerBoosterButton()
@@ -380,7 +402,9 @@ namespace GravityPuzzle
                 return;
             }
 
-            hammerVisualPool = new GameObjectPool<BoosterVisualView>(hammerVisualPrefabView, transform, 1);
+            // The hammer is a world-space sprite. Keeping it under the UI
+            // button/Canvas transform can place or scale it outside the board.
+            hammerVisualPool = new GameObjectPool<BoosterVisualView>(hammerVisualPrefabView, null, 1);
             hammerVisualPool.Prewarm();
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -85,6 +86,7 @@ namespace GravityPuzzle
         private float nextSliderPulseTime;
         private bool hasTweenConfig;
         private GameObjectPool<FlyingProgressVoxelView> flyingProgressVoxelPool;
+        private int pendingVfxProgressArrivalCount;
 
         private float SliderFillDuration => tweenConfig.ProgressSliderFillDuration;
         private Ease SliderFillEase => tweenConfig.ProgressSliderFillEase;
@@ -101,6 +103,7 @@ namespace GravityPuzzle
 
         public bool HasActiveFlyingVoxels => activeFlyingVoxelCount > 0;
         public bool HasPendingProgressPresentation => HasActiveFlyingVoxels ||
+                                                      pendingVfxProgressArrivalCount > 0 ||
                                                       (sliderFillTween != null && sliderFillTween.IsActive());
 
         private void Awake()
@@ -273,8 +276,7 @@ namespace GravityPuzzle
             {
                 progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
                 progressVoxelVfx.EmitVoxel(startWorldPos, Opaque(voxelColor), VoxelFlightDuration, Mathf.Max(1, particleCount));
-                AddProgress(progressAmount);
-                onArrival?.Invoke();
+                StartCoroutine(ApplyProgressWhenVfxArrives(progressAmount, onArrival));
                 return;
             }
 
@@ -363,7 +365,7 @@ namespace GravityPuzzle
             {
                 progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
                 progressVoxelVfx.EmitVoxelBurst(startWorldPos, Opaque(voxelColor), flightCount, VoxelFlightDuration);
-                AddProgress(totalProgressAmount);
+                StartCoroutine(ApplyProgressWhenVfxArrives(totalProgressAmount, null));
                 return;
             }
 
@@ -371,6 +373,15 @@ namespace GravityPuzzle
             float progressPerFlight = totalProgressAmount / count;
             for (int i = 0; i < count; i++)
                 SpawnFlyingVoxel(startWorldPos, voxelColor, progressPerFlight, null);
+        }
+
+        private IEnumerator ApplyProgressWhenVfxArrives(float progressAmount, Action onArrival)
+        {
+            pendingVfxProgressArrivalCount++;
+            yield return new WaitForSeconds(progressVoxelVfx.MaximumFlightDuration(VoxelFlightDuration));
+            pendingVfxProgressArrivalCount = Mathf.Max(0, pendingVfxProgressArrivalCount - 1);
+            AddProgress(progressAmount);
+            onArrival?.Invoke();
         }
 
         public Vector3 GetTargetWorldPosition()

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   definitions: []
   restingOutlineWidth: 0.05
-  selectedOutlineWidth: 0.08
+  selectedOutlineWidth: 0.04
   restingOutlineColor: {r: 0, g: 0, b: 0, a: 1}
   selectedOutlineColor: {r: 1, g: 1, b: 1, a: 1}
   restingOutlineSortingOrder: 10

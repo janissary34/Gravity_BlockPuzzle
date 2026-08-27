@@ -300,6 +300,7 @@ GameObject:
   - component: {fileID: 8427844676941586961}
   - component: {fileID: 7008116714117451324}
   - component: {fileID: 8699467379054502}
+  - component: {fileID: 1474577781694981454}
   m_Layer: 5
   m_Name: Hammer_Booster_Button
   m_TagString: Untagged
@@ -314,7 +315,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6957382919499924901}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 1.8788468}
   m_LocalScale: {x: 3.0165737, y: 3.0165737, z: 3.0165737}
   m_ConstrainProportionsScale: 1
@@ -424,8 +425,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   boosterButton: {fileID: 4506989174283006989}
+  buttonCanvasGroup: {fileID: 1474577781694981454}
   hammerVisualPrefab: {fileID: 4589897246359763626, guid: 1fa1d15cbe2b74e2887c23cb66b70f43, type: 3}
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
+  gameplayCamera: {fileID: 0}
   popScaleMultiplier: 1.7
   hammerHeadLocalOffset: {x: 0, y: 0.45}
   hammerSortingOrder: 100
@@ -444,12 +447,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   pressScale: 1
-  pressDuration: 0.1
-  pressEase: 6
   usePunchBounce: 1
   punchScaleStrength: {x: 0.1, y: 0.1, z: 0}
-  releaseDuration: 0.1
-  releaseEase: 27
   punchVibrato: 1
   punchElasticity: 1
   useRotationPunch: 1
@@ -474,6 +473,18 @@ MonoBehaviour:
   onBoosterClicked:
     m_PersistentCalls:
       m_Calls: []
+--- !u!225 &1474577781694981454
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6957382919499924901}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &8744602365314147260
 GameObject:
   m_ObjectHideFlags: 0

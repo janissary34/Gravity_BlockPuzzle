@@ -30,6 +30,9 @@ namespace GravityPuzzle
         [Tooltip("The UI Button that activates this Rocket Booster.")]
         [SerializeField] private Button boosterButton;
 
+        [Tooltip("Canvas group used to control the Rocket Booster button visibility and input.")]
+        [SerializeField] private CanvasGroup buttonCanvasGroup;
+
         [Tooltip("Text component displaying remaining booster count (TextMeshPro).")]
         [SerializeField] private TextMeshProUGUI countTmpText;
 
@@ -56,7 +59,6 @@ namespace GravityPuzzle
         private static RocketBooster activeBooster;
         private static int suppressGameplayThroughFrame = -1;
         private PrototypeBoard boundBoard;
-        private CanvasGroup buttonCanvasGroup;
         private bool launchInProgress;
         private int remainingCount = 3;
         private BoosterVisualView rocketVisualPrefabView;
@@ -68,7 +70,6 @@ namespace GravityPuzzle
         {
             remainingCount = initialCount;
             EnsureReferences();
-            buttonCanvasGroup = boosterButton != null ? boosterButton.GetComponent<CanvasGroup>() : null;
             InitializeRocketVisualPool();
         }
 
@@ -195,29 +196,56 @@ namespace GravityPuzzle
             if (Input.touchCount > 0)
             {
                 Touch touch = Input.GetTouch(0);
-                if (touch.phase != TouchPhase.Began || IsPointerOverUI(touch.fingerId))
+                if (touch.phase != TouchPhase.Began)
                     return;
+
+                if (IsPointerOverUI(touch.fingerId))
+                {
+                    Debug.Log("[RocketBooster] Target tap ignored because EventSystem reports UI under the touch.", this);
+                    return;
+                }
                 screenPosition = touch.position;
             }
             else
             {
-                if (!Input.GetMouseButtonDown(0) || IsPointerOverUI())
+                if (!Input.GetMouseButtonDown(0))
                     return;
+
+                if (IsPointerOverUI())
+                {
+                    Debug.Log("[RocketBooster] Target click ignored because EventSystem reports UI under the pointer.", this);
+                    return;
+                }
                 screenPosition = Input.mousePosition;
             }
 
             if (!PuzzleDragController.TryScreenToBoardWorld(screenPosition, out Vector2 worldPosition))
-                return;
-
-            if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target) &&
-                TryStartRocketImpact(target.Piece))
             {
-                Debug.Log($"[RocketBooster] Target tap hit piece: {target.Piece.name}");
-                boundBoard.StartTimer();
-                activeBooster = null;
-                suppressGameplayThroughFrame = Time.frameCount;
-                RefreshButtonState();
+                Debug.LogWarning("[RocketBooster] Target click received but the gameplay camera could not convert it to board space.", this);
                 return;
+            }
+
+            Debug.Log($"[RocketBooster] Target click received at screen={screenPosition}, world={worldPosition}.", this);
+
+            if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target))
+            {
+                Debug.Log(
+                    $"[RocketBooster] Target resolved: piece='{target.Piece.name}', sourceId={target.Piece.SourcePieceId}, cell={target.Cell}, world={target.WorldPosition}.",
+                    target.Piece);
+
+                if (TryStartRocketImpact(target.Piece))
+                {
+                    Debug.Log($"[RocketBooster] Target tap accepted: {target.Piece.name}");
+                    boundBoard.StartTimer();
+                    activeBooster = null;
+                    suppressGameplayThroughFrame = Time.frameCount;
+                    RefreshButtonState();
+                    return;
+                }
+
+                Debug.LogWarning(
+                    $"[RocketBooster] Target was resolved but rejected before launch: '{target.Piece.name}'.",
+                    target.Piece);
             }
 
             Debug.LogWarning(
@@ -234,6 +262,18 @@ namespace GravityPuzzle
             // Prevent an in-flight grid presentation tween from continuing to
             // move the piece after the rocket takes ownership of its transform.
             PuzzleDragController.CancelGridFallForTargetedAction(piece);
+
+            // Validate the authoritative grid handoff before consuming the
+            // target tap. This keeps one-cell pieces selectable even when a
+            // previous presentation left their grid state unavailable.
+            if (!piece.TryBeginShredderHandoff())
+            {
+                Debug.LogWarning(
+                    $"[RocketBooster] Target '{piece.name}' could not reserve its grid cells for rocket handoff.",
+                    piece);
+                return false;
+            }
+
             launchInProgress = true;
             StartCoroutine(PlayRocketLaunchSequence(piece));
             return true;
@@ -245,12 +285,6 @@ namespace GravityPuzzle
             {
                 if (tweenConfig == null)
                     Debug.LogError("[RocketBooster] TweenConfig is required for rocket presentation.", this);
-                launchInProgress = false;
-                yield break;
-            }
-
-            if (!piece.TryBeginShredderHandoff())
-            {
                 launchInProgress = false;
                 yield break;
             }
@@ -271,6 +305,13 @@ namespace GravityPuzzle
             // on a prefab being configured.
             if (!TryRentRocketVisual(out BoosterVisualView rocketView))
             {
+                // Preserve the authored launch timing even if the pooled
+                // presentation is temporarily unavailable. Progress must not
+                // jump ahead of the rocket action in this fallback path.
+                yield return new WaitForSeconds(
+                    tweenConfig.RocketEntranceDuration +
+                    tweenConfig.RocketTargetPauseDuration +
+                    tweenConfig.RocketLaunchDuration);
                 CompleteRocketImpact(piece, piecePos, camY + camOrtho + 7f);
                 yield break;
             }
@@ -417,7 +458,9 @@ namespace GravityPuzzle
                 return;
             }
 
-            rocketVisualPool = new GameObjectPool<BoosterVisualView>(rocketVisualPrefabView, transform, 1);
+            // This is a world-space sprite, so it must not inherit the UI
+            // button/Canvas transform used by this booster component.
+            rocketVisualPool = new GameObjectPool<BoosterVisualView>(rocketVisualPrefabView, null, 1);
             rocketVisualPool.Prewarm();
         }
 

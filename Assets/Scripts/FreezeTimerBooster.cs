@@ -27,6 +27,7 @@ namespace GravityPuzzle
         public bool HasBeenUsedThisLevel => usedThisLevel;
         public bool HasUses => boosterButtonRef != null ? boosterButtonRef.HasUses : !usedThisLevel;
         public event Action<FreezeTimerBooster> FreezeEnded;
+        public event Action<FreezeTimerBooster, float> FreezeProgressChanged;
 
         private PrototypeBoard boundBoard;
         private Coroutine freezeRoutine;
@@ -106,12 +107,14 @@ namespace GravityPuzzle
                    targetBoard.IsTimerActive && !LevelTimerUI.IsGameOver)
             {
                 elapsed += Time.unscaledDeltaTime;
+                FreezeProgressChanged?.Invoke(this, Mathf.Clamp01(elapsed / duration));
                 yield return null;
             }
 
             if (targetBoard != null)
                 targetBoard.ResumeTimer(this);
 
+            FreezeProgressChanged?.Invoke(this, 1f);
             freezeRoutine = null;
             FreezeEnded?.Invoke(this);
             RefreshButtonState();

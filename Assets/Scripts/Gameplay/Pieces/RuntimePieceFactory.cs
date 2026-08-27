@@ -515,10 +515,11 @@ namespace GravityPuzzle.Gameplay.Pieces
                 GetSelectedOutlineColor(),
                 GetRestingOutlineSortingOrder(),
                 GetSelectedOutlineSortingOrder());
+
         }
 
         private static float GetRestingOutlineWidth() => pieceVisualConfig != null ? pieceVisualConfig.RestingOutlineWidth : 0.05f;
-        private static float GetSelectedOutlineWidth() => pieceVisualConfig != null ? pieceVisualConfig.SelectedOutlineWidth : 0.08f;
+        private static float GetSelectedOutlineWidth() => pieceVisualConfig != null ? pieceVisualConfig.SelectedOutlineWidth : 0.04f;
         private static Color GetRestingOutlineColor() => pieceVisualConfig != null ? pieceVisualConfig.RestingOutlineColor : Color.black;
         private static Color GetSelectedOutlineColor() => pieceVisualConfig != null ? pieceVisualConfig.SelectedOutlineColor : Color.white;
         private static int GetRestingOutlineSortingOrder() => pieceVisualConfig != null ? pieceVisualConfig.RestingOutlineSortingOrder : 10;

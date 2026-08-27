@@ -93,6 +93,9 @@ namespace GravityPuzzle
         [Tooltip("FreezeTimerGlow RectTransform (for pulse scale).")]
         [SerializeField] private RectTransform freezeTimerGlowRect;
 
+        [Tooltip("UI-space offset applied after FreezeTimerGlow is aligned to the timer target.")]
+        [SerializeField] private Vector2 freezeTimerGlowOffset;
+
         [Tooltip("FreezeTimerGlow CanvasGroup (for pulse alpha and fade).")]
         [SerializeField] private CanvasGroup freezeTimerGlow;
 
@@ -780,7 +783,14 @@ namespace GravityPuzzle
                 freeze.freezeDuration = effectiveDuration;
                 SubscribeToFreezeCompletion(freeze);
                 freeze.ActivateFreezeBooster();
-                if (!freeze.IsFreezeActive)
+                if (freeze.IsFreezeActive)
+                {
+                    // Begin visual progression only after the authoritative
+                    // pause has actually started, so both windows share the
+                    // same first frame and duration.
+                    StartFreezeSlider();
+                }
+                else
                 {
                     UnsubscribeFromFreezeCompletion();
                 }
@@ -792,6 +802,7 @@ namespace GravityPuzzle
                 {
                     if (freezeRoutine != null) StopCoroutine(freezeRoutine);
                     freezeRoutine = StartCoroutine(FreezeTimerRoutine(activeBoard, effectiveDuration));
+                    StartFreezeSlider();
                 }
             }
         }
@@ -965,6 +976,7 @@ namespace GravityPuzzle
             UnsubscribeFromFreezeCompletion();
             activeFreezeBooster = freeze;
             activeFreezeBooster.FreezeEnded += HandleFreezeEnded;
+            activeFreezeBooster.FreezeProgressChanged += HandleFreezeProgressChanged;
         }
 
         private void UnsubscribeFromFreezeCompletion()
@@ -973,7 +985,16 @@ namespace GravityPuzzle
                 return;
 
             activeFreezeBooster.FreezeEnded -= HandleFreezeEnded;
+            activeFreezeBooster.FreezeProgressChanged -= HandleFreezeProgressChanged;
             activeFreezeBooster = null;
+        }
+
+        private void HandleFreezeProgressChanged(FreezeTimerBooster source, float normalizedProgress)
+        {
+            if (source != activeFreezeBooster)
+                return;
+
+            SetFreezeSliderValue(normalizedProgress);
         }
 
         private void HandleFreezeEnded(FreezeTimerBooster source)
@@ -1018,7 +1039,8 @@ namespace GravityPuzzle
                 {
                     if (glowRect != null)
                     {
-                        glowRect.anchoredPosition = GetTargetAnchoredPosition(glowRect, timer_txt);
+                        glowRect.anchoredPosition =
+                            (Vector2)GetTargetAnchoredPosition(glowRect, timer_txt) + freezeTimerGlowOffset;
 
                         if (timerFreezeGlowSize.x > 0f && timerFreezeGlowSize.y > 0f)
                             glowRect.sizeDelta = timerFreezeGlowSize;
@@ -1187,7 +1209,8 @@ namespace GravityPuzzle
             if (timer_txt != null)
             {
                 if (freezeTimerGlowRect != null)
-                    freezeTimerGlowRect.anchoredPosition = GetTargetAnchoredPosition(freezeTimerGlowRect, timer_txt);
+                    freezeTimerGlowRect.anchoredPosition =
+                        (Vector2)GetTargetAnchoredPosition(freezeTimerGlowRect, timer_txt) + freezeTimerGlowOffset;
 
                 if (freezeTimerIndicatorRect != null)
                     freezeTimerIndicatorRect.anchoredPosition = GetTargetAnchoredPosition(freezeTimerIndicatorRect, timer_txt);
@@ -1261,9 +1284,6 @@ namespace GravityPuzzle
             // t=0.14  FreezeDarkVignette
             if (freezeDarkVignette != null)
                 _freezeFXSequence.Insert(0.14f, freezeDarkVignette.DOFade(1f, atmoIn));
-
-            // t=0.00  Start freeze duration slider progression synchronously with impact
-            _freezeFXSequence.InsertCallback(0f, () => StartFreezeSlider());
 
             // t=0.18  Ambient snow (looping PSystems)
             _freezeFXSequence.InsertCallback(0.18f, () =>
@@ -1535,6 +1555,12 @@ namespace GravityPuzzle
                     .SetLink(gameObject, LinkBehaviour.KillOnDisable);
             }
 
+            // The authored FreezeTimerBooster owns the authoritative unscaled
+            // clock. Subscribe to its exact progress rather than running a
+            // second timer that can drift from the real freeze lifetime.
+            if (activeFreezeBooster != null && activeFreezeBooster.IsFreezeActive)
+                return;
+
             _sliderRoutine = StartCoroutine(FreezeSliderProgressRoutine(duration));
         }
 
@@ -1547,26 +1573,27 @@ namespace GravityPuzzle
             {
                 elapsed += Time.unscaledDeltaTime;
                 float progress = Mathf.Clamp01(elapsed / totalDuration);
-                float val = freezeSliderDrains ? (1f - progress) : progress;
-
-                if (freezeSlider != null)
-                    freezeSlider.value = val;
-
-                if (freezeFillImage != null)
-                    freezeFillImage.fillAmount = val;
+                SetFreezeSliderValue(progress);
 
                 yield return null;
             }
 
             // Ensure it settles cleanly at final value
-            float finalVal = freezeSliderDrains ? 0f : 1f;
-            if (freezeSlider != null)
-                freezeSlider.value = finalVal;
-
-            if (freezeFillImage != null)
-                freezeFillImage.fillAmount = finalVal;
+            SetFreezeSliderValue(1f);
 
             _sliderRoutine = null;
+        }
+
+        private void SetFreezeSliderValue(float normalizedProgress)
+        {
+            float progress = Mathf.Clamp01(normalizedProgress);
+            float value = freezeSliderDrains ? 1f - progress : progress;
+
+            if (freezeSlider != null)
+                freezeSlider.value = value;
+
+            if (freezeFillImage != null)
+                freezeFillImage.fillAmount = value;
         }
 
         /// <summary>
@@ -1597,6 +1624,17 @@ namespace GravityPuzzle
 
                 return;
             }
+
+            // Freeze completion can arrive one frame before the progress
+            // coroutine writes its terminal sample. Snap to the completed
+            // value before the presentation fades so a draining slider never
+            // disappears while it still appears partially full.
+            float completedValue = freezeSliderDrains ? 0f : 1f;
+            if (freezeSlider != null)
+                freezeSlider.value = completedValue;
+
+            if (freezeFillImage != null)
+                freezeFillImage.fillAmount = completedValue;
 
             if (freezeSliderCanvasGroup != null)
             {

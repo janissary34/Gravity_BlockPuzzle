@@ -11,7 +11,7 @@ namespace GravityPuzzle.Config
 
         [Header("Outline Presentation")]
         [SerializeField, Min(0.001f)] private float restingOutlineWidth = 0.05f;
-        [SerializeField, Min(0.001f)] private float selectedOutlineWidth = 0.08f;
+        [SerializeField, Min(0.001f)] private float selectedOutlineWidth = 0.04f;
         [SerializeField] private Color restingOutlineColor = Color.black;
         [SerializeField] private Color selectedOutlineColor = Color.white;
         [SerializeField] private int restingOutlineSortingOrder = 10;

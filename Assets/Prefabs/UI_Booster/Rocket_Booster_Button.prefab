@@ -166,6 +166,7 @@ GameObject:
   - component: {fileID: 1900688124751320693}
   - component: {fileID: 4825691057261913314}
   - component: {fileID: 8201114813977898633}
+  - component: {fileID: 9184216853929093061}
   m_Layer: 5
   m_Name: Rocket_Booster_Button
   m_TagString: Untagged
@@ -180,7 +181,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4599625161556333484}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 1.8788468}
   m_LocalScale: {x: 3.0165737, y: 3.0165737, z: 3.0165737}
   m_ConstrainProportionsScale: 1
@@ -291,12 +292,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   pressScale: 1
-  pressDuration: 0.1
-  pressEase: 6
   usePunchBounce: 1
   punchScaleStrength: {x: 0.1, y: 0.1, z: 0}
-  releaseDuration: 0.1
-  releaseEase: 27
   punchVibrato: 1
   punchElasticity: 1
   useRotationPunch: 1
@@ -335,13 +332,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boosterButtonRef: {fileID: 4825691057261913314}
   boosterButton: {fileID: 5817890513203303818}
+  buttonCanvasGroup: {fileID: 9184216853929093061}
   countTmpText: {fileID: 3322405142421825101}
   countUiText: {fileID: 0}
   initialCount: 3
   rocketVisualPrefab: {fileID: 4589897246359763626, guid: 12d907748e4f84b8585c8cc374be6014, type: 3}
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
+  gameplayCamera: {fileID: 0}
   rocketScale: {x: 1, y: 1, z: 1}
   rocketSortingOrder: 30000
+--- !u!225 &9184216853929093061
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4599625161556333484}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &5891819971468204770
 GameObject:
   m_ObjectHideFlags: 0
