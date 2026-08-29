@@ -34,6 +34,20 @@ namespace GravityPuzzle.Core.Grid
                 : GridCellState.Blocked;
         }
 
+        public bool TryGetOccupantId(GridCoordinate coordinate, out int occupantId)
+        {
+            occupantId = default;
+            if (!IsInside(coordinate))
+                return false;
+
+            GridCellState state = cellStates[coordinate.X, coordinate.Y];
+            if (state != GridCellState.Occupied && state != GridCellState.Reserved)
+                return false;
+
+            occupantId = occupantIds[coordinate.X, coordinate.Y];
+            return true;
+        }
+
         public int GetOccupantId(GridCoordinate coordinate)
         {
             return IsInside(coordinate)

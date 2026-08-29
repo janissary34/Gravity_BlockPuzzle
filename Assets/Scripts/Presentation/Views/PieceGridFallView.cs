@@ -50,6 +50,24 @@ namespace GravityPuzzle.Presentation.Views
                 onComplete);
         }
 
+        /// <summary>
+        /// Presents a normal, already-committed grid fall into the final legal
+        /// row above a shredder. It never alters board occupancy; it simply
+        /// spends the shredder clearance interval in the incoming motion rather
+        /// than as a stationary wait at the destination.
+        /// </summary>
+        public bool PlayShredderApproachTo(Vector2 targetPosition, Action onComplete)
+        {
+            if (body == null || tweenConfig == null)
+                return false;
+
+            return PlayTo(
+                targetPosition,
+                tweenConfig.GetShredderApproachDuration(
+                    Vector2.Distance(body.position, targetPosition)),
+                onComplete);
+        }
+
         private bool PlayTo(Vector2 targetPosition, float duration, Action onComplete)
         {
             activeFallTween?.Kill();

@@ -134,6 +134,8 @@ namespace GravityPuzzle
         private int selectedOutlineSortingOrder = 20;
         private bool[] shredderPresentationEnabledStates;
         private SpriteMaskInteraction[] shredderPresentationMaskStates;
+        private int[] shredderPresentationSortingOrders;
+        private int shredderPresentationOutlineSortingOrder;
         private bool beingShredded;
         private bool gridDespawned;
         private bool useFullCollisionGeometry;
@@ -794,6 +796,10 @@ namespace GravityPuzzle
             shredderPresentationRenderers = renderers;
             shredderPresentationEnabledStates = new bool[renderers.Length];
             shredderPresentationMaskStates = new SpriteMaskInteraction[renderers.Length];
+            shredderPresentationSortingOrders = new int[renderers.Length];
+            shredderPresentationOutlineSortingOrder = rootOutline != null
+                ? rootOutline.sortingOrder
+                : 0;
             for (int index = 0; index < renderers.Length; index++)
             {
                 SpriteRenderer renderer = renderers[index];
@@ -802,7 +808,30 @@ namespace GravityPuzzle
 
                 shredderPresentationEnabledStates[index] = renderer.enabled;
                 shredderPresentationMaskStates[index] = renderer.maskInteraction;
+                shredderPresentationSortingOrders[index] = renderer.sortingOrder;
             }
+        }
+
+        /// <summary>
+        /// Keeps later pieces visually behind the active shredder feed. This
+        /// affects presentation only; board occupancy remains owned by the
+        /// grid reservation captured at handoff.
+        /// </summary>
+        public void SetShredderPresentationDepth(int sortingOrderOffset)
+        {
+            if (shredderPresentationRenderers == null ||
+                shredderPresentationSortingOrders == null)
+                return;
+
+            for (int index = 0; index < shredderPresentationRenderers.Length; index++)
+            {
+                SpriteRenderer renderer = shredderPresentationRenderers[index];
+                if (renderer != null && renderer.transform.IsChildOf(transform))
+                    renderer.sortingOrder = shredderPresentationSortingOrders[index] + sortingOrderOffset;
+            }
+
+            if (rootOutline != null)
+                rootOutline.sortingOrder = shredderPresentationOutlineSortingOrder + sortingOrderOffset;
         }
 
         public void ApplyShredderPresentationClipping()
@@ -850,11 +879,15 @@ namespace GravityPuzzle
 
                 renderer.enabled = shredderPresentationEnabledStates[index];
                 renderer.maskInteraction = shredderPresentationMaskStates[index];
+                renderer.sortingOrder = shredderPresentationSortingOrders[index];
             }
 
             shredderPresentationRenderers = null;
             shredderPresentationEnabledStates = null;
             shredderPresentationMaskStates = null;
+            shredderPresentationSortingOrders = null;
+            if (rootOutline != null)
+                rootOutline.sortingOrder = shredderPresentationOutlineSortingOrder;
         }
 
         public void ReleaseCollisionCellsAtOrBelow(float worldY)

@@ -22,6 +22,8 @@ namespace GravityPuzzle
 
         private ShredderFeedMask activeFeedMask;
         private int activeFeedCount;
+        private readonly Dictionary<float, int> activeFeedsByShredderLine =
+            new Dictionary<float, int>();
 
         private void Awake()
         {
@@ -58,11 +60,42 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryCapturePiece(PuzzlePiece piece, float shredderY)
         {
-            if (piece == null || !piece.TryBeginShredderHandoff())
+            if (piece == null || !TryAcquireFeedLane(shredderY, out int feedDepth))
                 return false;
 
-            StartCoroutine(FeedPieceIntoShredder(piece, shredderY));
+            if (!piece.TryBeginShredderHandoff())
+            {
+                ReleaseFeedLane(shredderY);
+                return false;
+            }
+
+            StartCoroutine(FeedPieceIntoShredder(piece, shredderY, feedDepth));
             return true;
+        }
+
+        private bool TryAcquireFeedLane(float shredderY, out int feedDepth)
+        {
+            activeFeedsByShredderLine.TryGetValue(shredderY, out int activeInLane);
+            feedDepth = activeInLane;
+            int laneCapacity = shredderConfig != null
+                ? shredderConfig.FeedQueueCapacity
+                : 16;
+            if (activeInLane >= laneCapacity)
+                return false;
+
+            activeFeedsByShredderLine[shredderY] = activeInLane + 1;
+            return true;
+        }
+
+        private void ReleaseFeedLane(float shredderY)
+        {
+            if (!activeFeedsByShredderLine.TryGetValue(shredderY, out int activeInLane))
+                return;
+
+            if (activeInLane <= 1)
+                activeFeedsByShredderLine.Remove(shredderY);
+            else
+                activeFeedsByShredderLine[shredderY] = activeInLane - 1;
         }
 
         private void AcquireFeedMask(float shredderY)
@@ -92,7 +125,10 @@ namespace GravityPuzzle
             activeFeedMask = null;
         }
 
-        private System.Collections.IEnumerator FeedPieceIntoShredder(PuzzlePiece piece, float shredderY)
+        private System.Collections.IEnumerator FeedPieceIntoShredder(
+            PuzzlePiece piece,
+            float shredderY,
+            int feedDepth)
         {
             if (piece == null) yield break;
 
@@ -112,6 +148,10 @@ namespace GravityPuzzle
             // 2. Sprite Masking / Visual Clipping: mask out any portion moving below shredderY
             SpriteRenderer[] pieceRenderers = piece.ConfiguredShredderRenderers ?? EmptyRenderers;
             piece.BeginShredderPresentation(pieceRenderers);
+            // The lead piece stays in front. Followers preserve their vertical
+            // spacing and use one shared rear layer, so a deep valid queue
+            // cannot disappear behind the board background.
+            piece.SetShredderPresentationDepth(feedDepth > 0 ? -10 : 0);
             piece.ApplyShredderPresentationClipping();
             // Always use the authored PuzzlePiece colour for debris and UI voxels.
             // Renderer colours can be temporarily changed by selection or masking.
@@ -298,6 +338,7 @@ namespace GravityPuzzle
             }
 
             ReleaseFeedMask();
+            ReleaseFeedLane(shredderY);
         }
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);

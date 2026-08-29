@@ -185,6 +185,7 @@ namespace GravityPuzzle
             }
 
             CapturePiecesAtShredderBoundary();
+            CaptureQueuedPiecesBehindShredderFeeds();
 
             if (Input.touchCount > 0)
                 ProcessTouchInput();
@@ -284,6 +285,42 @@ namespace GravityPuzzle
                     }
 
                     break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Lets the next supported piece enter the same shredder feed before
+        /// the current feed has fully despawned. Both pieces retain their own
+        /// reserved grid footprints, so this is a presentation queue rather
+        /// than a board-space overlap.
+        /// </summary>
+        private void CaptureQueuedPiecesBehindShredderFeeds()
+        {
+            BlockShredder shredder = BlockShredder.Instance;
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            IReadOnlyList<ShredderCatchZone> zones = ShredderCatchZone.ActiveZones;
+            if (shredder == null || activeBoard == null || zones.Count == 0)
+                return;
+
+            IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
+            {
+                PuzzlePiece piece = pieces[pieceIndex];
+                if (piece == null || piece.IsBeingShredded || piece.IsFrozen ||
+                    !activeBoard.TryGetPieceModel(piece, out PieceModel model) ||
+                    !IsSettlingAboveShredderReservation(activeBoard.BoardSnapshot, model))
+                    continue;
+
+                for (int zoneIndex = 0; zoneIndex < zones.Count; zoneIndex++)
+                {
+                    ShredderCatchZone zone = zones[zoneIndex];
+                    if (zone == null || !zone.ContainsFeedLane(piece))
+                        continue;
+
+                    CancelGridFallForTargetedAction(piece);
+                    if (shredder.TryCapturePiece(piece, zone.ShredY))
+                        return;
                 }
             }
         }
@@ -402,9 +439,15 @@ namespace GravityPuzzle
                 PrepareKinematicBody(piece.Body);
                 Vector2 targetPosition = GravityLevelGridCoordinates.FineCellToWorld(level, targetPivot);
                 gridFallingPieces.Add(piece);
-                if (!piece.GridFallView.PlayFallTo(
+                bool settlesAboveShredder = IsSettlingAboveShredderReservation(snapshot, model);
+                bool played = settlesAboveShredder
+                    ? piece.GridFallView.PlayShredderApproachTo(
                         targetPosition,
-                        () => CompleteGridGravityPresentation(piece)))
+                        () => CompleteGridGravityPresentation(piece))
+                    : piece.GridFallView.PlayFallTo(
+                        targetPosition,
+                        () => CompleteGridGravityPresentation(piece));
+                if (!played)
                 {
                     gridFallingPieces.Remove(piece);
                     activeBoard.TrySetPieceState(piece, PieceState.Placed);
@@ -415,6 +458,30 @@ namespace GravityPuzzle
             }
 
             return playedAnyMove;
+        }
+
+        private static bool IsSettlingAboveShredderReservation(
+            LevelBoardSnapshot snapshot,
+            PieceModel model)
+        {
+            if (snapshot == null || model == null)
+                return false;
+
+            GridCoordinate down = new GridCoordinate(0, -1);
+            for (int index = 0; index < model.LocalCells.Count; index++)
+            {
+                GridCoordinate below = model.GetWorldCell(index).Offset(down);
+                if (snapshot.Grid.GetCellState(below) != GridCellState.Reserved ||
+                    !snapshot.Grid.TryGetOccupantId(below, out int occupantId) ||
+                    !snapshot.TryGetPiece(occupantId, out PieceModel occupant))
+                    continue;
+
+                if (occupant.State == PieceState.HandoffToPhysics ||
+                    occupant.State == PieceState.Shredding)
+                    return true;
+            }
+
+            return false;
         }
 
         private static PuzzlePiece FindActivePiece(int sourcePieceId)
