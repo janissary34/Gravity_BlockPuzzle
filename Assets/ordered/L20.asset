@@ -21,6 +21,7 @@ MonoBehaviour:
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
+  maxDragSpeed: 10
   useAutomaticCameraFit: 1
   fixedCameraSize: 6
   cameraViewportWidth: 0.88

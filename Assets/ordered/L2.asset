@@ -21,6 +21,7 @@ MonoBehaviour:
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
+  maxDragSpeed: 10
   useAutomaticCameraFit: 1
   fixedCameraSize: 6
   cameraViewportWidth: 0.88
@@ -74,6 +75,38 @@ MonoBehaviour:
     - localCell: {x: 2, y: 9}
       type: 0
     - localCell: {x: 3, y: 9}
+      type: 0
+    - localCell: {x: 4, y: 6}
+      type: 0
+    - localCell: {x: 5, y: 6}
+      type: 0
+    - localCell: {x: 6, y: 6}
+      type: 0
+    - localCell: {x: 7, y: 6}
+      type: 0
+    - localCell: {x: 4, y: 7}
+      type: 0
+    - localCell: {x: 5, y: 7}
+      type: 0
+    - localCell: {x: 6, y: 7}
+      type: 0
+    - localCell: {x: 7, y: 7}
+      type: 0
+    - localCell: {x: 4, y: 8}
+      type: 0
+    - localCell: {x: 5, y: 8}
+      type: 0
+    - localCell: {x: 6, y: 8}
+      type: 0
+    - localCell: {x: 7, y: 8}
+      type: 0
+    - localCell: {x: 4, y: 9}
+      type: 0
+    - localCell: {x: 5, y: 9}
+      type: 0
+    - localCell: {x: 6, y: 9}
+      type: 0
+    - localCell: {x: 7, y: 9}
       type: 0
   - name: Piece 4
     visualId: 
