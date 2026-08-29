@@ -50,12 +50,10 @@ namespace GravityPuzzle
             // next cascade exclusively from the committed grid state.
             Instance.pendingGridGravityMoves.Clear();
 
-            // Topology changes must not wait for an unrelated input/fixed
-            // update to resume gravity.  In particular, hammer-created
-            // remainders can have no physical support after their shared cell
-            // is removed. Start their new grid-owned cascade immediately when
-            // no existing fall presentation is in flight.
-            if (Instance.selectedPiece == null && Instance.gridFallingPieces.Count == 0)
+            // A committed grid fall already owns a distinct target footprint,
+            // so it cannot conflict with a fresh cascade plan. Do not delay a
+            // shredder-cleared row until an unrelated fall presentation ends.
+            if (Instance.selectedPiece == null)
             {
                 Instance.AdvanceGridGravityPresentation();
             }

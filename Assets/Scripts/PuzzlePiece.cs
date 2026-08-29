@@ -116,6 +116,11 @@ namespace GravityPuzzle
         private List<BoxCollider2D> collisionCells;
         private List<Vector2> fullCollisionCellSizes;
         private List<SpriteRenderer> collisionCellVisuals;
+        private readonly List<ShredderReservationCell> shredderReservationCells =
+            new List<ShredderReservationCell>();
+        private readonly List<GridCoordinate> shredderCellsReadyToRelease =
+            new List<GridCoordinate>();
+        private float shredderReservationStartBodyY;
         private readonly List<VoxelShard> configuredVoxelShards = new List<VoxelShard>();
         private SpriteRenderer[] configuredShredderRenderers;
         private Collider2D[] solidColliders;
@@ -144,6 +149,22 @@ namespace GravityPuzzle
         private Color iceCounterOutlineColor = Color.white;
         private float iceCounterOutlineWidth = .18f;
         private Vector2 iceCounterOffset;
+
+        private struct ShredderReservationCell
+        {
+            public GridCoordinate localCoordinate;
+            public float initialWorldCenterY;
+            public bool released;
+
+            public ShredderReservationCell(
+                GridCoordinate localCoordinate,
+                float initialWorldCenterY)
+            {
+                this.localCoordinate = localCoordinate;
+                this.initialWorldCenterY = initialWorldCenterY;
+                released = false;
+            }
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetActivePieces()
@@ -548,6 +569,9 @@ namespace GravityPuzzle
         private void PrepareForRuntimeSetup()
         {
             ClearIceVisuals();
+            shredderReservationCells.Clear();
+            shredderCellsReadyToRelease.Clear();
+            shredderReservationStartBodyY = 0f;
             beingShredded = false;
             destructionReported = false;
             useFullCollisionGeometry = false;
@@ -835,6 +859,8 @@ namespace GravityPuzzle
 
         public void ReleaseCollisionCellsAtOrBelow(float worldY)
         {
+            AdvanceShredderGridReleaseFrontier(worldY);
+
             if (collisionCells == null)
                 return;
 
@@ -861,6 +887,61 @@ namespace GravityPuzzle
             RuntimePieceFactory.RefreshOutline(this);
             InvalidateVoxelCache();
             Physics2D.SyncTransforms();
+        }
+
+        private void CaptureShredderReservationCells(PieceModel model)
+        {
+            shredderReservationCells.Clear();
+            shredderCellsReadyToRelease.Clear();
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (model == null || level == null)
+                return;
+
+            for (int index = 0; index < model.LocalCells.Count; index++)
+            {
+                GridCoordinate localCoordinate = model.LocalCells[index];
+                Vector2 worldCenter = GravityLevelGridCoordinates.FineCellToWorld(
+                    level,
+                    model.Anchor.Offset(localCoordinate));
+                shredderReservationCells.Add(new ShredderReservationCell(
+                    localCoordinate,
+                    worldCenter.y));
+            }
+
+            shredderReservationStartBodyY = Body != null ? Body.position.y : transform.position.y;
+        }
+
+        /// <summary>
+        /// Advances the logical cutter frontier one or more fine rows. Feed
+        /// tremor and rotation are presentation-only, so the authoritative
+        /// release boundary uses the kinematic feed's vertical displacement.
+        /// All cells on a crossed row are released in one board transaction.
+        /// </summary>
+        private void AdvanceShredderGridReleaseFrontier(float shredderY)
+        {
+            if (shredderReservationCells.Count == 0)
+                return;
+
+            float currentBodyY = Body != null ? Body.position.y : transform.position.y;
+            float verticalFeedDistance = currentBodyY - shredderReservationStartBodyY;
+            float initialSpaceFrontierY = shredderY - verticalFeedDistance;
+            shredderCellsReadyToRelease.Clear();
+            for (int index = 0; index < shredderReservationCells.Count; index++)
+            {
+                ShredderReservationCell cell = shredderReservationCells[index];
+                if (cell.released || cell.initialWorldCenterY > initialSpaceFrontierY)
+                    continue;
+
+                cell.released = true;
+                shredderReservationCells[index] = cell;
+                shredderCellsReadyToRelease.Add(cell.localCoordinate);
+            }
+
+            if (shredderCellsReadyToRelease.Count > 0)
+                PrototypeBoard.Active?.TryReleaseShredderGridCells(
+                    this,
+                    shredderCellsReadyToRelease);
         }
 
         private void ConfigureCollisionGeometry(
@@ -1356,6 +1437,9 @@ namespace GravityPuzzle
                     beingShredded = false;
                     return false;
                 }
+
+                if (board.TryGetPieceModel(this, out PieceModel model))
+                    CaptureShredderReservationCells(model);
 
                 board.TryLockFinalShredderOutcome(this);
             }

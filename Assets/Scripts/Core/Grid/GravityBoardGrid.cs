@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using GravityPuzzle.Gameplay.Pieces;
 
 namespace GravityPuzzle.Core.Grid
@@ -302,6 +303,35 @@ namespace GravityPuzzle.Core.Grid
         {
             ClearPieceCells(piece);
             piece.MarkOffBoard();
+        }
+
+        /// <summary>
+        /// Releases a subset of a shredding piece's reserved footprint. The
+        /// remaining cells stay reserved, so gravity can only enter board space
+        /// that has physically crossed the cutter.
+        /// </summary>
+        public bool TryReleaseReservedCells(
+            PieceModel piece,
+            IReadOnlyList<GridCoordinate> localCells)
+        {
+            if (piece == null || localCells == null)
+                return false;
+
+            bool releasedAny = false;
+            for (int index = 0; index < localCells.Count; index++)
+            {
+                GridCoordinate coordinate = piece.Anchor.Offset(localCells[index]);
+                if (!IsInside(coordinate) ||
+                    cellStates[coordinate.X, coordinate.Y] != GridCellState.Reserved ||
+                    occupantIds[coordinate.X, coordinate.Y] != piece.Id)
+                    continue;
+
+                cellStates[coordinate.X, coordinate.Y] = GridCellState.Empty;
+                occupantIds[coordinate.X, coordinate.Y] = default;
+                releasedAny = true;
+            }
+
+            return releasedAny;
         }
 
         private void SetPieceCells(PieceModel piece, GridCellState state)
