@@ -19,7 +19,9 @@ MonoBehaviour:
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
+  frameThickness: 0.5
   gravityScale: 1.5
+  maxDragSpeed: 10
   useAutomaticCameraFit: 1
   fixedCameraSize: 6
   cameraViewportWidth: 0.88
@@ -29,8 +31,6 @@ MonoBehaviour:
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
-  shredlenmeHizi: 0.7
-  titremeMiktari: 0.045
   pieces:
   - name: Piece 1
     visualId: 

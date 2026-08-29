@@ -22,28 +22,18 @@ namespace GravityPuzzle
             new Queue<GridGravityMove>();
         private GridCoordinate selectedPieceStartAnchor;
         private bool hasSelectedPieceStartAnchor;
-        private GridCoordinate selectedDragPivot;
-        private bool hasSelectedDragPivot;
         private Vector2 grabOffset;
+        // Latest pointer-derived target is retained only to calculate new input deltas.
         private Vector2 dragTarget;
+        private Vector2 pendingDragIntent;
+        private Vector2 lastResolvedDragPosition;
+        private bool hasLastResolvedDragPosition;
         private int activeFingerId = -1;
-        private ContactFilter2D solidContactFilter;
-        private readonly RaycastHit2D[] castHits = new RaycastHit2D[32];
-        private readonly Vector2[] contactNormals = new Vector2[32];
         private readonly Collider2D[] selectionHits = new Collider2D[32];
-        private const int MaximumSlideIterations = 4;
         private const float MinimumMoveDistance = .0005f;
-        private const float CastContactPadding = .002f;
-        private const float VisualContactTolerance = .01f;
-        private const float ShredderCollisionGuardDistance = 1f;
-        private const float MinimumBlockingCrossSection = .001f;
-        private const float BlockingNormalDotThreshold = -.001f;
-        private const float ContactManifoldTolerance = .004f;
-        private const float DuplicateNormalDotThreshold = .9995f;
         private const float TouchSelectionRadiusInGridCells = .45f;
         private const float MouseSelectionRadiusInGridCells = .18f;
         public static PuzzleDragController Instance { get; private set; }
-        private bool hasMovingPieces = true;
         private PrototypeBoard subscribedBoard;
         private bool inputLockedByGameState;
 
@@ -59,7 +49,6 @@ namespace GravityPuzzle
             // target. Drop that stale presentation work and calculate the
             // next cascade exclusively from the committed grid state.
             Instance.pendingGridGravityMoves.Clear();
-            Instance.hasMovingPieces = true;
 
             // Topology changes must not wait for an unrelated input/fixed
             // update to resume gravity.  In particular, hammer-created
@@ -110,7 +99,6 @@ namespace GravityPuzzle
             if (Instance.gridReleasePresentationPiece == piece)
                 Instance.gridReleasePresentationPiece = null;
             Instance.pendingGridGravityMoves.Clear();
-            Instance.hasMovingPieces = true;
             PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Placed);
         }
 
@@ -137,10 +125,6 @@ namespace GravityPuzzle
         private void Awake()
         {
             Instance = this;
-            
-            solidContactFilter = new ContactFilter2D();
-            solidContactFilter.NoFilter();
-            solidContactFilter.useTriggers = false;
         }
 
         private void Start()
@@ -265,8 +249,9 @@ namespace GravityPuzzle
         {
             selectedPiece = null;
             activeFingerId = -1;
+            pendingDragIntent = Vector2.zero;
+            hasLastResolvedDragPosition = false;
             hasSelectedPieceStartAnchor = false;
-            hasSelectedDragPivot = false;
         }
 
         private void CapturePiecesAtShredderBoundary()
@@ -312,7 +297,7 @@ namespace GravityPuzzle
 
             Physics2D.SyncTransforms();
             if (selectedPiece != null && !selectedPiece.IsBeingShredded)
-                TryMoveSelectedPieceOnGrid(selectedPiece, dragTarget);
+                TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent(), applySpeedLimit: true);
 
             AdvanceGridGravityPresentation();
         }
@@ -453,7 +438,6 @@ namespace GravityPuzzle
                 return;
 
             PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Placed);
-            hasMovingPieces = true;
         }
 
         private void RemoveFinishedGridFalls()
@@ -474,12 +458,15 @@ namespace GravityPuzzle
 
         // A selected piece keeps its dynamic occupancy in the grid while held so falling
         // pieces cannot enter its footprint. It moves atomically without self-collision.
-        private bool TryMoveSelectedPieceOnGrid(PuzzlePiece piece, Vector2 requestedWorldPosition)
+        private bool TryMoveSelectedPieceOnGrid(
+            PuzzlePiece piece,
+            Vector2 dragIntent,
+            bool applySpeedLimit)
         {
-            if (!TryResolveSelectedGridPosition(
+            if (!TryResolveSelectedGridMovement(
                     piece,
-                    requestedWorldPosition,
-                    applySpeedLimit: true,
+                    dragIntent,
+                    applySpeedLimit,
                     out LevelBoardSnapshot snapshot,
                     out PieceModel model,
                     out GravityLevelDefinition level,
@@ -487,6 +474,8 @@ namespace GravityPuzzle
                 return false;
 
             piece.Body.MovePosition(clampedPosition);
+            lastResolvedDragPosition = clampedPosition;
+            hasLastResolvedDragPosition = true;
 
             // Mantıksal grid hücresini (model.Anchor), sürekli pozisyonun şu an
             // en çok örtüştüğü tam hücreye göre arka planda güncelle. Bu sadece
@@ -496,20 +485,17 @@ namespace GravityPuzzle
             if (!anchorFromContinuous.Equals(model.Anchor))
                 snapshot.Grid.TryMoveIgnoringPiece(model, anchorFromContinuous, model.Id, out _);
 
-            selectedDragPivot = pivotFromContinuous;
-            hasSelectedDragPivot = true;
             return true;
         }
 
         /// <summary>
-        /// Resolves a drag request against the current authoritative grid.  A
-        /// held piece moves at a bounded presentation speed, while release uses
-        /// this same collision-safe route without the speed bound so it snaps to
-        /// the pointer's legal destination instead of its lagging body position.
+        /// Resolves only the current player input delta. The cursor is never a
+        /// destination: every fine-grid transition is validated from the piece's
+        /// current footprint, so blocked input cannot accumulate into a route.
         /// </summary>
-        private bool TryResolveSelectedGridPosition(
+        private bool TryResolveSelectedGridMovement(
             PuzzlePiece piece,
-            Vector2 requestedWorldPosition,
+            Vector2 dragIntent,
             bool applySpeedLimit,
             out LevelBoardSnapshot snapshot,
             out PieceModel model,
@@ -530,391 +516,117 @@ namespace GravityPuzzle
             if (level == null)
                 return false;
 
-            float fineCellSize = 1f / level.subdivisions;
-            Vector2 currentPosition = piece.Body.position;
-            float movementBudget = applySpeedLimit
-                ? level.maxDragSpeed * Time.fixedDeltaTime
-                : float.PositiveInfinity;
-            bool xFirst = Mathf.Abs(requestedWorldPosition.x - currentPosition.x) >=
-                          Mathf.Abs(requestedWorldPosition.y - currentPosition.y);
-
+            Vector2 currentPosition = hasLastResolvedDragPosition
+                ? lastResolvedDragPosition
+                : piece.Body.position;
+            Vector2 requestedMove = applySpeedLimit
+                ? Vector2.ClampMagnitude(dragIntent, level.maxDragSpeed * Time.fixedDeltaTime)
+                : dragIntent;
+            float requestedDistance = requestedMove.magnitude;
             clampedPosition = currentPosition;
-            if (xFirst)
+            if (requestedDistance < MinimumMoveDistance)
+                return true;
+
+            float fineCellSize = 1f / level.subdivisions;
+            int stepCount = Mathf.Max(
+                1,
+                Mathf.CeilToInt(requestedDistance / (fineCellSize * .25f)));
+            Vector2 step = requestedMove / stepCount;
+            GridCoordinate currentPivot = WorldToDragPivot(level, currentPosition);
+
+            for (int stepIndex = 0; stepIndex < stepCount; stepIndex++)
             {
-                ResolveHorizontalThenVertical(
-                    snapshot, model, level, requestedWorldPosition, fineCellSize,
-                    movementBudget, currentPosition, ref clampedPosition);
-            }
-            else
-            {
-                ResolveVerticalThenHorizontal(
-                    snapshot, model, level, requestedWorldPosition, fineCellSize,
-                    movementBudget, currentPosition, ref clampedPosition);
+                if (!TryResolveDragStep(
+                        snapshot,
+                        model,
+                        level,
+                        clampedPosition,
+                        step,
+                        ref currentPivot,
+                        out Vector2 nextPosition))
+                    break;
+
+                clampedPosition = nextPosition;
             }
 
             return true;
         }
 
-        private static void ResolveHorizontalThenVertical(
-            LevelBoardSnapshot snapshot,
-            PieceModel model,
-            GravityLevelDefinition level,
-            Vector2 requestedPosition,
-            float fineCellSize,
-            float movementBudget,
-            Vector2 currentPosition,
-            ref Vector2 resolvedPosition)
-        {
-            float horizontalTravel = Mathf.Min(
-                Mathf.Abs(requestedPosition.x - currentPosition.x), movementBudget);
-            resolvedPosition.x = ClampAxis(
-                snapshot, model, level, currentPosition,
-                currentPosition.x + Mathf.Sign(requestedPosition.x - currentPosition.x) * horizontalTravel,
-                fineCellSize, isXAxis: true);
-
-            float remainingBudget = RemainingMovementBudget(
-                movementBudget, Mathf.Abs(resolvedPosition.x - currentPosition.x));
-            float verticalTravel = Mathf.Min(
-                Mathf.Abs(requestedPosition.y - currentPosition.y), remainingBudget);
-            resolvedPosition.y = ClampAxis(
-                snapshot, model, level,
-                new Vector2(resolvedPosition.x, currentPosition.y),
-                currentPosition.y + Mathf.Sign(requestedPosition.y - currentPosition.y) * verticalTravel,
-                fineCellSize, isXAxis: false);
-        }
-
-        private static void ResolveVerticalThenHorizontal(
-            LevelBoardSnapshot snapshot,
-            PieceModel model,
-            GravityLevelDefinition level,
-            Vector2 requestedPosition,
-            float fineCellSize,
-            float movementBudget,
-            Vector2 currentPosition,
-            ref Vector2 resolvedPosition)
-        {
-            float verticalTravel = Mathf.Min(
-                Mathf.Abs(requestedPosition.y - currentPosition.y), movementBudget);
-            resolvedPosition.y = ClampAxis(
-                snapshot, model, level, currentPosition,
-                currentPosition.y + Mathf.Sign(requestedPosition.y - currentPosition.y) * verticalTravel,
-                fineCellSize, isXAxis: false);
-
-            float remainingBudget = RemainingMovementBudget(
-                movementBudget, Mathf.Abs(resolvedPosition.y - currentPosition.y));
-            float horizontalTravel = Mathf.Min(
-                Mathf.Abs(requestedPosition.x - currentPosition.x), remainingBudget);
-            resolvedPosition.x = ClampAxis(
-                snapshot, model, level,
-                new Vector2(currentPosition.x, resolvedPosition.y),
-                currentPosition.x + Mathf.Sign(requestedPosition.x - currentPosition.x) * horizontalTravel,
-                fineCellSize, isXAxis: true);
-        }
-
-        private static float RemainingMovementBudget(float movementBudget, float completedDistance)
-        {
-            return float.IsPositiveInfinity(movementBudget)
-                ? movementBudget
-                : Mathf.Max(0f, movementBudget - completedDistance);
-        }
-
-        // Samples the authoritative matrix along one continuous visual axis.
-        // The body therefore follows the pointer smoothly, while only a legal
-        // fine-grid footprint is allowed to cross into the next cell.
-        private static float ClampAxis(
+        private static bool TryResolveDragStep(
             LevelBoardSnapshot snapshot,
             PieceModel model,
             GravityLevelDefinition level,
             Vector2 currentPosition,
-            float requestedValueOnAxis,
-            float fineCellSize,
-            bool isXAxis)
+            Vector2 step,
+            ref GridCoordinate currentPivot,
+            out Vector2 resolvedPosition)
         {
-            float currentValue = isXAxis ? currentPosition.x : currentPosition.y;
-            if (Mathf.Approximately(requestedValueOnAxis, currentValue))
-                return currentValue;
-
-            float direction = Mathf.Sign(requestedValueOnAxis - currentValue);
-            float step = fineCellSize * .5f;
-            float testValue = currentValue;
-            while (Mathf.Abs(testValue - currentValue) <
-                   Mathf.Abs(requestedValueOnAxis - currentValue))
+            Vector2 requestedPosition = currentPosition + step;
+            GridCoordinate requestedPivot = WorldToDragPivot(level, requestedPosition);
+            bool xChanged = requestedPivot.X != currentPivot.X;
+            bool yChanged = requestedPivot.Y != currentPivot.Y;
+            if (!xChanged && !yChanged)
             {
-                float nextTest = testValue + step * direction;
-                if ((direction > 0f && nextTest > requestedValueOnAxis) ||
-                    (direction < 0f && nextTest < requestedValueOnAxis))
-                {
-                    nextTest = requestedValueOnAxis;
-                }
-
-                Vector2 testPosition = isXAxis
-                    ? new Vector2(nextTest, currentPosition.y)
-                    : new Vector2(currentPosition.x, nextTest);
-                GridCoordinate testAnchor = WorldToDragPivot(level, testPosition)
-                    .Offset(model.PivotOffset);
-                if (!snapshot.Grid.CheckPlacementIgnoringPiece(model, testAnchor, model.Id).IsSuccess)
-                    return testValue;
-
-                testValue = nextTest;
-                if (nextTest == requestedValueOnAxis)
-                    break;
+                resolvedPosition = requestedPosition;
+                return true;
             }
 
-            return testValue;
-        }
+            GridCoordinate xPivot = new GridCoordinate(requestedPivot.X, currentPivot.Y);
+            GridCoordinate yPivot = new GridCoordinate(currentPivot.X, requestedPivot.Y);
+            bool xAllowed = !xChanged || CanMoveToPivot(snapshot, model, xPivot);
+            bool yAllowed = !yChanged || CanMoveToPivot(snapshot, model, yPivot);
 
-        private void MoveSelectedBody(PuzzlePiece piece, Vector2 requestedMove)
-        {
-            Rigidbody2D body = piece.Body;
-            Vector2 remainingMove = requestedMove;
-
-            for (int iteration = 0; iteration < MaximumSlideIterations; iteration++)
+            if (xChanged && yChanged && xAllowed && yAllowed &&
+                CanMoveToPivot(snapshot, model, requestedPivot))
             {
-                float requestedDistance = remainingMove.magnitude;
-                if (requestedDistance < MinimumMoveDistance)
-                    break;
-
-                Vector2 direction = remainingMove / requestedDistance;
-                float maximumClearance =
-                    piece.CurrentCollisionInset +
-                    GravityGridMetrics.DraggingPieceCollisionSkinInCells +
-                    CastContactPadding;
-                int hitCount = body.Cast(
-                    direction,
-                    solidContactFilter,
-                    castHits,
-                    requestedDistance + maximumClearance);
-
-                bool foundBlockingHit = false;
-                float allowedDistance = requestedDistance;
-                for (int i = 0; i < hitCount; i++)
-                {
-                    RaycastHit2D hit = castHits[i];
-                    if (hit.collider == null || hit.collider.isTrigger)
-                        continue;
-
-                    // Rigidbody2D.Cast may report a collider the piece is already
-                    // touching even when the requested motion is away from it or
-                    // parallel to it. Treating that zero-distance contact as a
-                    // blocker is what made tightly packed pieces feel glued down.
-                    if (Vector2.Dot(direction, hit.normal) >= BlockingNormalDotThreshold)
-                        continue;
-
-                    if (!HasBlockingCrossSection(piece, hit.collider, direction))
-                        continue;
-
-                    float clearance = RequiredVisualClearance(piece, hit.collider);
-                    if (hit.distance > requestedDistance + clearance)
-                        continue;
-
-                    float candidateDistance = Mathf.Max(0f, hit.distance - clearance);
-                    if (foundBlockingHit && candidateDistance >= allowedDistance)
-                        continue;
-
-                    foundBlockingHit = true;
-                    allowedDistance = candidateDistance;
-                }
-
-                int contactNormalCount = foundBlockingHit
-                    ? CollectContactNormals(
-                        piece,
-                        direction,
-                        hitCount,
-                        requestedDistance,
-                        allowedDistance)
-                    : 0;
-
-                Vector2 completedMove = direction * allowedDistance;
-                MoveBody(body, body.position + completedMove);
-
-                remainingMove -= completedMove;
-                if (!foundBlockingHit || allowedDistance >= requestedDistance - MinimumMoveDistance)
-                    break;
-
-                // Use every surface reached at the same time, rather than whichever
-                // one happened to be first in Box2D's hit array. The projection is
-                // order-independent, so concave pieces cannot alternate between two
-                // normals and shake while the pointer is held still.
-                remainingMove = ProjectOntoContactManifold(remainingMove, contactNormalCount);
-                if (remainingMove.sqrMagnitude < MinimumMoveDistance * MinimumMoveDistance)
-                    break;
+                currentPivot = requestedPivot;
+                resolvedPosition = requestedPosition;
+                return true;
             }
 
-            body.velocity = Vector2.zero;
-            body.angularVelocity = 0f;
-        }
-
-        private int CollectContactNormals(
-            PuzzlePiece movingPiece,
-            Vector2 direction,
-            int hitCount,
-            float requestedDistance,
-            float allowedDistance)
-        {
-            int normalCount = 0;
-            for (int i = 0; i < hitCount; i++)
+            if (xChanged && !yChanged && xAllowed)
             {
-                RaycastHit2D hit = castHits[i];
-                if (hit.collider == null || hit.collider.isTrigger)
-                    continue;
-
-                Vector2 normal = hit.normal;
-                if (normal.sqrMagnitude < .5f ||
-                    Vector2.Dot(direction, normal) >= BlockingNormalDotThreshold ||
-                    !HasBlockingCrossSection(movingPiece, hit.collider, direction))
-                    continue;
-
-                float clearance = RequiredVisualClearance(movingPiece, hit.collider);
-                if (hit.distance > requestedDistance + clearance)
-                    continue;
-
-                float candidateDistance = Mathf.Max(0f, hit.distance - clearance);
-                if (candidateDistance > allowedDistance + ContactManifoldTolerance)
-                    continue;
-
-                normal.Normalize();
-                bool duplicate = false;
-                for (int existing = 0; existing < normalCount; existing++)
-                {
-                    if (Vector2.Dot(contactNormals[existing], normal) >= DuplicateNormalDotThreshold)
-                    {
-                        duplicate = true;
-                        break;
-                    }
-                }
-
-                if (!duplicate && normalCount < contactNormals.Length)
-                    contactNormals[normalCount++] = normal;
+                currentPivot = xPivot;
+                resolvedPosition = requestedPosition;
+                return true;
             }
 
-            return normalCount;
-        }
-
-        private Vector2 ProjectOntoContactManifold(Vector2 movement, int normalCount)
-        {
-            if (normalCount == 0 || SatisfiesEveryContact(movement, normalCount))
-                return movement;
-
-            // In 2D the closest legal vector is either unchanged, projected onto
-            // one contact face, or zero at the intersection of multiple faces.
-            // Testing those candidates avoids the order dependence of repeatedly
-            // clipping against normals returned in a non-deterministic hit order.
-            Vector2 best = Vector2.zero;
-            float bestError = movement.sqrMagnitude;
-            for (int i = 0; i < normalCount; i++)
+            if (yChanged && !xChanged && yAllowed)
             {
-                Vector2 normal = contactNormals[i];
-                Vector2 candidate = movement - normal * Vector2.Dot(movement, normal);
-                if (!SatisfiesEveryContact(candidate, normalCount))
-                    continue;
-
-                float error = (candidate - movement).sqrMagnitude;
-                if (error < bestError)
-                {
-                    best = candidate;
-                    bestError = error;
-                }
+                currentPivot = yPivot;
+                resolvedPosition = requestedPosition;
+                return true;
             }
 
-            return best;
-        }
-
-        private bool SatisfiesEveryContact(Vector2 movement, int normalCount)
-        {
-            for (int i = 0; i < normalCount; i++)
+            // A blocked diagonal may retain only the independently valid input
+            // component. This is sliding from the player's current gesture, not
+            // a route search toward the cursor's old absolute position.
+            if (xChanged && yChanged && xAllowed && !yAllowed)
             {
-                if (Vector2.Dot(movement, contactNormals[i]) < BlockingNormalDotThreshold)
-                    return false;
+                currentPivot = xPivot;
+                resolvedPosition = new Vector2(requestedPosition.x, currentPosition.y);
+                return true;
             }
 
-            return true;
-        }
-
-        private float RequiredVisualClearance(
-            PuzzlePiece movingPiece,
-            Collider2D hitCollider)
-        {
-            float collisionInset = movingPiece.CurrentCollisionInset;
-            PuzzlePiece hitPiece = hitCollider.GetComponentInParent<PuzzlePiece>();
-            if (hitPiece != null && hitPiece != movingPiece)
-                collisionInset += hitPiece.CurrentCollisionInset;
-
-            if (IsInShredderApproach(movingPiece) ||
-                (hitPiece != null && IsInShredderApproach(hitPiece)))
+            if (xChanged && yChanged && yAllowed && !xAllowed)
             {
-                // In the final cell before the shredder, preserve the full visual
-                // footprint. This prevents two falling pieces from appearing to
-                // weave together as they enter the physical shredder sequence.
-                return collisionInset + CastContactPadding;
+                currentPivot = yPivot;
+                resolvedPosition = new Vector2(currentPosition.x, requestedPosition.y);
+                return true;
             }
 
-            if (hitPiece == null)
-            {
-                // Obstacles and the board frame must use the full footprint.
-                // The small visual overlap tolerated between moving pieces would
-                // otherwise let a dragged piece enter an obstacle before release.
-                return collisionInset + CastContactPadding;
-            }
-
-            if (movingPiece.IsSelected || hitPiece.IsSelected)
-            {
-                // A held piece must keep its complete visible footprint. The
-                // old fine-grid tolerance let the pointer push two pieces into
-                // each other, which made their voxel artwork visibly intersect.
-                return collisionInset + CastContactPadding;
-            }
-
-            // Retain the original fine-grid tolerance only between movable pieces,
-            // so they can still pass through exact-size authored openings.
-            return Mathf.Max(0f, collisionInset - VisualContactTolerance) +
-                   CastContactPadding;
-        }
-
-        private static bool IsInShredderApproach(PuzzlePiece piece)
-        {
-            IReadOnlyList<ShredderCatchZone> zones = ShredderCatchZone.ActiveZones;
-            for (int i = 0; i < zones.Count; i++)
-            {
-                ShredderCatchZone zone = zones[i];
-                if (zone != null &&
-                    piece.LowestColliderPoint() <= zone.ShredY + ShredderCollisionGuardDistance)
-                {
-                    return true;
-                }
-            }
-
+            resolvedPosition = currentPosition;
             return false;
         }
 
-        private static bool HasBlockingCrossSection(
-            PuzzlePiece movingPiece,
-            Collider2D hitCollider,
-            Vector2 movementDirection)
+        private static bool CanMoveToPivot(
+            LevelBoardSnapshot snapshot,
+            PieceModel model,
+            GridCoordinate pivot)
         {
-            // A sweep can return a diagonal normal where two sharp corners only
-            // touch. Project both AABBs onto the axis perpendicular to movement:
-            // without a real cross-section overlap, the contact is tangent and
-            // must not stop a piece sliding past a staggered obstacle corner.
-            Vector2 perpendicular = new Vector2(
-                -movementDirection.y,
-                movementDirection.x).normalized;
-            Bounds movingBounds = movingPiece.CollisionBounds;
-            Bounds hitBounds = hitCollider.bounds;
-
-            Vector2 centreDelta = (Vector2)hitBounds.center -
-                                  (Vector2)movingBounds.center;
-            float centreSeparation = Mathf.Abs(Vector2.Dot(centreDelta, perpendicular));
-            float movingRadius =
-                movingBounds.extents.x * Mathf.Abs(perpendicular.x) +
-                movingBounds.extents.y * Mathf.Abs(perpendicular.y);
-            float hitRadius =
-                hitBounds.extents.x * Mathf.Abs(perpendicular.x) +
-                hitBounds.extents.y * Mathf.Abs(perpendicular.y);
-
-            return movingRadius + hitRadius - centreSeparation >
-                   MinimumBlockingCrossSection;
+            GridCoordinate anchor = pivot.Offset(model.PivotOffset);
+            return snapshot.Grid.CheckPlacementIgnoringPiece(model, anchor, model.Id).IsSuccess;
         }
-
 
         private static void PrepareKinematicBody(Rigidbody2D body)
         {
@@ -933,10 +645,8 @@ namespace GravityPuzzle
 
         private static void MoveBody(Rigidbody2D body, Vector2 targetPosition)
         {
-            // This is intentionally a Rigidbody2D position write, never a transform
-            // write. The target has already been swept with Rigidbody2D.Cast and must
-            // be applied immediately so the remaining slide iterations cast from the
-            // new position in this same FixedUpdate.
+            // The grid has already validated this authored position. Apply it
+            // immediately so the visual and Physics2D query transforms agree.
             body.position = targetPosition;
             Physics2D.SyncTransforms();
         }
@@ -957,6 +667,22 @@ namespace GravityPuzzle
 
             snapshot = activeBoard.BoardSnapshot;
             return activeBoard.TryGetPieceModel(piece, out model);
+        }
+
+        private void UpdateDragTarget(Vector2 nextTarget)
+        {
+            // Consume only fresh pointer movement. Retaining an old absolute
+            // target after a collision would turn the drag controller into a
+            // path-seeking cursor follower.
+            pendingDragIntent += nextTarget - dragTarget;
+            dragTarget = nextTarget;
+        }
+
+        private Vector2 ConsumeDragIntent()
+        {
+            Vector2 intent = pendingDragIntent;
+            pendingDragIntent = Vector2.zero;
+            return intent;
         }
 
         private void ProcessTouchInput()
@@ -980,13 +706,13 @@ namespace GravityPuzzle
 
             if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
             {
-                dragTarget = PointerWorldPosition(touch.position) + grabOffset;
+                UpdateDragTarget(PointerWorldPosition(touch.position) + grabOffset);
                 ReleasePiece();
                 activeFingerId = -1;
                 return;
             }
 
-            dragTarget = PointerWorldPosition(touch.position) + grabOffset;
+            UpdateDragTarget(PointerWorldPosition(touch.position) + grabOffset);
         }
 
         private void ProcessMouseInput()
@@ -998,7 +724,7 @@ namespace GravityPuzzle
 
             if (selectedPiece != null &&
                 (Input.GetMouseButton(0) || Input.GetMouseButtonUp(0)))
-                dragTarget = pointer + grabOffset;
+                UpdateDragTarget(pointer + grabOffset);
 
             if (selectedPiece != null && Input.GetMouseButtonUp(0))
                 ReleasePiece();
@@ -1077,10 +803,9 @@ namespace GravityPuzzle
             // The grid removes the held piece while it is being dragged. Retain
             // its last committed anchor so an invalid release can return to a
             // known legal board position without asking physics to decide.
-            LevelBoardSnapshot selectedSnapshot;
             PieceModel selectedModel;
             hasSelectedPieceStartAnchor =
-                TryGetSnapshotPiece(piece, out selectedSnapshot, out selectedModel) &&
+                TryGetSnapshotPiece(piece, out _, out selectedModel) &&
                 selectedModel.IsOnBoard;
             if (hasSelectedPieceStartAnchor)
                 selectedPieceStartAnchor = selectedModel.Anchor;
@@ -1095,72 +820,27 @@ namespace GravityPuzzle
 
             Rigidbody2D body = piece.Body;
             selectedPiece = piece;
-            if (hasSelectedPieceStartAnchor)
-            {
-                GravityLevelDefinition diagLevel = GravityLevelRuntime.FindLevelToPlay();
-                if (diagLevel != null)
-                {
-                    GridCoordinate diagPivot = new GridCoordinate(
-                        selectedModel.Anchor.X - selectedModel.PivotOffset.X,
-                        selectedModel.Anchor.Y - selectedModel.PivotOffset.Y);
-                    Vector2 expectedWorld = GravityLevelGridCoordinates.FineCellToWorld(diagLevel, diagPivot);
-                    Debug.Log($"[OriginDiag] piece={piece.name} bodyPos=({body.position.x:F3},{body.position.y:F3}) " +
-                        $"expectedPivotWorld=({expectedWorld.x:F3},{expectedWorld.y:F3}) " +
-                        $"anchor=({selectedModel.Anchor.X},{selectedModel.Anchor.Y}) " +
-                        $"pivotOffset=({selectedModel.PivotOffset.X},{selectedModel.PivotOffset.Y})");
-                }
-            }
-            if (hasSelectedPieceStartAnchor)
-            {
-                selectedDragPivot = new GridCoordinate(
-                    selectedPieceStartAnchor.X - selectedModel.PivotOffset.X,
-                    selectedPieceStartAnchor.Y - selectedModel.PivotOffset.Y);
-                hasSelectedDragPivot = true;
-            }
             PrepareKinematicBody(body);
             selectedPiece.SetSelected(true);
             Physics2D.SyncTransforms();
 
-            int pieceId = piece.GetInstanceID();
-
             grabOffset = body.position - pointerPosition;
             dragTarget = body.position;
-            hasMovingPieces = true;
+            pendingDragIntent = Vector2.zero;
+            lastResolvedDragPosition = body.position;
+            hasLastResolvedDragPosition = true;
         }
 
         private void ReleasePiece()
         {
             Rigidbody2D body = selectedPiece.Body;
-            Vector2 releaseRequestedPosition = body.position;
-            if (TryResolveSelectedGridPosition(
-                    selectedPiece,
-                    dragTarget,
-                    applySpeedLimit: false,
-                    out _,
-                    out _,
-                    out _,
-                    out Vector2 resolvedReleasePosition))
-            {
-                releaseRequestedPosition = resolvedReleasePosition;
-            }
+            TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent(), applySpeedLimit: false);
 
             selectedPiece.SetSelected(false);
             Physics2D.SyncTransforms();
             PrepareKinematicBody(body);
-            int pieceId = selectedPiece.GetInstanceID();
-            Debug.Log($"[ReleaseDiag] dragTarget=({dragTarget.x:F3},{dragTarget.y:F3}) " +
-                $"body=({body.position.x:F3},{body.position.y:F3}) " +
-                $"resolved=({releaseRequestedPosition.x:F3},{releaseRequestedPosition.y:F3}) id={pieceId}");
-            GridCoordinate releaseReferencePivot = new GridCoordinate(
-                selectedPieceStartAnchor.X - GetPivotOffset(selectedPiece).X,
-                selectedPieceStartAnchor.Y - GetPivotOffset(selectedPiece).Y);
-            if (TryCommitGridRelease(
-                    selectedPiece,
-                    releaseRequestedPosition,
-                    releaseReferencePivot,
-                    out Vector2 releasePosition))
+            if (TryCommitSafeSnapRelease(selectedPiece, out Vector2 releasePosition))
             {
-                Debug.Log($"[ReleaseDiag] committedWorld=({releasePosition.x:F3},{releasePosition.y:F3}) id={pieceId}");
                 PuzzlePiece releasePiece = selectedPiece;
                 gridReleasePresentationPiece = releasePiece;
                 if (!releasePiece.GridFallView.PlayReleaseTo(
@@ -1172,8 +852,7 @@ namespace GravityPuzzle
                 }
                 selectedPiece = null;
                 hasSelectedPieceStartAnchor = false;
-                hasSelectedDragPivot = false;
-                hasMovingPieces = true;
+                hasLastResolvedDragPosition = false;
                 return;
             }
 
@@ -1187,8 +866,7 @@ namespace GravityPuzzle
                 MoveBody(body, restorePosition);
                 selectedPiece = null;
                 hasSelectedPieceStartAnchor = false;
-                hasSelectedDragPivot = false;
-                hasMovingPieces = true;
+                hasLastResolvedDragPosition = false;
                 return;
             }
 
@@ -1198,8 +876,7 @@ namespace GravityPuzzle
 
             selectedPiece = null;
             hasSelectedPieceStartAnchor = false;
-            hasSelectedDragPivot = false;
-            hasMovingPieces = true;
+            hasLastResolvedDragPosition = false;
         }
 
         private void CompleteGridReleasePresentation(PuzzlePiece piece)
@@ -1223,10 +900,62 @@ namespace GravityPuzzle
             gridReleasePresentationPiece = null;
         }
 
-        private static bool TryCommitGridRelease(
+        private bool TryCommitSafeSnapRelease(
             PuzzlePiece piece,
-            Vector2 requestedWorldPosition,
-            GridCoordinate releaseReferencePivot,
+            out Vector2 releasePosition)
+        {
+            releasePosition = default;
+            if (piece == null || !hasSelectedPieceStartAnchor ||
+                !TryGetSnapshotPiece(piece, out _, out PieceModel model))
+            {
+                return TryCommitCurrentGridRelease(piece, out releasePosition);
+            }
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (level == null || board == null)
+                return TryCommitCurrentGridRelease(piece, out releasePosition);
+
+            Vector2 currentPosition = hasLastResolvedDragPosition
+                ? lastResolvedDragPosition
+                : piece.Body.position;
+            GridCoordinate referencePivot = new GridCoordinate(
+                selectedPieceStartAnchor.X - model.PivotOffset.X,
+                selectedPieceStartAnchor.Y - model.PivotOffset.Y);
+            GridCoordinate snappedPivot = SnapToBackgroundAlignedPivot(
+                level,
+                currentPosition,
+                referencePivot);
+            Vector2 snappedPosition = GravityLevelGridCoordinates.FineCellToWorld(level, snappedPivot);
+
+            // Snapping is only presentation alignment after the player has
+            // traversed a valid path. It may not complete a blocked path or
+            // move through a corner that the active drag could not cross.
+            if (!TryResolveSelectedGridMovement(
+                    piece,
+                    snappedPosition - currentPosition,
+                    applySpeedLimit: false,
+                    out _,
+                    out _,
+                    out _,
+                    out Vector2 resolvedPosition) ||
+                (resolvedPosition - snappedPosition).sqrMagnitude >
+                MinimumMoveDistance * MinimumMoveDistance)
+            {
+                return TryCommitCurrentGridRelease(piece, out releasePosition);
+            }
+
+            GridCoordinate snappedAnchor = snappedPivot.Offset(model.PivotOffset);
+            if (!board.TryMovePieceOnGrid(piece, snappedAnchor, out _))
+                return TryCommitCurrentGridRelease(piece, out releasePosition);
+
+            lastResolvedDragPosition = snappedPosition;
+            releasePosition = snappedPosition;
+            return true;
+        }
+
+        private static bool TryCommitCurrentGridRelease(
+            PuzzlePiece piece,
             out Vector2 releasePosition)
         {
             releasePosition = default;
@@ -1239,52 +968,42 @@ namespace GravityPuzzle
             if (activeLevel == null || activeBoard == null)
                 return false;
 
-            GridCoordinate pivot = SnapToBackgroundAlignedPivot(
-                activeLevel,
-                requestedWorldPosition,
-                releaseReferencePivot);
-
-            GridCoordinate anchor = pivot.Offset(model.PivotOffset);
             GridPlacementResult placementResult = GridPlacementResult.Failure(
                 GridPlacementFailureReason.OutOfBounds,
-                anchor,
+                model.Anchor,
                 GridCellState.Blocked,
                 default);
-            if (!snapshot.Grid.IsInside(anchor) ||
-                !activeBoard.TryMovePieceOnGrid(piece, anchor, out placementResult))
+            if (!snapshot.Grid.IsInside(model.Anchor) ||
+                !activeBoard.TryMovePieceOnGrid(piece, model.Anchor, out placementResult))
             {
                 Debug.LogWarning(
                     $"[GridRelease] Rejected '{piece.name}' id={model.Id}, " +
-                    $"modelOnBoard={model.IsOnBoard}, targetAnchor=({anchor.X},{anchor.Y}), " +
+                    $"modelOnBoard={model.IsOnBoard}, targetAnchor=({model.Anchor.X},{model.Anchor.Y}), " +
                     $"reason={placementResult.Reason}, cell=({placementResult.Coordinate.X},{placementResult.Coordinate.Y}), " +
                     $"cellState={placementResult.CellState}, occupant={placementResult.OccupantId}.",
                     piece);
                 return false;
             }
 
+            GridCoordinate pivot = new GridCoordinate(
+                model.Anchor.X - model.PivotOffset.X,
+                model.Anchor.Y - model.PivotOffset.Y);
             releasePosition = GravityLevelGridCoordinates.FineCellToWorld(activeLevel, pivot);
             return true;
         }
 
         private static GridCoordinate SnapToBackgroundAlignedPivot(
             GravityLevelDefinition level,
-            Vector2 requestedWorldPosition,
-            GridCoordinate releaseReferencePivot)
+            Vector2 currentPosition,
+            GridCoordinate referencePivot)
         {
-            GridCoordinate nearestPivot = WorldToNearestFineCell(level, requestedWorldPosition);
+            GridCoordinate nearestPivot = WorldToNearestFineCell(level, currentPosition);
             int subdivisions = Mathf.Max(1, level.subdivisions);
             return new GridCoordinate(
-                releaseReferencePivot.X +
-                Mathf.RoundToInt((nearestPivot.X - releaseReferencePivot.X) / (float)subdivisions) * subdivisions,
-                releaseReferencePivot.Y +
-                Mathf.RoundToInt((nearestPivot.Y - releaseReferencePivot.Y) / (float)subdivisions) * subdivisions);
-        }
-
-        private static GridCoordinate GetPivotOffset(PuzzlePiece piece)
-        {
-            return TryGetSnapshotPiece(piece, out _, out PieceModel model)
-                ? model.PivotOffset
-                : default;
+                referencePivot.X +
+                Mathf.RoundToInt((nearestPivot.X - referencePivot.X) / (float)subdivisions) * subdivisions,
+                referencePivot.Y +
+                Mathf.RoundToInt((nearestPivot.Y - referencePivot.Y) / (float)subdivisions) * subdivisions);
         }
 
         private static GridCoordinate WorldToDragPivot(
