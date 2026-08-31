@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using DG.Tweening;
 using GravityPuzzle.Config;
@@ -170,13 +169,13 @@ namespace GravityPuzzle
             if (Input.touchCount > 0)
             {
                 Touch touch = Input.GetTouch(0);
-                if (touch.phase != TouchPhase.Began || IsPointerOverUI(touch.fingerId))
+                if (touch.phase != TouchPhase.Began)
                     return;
                 screenPosition = touch.position;
             }
             else
             {
-                if (!Input.GetMouseButtonDown(0) || IsPointerOverUI())
+                if (!Input.GetMouseButtonDown(0))
                     return;
                 screenPosition = Input.mousePosition;
             }
@@ -419,16 +418,6 @@ namespace GravityPuzzle
         {
             hammerView = null;
             return hammerVisualPool != null && hammerVisualPool.TryRent(out hammerView);
-        }
-
-        private static bool IsPointerOverUI(int fingerId = -1)
-        {
-            if (EventSystem.current == null)
-                return false;
-
-            return fingerId >= 0
-                ? EventSystem.current.IsPointerOverGameObject(fingerId)
-                : EventSystem.current.IsPointerOverGameObject();
         }
 
         private void SynchronizeLevel()

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using GravityPuzzle.Config;
 using GravityPuzzle.Core.StateMachine;
@@ -199,11 +198,6 @@ namespace GravityPuzzle
                 if (touch.phase != TouchPhase.Began)
                     return;
 
-                if (IsPointerOverUI(touch.fingerId))
-                {
-                    Debug.Log("[RocketBooster] Target tap ignored because EventSystem reports UI under the touch.", this);
-                    return;
-                }
                 screenPosition = touch.position;
             }
             else
@@ -211,11 +205,6 @@ namespace GravityPuzzle
                 if (!Input.GetMouseButtonDown(0))
                     return;
 
-                if (IsPointerOverUI())
-                {
-                    Debug.Log("[RocketBooster] Target click ignored because EventSystem reports UI under the pointer.", this);
-                    return;
-                }
                 screenPosition = Input.mousePosition;
             }
 
@@ -621,15 +610,5 @@ namespace GravityPuzzle
                 !LevelTimerUI.IsGameOver;
         }
 
-        private static bool IsPointerOverUI(int fingerId = -1)
-        {
-            if (EventSystem.current == null)
-                return false;
-
-            if (fingerId >= 0)
-                return EventSystem.current.IsPointerOverGameObject(fingerId);
-
-            return EventSystem.current.IsPointerOverGameObject();
-        }
     }
 }
