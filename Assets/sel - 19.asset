@@ -19,13 +19,21 @@ MonoBehaviour:
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
+  frameThickness: 0.5
   gravityScale: 1.5
+  maxDragSpeed: 10
+  useAutomaticCameraFit: 1
+  fixedCameraSize: 6
+  cameraViewportWidth: 0.88
+  cameraViewportHeight: 0.7
+  useRuntimeSafeAreaForCameraFit: 0
   exitWidth: 3
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
   - name: Piece 1
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 26, y: 22}
     quarterTurns: 0
@@ -165,6 +173,7 @@ MonoBehaviour:
     - localCell: {x: 9, y: -3}
       type: 0
   - name: Piece 2
+    visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 20, y: 18}
     quarterTurns: 0
@@ -304,6 +313,7 @@ MonoBehaviour:
     - localCell: {x: 3, y: -11}
       type: 0
   - name: Piece 3
+    visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 20, y: 18}
     quarterTurns: 0
@@ -443,6 +453,7 @@ MonoBehaviour:
     - localCell: {x: 7, y: -3}
       type: 0
   - name: Piece 4
+    visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 24, y: 22}
     quarterTurns: 0
@@ -582,6 +593,7 @@ MonoBehaviour:
     - localCell: {x: -5, y: -7}
       type: 0
   - name: Piece 5
+    visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 20, y: 18}
     quarterTurns: 0
@@ -689,6 +701,7 @@ MonoBehaviour:
     - localCell: {x: 7, y: 5}
       type: 0
   - name: Piece 6
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
     origin: {x: 12, y: -2}
     quarterTurns: 0
@@ -828,6 +841,7 @@ MonoBehaviour:
     - localCell: {x: 7, y: 9}
       type: 0
   - name: Piece 7
+    visualId: 
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
     origin: {x: 12, y: 14}
     quarterTurns: 0
@@ -935,6 +949,7 @@ MonoBehaviour:
     - localCell: {x: -5, y: 13}
       type: 0
   - name: Piece 8
+    visualId: 
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
     origin: {x: 20, y: 24}
     quarterTurns: 0
@@ -1042,6 +1057,7 @@ MonoBehaviour:
     - localCell: {x: -9, y: -9}
       type: 0
   - name: Piece 9
+    visualId: 
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
     origin: {x: 20, y: 24}
     quarterTurns: 0
@@ -1149,6 +1165,7 @@ MonoBehaviour:
     - localCell: {x: 19, y: 3}
       type: 0
   - name: Piece 10
+    visualId: 
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
     origin: {x: 20, y: 24}
     quarterTurns: 0
@@ -1288,6 +1305,7 @@ MonoBehaviour:
     - localCell: {x: -1, y: 7}
       type: 0
   - name: Piece 11
+    visualId: 
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
     origin: {x: 20, y: 24}
     quarterTurns: 0
@@ -1427,6 +1445,7 @@ MonoBehaviour:
     - localCell: {x: 15, y: 3}
       type: 0
   - name: Piece 12
+    visualId: 
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
     origin: {x: 20, y: 24}
     quarterTurns: 0
@@ -1534,6 +1553,7 @@ MonoBehaviour:
     - localCell: {x: -1, y: 11}
       type: 0
   - name: Piece 13
+    visualId: 
     color: {r: 0.5240001, g: 1, b: 0.3, a: 1}
     origin: {x: 20, y: 24}
     quarterTurns: 0
@@ -1641,6 +1661,7 @@ MonoBehaviour:
     - localCell: {x: 7, y: 7}
       type: 0
   - name: Piece 14
+    visualId: 
     color: {r: 0.084549636, g: 0.14074, b: 0.9433962, a: 1}
     origin: {x: 20, y: 24}
     quarterTurns: 0
@@ -2037,46 +2058,6 @@ MonoBehaviour:
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  shredders:
-  - name: Shredder 1
-    cell: {x: 1, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 2
-    cell: {x: 6, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 3
-    cell: {x: 10, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 4
-    cell: {x: 14, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 5
-    cell: {x: 17, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 6
-    cell: {x: 21, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 7
-    cell: {x: 26, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 8
-    cell: {x: 30, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
+  shredders: []
   inactiveBoardCells: []
   inactiveFineCells: []

@@ -4,6 +4,7 @@ using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -44,17 +45,8 @@ namespace GravityPuzzle
             GravityLevelDefinition authoredLevel = GravityLevelRuntime.FindLevelToPlay();
             if (authoredLevel != null)
             {
-                if (GravityLevelRuntime.ConsumePreviewLaunchRequest())
-                {
-                    StartAuthoredLevel(authoredLevel);
-                    return;
-                }
-
-                ConfigureCamera(5.4f, new Color(.075f, .035f, .16f));
-                GameObject menu = new GameObject("Gravity Puzzle Main Menu");
-                menu.AddComponent<GravityMainMenu>().Initialize(
-                    authoredLevel,
-                    GravityLevelRuntime.CurrentLevelNumber);
+                GravityLevelRuntime.ConsumePreviewLaunchRequest();
+                StartAuthoredLevel(authoredLevel);
                 return;
             }
 
@@ -600,7 +592,38 @@ namespace GravityPuzzle
         public string winSceneName = "";
 
         [Tooltip("If true, renders the old debug OnGUI 'LEVEL CLEARED!' text overlay on screen.")]
-        public bool showRuntimeWinGUI = true;
+        public bool showRuntimeWinGUI = false;
+
+        [Tooltip("Canvas altında bulunan, level tamamlandığında gösterilecek win paneli.")]
+        [SerializeField] private GameObject winPanel;
+
+        [Tooltip("Win Panel içindeki, sonraki leveli yükleyecek buton.")]
+        [SerializeField] private UnityEngine.UI.Button nextLevelButton;
+
+        [Tooltip("Next Level Button içindeki, sıradaki level numarasını gösteren TMP metni.")]
+        [SerializeField] private TMP_Text nextLevelButtonLabel;
+
+        [Header("Level Clear Effects")]
+        [Tooltip("Scene instance of the first one-shot particle effect to play when the level is cleared.")]
+        [SerializeField] private ParticleSystem levelClearParticleEffectA;
+
+        [Tooltip("Scene instance of the second one-shot particle effect to play when the level is cleared.")]
+        [SerializeField] private ParticleSystem levelClearParticleEffectB;
+
+        [Tooltip("Scene instance of an additional one-shot particle effect to play when the level is cleared.")]
+        [SerializeField] private ParticleSystem levelClearParticleEffectC;
+
+        [Tooltip("Scene instance of an additional one-shot particle effect to play when the level is cleared.")]
+        [SerializeField] private ParticleSystem levelClearParticleEffectD;
+
+        [Tooltip("Scene instance of an additional one-shot particle effect to play when the level is cleared.")]
+        [SerializeField] private ParticleSystem levelClearParticleEffectE;
+
+        [Tooltip("Scene instance of an additional one-shot particle effect to play when the level is cleared.")]
+        [SerializeField] private ParticleSystem levelClearParticleEffectF;
+
+        [Tooltip("Scene instance of an additional one-shot particle effect to play when the level is cleared.")]
+        [SerializeField] private ParticleSystem levelClearParticleEffectG;
 
         public float TimeLimit { get; private set; }
         public float TimeRemaining { get; private set; }
@@ -612,6 +635,15 @@ namespace GravityPuzzle
         public GameState GameState => gameStateMachine.Current;
         public LevelBoardSnapshot BoardSnapshot { get; private set; }
 
+        private void Awake()
+        {
+            if (winPanel != null)
+                winPanel.SetActive(false);
+
+            if (nextLevelButton != null)
+                nextLevelButton.onClick.AddListener(LoadNextLevelFromWinPanel);
+        }
+
         private void OnEnable()
         {
             Active = this;
@@ -621,6 +653,12 @@ namespace GravityPuzzle
         {
             if (Active == this)
                 Active = null;
+        }
+
+        private void OnDestroy()
+        {
+            if (nextLevelButton != null)
+                nextLevelButton.onClick.RemoveListener(LoadNextLevelFromWinPanel);
         }
 
         public void SetTimeLimit(float timeLimit)
@@ -1109,12 +1147,18 @@ namespace GravityPuzzle
                 {
                     boardCleared = true;
                     TryTransitionGameState(GameState.LevelComplete);
+                    PlayLevelClearParticleEffects();
+                    ShowWinPanel();
                     Debug.Log("LEVEL CLEARED!");
 
                     OnLevelCleared?.Invoke();
                     LevelCleared?.Invoke();
 
-                    if (!string.IsNullOrEmpty(winSceneName))
+                    if (winPanel != null)
+                    {
+                        // The panel owns the player's next-level decision.
+                    }
+                    else if (!string.IsNullOrEmpty(winSceneName))
                     {
                         StartCoroutine(LoadWinScene(winSceneName));
                     }
@@ -1161,6 +1205,61 @@ namespace GravityPuzzle
                     }
                 }
             }
+        }
+
+        private void PlayLevelClearParticleEffects()
+        {
+            PlayParticleEffect(levelClearParticleEffectA);
+            PlayParticleEffect(levelClearParticleEffectB);
+            PlayParticleEffect(levelClearParticleEffectC);
+            PlayParticleEffect(levelClearParticleEffectD);
+            PlayParticleEffect(levelClearParticleEffectE);
+            PlayParticleEffect(levelClearParticleEffectF);
+            PlayParticleEffect(levelClearParticleEffectG);
+        }
+
+        private void ShowWinPanel()
+        {
+            if (winPanel == null)
+                return;
+
+            bool hasNextLevel = GravityLevelRuntime.HasNextLevel;
+            if (nextLevelButton != null)
+                nextLevelButton.interactable = hasNextLevel;
+
+            if (nextLevelButtonLabel != null)
+            {
+                nextLevelButtonLabel.text = hasNextLevel
+                    ? $"LEVEL {GravityLevelRuntime.CurrentLevelNumber + 1}"
+                    : "COMPLETE";
+            }
+
+            winPanel.SetActive(true);
+        }
+
+        private void LoadNextLevelFromWinPanel()
+        {
+            if (!boardCleared)
+                return;
+
+            if (!GravityLevelRuntime.TryAdvanceToNextLevel())
+            {
+                Debug.Log("[LevelSequence] No next level is available.", this);
+                return;
+            }
+
+            Scene activeScene = SceneManager.GetActiveScene();
+            SceneManager.LoadScene(activeScene.name);
+        }
+
+        private static void PlayParticleEffect(ParticleSystem particleEffect)
+        {
+            if (particleEffect == null)
+                return;
+
+            particleEffect.gameObject.SetActive(true);
+            particleEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            particleEffect.Play(true);
         }
 
         private IEnumerator LoadWinScene(string sceneName)

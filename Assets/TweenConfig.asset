@@ -23,7 +23,6 @@ MonoBehaviour:
   gridReleaseUnitsPerSecond: 12
   gridReleaseMinimumDuration: 0.06
   gridReleaseMaximumDuration: 0.28
-  shredderApproachMinimumDuration: 0.001
   shredDuration: 0.3
   shredEase: 5
   iceCrackDuration: 0.16

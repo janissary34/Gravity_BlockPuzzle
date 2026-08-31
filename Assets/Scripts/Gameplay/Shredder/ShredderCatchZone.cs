@@ -54,20 +54,6 @@ namespace GravityPuzzle
                    bounds.min.y <= captureTopY + captureApproachDistance;
         }
 
-        /// <summary>
-        /// Returns whether a piece belongs to this shredder's horizontal feed
-        /// lane. Queue admission is still decided by the authoritative grid;
-        /// this only associates a supported piece with the correct mouth.
-        /// </summary>
-        public bool ContainsFeedLane(PuzzlePiece piece)
-        {
-            if (piece == null || piece.IsBeingShredded)
-                return false;
-
-            Bounds bounds = piece.CollisionBounds;
-            return bounds.max.x >= leftX && bounds.min.x <= rightX;
-        }
-
         public void OnSpawn()
         {
             ShredY = 0f;

@@ -51,20 +51,18 @@ namespace GravityPuzzle.Presentation.Views
         }
 
         /// <summary>
-        /// Presents a normal, already-committed grid fall into the final legal
-        /// row above a shredder. It never alters board occupancy; it simply
-        /// spends the shredder clearance interval in the incoming motion rather
-        /// than as a stationary wait at the destination.
+        /// Extends an active gravity presentation after more legal board space
+        /// became available below it. Gameplay commits the new target before
+        /// this presentation-only retarget occurs.
         /// </summary>
-        public bool PlayShredderApproachTo(Vector2 targetPosition, Action onComplete)
+        public bool RetargetReleaseTo(Vector2 targetPosition, Action onComplete)
         {
-            if (body == null || tweenConfig == null)
+            if (!IsAnimating || body == null || tweenConfig == null)
                 return false;
 
             return PlayTo(
                 targetPosition,
-                tweenConfig.GetShredderApproachDuration(
-                    Vector2.Distance(body.position, targetPosition)),
+                tweenConfig.GetGridReleaseDuration(Vector2.Distance(body.position, targetPosition)),
                 onComplete);
         }
 

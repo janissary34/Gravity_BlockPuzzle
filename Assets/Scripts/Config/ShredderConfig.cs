@@ -51,7 +51,7 @@ namespace GravityPuzzle.Config
 
         [Header("Piece Feed")]
         [Min(0.01f)] [SerializeField] private float feedSpeed = 2f;
-        [Tooltip("Maximum number of vertically queued pieces that may feed through one shredder mouth at once.")]
+        [Tooltip("Maximum number of pieces that have reached one shredder mouth and may feed concurrently.")]
         [Min(1)] [SerializeField] private int feedQueueCapacity = 16;
         [Min(0f)] [SerializeField] private float tremorIntensity = .045f;
         [Min(0f)] [SerializeField] private float tremorFrequency = 55f;

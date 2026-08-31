@@ -17,9 +17,6 @@ namespace GravityPuzzle.Config
         [Min(.001f)] [SerializeField] private float gridReleaseUnitsPerSecond = 12f;
         [Min(.001f)] [SerializeField] private float gridReleaseMinimumDuration = .06f;
         [Min(.001f)] [SerializeField] private float gridReleaseMaximumDuration = .28f;
-        [Header("Shredder Approach Presentation")]
-        [Tooltip("Minimum duration for a legal fall that settles directly above a shredding reservation. The extra time is spent while moving, instead of waiting at the last safe grid row.")]
-        [Min(.001f)] [SerializeField] private float shredderApproachMinimumDuration = .24f;
         [SerializeField] private float shredDuration = .3f;
         [SerializeField] private Ease shredEase = Ease.InQuad;
 
@@ -143,12 +140,6 @@ namespace GravityPuzzle.Config
                 distance / gridReleaseUnitsPerSecond,
                 gridReleaseMinimumDuration,
                 gridReleaseMaximumDuration);
-        }
-        public float GetShredderApproachDuration(float distance)
-        {
-            return Mathf.Max(
-                GetGridFallDuration(distance),
-                shredderApproachMinimumDuration);
         }
         public float ShredDuration => shredDuration;
         public Ease ShredEase => shredEase;

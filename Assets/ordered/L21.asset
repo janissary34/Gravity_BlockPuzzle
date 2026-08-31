@@ -22,7 +22,7 @@ MonoBehaviour:
   frameThickness: 0.5
   gravityScale: 1.5
   maxDragSpeed: 10
-  useAutomaticCameraFit: 1
+  useAutomaticCameraFit: 0
   fixedCameraSize: 6
   cameraViewportWidth: 0.88
   cameraViewportHeight: 0.7

@@ -55,12 +55,18 @@ namespace GravityPuzzle
 
         /// <summary>
         /// Starts the coordinate-authorized handoff into the shredder. The
-        /// caller has already established that the piece footprint reached a
-        /// configured catch zone; physics triggers never decide this transition.
+        /// catch zone is both the selected mouth and the authoritative
+        /// proximity check: a piece cannot join a feed merely because another
+        /// piece in the same lane is already being shredded.
         /// </summary>
-        public bool TryCapturePiece(PuzzlePiece piece, float shredderY)
+        public bool TryCapturePiece(PuzzlePiece piece, ShredderCatchZone zone)
         {
-            if (piece == null || !TryAcquireFeedLane(shredderY, out int feedDepth))
+            if (piece == null || zone == null ||
+                !zone.ContainsCaptureFootprint(piece))
+                return false;
+
+            float shredderY = zone.ShredY;
+            if (!TryAcquireFeedLane(shredderY, out int feedDepth))
                 return false;
 
             if (!piece.TryBeginShredderHandoff())
