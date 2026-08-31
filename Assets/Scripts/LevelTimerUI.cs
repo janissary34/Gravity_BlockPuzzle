@@ -43,13 +43,6 @@ namespace GravityPuzzle
         {
             // Always ensure the game state is reset when this script wakes up (e.g. on scene reload)
             IsGameOver = false;
-
-            // Keep the fail overlay out of the EventSystem raycast results as
-            // soon as the scene is initialized. Waiting until Start leaves a
-            // frame in which its full-panel Image can reject a booster target
-            // tap, depending on Unity's component update order.
-            if (failPopupPanel != null)
-                failPopupPanel.SetActive(false);
         }
 
         private void OnEnable()
@@ -68,6 +61,9 @@ namespace GravityPuzzle
 
         private void Start()
         {
+            if (failPopupPanel != null)
+                failPopupPanel.SetActive(false);
+                
             if (retryButton != null)
                 retryButton.onClick.AddListener(OnRetryClicked);
                 
