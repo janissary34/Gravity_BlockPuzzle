@@ -17,13 +17,13 @@ MonoBehaviour:
   boardColumns: 8
   boardRows: 9
   subdivisions: 4
-  backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
-  frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
+  backgroundColor: {r: 0.08018868, g: 0.16275397, b: 0.3207547, a: 1}
+  frameColor: {r: 0.11454253, g: 0.1292523, b: 0.24528301, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
   maxDragSpeed: 10
   useAutomaticCameraFit: 0
-  fixedCameraSize: 6
+  fixedCameraSize: 9
   cameraViewportWidth: 0.88
   cameraViewportHeight: 0.7
   useRuntimeSafeAreaForCameraFit: 0

@@ -23,7 +23,7 @@ MonoBehaviour:
   gravityScale: 1.5
   maxDragSpeed: 10
   useAutomaticCameraFit: 0
-  fixedCameraSize: 6
+  fixedCameraSize: 9
   cameraViewportWidth: 0.88
   cameraViewportHeight: 0.7
   useRuntimeSafeAreaForCameraFit: 0
