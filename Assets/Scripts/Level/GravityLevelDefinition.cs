@@ -89,10 +89,6 @@ namespace GravityPuzzle
         [Tooltip("Timer Booster uses available in this level. Set to 0 to hide the Timer Booster.")]
         [Min(0)] public int timerBoosterCount = 3;
 
-        [Header("Drag Presentation")]
-        [Tooltip("Maximum world-space distance a held piece can travel per second. Keeps a piece from catching up to a distant pointer in one physics tick after it clears an obstacle.")]
-        [Min(.01f)] public float maxDragSpeed = 10f;
-
         [Header("Camera Framing")]
         [Tooltip("If disabled, the level uses Fixed Camera Size instead of fitting the camera from board dimensions.")]
         public bool useAutomaticCameraFit = true;

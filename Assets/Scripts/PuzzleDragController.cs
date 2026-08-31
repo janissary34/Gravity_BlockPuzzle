@@ -192,6 +192,13 @@ namespace GravityPuzzle
                 ProcessTouchInput();
             else
                 ProcessMouseInput();
+
+            // A held piece is presentation-driven by the current input frame.
+            // The grid validates the complete fresh pointer delta before the
+            // body pose changes, so this remains collision-safe without
+            // inheriting FixedUpdate or Rigidbody interpolation latency.
+            if (selectedPiece != null && !selectedPiece.IsBeingShredded)
+                TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent());
         }
 
         private void BindBoardEvents(PrototypeBoard nextBoard)
@@ -296,9 +303,6 @@ namespace GravityPuzzle
                 return;
 
             Physics2D.SyncTransforms();
-            if (selectedPiece != null && !selectedPiece.IsBeingShredded)
-                TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent(), applySpeedLimit: true);
-
             AdvanceGridGravityPresentation();
         }
 
@@ -545,20 +549,21 @@ namespace GravityPuzzle
         // pieces cannot enter its footprint. It moves atomically without self-collision.
         private bool TryMoveSelectedPieceOnGrid(
             PuzzlePiece piece,
-            Vector2 dragIntent,
-            bool applySpeedLimit)
+            Vector2 dragIntent)
         {
             if (!TryResolveSelectedGridMovement(
                     piece,
                     dragIntent,
-                    applySpeedLimit,
                     out LevelBoardSnapshot snapshot,
                     out PieceModel model,
                     out GravityLevelDefinition level,
                     out Vector2 clampedPosition))
                 return false;
 
-            piece.Body.MovePosition(clampedPosition);
+            // The board solver, not Physics2D, owns drag legality. Set the
+            // kinematic body's pose in this input frame so the grabbed point
+            // remains attached to the cursor/finger.
+            piece.Body.position = clampedPosition;
             lastResolvedDragPosition = clampedPosition;
             hasLastResolvedDragPosition = true;
 
@@ -581,7 +586,6 @@ namespace GravityPuzzle
         private bool TryResolveSelectedGridMovement(
             PuzzlePiece piece,
             Vector2 dragIntent,
-            bool applySpeedLimit,
             out LevelBoardSnapshot snapshot,
             out PieceModel model,
             out GravityLevelDefinition level,
@@ -604,9 +608,7 @@ namespace GravityPuzzle
             Vector2 currentPosition = hasLastResolvedDragPosition
                 ? lastResolvedDragPosition
                 : piece.Body.position;
-            Vector2 requestedMove = applySpeedLimit
-                ? Vector2.ClampMagnitude(dragIntent, level.maxDragSpeed * Time.fixedDeltaTime)
-                : dragIntent;
+            Vector2 requestedMove = dragIntent;
             float requestedDistance = requestedMove.magnitude;
             clampedPosition = currentPosition;
             if (requestedDistance < MinimumMoveDistance)
@@ -713,12 +715,14 @@ namespace GravityPuzzle
             return snapshot.Grid.CheckPlacementIgnoringPiece(model, anchor, model.Id).IsSuccess;
         }
 
-        private static void PrepareKinematicBody(Rigidbody2D body)
+        private static void PrepareKinematicBody(Rigidbody2D body, bool interpolate = true)
         {
             body.simulated = true;
             body.bodyType = RigidbodyType2D.Kinematic;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            body.interpolation = interpolate
+                ? RigidbodyInterpolation2D.Interpolate
+                : RigidbodyInterpolation2D.None;
             body.useFullKinematicContacts = true;
             body.sleepMode = RigidbodySleepMode2D.NeverSleep;
             body.constraints = RigidbodyConstraints2D.FreezeRotation;
@@ -905,7 +909,7 @@ namespace GravityPuzzle
 
             Rigidbody2D body = piece.Body;
             selectedPiece = piece;
-            PrepareKinematicBody(body);
+            PrepareKinematicBody(body, interpolate: false);
             selectedPiece.SetSelected(true);
             Physics2D.SyncTransforms();
 
@@ -919,7 +923,7 @@ namespace GravityPuzzle
         private void ReleasePiece()
         {
             Rigidbody2D body = selectedPiece.Body;
-            TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent(), applySpeedLimit: false);
+            TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent());
 
             selectedPiece.SetSelected(false);
             Physics2D.SyncTransforms();
@@ -1019,7 +1023,6 @@ namespace GravityPuzzle
             if (!TryResolveSelectedGridMovement(
                     piece,
                     snappedPosition - currentPosition,
-                    applySpeedLimit: false,
                     out _,
                     out _,
                     out _,

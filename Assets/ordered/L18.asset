@@ -21,7 +21,9 @@ MonoBehaviour:
   frameColor: {r: 0.105708204, g: 0.089711644, b: 0.3018868, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
-  maxDragSpeed: 10
+  rocketBoosterCount: 3
+  hammerBoosterCount: 3
+  timerBoosterCount: 3
   useAutomaticCameraFit: 0
   fixedCameraSize: 9
   cameraViewportWidth: 0.88
