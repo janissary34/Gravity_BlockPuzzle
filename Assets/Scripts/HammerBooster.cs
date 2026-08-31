@@ -39,6 +39,8 @@ namespace GravityPuzzle
         [SerializeField] private int hammerSortingOrder = 100;
         [Tooltip("World-space height of the hammer pivot above the selected block during the swing.")]
         [SerializeField] private float hammerHoverHeightOffset = .85f;
+        [SerializeField, Tooltip("Fallback count when no BoosterButton is present.")]
+        private int initialCount = 3;
 
         // Testing override: the hammer can be used repeatedly without waiting
         // for a new level.
@@ -49,6 +51,7 @@ namespace GravityPuzzle
         private PrototypeBoard boundBoard;
         private BoosterButton boosterButtonRef;
         private bool impactInProgress;
+        private int remainingCount;
         private BoosterVisualView hammerVisualPrefabView;
         private GameObjectPool<BoosterVisualView> hammerVisualPool;
 
@@ -58,6 +61,7 @@ namespace GravityPuzzle
                 boosterButton = GetComponent<Button>();
 
             boosterButtonRef = GetComponent<BoosterButton>();
+            remainingCount = initialCount;
             InitializeHammerVisualPool();
         }
 
@@ -127,7 +131,8 @@ namespace GravityPuzzle
                 return;
             }
 
-            if (boundBoard == null || !boundBoard.IsLevelRunning || LevelTimerUI.IsGameOver)
+            if (GetRemainingUseCount() <= 0 ||
+                boundBoard == null || !boundBoard.IsLevelRunning || LevelTimerUI.IsGameOver)
             {
                 Debug.LogWarning(
                     $"[HammerBooster] Activation rejected. board={(boundBoard != null)}, running={(boundBoard != null && boundBoard.IsLevelRunning)}, gameOver={LevelTimerUI.IsGameOver}, targeting={IsTargeting}.",
@@ -159,7 +164,8 @@ namespace GravityPuzzle
 
         private void ProcessTargetInput()
         {
-            if (boundBoard == null || !boundBoard.IsLevelRunning || LevelTimerUI.IsGameOver)
+            if (GetRemainingUseCount() <= 0 ||
+                boundBoard == null || !boundBoard.IsLevelRunning || LevelTimerUI.IsGameOver)
             {
                 CancelHammerSelection();
                 return;
@@ -236,7 +242,7 @@ namespace GravityPuzzle
                 ApplyHammerImpact(piece, impactPosition);
                 impactInProgress = false;
                 if (TopologyEditingEnabled)
-                    GetHammerBoosterButton()?.TryConsumeUse();
+                    ConsumeHammerUse();
                 return;
             }
 
@@ -297,7 +303,7 @@ namespace GravityPuzzle
                 hammerVisualPool.Return(hammerView);
                 impactInProgress = false;
                 if (TopologyEditingEnabled)
-                    GetHammerBoosterButton()?.TryConsumeUse();
+                    ConsumeHammerUse();
             });
         }
 
@@ -321,9 +327,20 @@ namespace GravityPuzzle
             return impact - impactPointOffset;
         }
 
-        private BoosterButton GetHammerBoosterButton()
+        private int GetRemainingUseCount()
         {
-            return boosterButtonRef;
+            return boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+        }
+
+        private void ConsumeHammerUse()
+        {
+            if (boosterButtonRef != null)
+            {
+                boosterButtonRef.TryConsumeUse();
+                return;
+            }
+
+            remainingCount = Mathf.Max(0, remainingCount - 1);
         }
 
         private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)
@@ -432,6 +449,18 @@ namespace GravityPuzzle
             CancelHammerSelection();
             boundBoard = activeBoard;
             boundBoard.GameStateChanged += HandleGameStateChanged;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            int levelUseCount = level != null ? level.hammerBoosterCount : initialCount;
+            if (boosterButtonRef != null)
+            {
+                boosterButtonRef.ConfigureLevelUseCount(levelUseCount);
+            }
+            else
+            {
+                remainingCount = levelUseCount;
+                if (remainingCount == 0)
+                    gameObject.SetActive(false);
+            }
             RefreshButtonState();
         }
 
@@ -457,6 +486,7 @@ namespace GravityPuzzle
             }
             boosterButton.interactable =
                 visible &&
+                GetRemainingUseCount() > 0 &&
                 activeBooster != this &&
                 boundBoard != null &&
                 boundBoard.IsLevelRunning &&

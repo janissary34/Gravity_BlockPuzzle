@@ -25,7 +25,7 @@ namespace GravityPuzzle
 
         public bool IsFreezeActive => freezeRoutine != null;
         public bool HasBeenUsedThisLevel => usedThisLevel;
-        public bool HasUses => boosterButtonRef != null ? boosterButtonRef.HasUses : !usedThisLevel;
+        public bool HasUses => boosterButtonRef != null ? boosterButtonRef.HasUses : remainingCount > 0;
         public event Action<FreezeTimerBooster> FreezeEnded;
         public event Action<FreezeTimerBooster, float> FreezeProgressChanged;
 
@@ -33,6 +33,7 @@ namespace GravityPuzzle
         private Coroutine freezeRoutine;
         private CanvasGroup buttonCanvasGroup;
         private bool usedThisLevel;
+        private int remainingCount = 1;
 
         private void Awake()
         {
@@ -91,6 +92,8 @@ namespace GravityPuzzle
                 return;
 
             usedThisLevel = true;
+            if (boosterButtonRef == null)
+                remainingCount = Mathf.Max(0, remainingCount - 1);
             freezeRoutine = StartCoroutine(FreezeTimerRoutine(boundBoard));
             RefreshButtonState();
         }
@@ -129,9 +132,17 @@ namespace GravityPuzzle
             CancelOwnedFreeze();
             boundBoard = activeBoard;
             usedThisLevel = false;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            int levelUseCount = level != null ? level.timerBoosterCount : 1;
             if (boosterButtonRef != null)
             {
-                boosterButtonRef.ResetCount();
+                boosterButtonRef.ConfigureLevelUseCount(levelUseCount);
+            }
+            else
+            {
+                remainingCount = levelUseCount;
+                if (remainingCount == 0)
+                    gameObject.SetActive(false);
             }
             RefreshButtonState();
         }

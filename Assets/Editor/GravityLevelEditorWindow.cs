@@ -145,6 +145,15 @@ namespace GravityPuzzle.Editor
             int newColumns = Mathf.Max(3, EditorGUILayout.IntField("Columns", level.boardColumns));
             int newRows = Mathf.Max(3, EditorGUILayout.IntField("Rows", level.boardRows));
             float newGravity = Mathf.Max(.1f, EditorGUILayout.FloatField("Gravity", level.gravityScale));
+            int newRocketBoosterCount = Mathf.Max(0, EditorGUILayout.IntField(
+                new GUIContent("Rocket Count", "Rocket Booster uses available in this level. Set 0 to hide it."),
+                level.rocketBoosterCount));
+            int newHammerBoosterCount = Mathf.Max(0, EditorGUILayout.IntField(
+                new GUIContent("Hammer Count", "Hammer Booster uses available in this level. Set 0 to hide it."),
+                level.hammerBoosterCount));
+            int newTimerBoosterCount = Mathf.Max(0, EditorGUILayout.IntField(
+                new GUIContent("Timer Count", "Timer Booster uses available in this level. Set 0 to hide it."),
+                level.timerBoosterCount));
             int newExitWidthCells = EditorGUILayout.IntSlider(
                 "Exit Width (cells)",
                 Mathf.Clamp(Mathf.RoundToInt(level.exitWidth), 1, newColumns),
@@ -177,6 +186,9 @@ namespace GravityPuzzle.Editor
                 newRows != level.boardRows ||
                 !Mathf.Approximately(newTimeLimit, level.timeLimit) ||
                 !Mathf.Approximately(newGravity, level.gravityScale) ||
+                newRocketBoosterCount != level.rocketBoosterCount ||
+                newHammerBoosterCount != level.hammerBoosterCount ||
+                newTimerBoosterCount != level.timerBoosterCount ||
                 !Mathf.Approximately(newExitWidth, level.exitWidth) ||
                 newBackground != level.backgroundColor || newFrame != level.frameColor ||
                 !Mathf.Approximately(newFrameThickness, level.frameThickness))
@@ -187,6 +199,9 @@ namespace GravityPuzzle.Editor
                 level.boardColumns = newColumns;
                 level.boardRows = newRows;
                 level.gravityScale = newGravity;
+                level.rocketBoosterCount = newRocketBoosterCount;
+                level.hammerBoosterCount = newHammerBoosterCount;
+                level.timerBoosterCount = newTimerBoosterCount;
                 level.exitWidth = newExitWidth;
                 level.backgroundColor = newBackground;
                 level.frameColor = newFrame;

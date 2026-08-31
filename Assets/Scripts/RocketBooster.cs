@@ -281,7 +281,7 @@ namespace GravityPuzzle
             piece.PrepareForPresentationRemoval();
 
             Camera camera = gameplayCamera;
-            Vector3 piecePos = GetPieceCenter(piece);
+            Vector3 piecePos = piece.GetPreferredRocketAttachmentPoint();
 
             float camY = camera != null ? camera.transform.position.y : 0f;
             float camOrtho = camera != null ? camera.orthographicSize : 10f;
@@ -325,7 +325,9 @@ namespace GravityPuzzle
                 yield break;
             }
 
-            // 3. Attach piece transform to rocket at piece center
+            // 3. The rocket reached a real occupied cell, not the bounding-box
+            // centre (which can be empty for an L-shaped piece). Parenting at
+            // this point makes the carrier feel physically attached to it.
             piece.transform.SetParent(rocket.transform, true);
             // The carrier must remain visibly in front of the carried piece
             // for the entire flight.  The piece keeps a high order so it stays
@@ -398,41 +400,6 @@ namespace GravityPuzzle
             activeBooster = null;
             launchInProgress = false;
             RefreshButtonState();
-        }
-
-        private Vector3 GetPieceCenter(PuzzlePiece piece)
-        {
-            if (piece == null) return Vector3.zero;
-
-            SpriteRenderer[] renderers = piece.GetComponentsInChildren<SpriteRenderer>();
-            if (renderers != null && renderers.Length > 0)
-            {
-                Bounds bounds = renderers[0].bounds;
-                for (int i = 1; i < renderers.Length; i++)
-                {
-                    if (renderers[i] != null && renderers[i].enabled)
-                    {
-                        bounds.Encapsulate(renderers[i].bounds);
-                    }
-                }
-                return bounds.center;
-            }
-
-            Collider2D[] colliders = piece.GetComponentsInChildren<Collider2D>();
-            if (colliders != null && colliders.Length > 0)
-            {
-                Bounds bounds = colliders[0].bounds;
-                for (int i = 1; i < colliders.Length; i++)
-                {
-                    if (colliders[i] != null && colliders[i].enabled)
-                    {
-                        bounds.Encapsulate(colliders[i].bounds);
-                    }
-                }
-                return bounds.center;
-            }
-
-            return piece.transform.position;
         }
 
         private void InitializeRocketVisualPool()
@@ -562,14 +529,18 @@ namespace GravityPuzzle
             CancelRocketSelection();
             boundBoard = activeBoard;
             boundBoard.GameStateChanged += HandleGameStateChanged;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            int levelUseCount = level != null ? level.rocketBoosterCount : initialCount;
             if (boosterButtonRef != null)
             {
-                boosterButtonRef.ResetCount(initialCount);
+                boosterButtonRef.ConfigureLevelUseCount(levelUseCount);
             }
             else
             {
-                remainingCount = initialCount;
+                remainingCount = levelUseCount;
                 UpdateCountUI();
+                if (remainingCount == 0)
+                    gameObject.SetActive(false);
             }
             RefreshButtonState();
         }

@@ -17,10 +17,12 @@ MonoBehaviour:
   boardColumns: 6
   boardRows: 6
   subdivisions: 4
-  backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
-  frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
+  backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 0.4745098}
+  frameColor: {r: 0.38039216, g: 0.41960785, b: 0.54901963, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
+  rocketBoosterCount: 0
+  hammerBoosterCount: 3
   maxDragSpeed: 10
   useAutomaticCameraFit: 0
   fixedCameraSize: 9
@@ -769,7 +771,7 @@ MonoBehaviour:
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0.38039216, g: 0.41960785, b: 0.54901963, a: 1}
   - name: Obstacle 9
     usesGridCells: 1
     gridCell: {x: 4, y: 3}

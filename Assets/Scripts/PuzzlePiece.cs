@@ -1075,6 +1075,160 @@ namespace GravityPuzzle
         }
 
         /// <summary>
+        /// Returns a visual attachment point suitable for a vertically moving
+        /// carrier such as the rocket booster. A contiguous vertical stem is
+        /// preferred and the carrier connects at its midpoint. This lets an L
+        /// shape be lifted from its two-or-more stacked cells rather than from
+        /// its unsupported end cell.
+        /// </summary>
+        public Vector2 GetPreferredRocketAttachmentPoint()
+        {
+            if (collisionCellVisuals == null || collisionCellVisuals.Count == 0)
+                return transform.position;
+
+            Bounds combinedBounds = default;
+            bool hasVisual = false;
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[index];
+                if (visual == null || !visual.gameObject.activeInHierarchy)
+                    continue;
+
+                if (hasVisual)
+                    combinedBounds.Encapsulate(visual.bounds);
+                else
+                {
+                    combinedBounds = visual.bounds;
+                    hasVisual = true;
+                }
+            }
+
+            if (!hasVisual)
+                return transform.position;
+
+            Vector2 visualCentre = combinedBounds.center;
+            if (TryGetVerticalStemAttachmentPoint(visualCentre, out Vector2 stemAttachmentPoint))
+                return stemAttachmentPoint;
+
+            Vector2 attachmentPoint = visualCentre;
+            float closestDistance = float.PositiveInfinity;
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[index];
+                if (visual == null || !visual.gameObject.activeInHierarchy)
+                    continue;
+
+                Vector2 cellCentre = visual.bounds.center;
+                float distance = (cellCentre - visualCentre).sqrMagnitude;
+                if (distance >= closestDistance)
+                    continue;
+
+                closestDistance = distance;
+                attachmentPoint = cellCentre;
+            }
+
+            return attachmentPoint;
+        }
+
+        private bool TryGetVerticalStemAttachmentPoint(
+            Vector2 visualCentre,
+            out Vector2 attachmentPoint)
+        {
+            attachmentPoint = default;
+            int longestStemCount = 1;
+            float closestDistance = float.PositiveInfinity;
+
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer stemStart = collisionCellVisuals[index];
+                if (stemStart == null || !stemStart.gameObject.activeInHierarchy ||
+                    HasDirectlyAdjacentCellBelow(stemStart))
+                {
+                    continue;
+                }
+
+                Bounds stemBounds = stemStart.bounds;
+                SpriteRenderer currentStemTop = stemStart;
+                int stemCount = 1;
+                while (TryGetDirectlyAdjacentCellAbove(currentStemTop, out SpriteRenderer nextStemCell))
+                {
+                    stemBounds.Encapsulate(nextStemCell.bounds);
+                    currentStemTop = nextStemCell;
+                    stemCount++;
+                }
+
+                if (stemCount < 2)
+                    continue;
+
+                Vector2 candidate = stemBounds.center;
+                float distance = (candidate - visualCentre).sqrMagnitude;
+                if (stemCount < longestStemCount ||
+                    (stemCount == longestStemCount && distance >= closestDistance))
+                {
+                    continue;
+                }
+
+                longestStemCount = stemCount;
+                closestDistance = distance;
+                attachmentPoint = candidate;
+            }
+
+            return longestStemCount >= 2;
+        }
+
+        private bool HasDirectlyAdjacentCellBelow(SpriteRenderer cell)
+        {
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer candidate = collisionCellVisuals[index];
+                if (candidate != null && candidate != cell &&
+                    candidate.gameObject.activeInHierarchy &&
+                    AreVerticallyAdjacent(candidate.bounds, cell.bounds))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryGetDirectlyAdjacentCellAbove(
+            SpriteRenderer cell,
+            out SpriteRenderer aboveCell)
+        {
+            aboveCell = null;
+            float closestGap = float.PositiveInfinity;
+            Bounds cellBounds = cell.bounds;
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer candidate = collisionCellVisuals[index];
+                if (candidate == null || candidate == cell ||
+                    !candidate.gameObject.activeInHierarchy ||
+                    !AreVerticallyAdjacent(cellBounds, candidate.bounds))
+                {
+                    continue;
+                }
+
+                float gap = Mathf.Abs(candidate.bounds.min.y - cellBounds.max.y);
+                if (gap >= closestGap)
+                    continue;
+
+                closestGap = gap;
+                aboveCell = candidate;
+            }
+
+            return aboveCell != null;
+        }
+
+        private static bool AreVerticallyAdjacent(Bounds lowerBounds, Bounds upperBounds)
+        {
+            float xAlignmentTolerance = Mathf.Min(lowerBounds.size.x, upperBounds.size.x) * .1f;
+            float edgeTolerance = Mathf.Min(lowerBounds.size.y, upperBounds.size.y) * .1f;
+            return Mathf.Abs(lowerBounds.center.x - upperBounds.center.x) <= xAlignmentTolerance &&
+                   Mathf.Abs(lowerBounds.max.y - upperBounds.min.y) <= edgeTolerance;
+        }
+
+        /// <summary>
         /// Removes a cell and returns its exact visual/progress payload for a
         /// booster impact or another effect that must preserve the voxel reward.
         /// </summary>

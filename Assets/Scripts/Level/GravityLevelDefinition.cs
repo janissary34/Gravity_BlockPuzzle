@@ -81,6 +81,14 @@ namespace GravityPuzzle
 
         [Min(.1f)] public float gravityScale = 1.5f;
 
+        [Header("Boosters")]
+        [Tooltip("Rocket Booster uses available in this level. Set to 0 to hide the Rocket Booster.")]
+        [Min(0)] public int rocketBoosterCount = 3;
+        [Tooltip("Hammer Booster uses available in this level. Set to 0 to hide the Hammer Booster.")]
+        [Min(0)] public int hammerBoosterCount = 3;
+        [Tooltip("Timer Booster uses available in this level. Set to 0 to hide the Timer Booster.")]
+        [Min(0)] public int timerBoosterCount = 3;
+
         [Header("Drag Presentation")]
         [Tooltip("Maximum world-space distance a held piece can travel per second. Keeps a piece from catching up to a distant pointer in one physics tick after it clears an obstacle.")]
         [Min(.01f)] public float maxDragSpeed = 10f;
