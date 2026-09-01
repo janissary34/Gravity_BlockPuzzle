@@ -17,8 +17,8 @@ MonoBehaviour:
     sprite: {fileID: 21300000, guid: f2196e962baaa4e22a0b38fb055b6660, type: 3}
     tint: {r: 1, g: 1, b: 1, a: 1}
   iceOverlaySprite: {fileID: 21300000, guid: f2196e962baaa4e22a0b38fb055b6660, type: 3}
-  iceOverlayTint: {r: 1, g: 1, b: 1, a: 0.42}
-  iceFrostTint: {r: 1, g: 1, b: 1, a: 0.18}
+  iceOverlayTint: {r: 0.72, g: 0.92, b: 1, a: 1}
+  iceFrostTint: {r: 0.9, g: 0.98, b: 1, a: 0.32}
   restingOutlineWidth: 0.05
   selectedOutlineWidth: 0.04
   restingOutlineColor: {r: 0, g: 0, b: 0, a: 1}
