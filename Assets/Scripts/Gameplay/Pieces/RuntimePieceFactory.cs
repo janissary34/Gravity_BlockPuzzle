@@ -150,6 +150,12 @@ namespace GravityPuzzle.Gameplay.Pieces
             root.Transform.localScale = scale;
             ConfigureFragment(root.Piece, root.Body, root.CompositeCollider, root.Outline,
                 level, cells, color, remainingProgress);
+            // A pooled Rigidbody2D can retain its previous physics pose until
+            // Unity's next transform sync. Fragment grid registration happens
+            // immediately below its creation, so explicitly align the physics
+            // body with the root before that model is derived.
+            root.Body.position = position;
+            root.Body.rotation = rotation.eulerAngles.z;
             return root.Piece;
         }
 
@@ -284,12 +290,17 @@ namespace GravityPuzzle.Gameplay.Pieces
             }
 
             composite.GenerateGeometry();
+            // Build the presentation outline while adjoining modular cells
+            // still share their full edges. ConfigureCollisionGeometry applies
+            // a small collision skin afterwards; generating the outline from
+            // that shrunken composite turns each cell into a separate path and
+            // leaves a selected fragment outlined only around one cell.
+            ConfigureOutline(outline, composite);
             piece.ConfigureProgressUnits(Mathf.Max(1, Mathf.CeilToInt(remainingProgress)));
             piece.ConfigureVisualColor(color);
             piece.ConfigureCollisionGeometry(composite, collisionCells, cellVisuals);
             piece.ConfigureVoxelPresentation(voxelShards);
             piece.ConfigureRemainingProgress(remainingProgress);
-            ConfigureOutline(outline, composite);
             ConfigureOutlinePresentation(piece);
         }
 

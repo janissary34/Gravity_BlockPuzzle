@@ -617,19 +617,31 @@ namespace GravityPuzzle
                 if (cell == null || !cell.enabled)
                     continue;
 
-                Bounds bounds = cell.bounds;
+                // The resting collision profile deliberately shrinks colliders
+                // by a small skin. That profile is presentation/physics
+                // support only; deriving the board footprint from bounds made
+                // a hammer fragment's grid cells depend on that shrink and
+                // could move it into a neighbouring obstacle or piece.
+                Vector2 fullLocalSize = fullCollisionCellSizes != null && index < fullCollisionCellSizes.Count
+                    ? fullCollisionCellSizes[index]
+                    : cell.size;
+                Vector3 lossyScale = cell.transform.lossyScale;
+                Vector2 fullWorldSize = Vector2.Scale(
+                    fullLocalSize,
+                    new Vector2(Mathf.Abs(lossyScale.x), Mathf.Abs(lossyScale.y)));
+                Vector2 fullWorldCenter = cell.transform.TransformPoint(cell.offset);
                 int fineWidth = Mathf.Max(
                     1,
-                    Mathf.RoundToInt(bounds.size.x * level.subdivisions));
+                    Mathf.RoundToInt(fullWorldSize.x * level.subdivisions));
                 int fineHeight = Mathf.Max(
                     1,
-                    Mathf.RoundToInt(bounds.size.y * level.subdivisions));
+                    Mathf.RoundToInt(fullWorldSize.y * level.subdivisions));
                 float fineCellSize = 1f / level.subdivisions;
                 GridCoordinate bottomLeft = GravityLevelGridCoordinates.WorldToFineCell(
                     level,
                     new Vector2(
-                        bounds.min.x + fineCellSize * .5f,
-                        bounds.min.y + fineCellSize * .5f));
+                        fullWorldCenter.x - fullWorldSize.x * .5f + fineCellSize * .5f,
+                        fullWorldCenter.y - fullWorldSize.y * .5f + fineCellSize * .5f));
 
                 for (int y = 0; y < fineHeight; y++)
                 {
@@ -667,7 +679,14 @@ namespace GravityPuzzle
                     worldCell.Y - minimum.Y));
             }
 
-            GridCoordinate pivot = GravityLevelGridCoordinates.WorldToFineCell(level, Body.position);
+            // Fragment topology is generated from this root's rendered slot
+            // layout. Use the root position for its pivot as well: a pooled
+            // Rigidbody may still expose its previous physics pose until the
+            // next physics sync, which would shift the grid model away from
+            // the newly built collider and visual geometry.
+            GridCoordinate pivot = GravityLevelGridCoordinates.WorldToFineCell(
+                level,
+                transform.position);
             GridCoordinate pivotOffset = new GridCoordinate(
                 minimum.X - pivot.X,
                 minimum.Y - pivot.Y);
@@ -1476,8 +1495,17 @@ namespace GravityPuzzle
                 fragments.Add(fragment);
             }
 
+            // Newly rented fragment roots and their slot colliders must be
+            // visible to the immediate grid-model transaction below. This is
+            // a one-shot topology edit, not a gameplay collision query.
+            Physics2D.SyncTransforms();
+
             PrototypeBoard board = PrototypeBoard.Active;
-            if (board == null || !board.TryRegisterHammerFragments(fragments, PieceState.Falling))
+            // Register fragments as settled candidates. WakeUpGravity then
+            // commits their legal fall targets and starts the matching grid
+            // presentation tween. Registering them as Falling here skips the
+            // planner entirely, leaving their visual roots behind the grid.
+            if (board == null || !board.TryRegisterHammerFragments(fragments, PieceState.Placed))
             {
                 // The caller restores the complete pre-hit source root. Do not
                 // rebuild this root as disconnected presentation geometry.
