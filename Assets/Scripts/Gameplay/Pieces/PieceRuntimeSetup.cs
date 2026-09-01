@@ -12,6 +12,9 @@ namespace GravityPuzzle.Gameplay.Pieces
             CompositeCollider2D compositeCollider,
             List<BoxCollider2D> collisionCells,
             List<SpriteRenderer> collisionCellVisuals,
+            Sprite iceOverlaySprite,
+            Color iceOverlayTint,
+            Color iceFrostTint,
             int frozenMoveCount,
             float iceCounterFontSize,
             Color iceCounterTextColor,
@@ -32,6 +35,9 @@ namespace GravityPuzzle.Gameplay.Pieces
             CompositeCollider = compositeCollider;
             CollisionCells = collisionCells;
             CollisionCellVisuals = collisionCellVisuals;
+            IceOverlaySprite = iceOverlaySprite;
+            IceOverlayTint = iceOverlayTint;
+            IceFrostTint = iceFrostTint;
             FrozenMoveCount = frozenMoveCount;
             IceCounterFontSize = iceCounterFontSize;
             IceCounterTextColor = iceCounterTextColor;
@@ -53,6 +59,9 @@ namespace GravityPuzzle.Gameplay.Pieces
         public CompositeCollider2D CompositeCollider { get; }
         public List<BoxCollider2D> CollisionCells { get; }
         public List<SpriteRenderer> CollisionCellVisuals { get; }
+        public Sprite IceOverlaySprite { get; }
+        public Color IceOverlayTint { get; }
+        public Color IceFrostTint { get; }
         public int FrozenMoveCount { get; }
         public float IceCounterFontSize { get; }
         public Color IceCounterTextColor { get; }

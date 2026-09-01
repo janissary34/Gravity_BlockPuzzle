@@ -9,6 +9,12 @@ namespace GravityPuzzle.Config
     {
         [SerializeField] private List<PieceVisualDefinition> definitions = new List<PieceVisualDefinition>();
 
+        [Header("Ice Presentation")]
+        [Tooltip("Sprite rendered only above pieces whose Block Type is Ice. Leave empty to retain the legacy source-sprite overlay.")]
+        [SerializeField] private Sprite iceOverlaySprite;
+        [SerializeField] private Color iceOverlayTint = new Color(1f, 1f, 1f, .42f);
+        [SerializeField] private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
+
         [Header("Outline Presentation")]
         [SerializeField, Min(0.001f)] private float restingOutlineWidth = 0.05f;
         [SerializeField, Min(0.001f)] private float selectedOutlineWidth = 0.04f;
@@ -20,6 +26,9 @@ namespace GravityPuzzle.Config
         [SerializeField, Range(0, 8)] private int outlineCapVertices = 4;
 
         public IReadOnlyList<PieceVisualDefinition> Definitions => definitions;
+        public Sprite IceOverlaySprite => iceOverlaySprite;
+        public Color IceOverlayTint => iceOverlayTint;
+        public Color IceFrostTint => iceFrostTint;
         public float RestingOutlineWidth => restingOutlineWidth;
         public float SelectedOutlineWidth => selectedOutlineWidth;
         public Color RestingOutlineColor => restingOutlineColor;

@@ -232,6 +232,9 @@ namespace GravityPuzzle.Editor
                 GUILayout.Label("Selected Piece", EditorStyles.boldLabel);
                 string newName = EditorGUILayout.TextField("Name", piece.name);
                 Color newColor = EditorGUILayout.ColorField("Color", piece.color);
+                string newVisualId = EditorGUILayout.TextField(
+                    new GUIContent("Visual Id", "Optional key resolved through Piece Visual Config."),
+                    piece.visualId);
                 Vector2Int newOrigin = EditorGUILayout.Vector2IntField("Origin", piece.origin);
                 int newRotation = EditorGUILayout.Popup("Start Rotation", piece.quarterTurns, new[] { "0°", "90°", "180°", "270°" });
                 PieceSpecialBlockType resolvedSpecialType = piece.specialBlockType == PieceSpecialBlockType.Normal &&
@@ -289,6 +292,7 @@ namespace GravityPuzzle.Editor
                 }
 
                 if (newName != piece.name || newColor != piece.color ||
+                    newVisualId != piece.visualId ||
                     newOrigin != piece.origin || newRotation != piece.quarterTurns ||
                     newSpecialBlockType != resolvedSpecialType ||
                     newFrozenMoveCount != piece.frozenMoveCount ||
@@ -307,6 +311,7 @@ namespace GravityPuzzle.Editor
                     Undo.RecordObject(level, "Edit puzzle piece");
                     piece.name = newName;
                     piece.color = newColor;
+                    piece.visualId = newVisualId;
                     piece.origin = newOrigin;
                     piece.quarterTurns = newRotation;
                     piece.specialBlockType = newSpecialBlockType;

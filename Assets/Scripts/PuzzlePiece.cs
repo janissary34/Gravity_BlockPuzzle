@@ -116,6 +116,9 @@ namespace GravityPuzzle
         private List<BoxCollider2D> collisionCells;
         private List<Vector2> fullCollisionCellSizes;
         private List<SpriteRenderer> collisionCellVisuals;
+        private Sprite iceOverlaySprite;
+        private Color iceOverlayTint = new Color(1f, 1f, 1f, .42f);
+        private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
         private readonly List<ShredderReservationCell> shredderReservationCells =
             new List<ShredderReservationCell>();
         private readonly List<GridCoordinate> shredderCellsReadyToRelease =
@@ -560,6 +563,9 @@ namespace GravityPuzzle
                 setup.CompositeCollider,
                 setup.CollisionCells,
                 setup.CollisionCellVisuals);
+            iceOverlaySprite = setup.IceOverlaySprite;
+            iceOverlayTint = setup.IceOverlayTint;
+            iceFrostTint = setup.IceFrostTint;
             ConfigureFreeze(
                 setup.SpecialBlockType == PieceSpecialBlockType.Bomb ? 0 : setup.FrozenMoveCount,
                 setup.IceCounterFontSize,
@@ -580,6 +586,9 @@ namespace GravityPuzzle
         private void PrepareForRuntimeSetup()
         {
             ClearIceVisuals();
+            iceOverlaySprite = null;
+            iceOverlayTint = new Color(1f, 1f, 1f, .42f);
+            iceFrostTint = new Color(1f, 1f, 1f, .18f);
             shredderReservationCells.Clear();
             shredderCellsReadyToRelease.Clear();
             shredderReservationStartBodyY = 0f;
@@ -1722,14 +1731,16 @@ namespace GravityPuzzle
                     source,
                     "Ice Overlay",
                     Vector3.one,
-                    new Color(.42f, .82f, 1f, .58f),
-                    source.sortingOrder + 5);
+                    iceOverlayTint,
+                    source.sortingOrder + 5,
+                    iceOverlaySprite);
                 CreateIceLayer(
                     source,
                     "Ice Frost",
                     new Vector3(.72f, .72f, 1f),
-                    new Color(.9f, 1f, 1f, .3f),
-                    source.sortingOrder + 6);
+                    iceFrostTint,
+                    source.sortingOrder + 6,
+                    iceOverlaySprite);
             }
         }
 
@@ -1811,7 +1822,8 @@ namespace GravityPuzzle
             string layerName,
             Vector3 scale,
             Color color,
-            int sortingOrder)
+            int sortingOrder,
+            Sprite overlaySprite)
         {
             if (iceRenderers.Count >= iceSlots.Count)
             {
@@ -1825,7 +1837,7 @@ namespace GravityPuzzle
             renderer.transform.localRotation = Quaternion.identity;
             renderer.transform.localScale = scale;
             renderer.gameObject.name = layerName;
-            renderer.sprite = source.sprite;
+            renderer.sprite = overlaySprite != null ? overlaySprite : source.sprite;
             renderer.color = color;
             renderer.sortingLayerID = source.sortingLayerID;
             renderer.sortingOrder = sortingOrder;
