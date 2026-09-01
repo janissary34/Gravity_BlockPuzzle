@@ -197,6 +197,9 @@ namespace GravityPuzzle
         private Vector3 originalScale = Vector3.one;
         private Sequence activeSequence;
         private Coroutine freezeRoutine;
+        // The timer must stop on the button press, rather than after the
+        // travelling-clock presentation has reached the countdown.
+        private PrototypeBoard sequencePausedBoard;
         // Presentation has an explicit owner and lifetime. It must not disappear
         // merely because an optional legacy FreezeTimerBooster is unavailable.
         private Coroutine freezePresentationRoutine;
@@ -435,6 +438,8 @@ namespace GravityPuzzle
                 freezeRoutine = null;
             }
 
+            ReleaseSequenceTimerPause();
+
             if (freezePresentationRoutine != null)
             {
                 StopCoroutine(freezePresentationRoutine);
@@ -507,6 +512,17 @@ namespace GravityPuzzle
                 Debug.LogWarning("[TimerBooster] Cannot play sequence: timer_obj or timer_txt reference is missing in Inspector.");
                 return;
             }
+
+            // Reserve an owner-specific pause before starting presentation.
+            // The animation can take several seconds, and it must not consume
+            // any of the player's remaining level time.
+            if (!activeBoard.TryPauseTimer(this))
+            {
+                Debug.LogWarning("[TimerBooster] Cannot play sequence: timer could not be paused.");
+                return;
+            }
+
+            sequencePausedBoard = activeBoard;
 
             if (activeSequence != null && activeSequence.IsActive())
             {
@@ -785,6 +801,9 @@ namespace GravityPuzzle
                 freeze.ActivateFreezeBooster();
                 if (freeze.IsFreezeActive)
                 {
+                    // FreezeTimerBooster now owns the post-impact pause. Drop
+                    // this sequence's owner without creating a timer gap.
+                    ReleaseSequenceTimerPause();
                     // Begin visual progression only after the authoritative
                     // pause has actually started, so both windows share the
                     // same first frame and duration.
@@ -793,6 +812,7 @@ namespace GravityPuzzle
                 else
                 {
                     UnsubscribeFromFreezeCompletion();
+                    ReleaseSequenceTimerPause();
                 }
             }
             else
@@ -814,7 +834,7 @@ namespace GravityPuzzle
 
         private IEnumerator FreezeTimerRoutine(PrototypeBoard targetBoard, float duration)
         {
-            if (targetBoard == null || !targetBoard.TryPauseTimer(this))
+            if (targetBoard == null || targetBoard != sequencePausedBoard)
             {
                 SetUrgencyPresentationVisible(false, false);
                 StopFreezeAmbientPresentation(false);
@@ -834,7 +854,7 @@ namespace GravityPuzzle
 
             if (targetBoard != null)
             {
-                targetBoard.ResumeTimer(this);
+                ReleaseSequenceTimerPause();
                 Debug.Log("[TimerBooster] Timer resumed after 8s freeze!");
             }
 
@@ -842,6 +862,15 @@ namespace GravityPuzzle
             PlayFreezeExpirationSequence();    // FAZ 7: staggered new FX cleanup
             SetUrgencyPresentationVisible(false, false);
             StopFreezeAmbientPresentation(false);
+        }
+
+        private void ReleaseSequenceTimerPause()
+        {
+            if (sequencePausedBoard == null)
+                return;
+
+            sequencePausedBoard.ResumeTimer(this);
+            sequencePausedBoard = null;
         }
 
         private void PlayTimerImpactParticles()
