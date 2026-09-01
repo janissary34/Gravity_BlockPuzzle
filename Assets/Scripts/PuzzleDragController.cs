@@ -31,7 +31,6 @@ namespace GravityPuzzle
         // is input state only; the board model remains the sole position state.
         private Vector2 fineDragRemainder;
         private Vector2 lastResolvedDragPosition;
-        private Vector2 dragPresentationVelocity;
         private bool hasLastResolvedDragPosition;
         private int activeFingerId = -1;
         private readonly Collider2D[] selectionHits = new Collider2D[32];
@@ -202,10 +201,7 @@ namespace GravityPuzzle
             // body pose changes, so this remains collision-safe without
             // inheriting FixedUpdate or Rigidbody interpolation latency.
             if (selectedPiece != null && !selectedPiece.IsBeingShredded)
-            {
                 TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent());
-                UpdateSelectedPiecePresentation();
-            }
         }
 
         private void BindBoardEvents(PrototypeBoard nextBoard)
@@ -265,7 +261,6 @@ namespace GravityPuzzle
             activeFingerId = -1;
             pendingDragIntent = Vector2.zero;
             fineDragRemainder = Vector2.zero;
-            dragPresentationVelocity = Vector2.zero;
             hasLastResolvedDragPosition = false;
             hasSelectedPieceStartAnchor = false;
         }
@@ -572,7 +567,6 @@ namespace GravityPuzzle
                 return false;
 
             fineDragRemainder += dragIntent * level.subdivisions;
-            bool moved = false;
             while (TryGetNextFineDragStep(out GridCoordinate step))
             {
                 GridCoordinate targetAnchor = model.Anchor.Offset(step);
@@ -588,42 +582,75 @@ namespace GravityPuzzle
                     continue;
                 }
 
-                moved = true;
                 if (step.X != 0)
                     fineDragRemainder.x -= step.X;
                 else
                     fineDragRemainder.y -= step.Y;
             }
 
-            if (!moved)
-                return true;
-
             GridCoordinate pivot = new GridCoordinate(
                 model.Anchor.X - model.PivotOffset.X,
                 model.Anchor.Y - model.PivotOffset.Y);
-            Vector2 position = GravityLevelGridCoordinates.FineCellToWorld(level, pivot);
-            lastResolvedDragPosition = position;
+            Vector2 anchorPosition = GravityLevelGridCoordinates.FineCellToWorld(level, pivot);
+            lastResolvedDragPosition = anchorPosition;
             hasLastResolvedDragPosition = true;
+            piece.Body.position = anchorPosition + GetContinuousDragPresentationOffset(
+                snapshot.Grid,
+                model,
+                level,
+                fineDragRemainder);
             return true;
         }
 
-        private void UpdateSelectedPiecePresentation()
+        private static Vector2 GetContinuousDragPresentationOffset(
+            GravityBoardGrid grid,
+            PieceModel model,
+            GravityLevelDefinition level,
+            Vector2 remainder)
         {
-            if (selectedPiece == null || selectedPiece.Body == null || !hasLastResolvedDragPosition)
-                return;
+            int horizontalStep = remainder.x > 0f ? 1 : remainder.x < 0f ? -1 : 0;
+            int verticalStep = remainder.y > 0f ? 1 : remainder.y < 0f ? -1 : 0;
+            bool horizontalLegal = horizontalStep != 0 &&
+                grid.CheckPlacementIgnoringPiece(
+                    model,
+                    model.Anchor.Offset(new GridCoordinate(horizontalStep, 0)),
+                    model.Id).IsSuccess;
+            bool verticalLegal = verticalStep != 0 &&
+                grid.CheckPlacementIgnoringPiece(
+                    model,
+                    model.Anchor.Offset(new GridCoordinate(0, verticalStep)),
+                    model.Id).IsSuccess;
 
-            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
-            if (level == null)
-                return;
+            Vector2 offset = Vector2.zero;
+            if (horizontalLegal && verticalLegal && horizontalStep != 0 && verticalStep != 0)
+            {
+                GridCoordinate diagonal = new GridCoordinate(horizontalStep, verticalStep);
+                if (grid.CheckPlacementIgnoringPiece(
+                        model,
+                        model.Anchor.Offset(diagonal),
+                        model.Id).IsSuccess)
+                {
+                    offset = remainder;
+                }
+                else if (Mathf.Abs(remainder.x) >= Mathf.Abs(remainder.y))
+                {
+                    offset.x = remainder.x;
+                }
+                else
+                {
+                    offset.y = remainder.y;
+                }
+            }
+            else if (horizontalLegal)
+            {
+                offset.x = remainder.x;
+            }
+            else if (verticalLegal)
+            {
+                offset.y = remainder.y;
+            }
 
-            Rigidbody2D body = selectedPiece.Body;
-            body.position = Vector2.SmoothDamp(
-                body.position,
-                lastResolvedDragPosition,
-                ref dragPresentationVelocity,
-                level.dragPresentationSmoothingSeconds,
-                Mathf.Infinity,
-                Time.deltaTime);
+            return offset / level.subdivisions;
         }
 
         private bool TryGetNextFineDragStep(out GridCoordinate step)
@@ -846,7 +873,6 @@ namespace GravityPuzzle
             dragTarget = body.position;
             pendingDragIntent = Vector2.zero;
             fineDragRemainder = Vector2.zero;
-            dragPresentationVelocity = Vector2.zero;
             lastResolvedDragPosition = body.position;
             hasLastResolvedDragPosition = true;
         }

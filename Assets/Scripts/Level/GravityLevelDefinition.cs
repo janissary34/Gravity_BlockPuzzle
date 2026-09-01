@@ -87,10 +87,6 @@ namespace GravityPuzzle
         [Tooltip("Timer Booster uses available in this level. Set to 0 to hide the Timer Booster.")]
         [Min(0)] public int timerBoosterCount = 3;
 
-        [Header("Drag Presentation")]
-        [Tooltip("Time for the held-piece presentation to settle to its already-validated fine-grid anchor. This never affects placement legality.")]
-        [Min(.001f)] public float dragPresentationSmoothingSeconds = .012f;
-
         [Header("Camera Framing")]
         [Tooltip("If disabled, the level uses Fixed Camera Size instead of fitting the camera from board dimensions.")]
         public bool useAutomaticCameraFit = true;

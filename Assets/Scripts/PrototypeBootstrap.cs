@@ -585,9 +585,6 @@ namespace GravityPuzzle
         [Tooltip("If set, this scene will be loaded when the level is cleared instead of the default auto-reload behavior.")]
         public string winSceneName = "";
 
-        [Tooltip("If true, renders the old debug OnGUI 'LEVEL CLEARED!' text overlay on screen.")]
-        public bool showRuntimeWinGUI = false;
-
         [Tooltip("Canvas altında bulunan, level tamamlandığında gösterilecek win paneli.")]
         [SerializeField] private GameObject winPanel;
 
@@ -1300,22 +1297,5 @@ namespace GravityPuzzle
             return false;
         }
 
-        private void OnGUI()
-        {
-            if (!showRuntimeWinGUI || !boardCleared)
-                return;
-
-            GUIStyle style = new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 38,
-                fontStyle = FontStyle.Bold
-            };
-            style.normal.textColor = new Color(.35f, 1f, .55f);
-            string message = sequentialLevelsEnabled && !GravityLevelRuntime.HasNextLevel
-                ? "ALL LEVELS CLEARED!"
-                : "LEVEL CLEARED!";
-            GUI.Label(new Rect(0f, Screen.height * .42f, Screen.width, 70f), message, style);
-        }
     }
 }
