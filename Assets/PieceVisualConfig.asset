@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   definitions:
   - visualId: ice_block
-    sprite: {fileID: 21300000, guid: f2196e962baaa4e22a0b38fb055b6660, type: 3}
+    sprite: {fileID: 21300000, guid: 972694c4005d54ca49411a2a5a1b2d26, type: 3}
     tint: {r: 1, g: 1, b: 1, a: 1}
   iceOverlaySprite: {fileID: 21300000, guid: f2196e962baaa4e22a0b38fb055b6660, type: 3}
   iceOverlayTint: {r: 0.72, g: 0.92, b: 1, a: 1}
