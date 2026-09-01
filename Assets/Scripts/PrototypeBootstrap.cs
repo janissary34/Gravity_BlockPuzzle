@@ -594,6 +594,9 @@ namespace GravityPuzzle
         [Tooltip("Next Level Button içindeki, sıradaki level numarasını gösteren TMP metni.")]
         [SerializeField] private TMP_Text nextLevelButtonLabel;
 
+        [Tooltip("Win Panel içindeki, tamamlanan levelin coin ödülünü gösteren TMP metni.")]
+        [SerializeField] private TMP_Text winPanelCoinAmountText;
+
         [Header("Level Clear Effects")]
         [Tooltip("Scene instance of the first one-shot particle effect to play when the level is cleared.")]
         [SerializeField] private ParticleSystem levelClearParticleEffectA;
@@ -1224,6 +1227,9 @@ namespace GravityPuzzle
                     ? $"LEVEL {GravityLevelRuntime.CurrentLevelNumber + 1}"
                     : "COMPLETE";
             }
+
+            if (winPanelCoinAmountText != null)
+                winPanelCoinAmountText.text = GravityLevelRuntime.CurrentLevelCoinAmount.ToString();
 
             winPanel.SetActive(true);
         }

@@ -117,6 +117,11 @@ namespace GravityPuzzle
 
         public static int CurrentLevelNumber => Mathf.Max(1, currentLevelIndex + 1);
 
+        /// <summary>Configured coin reward for the level currently being played.</summary>
+        public static int CurrentLevelCoinAmount => CurrentLevel != null
+            ? Mathf.Max(0, CurrentLevel.coinAmount)
+            : 0;
+
         /// <summary>
         /// Requests that the next scene load immediately starts the active level without showing the main menu.
         /// </summary>

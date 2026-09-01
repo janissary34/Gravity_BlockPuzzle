@@ -79,6 +79,10 @@ namespace GravityPuzzle
 
         [Min(.1f)] public float gravityScale = 1.5f;
 
+        [Header("Level Reward")]
+        [Tooltip("Coin amount displayed on the Win Panel when this level is completed.")]
+        [Min(0)] public int coinAmount = 20;
+
         [Header("Boosters")]
         [Tooltip("Rocket Booster uses available in this level. Set to 0 to hide the Rocket Booster.")]
         [Min(0)] public int rocketBoosterCount = 3;
