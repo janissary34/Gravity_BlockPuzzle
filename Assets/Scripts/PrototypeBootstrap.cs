@@ -77,12 +77,6 @@ namespace GravityPuzzle
             ApplyObstacleMaterials();
         }
 
-        internal static void SetDraggingFriction(PuzzlePiece piece, bool isDragging)
-        {
-            EnsurePhysicsMaterials();
-            ApplyPieceMaterial(piece, puzzleContactMaterial);
-        }
-
         private static void EnsurePhysicsMaterials()
         {
             if (puzzleContactMaterial == null)

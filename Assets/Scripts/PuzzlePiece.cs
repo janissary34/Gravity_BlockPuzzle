@@ -103,9 +103,7 @@ namespace GravityPuzzle
 
         public float CurrentCollisionInset => collisionCells == null || useFullCollisionGeometry
             ? 0f
-            : isSelected
-                ? GravityGridMetrics.DraggingPieceCollisionSkinInCells
-                : GravityGridMetrics.RestingPieceCollisionSkinInCells;
+            : GravityGridMetrics.RestingPieceCollisionSkinInCells;
 
         private readonly List<SpriteRenderer> iceRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> iceSlots = new List<SpriteRenderer>();
@@ -502,11 +500,6 @@ namespace GravityPuzzle
                 return;
 
             this.isSelected = isSelected;
-            ApplyCollisionProfile();
-
-            // Resting pieces grip one another. During a drag, contact friction is
-            // removed temporarily so adjacent pieces cannot jam against each other.
-            PrototypeBootstrap.SetDraggingFriction(this, isSelected);
 
             if (rootOutline != null)
             {
@@ -1578,9 +1571,7 @@ namespace GravityPuzzle
 
             float inset = useFullCollisionGeometry
                 ? 0f
-                : isSelected
-                    ? GravityGridMetrics.DraggingPieceCollisionSkinInCells
-                    : GravityGridMetrics.RestingPieceCollisionSkinInCells;
+                : GravityGridMetrics.RestingPieceCollisionSkinInCells;
 
             // Inset every modular cell around its own centre. Scaling the common
             // root instead would move the cells of concave pieces relative to

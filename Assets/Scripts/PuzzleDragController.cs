@@ -32,6 +32,11 @@ namespace GravityPuzzle
         private int activeFingerId = -1;
         private readonly Collider2D[] selectionHits = new Collider2D[32];
         private const float MinimumMoveDistance = .0005f;
+        // A tiny separation keeps full-size visual cells from flickering into
+        // one another because of floating-point rounding at a contact edge.
+        // It also makes a face that was hit on X unambiguously non-overlapping
+        // when the next input frame resolves Y (and vice versa).
+        private const float ContinuousContactPaddingFineCells = .002f;
         private const float TouchSelectionRadiusInGridCells = .45f;
         private const float MouseSelectionRadiusInGridCells = .18f;
         public static PuzzleDragController Instance { get; private set; }
@@ -608,111 +613,169 @@ namespace GravityPuzzle
             Vector2 currentPosition = hasLastResolvedDragPosition
                 ? lastResolvedDragPosition
                 : piece.Body.position;
-            Vector2 requestedMove = dragIntent;
-            float requestedDistance = requestedMove.magnitude;
             clampedPosition = currentPosition;
-            if (requestedDistance < MinimumMoveDistance)
+            if (dragIntent.sqrMagnitude < MinimumMoveDistance * MinimumMoveDistance)
                 return true;
 
-            float fineCellSize = 1f / level.subdivisions;
-            int stepCount = Mathf.Max(
-                1,
-                Mathf.CeilToInt(requestedDistance / (fineCellSize * .25f)));
-            Vector2 step = requestedMove / stepCount;
-            GridCoordinate currentPivot = WorldToDragPivot(level, currentPosition);
-
-            for (int stepIndex = 0; stepIndex < stepCount; stepIndex++)
-            {
-                if (!TryResolveDragStep(
-                        snapshot,
-                        model,
-                        level,
-                        clampedPosition,
-                        step,
-                        ref currentPivot,
-                        out Vector2 nextPosition))
-                    break;
-
-                clampedPosition = nextPosition;
-            }
+            clampedPosition = ResolveContinuousGridDrag(
+                snapshot.Grid,
+                model,
+                level,
+                currentPosition,
+                dragIntent);
 
             return true;
         }
 
-        private static bool TryResolveDragStep(
-            LevelBoardSnapshot snapshot,
+        /// <summary>
+        /// Sweeps the full visual fine-cell footprint against the authoritative
+        /// grid. Unlike a nearest-pivot test, it stops precisely at a cell edge
+        /// and resolves the remaining axis independently for corner sliding.
+        /// </summary>
+        private static Vector2 ResolveContinuousGridDrag(
+            GravityBoardGrid grid,
             PieceModel model,
             GravityLevelDefinition level,
             Vector2 currentPosition,
-            Vector2 step,
-            ref GridCoordinate currentPivot,
-            out Vector2 resolvedPosition)
+            Vector2 dragIntent)
         {
-            Vector2 requestedPosition = currentPosition + step;
-            GridCoordinate requestedPivot = WorldToDragPivot(level, requestedPosition);
-            bool xChanged = requestedPivot.X != currentPivot.X;
-            bool yChanged = requestedPivot.Y != currentPivot.Y;
-            if (!xChanged && !yChanged)
+            Vector2 pivot = WorldToContinuousFinePivot(level, currentPosition);
+            Vector2 requestedMove = dragIntent * level.subdivisions;
+
+            // Resolve the dominant gesture axis first. The other axis is then
+            // evaluated at that legal position, giving a natural wall/corner
+            // slide without a physics contact or a routing catch-up.
+            if (Mathf.Abs(requestedMove.x) >= Mathf.Abs(requestedMove.y))
             {
-                resolvedPosition = requestedPosition;
-                return true;
+                pivot.x += ResolveAxisMovement(grid, model, pivot, requestedMove.x, horizontal: true);
+                pivot.y += ResolveAxisMovement(grid, model, pivot, requestedMove.y, horizontal: false);
+            }
+            else
+            {
+                pivot.y += ResolveAxisMovement(grid, model, pivot, requestedMove.y, horizontal: false);
+                pivot.x += ResolveAxisMovement(grid, model, pivot, requestedMove.x, horizontal: true);
             }
 
-            GridCoordinate xPivot = new GridCoordinate(requestedPivot.X, currentPivot.Y);
-            GridCoordinate yPivot = new GridCoordinate(currentPivot.X, requestedPivot.Y);
-            bool xAllowed = !xChanged || CanMoveToPivot(snapshot, model, xPivot);
-            bool yAllowed = !yChanged || CanMoveToPivot(snapshot, model, yPivot);
-
-            if (xChanged && yChanged && xAllowed && yAllowed &&
-                CanMoveToPivot(snapshot, model, requestedPivot))
-            {
-                currentPivot = requestedPivot;
-                resolvedPosition = requestedPosition;
-                return true;
-            }
-
-            if (xChanged && !yChanged && xAllowed)
-            {
-                currentPivot = xPivot;
-                resolvedPosition = requestedPosition;
-                return true;
-            }
-
-            if (yChanged && !xChanged && yAllowed)
-            {
-                currentPivot = yPivot;
-                resolvedPosition = requestedPosition;
-                return true;
-            }
-
-            // A blocked diagonal may retain only the independently valid input
-            // component. This is sliding from the player's current gesture, not
-            // a route search toward the cursor's old absolute position.
-            if (xChanged && yChanged && xAllowed && !yAllowed)
-            {
-                currentPivot = xPivot;
-                resolvedPosition = new Vector2(requestedPosition.x, currentPosition.y);
-                return true;
-            }
-
-            if (xChanged && yChanged && yAllowed && !xAllowed)
-            {
-                currentPivot = yPivot;
-                resolvedPosition = new Vector2(currentPosition.x, requestedPosition.y);
-                return true;
-            }
-
-            resolvedPosition = currentPosition;
-            return false;
+            return ContinuousFinePivotToWorld(level, pivot);
         }
 
-        private static bool CanMoveToPivot(
-            LevelBoardSnapshot snapshot,
+        private static float ResolveAxisMovement(
+            GravityBoardGrid grid,
             PieceModel model,
-            GridCoordinate pivot)
+            Vector2 pivot,
+            float requestedMovement,
+            bool horizontal)
         {
-            GridCoordinate anchor = pivot.Offset(model.PivotOffset);
-            return snapshot.Grid.CheckPlacementIgnoringPiece(model, anchor, model.Id).IsSuccess;
+            if (Mathf.Abs(requestedMovement) < ContinuousContactPaddingFineCells)
+                return 0f;
+
+            float allowedMovement = requestedMovement;
+            for (int cellIndex = 0; cellIndex < model.LocalCells.Count; cellIndex++)
+            {
+                GridCoordinate localCell = model.LocalCells[cellIndex];
+                float centerX = pivot.x + model.PivotOffset.X + localCell.X;
+                float centerY = pivot.y + model.PivotOffset.Y + localCell.Y;
+                float targetCenter = (horizontal ? centerX : centerY) + requestedMovement;
+
+                int minimumX = horizontal
+                    ? Mathf.FloorToInt(Mathf.Min(centerX, targetCenter))
+                    : Mathf.FloorToInt(centerX);
+                int maximumX = horizontal
+                    ? Mathf.CeilToInt(Mathf.Max(centerX, targetCenter))
+                    : Mathf.CeilToInt(centerX);
+                int minimumY = horizontal
+                    ? Mathf.FloorToInt(centerY)
+                    : Mathf.FloorToInt(Mathf.Min(centerY, targetCenter));
+                int maximumY = horizontal
+                    ? Mathf.CeilToInt(centerY)
+                    : Mathf.CeilToInt(Mathf.Max(centerY, targetCenter));
+
+                for (int y = minimumY; y <= maximumY; y++)
+                {
+                    for (int x = minimumX; x <= maximumX; x++)
+                    {
+                        if (!IsSolidCellForDrag(grid, model.Id, x, y) ||
+                            !HasPerpendicularOverlap(centerX, centerY, x, y, horizontal))
+                        {
+                            continue;
+                        }
+
+                        float cellCenter = horizontal ? centerX : centerY;
+                        float obstacleCenter = horizontal ? x : y;
+                        float contactMovement = requestedMovement > 0f
+                            ? (obstacleCenter - .5f) - (cellCenter + .5f)
+                            : (obstacleCenter + .5f) - (cellCenter - .5f);
+
+                        if (requestedMovement > 0f)
+                        {
+                            if (contactMovement < -ContinuousContactPaddingFineCells)
+                                continue;
+                            if (contactMovement <= allowedMovement)
+                                allowedMovement = Mathf.Max(0f, contactMovement - ContinuousContactPaddingFineCells);
+                        }
+                        else
+                        {
+                            if (contactMovement > ContinuousContactPaddingFineCells)
+                                continue;
+                            if (contactMovement >= allowedMovement)
+                                allowedMovement = Mathf.Min(0f, contactMovement + ContinuousContactPaddingFineCells);
+                        }
+                    }
+                }
+            }
+
+            return allowedMovement;
+        }
+
+        private static bool IsSolidCellForDrag(
+            GravityBoardGrid grid,
+            int movingPieceId,
+            int x,
+            int y)
+        {
+            GridCoordinate coordinate = new GridCoordinate(x, y);
+            GridCellState state = grid.GetCellState(coordinate);
+            if (state == GridCellState.Empty)
+                return false;
+
+            return (state != GridCellState.Occupied && state != GridCellState.Reserved) ||
+                   grid.GetOccupantId(coordinate) != movingPieceId;
+        }
+
+        private static bool HasPerpendicularOverlap(
+            float centerX,
+            float centerY,
+            int obstacleX,
+            int obstacleY,
+            bool horizontal)
+        {
+            float movingCenter = horizontal ? centerY : centerX;
+            float obstacleCenter = horizontal ? obstacleY : obstacleX;
+            float overlap = Mathf.Min(movingCenter + .5f, obstacleCenter + .5f) -
+                            Mathf.Max(movingCenter - .5f, obstacleCenter - .5f);
+
+            // Broad-phase floor/ceil ranges intentionally include neighbouring
+            // cells. A face-touch or the tiny separation left by a prior axis
+            // must not become a perpendicular blocker at a corner.
+            return overlap > ContinuousContactPaddingFineCells;
+        }
+
+        private static Vector2 WorldToContinuousFinePivot(
+            GravityLevelDefinition level,
+            Vector2 worldPosition)
+        {
+            return new Vector2(
+                (worldPosition.x + level.boardColumns * .5f) * level.subdivisions - .5f,
+                (worldPosition.y + level.boardRows * .5f) * level.subdivisions - .5f);
+        }
+
+        private static Vector2 ContinuousFinePivotToWorld(
+            GravityLevelDefinition level,
+            Vector2 finePivot)
+        {
+            return new Vector2(
+                -level.boardColumns * .5f + (finePivot.x + .5f) / level.subdivisions,
+                -level.boardRows * .5f + (finePivot.y + .5f) / level.subdivisions);
         }
 
         private static void PrepareKinematicBody(Rigidbody2D body, bool interpolate = true)
@@ -723,7 +786,7 @@ namespace GravityPuzzle
             body.interpolation = interpolate
                 ? RigidbodyInterpolation2D.Interpolate
                 : RigidbodyInterpolation2D.None;
-            body.useFullKinematicContacts = true;
+            body.useFullKinematicContacts = false;
             body.sleepMode = RigidbodySleepMode2D.NeverSleep;
             body.constraints = RigidbodyConstraints2D.FreezeRotation;
             body.velocity = Vector2.zero;

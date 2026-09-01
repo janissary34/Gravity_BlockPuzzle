@@ -12,11 +12,9 @@ namespace GravityPuzzle
         public const float ReferencePortraitWidth = 375f;
         public const float ReferencePortraitHeight = 812f;
         public const float MinimumTouchTargetPoints = 44f;
-        // Collision geometry uses a tiny inset at rest and a larger one while
-        // dragging so pieces can pass through exact-size grid openings. The
-        // matching visual scale is applied by PuzzlePiece.
+        // Normal board colliders exist for selection and are not gameplay
+        // movement geometry. Shredder handoff restores full geometry.
         public const float RestingPieceCollisionSkinInCells = .005f;
-        public const float DraggingPieceCollisionSkinInCells = .055f;
 
         public static float EstimatedCellSizeInPoints(int columns, int rows)
         {

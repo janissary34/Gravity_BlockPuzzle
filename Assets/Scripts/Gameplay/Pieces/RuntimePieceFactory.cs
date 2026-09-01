@@ -231,7 +231,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             body.gravityScale = level.gravityScale;
             body.mass = 1f;
             body.bodyType = RigidbodyType2D.Kinematic;
-            body.useFullKinematicContacts = true;
+            body.useFullKinematicContacts = false;
             body.interpolation = RigidbodyInterpolation2D.None;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             body.constraints = RigidbodyConstraints2D.FreezeRotation;
