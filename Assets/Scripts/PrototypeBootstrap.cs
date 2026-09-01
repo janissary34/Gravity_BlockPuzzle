@@ -569,6 +569,7 @@ namespace GravityPuzzle
         private bool finalShredderOutcomeLocked;
         private bool boardCleared;
         private bool boardFailed;
+        private float bombElapsedSeconds;
         private bool sequentialLevelsEnabled = true;
         private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
         private readonly StateMachine<GameState> gameStateMachine = new StateMachine<GameState>(
@@ -663,6 +664,7 @@ namespace GravityPuzzle
             DestroyedPieceCount = 0;
             timerPauseOwners.Clear();
             finalShredderOutcomeLocked = false;
+            bombElapsedSeconds = 0f;
         }
 
         public void SetFinalShredderGraceSeconds(float seconds)
@@ -1027,16 +1029,32 @@ namespace GravityPuzzle
 
         public void StartTimer()
         {
+            // Every drag/tap path may request a start. The first accepted
+            // player action owns the bomb countdown's epoch; later requests
+            // must never reset it.
+            if (IsTimerStarted)
+                return;
+
             if (!TryTransitionGameState(GameState.Playing))
                 return;
 
             IsTimerStarted = true;
+            bombElapsedSeconds = 0f;
         }
 
         public void NotifyPieceDestroyed(PuzzlePiece destroyedPiece)
         {
             if (!IsLevelRunning || destroyedPiece == null)
                 return;
+
+            // A bomb's contract is stricter than ordinary piece removal: it
+            // must enter a shredder. Falling off the board or being removed by
+            // another destruction path cannot silently satisfy its objective.
+            if (destroyedPiece.IsBomb && !destroyedPiece.IsBeingShredded)
+            {
+                Debug.Log($"[BombBlock] '{destroyedPiece.name}' was removed without entering a shredder.", destroyedPiece);
+                FailLevel();
+            }
 
             // The handoff reserves the piece while it is still visibly entering
             // the shredder. Individual grid cells are released only as the
@@ -1111,6 +1129,13 @@ namespace GravityPuzzle
             }
 
             IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            if (IsTimerStarted && !boardCleared && !boardFailed)
+            {
+                bombElapsedSeconds += Time.deltaTime;
+                if (UpdateBombTimers(pieces))
+                    return;
+            }
+
             int livePieceCount = 0;
             for (int i = 0; i < pieces.Count; i++)
             {
@@ -1192,13 +1217,42 @@ namespace GravityPuzzle
 
                     if (allSettled)
                     {
-                        boardFailed = true;
-                        TryTransitionGameState(GameState.Result);
-                        Debug.Log("LEVEL FAILED!");
-                        LevelFailed?.Invoke();
+                        FailLevel();
                     }
                 }
             }
+        }
+
+        private bool UpdateBombTimers(IReadOnlyList<PuzzlePiece> pieces)
+        {
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                PuzzlePiece piece = pieces[i];
+                if (piece == null || !piece.IsBomb || piece.IsBeingShredded)
+                    continue;
+
+                float remainingSeconds = piece.BombTimerSeconds - bombElapsedSeconds;
+                piece.RefreshBombTimer(remainingSeconds);
+                if (remainingSeconds > 0f)
+                    continue;
+
+                Debug.Log($"[BombBlock] '{piece.name}' was not shredded before its timer expired.", piece);
+                FailLevel();
+                return true;
+            }
+
+            return false;
+        }
+
+        private void FailLevel()
+        {
+            if (boardFailed || boardCleared)
+                return;
+
+            boardFailed = true;
+            TryTransitionGameState(GameState.Result);
+            Debug.Log("LEVEL FAILED!");
+            LevelFailed?.Invoke();
         }
 
         private void PlayLevelClearParticleEffects()

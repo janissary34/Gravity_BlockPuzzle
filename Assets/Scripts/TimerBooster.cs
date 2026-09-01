@@ -314,7 +314,6 @@ namespace GravityPuzzle
             : timerFreezeGlowFadeOutEase;
 
         // Freeze FX presentation timing shortcuts
-        private float AnticipationDuration    => tweenConfig != null ? tweenConfig.TimerAnticipationDuration    : 0.12f;
         private float FlightScaleTarget       => tweenConfig != null ? tweenConfig.TimerFlightScaleTarget       : 0.60f;
         private float FreezeImpactStartSc     => tweenConfig != null ? tweenConfig.FreezeImpactStartScale       : 0.40f;
         private float FreezeImpactPeakSc      => tweenConfig != null ? tweenConfig.FreezeImpactPeakScale        : 1.40f;
@@ -649,10 +648,6 @@ namespace GravityPuzzle
             {
                 seq.Append(timer_obj.transform.DOMove(centerPos, EntranceDuration).SetEase(EntranceEase));
             }
-
-            // Step 1b: Anticipation scale punch on arrival at center (1.0 \u2192 ~1.07 \u2192 ~0.96)
-            seq.Append(timer_obj.transform
-                .DOPunchScale(Vector3.one * 0.07f, AnticipationDuration, 1, 0.5f));
 
             // Step 2: Pause at center & animate 360 degree radial fill over freezeFillDuration
             if (frozenClockImage != null)

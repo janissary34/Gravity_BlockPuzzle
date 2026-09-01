@@ -142,7 +142,13 @@ namespace GravityPuzzle
                 Debug.LogError("[LevelProgress] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
 
             if (progressVoxelVfx != null)
+            {
+                // The particles must render in front of the world-space
+                // progress canvas; otherwise their final position is hidden
+                // behind the slider handle/pin.
+                progressVoxelVfx.SetRendererSortingOrder(progressCanvas.sortingOrder + 1);
                 progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
+            }
         }
 
         private void ConfigureFlyingProgressVoxelPool()
@@ -275,8 +281,12 @@ namespace GravityPuzzle
             if (progressVoxelVfx != null)
             {
                 progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
-                progressVoxelVfx.EmitVoxel(startWorldPos, Opaque(voxelColor), VoxelFlightDuration, Mathf.Max(1, particleCount));
-                StartCoroutine(ApplyProgressWhenVfxArrives(progressAmount, onArrival));
+                int flightGroupId = progressVoxelVfx.EmitVoxel(
+                    startWorldPos,
+                    Opaque(voxelColor),
+                    VoxelFlightDuration,
+                    Mathf.Max(1, particleCount));
+                StartCoroutine(ApplyProgressWhenVfxArrives(progressAmount, onArrival, flightGroupId));
                 return;
             }
 
@@ -364,8 +374,12 @@ namespace GravityPuzzle
             if (progressVoxelVfx != null)
             {
                 progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
-                progressVoxelVfx.EmitVoxelBurst(startWorldPos, Opaque(voxelColor), flightCount, VoxelFlightDuration);
-                StartCoroutine(ApplyProgressWhenVfxArrives(totalProgressAmount, null));
+                int flightGroupId = progressVoxelVfx.EmitVoxelBurst(
+                    startWorldPos,
+                    Opaque(voxelColor),
+                    flightCount,
+                    VoxelFlightDuration);
+                StartCoroutine(ApplyProgressWhenVfxArrives(totalProgressAmount, null, flightGroupId));
                 return;
             }
 
@@ -375,10 +389,15 @@ namespace GravityPuzzle
                 SpawnFlyingVoxel(startWorldPos, voxelColor, progressPerFlight, null);
         }
 
-        private IEnumerator ApplyProgressWhenVfxArrives(float progressAmount, Action onArrival)
+        private IEnumerator ApplyProgressWhenVfxArrives(float progressAmount, Action onArrival, int flightGroupId)
         {
             pendingVfxProgressArrivalCount++;
-            yield return new WaitForSeconds(progressVoxelVfx.MaximumFlightDuration(VoxelFlightDuration));
+            while (progressVoxelVfx != null && progressVoxelVfx.IsFlightGroupActive(flightGroupId))
+                yield return null;
+
+            // The group has rendered its last target frame. Advance the pin
+            // only after the frame is complete, never from a duration estimate.
+            yield return new WaitForEndOfFrame();
             pendingVfxProgressArrivalCount = Mathf.Max(0, pendingVfxProgressArrivalCount - 1);
             AddProgress(progressAmount);
             onArrival?.Invoke();
@@ -399,17 +418,19 @@ namespace GravityPuzzle
                 ? progressCanvas.worldCamera
                 : null;
 
-            if (uiCamera == null)
-                uiCamera = mainCamera;
-
             Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(uiCamera, progressTargetRect.position);
             if (mainCamera != null)
             {
-                float planeDistance = Mathf.Abs(mainCamera.transform.position.z);
-                if (planeDistance < 0.1f) planeDistance = 10f;
-                Vector3 worldPoint = mainCamera.ScreenToWorldPoint(new Vector3(screenPoint.x, screenPoint.y, planeDistance));
-                worldPoint.z = 0f;
-                return worldPoint;
+                Ray targetRay = mainCamera.ScreenPointToRay(screenPoint);
+                float rayZ = targetRay.direction.z;
+                if (Mathf.Abs(rayZ) > .0001f)
+                {
+                    float distanceToGameplayPlane = -targetRay.origin.z / rayZ;
+                    if (distanceToGameplayPlane >= 0f)
+                        return targetRay.GetPoint(distanceToGameplayPlane);
+                }
+
+                Debug.LogWarning("[LevelProgress] Could not project the progress pin onto the gameplay plane.", this);
             }
 
             Vector3 fallback = progressTargetRect.position;
@@ -469,19 +490,22 @@ namespace GravityPuzzle
                 if (sliderFillTween != null && sliderFillTween.IsActive())
                 {
                     sliderFillTween.ChangeEndValue(currentShreddedUnits, true);
+                    sliderFillTween.OnUpdate(UpdateProgressVoxelTarget);
                 }
                 else
                 {
                     sliderFillTween = progressSlider.DOValue(currentShreddedUnits, SliderFillDuration)
                         .SetEase(SliderFillEase)
                         .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
-                        .SetAutoKill(true);
+                        .SetAutoKill(true)
+                        .OnUpdate(UpdateProgressVoxelTarget);
                 }
 
             }
             else if (progressSlider != null)
             {
                 progressSlider.value = currentShreddedUnits;
+                UpdateProgressVoxelTarget();
             }
 
             OnProgressChanged?.Invoke(currentShreddedUnits, totalBlockUnitsInLevel);
@@ -500,6 +524,12 @@ namespace GravityPuzzle
                     TriggerLevelCompleted();
                 }
             }
+        }
+
+        private void UpdateProgressVoxelTarget()
+        {
+            if (progressVoxelVfx != null)
+                progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
         }
 
         private void TriggerLevelCompleted()

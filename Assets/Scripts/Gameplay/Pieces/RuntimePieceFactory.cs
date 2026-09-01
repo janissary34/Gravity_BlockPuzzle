@@ -332,7 +332,14 @@ namespace GravityPuzzle.Gameplay.Pieces
                 definition.iceCounterTextColor,
                 definition.iceCounterOutlineColor,
                 definition.iceCounterOutlineWidth,
-                definition.iceCounterOffset));
+                definition.iceCounterOffset,
+                definition.specialBlockType,
+                definition.bombTimerSeconds,
+                definition.bombCounterFontSize,
+                definition.bombCounterTextColor,
+                definition.bombCounterOutlineColor,
+                definition.bombCounterOutlineWidth,
+                definition.bombCounterOffset));
             if (content.VoxelShards != null && content.VoxelShards.Count > 0)
                 puzzlePiece.ConfigureVoxelPresentation(content.VoxelShards);
             else if (content.CollisionCellVisuals != null)

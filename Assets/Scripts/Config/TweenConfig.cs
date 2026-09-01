@@ -100,8 +100,6 @@ namespace GravityPuzzle.Config
         [SerializeField] private Ease timerFreezeGlowFadeOutEase = Ease.InSine;
 
         [Header("Freeze FX Presentation")]
-        [Tooltip("Duration of the subtle scale punch when the clock arrives at center (anticipation).")]
-        [Min(.001f)] [SerializeField] private float timerAnticipationDuration = .12f;
         [Tooltip("Target localScale multiplier applied to timer_obj while it flies toward the timer display.")]
         [Min(0f)] [SerializeField] private float timerFlightScaleTarget = .60f;
         [Tooltip("FreezeImpactImage starting scale (before burst).")]
@@ -208,7 +206,6 @@ namespace GravityPuzzle.Config
         public Ease TimerFreezeGlowFadeInEase => timerFreezeGlowFadeInEase;
         public float TimerFreezeGlowFadeOutDuration => timerFreezeGlowFadeOutDuration;
         public Ease TimerFreezeGlowFadeOutEase => timerFreezeGlowFadeOutEase;
-        public float TimerAnticipationDuration => timerAnticipationDuration;
         public float TimerFlightScaleTarget => timerFlightScaleTarget;
         public float FreezeImpactStartScale => freezeImpactStartScale;
         public float FreezeImpactPeakScale => freezeImpactPeakScale;

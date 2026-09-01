@@ -54,6 +54,8 @@ namespace GravityPuzzle.Presentation.VFX
             public Vector3 p2;
             public float elapsed;
             public float duration;
+            public int groupId;
+            public bool arrived;
             public Color32 color;
             public float size;
         }
@@ -61,6 +63,7 @@ namespace GravityPuzzle.Presentation.VFX
         private readonly FlightData[] activeFlights = new FlightData[MaxActiveFlights];
         private readonly ParticleSystem.Particle[] particleBuffer = new ParticleSystem.Particle[MaxActiveFlights];
         private int activeCount;
+        private int nextFlightGroupId = 1;
 
         private Vector3 targetWorldPosition = Vector3.up * 4f;
         private bool hasTargetPosition;
@@ -132,18 +135,34 @@ namespace GravityPuzzle.Presentation.VFX
         }
 
         /// <summary>
+        /// Places flight particles above the authored progress UI so their
+        /// arrival remains visible at the target pin.
+        /// </summary>
+        public void SetRendererSortingOrder(int order)
+        {
+            sortingOrder = order;
+            ConfigureRendererSorting();
+        }
+
+        /// <summary>
         /// Updates the world position of the Slider Handle (P2).
         /// </summary>
         public void SetTargetPosition(Vector3 worldTarget)
         {
             targetWorldPosition = worldTarget;
             hasTargetPosition = true;
+
+            for (int index = 0; index < activeCount; index++)
+            {
+                if (!activeFlights[index].arrived)
+                    activeFlights[index].p2 = worldTarget;
+            }
         }
 
         /// <summary>
         /// Emits flying particles that follow P0 (Contact) -> P1 (Drop/Scatter) -> P2 (Slider Handle Target).
         /// </summary>
-        public void EmitVoxel(Vector3 contactWorldPos, Color color, float flightDuration = 0.55f, int count = 1)
+        public int EmitVoxel(Vector3 contactWorldPos, Color color, float flightDuration = 0.55f, int count = 1)
         {
             if (particleSys != null && !particleSys.isPlaying)
                 particleSys.Play();
@@ -151,6 +170,9 @@ namespace GravityPuzzle.Presentation.VFX
             float duration = flightDuration > 0.01f ? flightDuration : this.flightDuration;
             Vector3 p2 = targetWorldPosition;
             Color32 color32 = color;
+            int groupId = nextFlightGroupId++;
+            if (nextFlightGroupId == int.MaxValue)
+                nextFlightGroupId = 1;
 
             int totalCount = count * Mathf.Max(1, particleMultiplier);
 
@@ -176,22 +198,37 @@ namespace GravityPuzzle.Presentation.VFX
                     p1 = p1,
                     p2 = p2,
                     elapsed = 0f,
-                    duration = flightDuration + Random.Range(-0.04f, 0.04f),
+                    duration = duration + Random.Range(-0.04f, 0.04f),
+                    groupId = groupId,
                     color = color32,
                     size = Random.Range(baseParticleSize * 0.85f, baseParticleSize * 1.15f)
                 };
 
                 activeCount++;
             }
+
+            return groupId;
         }
 
         /// <summary>
         /// Emits a burst of particles for booster impacts (Hammer, Rocket).
         /// </summary>
-        public void EmitVoxelBurst(Vector3 contactWorldPos, Color color, int particleCount, float flightDuration = 0.55f)
+        public int EmitVoxelBurst(Vector3 contactWorldPos, Color color, int particleCount, float flightDuration = 0.55f)
         {
             int clampedCount = Mathf.Clamp(particleCount, 1, 128);
-            EmitVoxel(contactWorldPos, color, flightDuration, clampedCount);
+            return EmitVoxel(contactWorldPos, color, flightDuration, clampedCount);
+        }
+
+        /// <summary>Returns true while any particle in the emitted group is still visible.</summary>
+        public bool IsFlightGroupActive(int groupId)
+        {
+            for (int index = 0; index < activeCount; index++)
+            {
+                if (activeFlights[index].groupId == groupId)
+                    return true;
+            }
+
+            return false;
         }
 
         private void LateUpdate()
@@ -204,33 +241,35 @@ namespace GravityPuzzle.Presentation.VFX
             for (int i = 0; i < activeCount; i++)
             {
                 activeFlights[i].elapsed += dt;
-                float duration = activeFlights[i].duration;
-                float normalizedTime = activeFlights[i].elapsed / duration;
+                FlightData flight = activeFlights[i];
+                if (flight.arrived)
+                    continue;
 
-                if (normalizedTime >= 1f)
-                    continue; // Reached P2 (Slider Handle)
+                float normalizedTime = flight.elapsed / flight.duration;
+                bool reachedTarget = normalizedTime >= 1f;
 
                 // Apply easing to normalized time parameter
-                float t = ApplyEasing(normalizedTime, easeType);
+                float t = ApplyEasing(Mathf.Clamp01(normalizedTime), easeType);
 
                 // Authentic 3-stage Quadratic Bezier equation: B(t) = (1-t)^2*P0 + 2*(1-t)*t*P1 + t^2*P2
                 float inv = 1f - t;
-                Vector3 pos = inv * inv * activeFlights[i].p0 +
-                              2f * inv * t * activeFlights[i].p1 +
-                              t * t * activeFlights[i].p2;
+                Vector3 pos = inv * inv * flight.p0 +
+                              2f * inv * t * flight.p1 +
+                              t * t * flight.p2;
                 pos.z = 0f;
 
                 particleBuffer[aliveCount].position = pos;
                 particleBuffer[aliveCount].velocity = Vector3.zero;
-                particleBuffer[aliveCount].startColor = activeFlights[i].color;
-                particleBuffer[aliveCount].startSize = activeFlights[i].size > 0.05f ? activeFlights[i].size : 0.3f;
+                particleBuffer[aliveCount].startColor = flight.color;
+                particleBuffer[aliveCount].startSize = flight.size > 0.05f ? flight.size : 0.3f;
                 particleBuffer[aliveCount].remainingLifetime = 10f;
                 particleBuffer[aliveCount].startLifetime = 10f;
 
-                if (aliveCount != i)
-                {
-                    activeFlights[aliveCount] = activeFlights[i];
-                }
+                // Keep the particle for one rendered frame at P2. Without this,
+                // the flight is removed just before it visually reaches the pin.
+                flight.arrived = reachedTarget;
+
+                activeFlights[aliveCount] = flight;
 
                 aliveCount++;
             }

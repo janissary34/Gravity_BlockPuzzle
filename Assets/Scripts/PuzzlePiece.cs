@@ -53,6 +53,8 @@ namespace GravityPuzzle
         public bool IsSelected => isSelected;
         public bool IsBeingShredded => beingShredded;
         public bool IsFrozen { get; private set; }
+        public bool IsBomb { get; private set; }
+        public float BombTimerSeconds { get; private set; }
         public int SourcePieceId { get; private set; } = -1;
         /// <summary>Authored board-block units represented by this draggable piece.</summary>
         public int ProgressUnits { get; private set; } = 1;
@@ -149,6 +151,12 @@ namespace GravityPuzzle
         private Color iceCounterOutlineColor = Color.white;
         private float iceCounterOutlineWidth = .18f;
         private Vector2 iceCounterOffset;
+        private float bombCounterFontSize = 36f;
+        private Color bombCounterTextColor = new Color(.95f, .18f, .12f);
+        private Color bombCounterOutlineColor = Color.white;
+        private float bombCounterOutlineWidth = .18f;
+        private Vector2 bombCounterOffset;
+        private int previousBombRemaining = -1;
 
         private struct ShredderReservationCell
         {
@@ -553,12 +561,20 @@ namespace GravityPuzzle
                 setup.CollisionCells,
                 setup.CollisionCellVisuals);
             ConfigureFreeze(
-                setup.FrozenMoveCount,
+                setup.SpecialBlockType == PieceSpecialBlockType.Bomb ? 0 : setup.FrozenMoveCount,
                 setup.IceCounterFontSize,
                 setup.IceCounterTextColor,
                 setup.IceCounterOutlineColor,
                 setup.IceCounterOutlineWidth,
                 setup.IceCounterOffset);
+            ConfigureBomb(
+                setup.SpecialBlockType == PieceSpecialBlockType.Bomb,
+                setup.BombTimerSeconds,
+                setup.BombCounterFontSize,
+                setup.BombCounterTextColor,
+                setup.BombCounterOutlineColor,
+                setup.BombCounterOutlineWidth,
+                setup.BombCounterOffset);
         }
 
         private void PrepareForRuntimeSetup()
@@ -572,6 +588,9 @@ namespace GravityPuzzle
             useFullCollisionGeometry = false;
             isSelected = false;
             IsFrozen = false;
+            IsBomb = false;
+            BombTimerSeconds = 0f;
+            previousBombRemaining = -1;
             InvalidateVoxelCache();
         }
 
@@ -1020,6 +1039,41 @@ namespace GravityPuzzle
             iceCounterOffset = counterOffset;
             PrototypeBoard board = PrototypeBoard.Active;
             RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+        }
+
+        public void ConfigureBomb(
+            bool isBomb,
+            float timerSeconds,
+            float counterFontSize,
+            Color counterTextColor,
+            Color counterOutlineColor,
+            float counterOutlineWidth,
+            Vector2 counterOffset)
+        {
+            IsBomb = isBomb;
+            BombTimerSeconds = isBomb ? Mathf.Max(1f, timerSeconds) : 0f;
+            bombCounterFontSize = Mathf.Max(1f, counterFontSize);
+            bombCounterTextColor = counterTextColor;
+            bombCounterOutlineColor = counterOutlineColor;
+            bombCounterOutlineWidth = Mathf.Clamp01(counterOutlineWidth);
+            bombCounterOffset = counterOffset;
+            previousBombRemaining = -1;
+
+            if (IsBomb)
+                RefreshBombTimer(BombTimerSeconds);
+        }
+
+        public void RefreshBombTimer(float secondsRemaining)
+        {
+            if (!IsBomb || beingShredded)
+                return;
+
+            int remainingSeconds = Mathf.CeilToInt(Mathf.Max(0f, secondsRemaining));
+            if (remainingSeconds == previousBombRemaining)
+                return;
+
+            previousBombRemaining = remainingSeconds;
+            UpdateBombCounter(remainingSeconds);
         }
 
         public void RefreshFreezeState(int destroyedPieceCount)
@@ -1720,6 +1774,38 @@ namespace GravityPuzzle
             iceCounterText.ForceMeshUpdate();
         }
 
+        private void UpdateBombCounter(int remainingCount)
+        {
+            if (collisionCellVisuals == null || collisionCellVisuals.Count == 0 || iceCounterText == null)
+                return;
+
+            Bounds combinedBounds = collisionCellVisuals[0].bounds;
+            for (int i = 1; i < collisionCellVisuals.Count; i++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[i];
+                if (visual != null)
+                    combinedBounds.Encapsulate(visual.bounds);
+            }
+
+            iceCounterText.color = bombCounterTextColor;
+            iceCounterText.enabled = true;
+            iceCounterText.enableAutoSizing = false;
+            iceCounterText.fontSize = bombCounterFontSize * RuntimeIceCounterFontScale;
+            iceCounterText.outlineColor = bombCounterOutlineColor;
+            iceCounterText.outlineWidth = bombCounterOutlineWidth * .1f;
+            iceCounterText.renderer.sortingLayerID = collisionCellVisuals[0].sortingLayerID;
+            iceCounterText.renderer.sortingOrder = 50;
+            iceCounterText.text = Mathf.Max(0, remainingCount).ToString();
+            iceCounterText.transform.position = new Vector3(
+                combinedBounds.center.x + bombCounterOffset.x,
+                combinedBounds.center.y + bombCounterOffset.y,
+                transform.position.z - .1f);
+            iceCounterText.rectTransform.sizeDelta = new Vector2(
+                Mathf.Max(.75f, combinedBounds.size.x * .9f),
+                Mathf.Max(.75f, combinedBounds.size.y * .9f));
+            iceCounterText.ForceMeshUpdate();
+        }
+
         private void CreateIceLayer(
             SpriteRenderer source,
             string layerName,
@@ -1827,6 +1913,7 @@ namespace GravityPuzzle
         {
             iceReleaseAnimating = false;
             previousFrozenRemaining = -1;
+            previousBombRemaining = -1;
             foreach (SpriteRenderer renderer in iceRenderers)
             {
                 if (renderer == null)

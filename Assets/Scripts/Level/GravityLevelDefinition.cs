@@ -125,6 +125,13 @@ namespace GravityPuzzle
         Hook
     }
 
+    public enum PieceSpecialBlockType
+    {
+        Normal,
+        Ice,
+        Bomb
+    }
+
     [Serializable]
     public sealed class PieceDefinition
     {
@@ -134,6 +141,8 @@ namespace GravityPuzzle
         public Color color = new Color(.2f, .65f, 1f);
         public Vector2Int origin = new Vector2Int(8, 10);
         [Range(0, 3)] public int quarterTurns;
+        [Tooltip("Normal pieces have no special behaviour. Ice and Bomb are mutually exclusive.")]
+        public PieceSpecialBlockType specialBlockType;
         [Tooltip("Piece stays frozen until this many other pieces have been destroyed. 0 disables ice.")]
         [Min(0)] public int frozenMoveCount;
         [Min(1f)] public float iceCounterFontSize = 36f;
@@ -141,6 +150,13 @@ namespace GravityPuzzle
         public Color iceCounterOutlineColor = Color.white;
         [Range(0f, 1f)] public float iceCounterOutlineWidth = .18f;
         public Vector2 iceCounterOffset = Vector2.zero;
+        [Tooltip("Seconds available to shred this bomb after the player's first action. Values below 1 are invalid for bomb pieces.")]
+        [Min(1f)] public float bombTimerSeconds = 10f;
+        [Min(1f)] public float bombCounterFontSize = 36f;
+        public Color bombCounterTextColor = new Color(.95f, .18f, .12f);
+        public Color bombCounterOutlineColor = Color.white;
+        [Range(0f, 1f)] public float bombCounterOutlineWidth = .18f;
+        public Vector2 bombCounterOffset = Vector2.zero;
         public List<PieceCellDefinition> cells = new List<PieceCellDefinition>();
     }
 

@@ -320,9 +320,10 @@ namespace GravityPuzzle.Core.Grid
         }
 
         /// <summary>
-        /// Releases a subset of a shredding piece's reserved footprint. The
-        /// remaining cells stay reserved, so gravity can only enter board space
-        /// that has physically crossed the cutter.
+        /// Releases a subset of a shredding piece's footprint. The shredder
+        /// hands a piece through HandoffToPhysics and Shredding on separate
+        /// lifecycle calls; both states must expose the cells that have already
+        /// crossed the cutter. Remaining cells continue to block gravity.
         /// </summary>
         public bool TryReleaseReservedCells(
             PieceModel piece,
@@ -336,7 +337,8 @@ namespace GravityPuzzle.Core.Grid
             {
                 GridCoordinate coordinate = piece.Anchor.Offset(localCells[index]);
                 if (!IsInside(coordinate) ||
-                    cellStates[coordinate.X, coordinate.Y] != GridCellState.Reserved ||
+                    (cellStates[coordinate.X, coordinate.Y] != GridCellState.Reserved &&
+                     cellStates[coordinate.X, coordinate.Y] != GridCellState.Occupied) ||
                     occupantIds[coordinate.X, coordinate.Y] != piece.Id)
                     continue;
 

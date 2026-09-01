@@ -190,7 +190,8 @@ namespace GravityPuzzle
             float progressPerGrain = totalProgress /
                                      (float)Mathf.Max(1, shardList.Count * LevelProgressManager.SandGrainsPerRenderedVoxel);
             float scheduledProgress = 0f;
-            bool legacyProgressScheduled = false;
+            float bufferedParticleProgress = 0f;
+            Vector2 bufferedParticlePosition = new Vector2(piece.transform.position.x, grinderExitSeamY);
             float maxTime = 4.0f;
             float elapsed = 0f;
             float previousShakeOffsetX = 0f;
@@ -206,19 +207,22 @@ namespace GravityPuzzle
             {
                 elapsed += Time.deltaTime;
 
-                // As the piece crosses the cutter line, release only the lower
-                // collision cells. The part still above the shredder stays solid,
-                // so large pieces cannot merge into one another while being fed.
-                piece.ReleaseCollisionCellsAtOrBelow(shredderY);
-
                 if (rb != null)
                 {
                     // Apply continuous high-frequency horizontal tremor
                     float shakeOffsetX = Mathf.Sin(Time.time * tremorFrequency) *
                                          tremorIntensity * shakeAmplitude;
-                    rb.position += new Vector2(shakeOffsetX - previousShakeOffsetX, 0f);
+                    // The feed is kinematic, so commit its position here rather
+                    // than waiting for a later physics step to integrate a
+                    // velocity.  The grid release immediately below must see
+                    // the same cutter crossing as the presentation; otherwise
+                    // pieces above keep treating already-shredded cells as solid
+                    // until the whole root is returned to its pool.
+                    rb.position += new Vector2(
+                        shakeOffsetX - previousShakeOffsetX,
+                        -feedSpeed * Time.deltaTime);
                     previousShakeOffsetX = shakeOffsetX;
-                    rb.velocity = new Vector2(0f, -feedSpeed);
+                    rb.velocity = Vector2.zero;
 
                     // Keep the feed visually stable while it enters the cutter.
                     float currentAngle = Mathf.DeltaAngle(0f, rb.rotation);
@@ -228,6 +232,12 @@ namespace GravityPuzzle
                         rb.rotation = Mathf.Clamp(currentAngle, -maxTiltAngle, maxTiltAngle);
                     }
                 }
+
+                // Release only the cells that have now crossed the cutter.
+                // This transaction also wakes grid gravity, allowing an upper
+                // piece to follow the shrinking shredder footprint in the same
+                // feed instead of waiting for this complete piece to despawn.
+                piece.ReleaseCollisionCellsAtOrBelow(shredderY);
 
                 int targetPieceParticles = Mathf.Max(1, (int)(Mathf.Max(1f, totalProgress) * (shredderConfig != null ? shredderConfig.ParticlesPerShreddedCell : 8)));
                 int emissionStride = Mathf.Max(1, shardList.Count / targetPieceParticles);
@@ -249,6 +259,8 @@ namespace GravityPuzzle
 
                         float shardProgress = progressPerGrain * LevelProgressManager.SandGrainsPerRenderedVoxel;
                         scheduledProgress += shardProgress;
+                        bufferedParticleProgress += shardProgress;
+                        bufferedParticlePosition = contactWorldPos;
 
                         bool shouldEmitParticle = (processedShards.Count % emissionStride == 0);
                         if (shouldEmitParticle)
@@ -256,12 +268,12 @@ namespace GravityPuzzle
                             shard.BeginProgressHandoff(
                                 contactWorldPos,
                                 shardColor,
-                                shardProgress,
+                                bufferedParticleProgress,
                                 1);
+                            bufferedParticleProgress = 0f;
                         }
                         else
                         {
-                            LevelProgressManager.Instance?.AddProgress(shardProgress);
                             shard.Recycle();
                         }
                     }
@@ -326,6 +338,21 @@ namespace GravityPuzzle
 
             if (piece != null)
             {
+                // The incomplete final bucket still represents shredded units.
+                // Route it through the same flight presentation rather than
+                // advancing the slider before a particle reaches the pin.
+                if (bufferedParticleProgress > 0.0001f)
+                {
+                    LevelProgressManager progressManager = LevelProgressManager.Instance;
+                    if (progressManager != null)
+                    {
+                        progressManager.SpawnFlyingVoxel(
+                            bufferedParticlePosition,
+                            Opaque(tileColor),
+                            bufferedParticleProgress);
+                    }
+                }
+
                 float outstandingProgress = Mathf.Max(0f, totalProgress - scheduledProgress);
                 if (outstandingProgress > 0.0001f)
                 {

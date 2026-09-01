@@ -17,7 +17,14 @@ namespace GravityPuzzle.Gameplay.Pieces
             Color iceCounterTextColor,
             Color iceCounterOutlineColor,
             float iceCounterOutlineWidth,
-            Vector2 iceCounterOffset)
+            Vector2 iceCounterOffset,
+            PieceSpecialBlockType specialBlockType,
+            float bombTimerSeconds,
+            float bombCounterFontSize,
+            Color bombCounterTextColor,
+            Color bombCounterOutlineColor,
+            float bombCounterOutlineWidth,
+            Vector2 bombCounterOffset)
         {
             SourcePieceId = sourcePieceId;
             ProgressUnits = progressUnits;
@@ -31,6 +38,13 @@ namespace GravityPuzzle.Gameplay.Pieces
             IceCounterOutlineColor = iceCounterOutlineColor;
             IceCounterOutlineWidth = iceCounterOutlineWidth;
             IceCounterOffset = iceCounterOffset;
+            SpecialBlockType = specialBlockType;
+            BombTimerSeconds = bombTimerSeconds;
+            BombCounterFontSize = bombCounterFontSize;
+            BombCounterTextColor = bombCounterTextColor;
+            BombCounterOutlineColor = bombCounterOutlineColor;
+            BombCounterOutlineWidth = bombCounterOutlineWidth;
+            BombCounterOffset = bombCounterOffset;
         }
 
         public int SourcePieceId { get; }
@@ -45,5 +59,12 @@ namespace GravityPuzzle.Gameplay.Pieces
         public Color IceCounterOutlineColor { get; }
         public float IceCounterOutlineWidth { get; }
         public Vector2 IceCounterOffset { get; }
+        public PieceSpecialBlockType SpecialBlockType { get; }
+        public float BombTimerSeconds { get; }
+        public float BombCounterFontSize { get; }
+        public Color BombCounterTextColor { get; }
+        public Color BombCounterOutlineColor { get; }
+        public float BombCounterOutlineWidth { get; }
+        public Vector2 BombCounterOffset { get; }
     }
 }

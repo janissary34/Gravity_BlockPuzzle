@@ -121,9 +121,12 @@ namespace GravityPuzzle.Editor
                 Color previous = GUI.backgroundColor;
                 if (i == selectedPiece)
                     GUI.backgroundColor = new Color(.55f, .8f, 1f);
-                string pieceLabel = level.pieces[i].frozenMoveCount > 0
-                    ? $"{level.pieces[i].name} [Ice {level.pieces[i].frozenMoveCount}]"
-                    : level.pieces[i].name;
+                PieceDefinition listPiece = level.pieces[i];
+                string pieceLabel = listPiece.specialBlockType == PieceSpecialBlockType.Bomb
+                    ? $"{listPiece.name} [Bomb {listPiece.bombTimerSeconds:0.#}s]"
+                    : listPiece.frozenMoveCount > 0
+                        ? $"{listPiece.name} [Ice {listPiece.frozenMoveCount}]"
+                        : listPiece.name;
                 if (GUILayout.Button(pieceLabel))
                     SelectPiece(i);
                 GUI.backgroundColor = previous;
@@ -231,17 +234,29 @@ namespace GravityPuzzle.Editor
                 Color newColor = EditorGUILayout.ColorField("Color", piece.color);
                 Vector2Int newOrigin = EditorGUILayout.Vector2IntField("Origin", piece.origin);
                 int newRotation = EditorGUILayout.Popup("Start Rotation", piece.quarterTurns, new[] { "0°", "90°", "180°", "270°" });
-                int newFrozenMoveCount = Mathf.Max(0, EditorGUILayout.IntField(
-                    new GUIContent(
-                        "Frozen Move Count",
-                        "The piece unlocks after this many pieces have been destroyed. Use 0 for a normal piece."),
-                    piece.frozenMoveCount));
+                PieceSpecialBlockType resolvedSpecialType = piece.specialBlockType == PieceSpecialBlockType.Normal &&
+                                                            piece.frozenMoveCount > 0
+                    ? PieceSpecialBlockType.Ice
+                    : piece.specialBlockType;
+                PieceSpecialBlockType newSpecialBlockType = (PieceSpecialBlockType)EditorGUILayout.EnumPopup(
+                    new GUIContent("Block Type", "Ice and Bomb are mutually exclusive."), resolvedSpecialType);
+                int newFrozenMoveCount = piece.frozenMoveCount;
+                if (newSpecialBlockType == PieceSpecialBlockType.Ice)
+                {
+                    newFrozenMoveCount = Mathf.Max(1, EditorGUILayout.IntField(
+                        new GUIContent("Frozen Move Count", "The piece unlocks after this many other pieces have been destroyed."),
+                        piece.frozenMoveCount));
+                }
+                else
+                {
+                    newFrozenMoveCount = 0;
+                }
                 float newCounterFontSize = piece.iceCounterFontSize;
                 Color newCounterTextColor = piece.iceCounterTextColor;
                 Color newCounterOutlineColor = piece.iceCounterOutlineColor;
                 float newCounterOutlineWidth = piece.iceCounterOutlineWidth;
                 Vector2 newCounterOffset = piece.iceCounterOffset;
-                if (newFrozenMoveCount > 0)
+                if (newSpecialBlockType == PieceSpecialBlockType.Ice)
                 {
                     GUILayout.Label("Ice Counter Text", EditorStyles.boldLabel);
                     newCounterFontSize = Mathf.Max(1f,
@@ -256,26 +271,57 @@ namespace GravityPuzzle.Editor
                         "Position Offset", piece.iceCounterOffset);
                 }
 
+                float newBombTimerSeconds = piece.bombTimerSeconds;
+                float newBombCounterFontSize = piece.bombCounterFontSize;
+                Color newBombCounterTextColor = piece.bombCounterTextColor;
+                Color newBombCounterOutlineColor = piece.bombCounterOutlineColor;
+                float newBombCounterOutlineWidth = piece.bombCounterOutlineWidth;
+                Vector2 newBombCounterOffset = piece.bombCounterOffset;
+                if (newSpecialBlockType == PieceSpecialBlockType.Bomb)
+                {
+                    newBombTimerSeconds = Mathf.Max(1f, EditorGUILayout.FloatField("Bomb Timer (seconds)", piece.bombTimerSeconds));
+                    GUILayout.Label("Bomb Counter Text", EditorStyles.boldLabel);
+                    newBombCounterFontSize = Mathf.Max(1f, EditorGUILayout.FloatField("Font Size", piece.bombCounterFontSize));
+                    newBombCounterTextColor = EditorGUILayout.ColorField("Text Color", piece.bombCounterTextColor);
+                    newBombCounterOutlineColor = EditorGUILayout.ColorField("Outline Color", piece.bombCounterOutlineColor);
+                    newBombCounterOutlineWidth = EditorGUILayout.Slider("Outline Width", piece.bombCounterOutlineWidth, 0f, 1f);
+                    newBombCounterOffset = EditorGUILayout.Vector2Field("Position Offset", piece.bombCounterOffset);
+                }
+
                 if (newName != piece.name || newColor != piece.color ||
                     newOrigin != piece.origin || newRotation != piece.quarterTurns ||
+                    newSpecialBlockType != resolvedSpecialType ||
                     newFrozenMoveCount != piece.frozenMoveCount ||
                     !Mathf.Approximately(newCounterFontSize, piece.iceCounterFontSize) ||
                     newCounterTextColor != piece.iceCounterTextColor ||
                     newCounterOutlineColor != piece.iceCounterOutlineColor ||
                     !Mathf.Approximately(newCounterOutlineWidth, piece.iceCounterOutlineWidth) ||
-                    newCounterOffset != piece.iceCounterOffset)
+                    newCounterOffset != piece.iceCounterOffset ||
+                    !Mathf.Approximately(newBombTimerSeconds, piece.bombTimerSeconds) ||
+                    !Mathf.Approximately(newBombCounterFontSize, piece.bombCounterFontSize) ||
+                    newBombCounterTextColor != piece.bombCounterTextColor ||
+                    newBombCounterOutlineColor != piece.bombCounterOutlineColor ||
+                    !Mathf.Approximately(newBombCounterOutlineWidth, piece.bombCounterOutlineWidth) ||
+                    newBombCounterOffset != piece.bombCounterOffset)
                 {
                     Undo.RecordObject(level, "Edit puzzle piece");
                     piece.name = newName;
                     piece.color = newColor;
                     piece.origin = newOrigin;
                     piece.quarterTurns = newRotation;
+                    piece.specialBlockType = newSpecialBlockType;
                     piece.frozenMoveCount = newFrozenMoveCount;
                     piece.iceCounterFontSize = newCounterFontSize;
                     piece.iceCounterTextColor = newCounterTextColor;
                     piece.iceCounterOutlineColor = newCounterOutlineColor;
                     piece.iceCounterOutlineWidth = newCounterOutlineWidth;
                     piece.iceCounterOffset = newCounterOffset;
+                    piece.bombTimerSeconds = newBombTimerSeconds;
+                    piece.bombCounterFontSize = newBombCounterFontSize;
+                    piece.bombCounterTextColor = newBombCounterTextColor;
+                    piece.bombCounterOutlineColor = newBombCounterOutlineColor;
+                    piece.bombCounterOutlineWidth = newBombCounterOutlineWidth;
+                    piece.bombCounterOffset = newBombCounterOffset;
                     MarkDirty();
                 }
 
@@ -677,7 +723,13 @@ namespace GravityPuzzle.Editor
                         ? Color.Lerp(piece.color, Color.white, .22f)
                         : piece.color;
                     EditorGUI.DrawRect(new Rect(rect.x + 1f, rect.y + 1f, rect.width - 2f, rect.height - 2f), color);
-                    if (piece.frozenMoveCount > 0)
+                    if (piece.specialBlockType == PieceSpecialBlockType.Bomb)
+                    {
+                        EditorGUI.DrawRect(
+                            new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f),
+                            new Color(.35f, .08f, .06f, .52f));
+                    }
+                    else if (piece.frozenMoveCount > 0)
                     {
                         Color ice = new Color(.55f, .9f, 1f, .48f);
                         EditorGUI.DrawRect(
@@ -686,7 +738,15 @@ namespace GravityPuzzle.Editor
                     }
                 }
 
-                if (piece.frozenMoveCount > 0 && hasVisibleCell)
+                if (piece.specialBlockType == PieceSpecialBlockType.Bomb && hasVisibleCell)
+                {
+                    float worldToEditorPixels = cellSize * level.subdivisions;
+                    pieceBounds.position += new Vector2(
+                        piece.bombCounterOffset.x * worldToEditorPixels,
+                        -piece.bombCounterOffset.y * worldToEditorPixels);
+                    DrawBombCounterPreview(pieceBounds, piece);
+                }
+                else if (piece.frozenMoveCount > 0 && hasVisibleCell)
                 {
                     float worldToEditorPixels = cellSize * level.subdivisions;
                     pieceBounds.position += new Vector2(
@@ -729,6 +789,28 @@ namespace GravityPuzzle.Editor
             GUI.Label(new Rect(bounds.x, bounds.y + outlinePixels, bounds.width, bounds.height), count, textStyle);
 
             textStyle.normal.textColor = piece.iceCounterTextColor;
+            GUI.Label(bounds, count, textStyle);
+        }
+
+        private static void DrawBombCounterPreview(Rect bounds, PieceDefinition piece)
+        {
+            int previewFontSize = Mathf.Clamp(Mathf.RoundToInt(piece.bombCounterFontSize), 8, 96);
+            GUIStyle textStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = previewFontSize
+            };
+
+            string count = Mathf.CeilToInt(piece.bombTimerSeconds).ToString();
+            int outlinePixels = Mathf.Max(
+                1,
+                Mathf.RoundToInt(previewFontSize * piece.bombCounterOutlineWidth * .08f));
+            textStyle.normal.textColor = piece.bombCounterOutlineColor;
+            GUI.Label(new Rect(bounds.x - outlinePixels, bounds.y, bounds.width, bounds.height), count, textStyle);
+            GUI.Label(new Rect(bounds.x + outlinePixels, bounds.y, bounds.width, bounds.height), count, textStyle);
+            GUI.Label(new Rect(bounds.x, bounds.y - outlinePixels, bounds.width, bounds.height), count, textStyle);
+            GUI.Label(new Rect(bounds.x, bounds.y + outlinePixels, bounds.width, bounds.height), count, textStyle);
+            textStyle.normal.textColor = piece.bombCounterTextColor;
             GUI.Label(bounds, count, textStyle);
         }
 
