@@ -245,7 +245,9 @@ namespace GravityPuzzle
         private bool TryStartRocketImpact(PuzzlePiece piece)
         {
             int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
-            if (piece == null || piece.IsBeingShredded || launchInProgress || currentUses <= 0)
+            // Frozen pieces are locked until their required destruction count is
+            // met. The rocket must respect the same rule as normal dragging.
+            if (piece == null || piece.IsFrozen || piece.IsBeingShredded || launchInProgress || currentUses <= 0)
                 return false;
 
             // Prevent an in-flight grid presentation tween from continuing to

@@ -31,6 +31,7 @@ namespace GravityPuzzle
         // is input state only; the board model remains the sole position state.
         private Vector2 fineDragRemainder;
         private Vector2 lastResolvedDragPosition;
+        private Vector2 dragPresentationVelocity;
         private bool hasLastResolvedDragPosition;
         private int activeFingerId = -1;
         private readonly Collider2D[] selectionHits = new Collider2D[32];
@@ -201,7 +202,10 @@ namespace GravityPuzzle
             // body pose changes, so this remains collision-safe without
             // inheriting FixedUpdate or Rigidbody interpolation latency.
             if (selectedPiece != null && !selectedPiece.IsBeingShredded)
+            {
                 TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent());
+                UpdateSelectedPiecePresentation();
+            }
         }
 
         private void BindBoardEvents(PrototypeBoard nextBoard)
@@ -261,6 +265,7 @@ namespace GravityPuzzle
             activeFingerId = -1;
             pendingDragIntent = Vector2.zero;
             fineDragRemainder = Vector2.zero;
+            dragPresentationVelocity = Vector2.zero;
             hasLastResolvedDragPosition = false;
             hasSelectedPieceStartAnchor = false;
         }
@@ -597,10 +602,28 @@ namespace GravityPuzzle
                 model.Anchor.X - model.PivotOffset.X,
                 model.Anchor.Y - model.PivotOffset.Y);
             Vector2 position = GravityLevelGridCoordinates.FineCellToWorld(level, pivot);
-            piece.Body.position = position;
             lastResolvedDragPosition = position;
             hasLastResolvedDragPosition = true;
             return true;
+        }
+
+        private void UpdateSelectedPiecePresentation()
+        {
+            if (selectedPiece == null || selectedPiece.Body == null || !hasLastResolvedDragPosition)
+                return;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null)
+                return;
+
+            Rigidbody2D body = selectedPiece.Body;
+            body.position = Vector2.SmoothDamp(
+                body.position,
+                lastResolvedDragPosition,
+                ref dragPresentationVelocity,
+                level.dragPresentationSmoothingSeconds,
+                Mathf.Infinity,
+                Time.deltaTime);
         }
 
         private bool TryGetNextFineDragStep(out GridCoordinate step)
@@ -823,6 +846,7 @@ namespace GravityPuzzle
             dragTarget = body.position;
             pendingDragIntent = Vector2.zero;
             fineDragRemainder = Vector2.zero;
+            dragPresentationVelocity = Vector2.zero;
             lastResolvedDragPosition = body.position;
             hasLastResolvedDragPosition = true;
         }
