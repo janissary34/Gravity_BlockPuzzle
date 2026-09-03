@@ -262,7 +262,7 @@ namespace GravityPuzzle
             // Validate the authoritative grid handoff before consuming the
             // target tap. This keeps one-cell pieces selectable even when a
             // previous presentation left their grid state unavailable.
-            if (!piece.TryBeginShredderHandoff())
+            if (!piece.TryBeginShredderHandoff(reportDestructionImmediately: false))
             {
                 Debug.LogWarning(
                     $"[RocketBooster] Target '{piece.name}' could not reserve its grid cells for rocket handoff.",
@@ -401,6 +401,10 @@ namespace GravityPuzzle
 
             if (piece != null)
             {
+                // The carried piece is now off-screen. Report its destruction
+                // only at this completion point so ice counters decrement when
+                // the rocket removal is visually complete, not on target tap.
+                piece.ReportDestroyed();
                 piece.ReleaseInstance();
             }
 

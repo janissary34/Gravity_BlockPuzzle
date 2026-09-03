@@ -1760,7 +1760,7 @@ namespace GravityPuzzle
         /// shredder. Its current grid footprint is reserved before the visual
         /// feed begins, so no gravity move or placement can enter it.
         /// </summary>
-        public bool TryBeginShredderHandoff()
+        public bool TryBeginShredderHandoff(bool reportDestructionImmediately = true)
         {
             if (beingShredded)
                 return false;
@@ -1786,7 +1786,12 @@ namespace GravityPuzzle
                 board.TryLockFinalShredderOutcome(this);
             }
 
-            ReportDestroyed();
+            // The normal shredder owns destruction at handoff time. Rocket
+            // presentation keeps the same grid reservation, but defers the
+            // destruction event until its carried piece has actually left the
+            // screen, so frozen-piece counters stay visually in sync.
+            if (reportDestructionImmediately)
+                ReportDestroyed();
             return true;
         }
 
