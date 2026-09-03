@@ -114,7 +114,8 @@ namespace GravityPuzzle
 
         /// <summary>
         /// Public Button OnClick entry point. The next valid puzzle-cell tap is
-        /// removed; tapping empty space does not consume the one-time booster.
+        /// removed. Tapping anywhere else cancels targeting without consuming
+        /// a booster use.
         /// </summary>
         public void ActivateHammerBooster()
         {
@@ -191,7 +192,10 @@ namespace GravityPuzzle
             }
 
             if (!PuzzleDragController.TryScreenToBoardWorld(screenPosition, out Vector2 worldPosition))
+            {
+                CancelHammerSelection();
                 return;
+            }
 
             if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target) &&
                 TryStartHammerImpact(target.Piece, target.WorldPosition))
@@ -207,9 +211,10 @@ namespace GravityPuzzle
                 return;
             }
 
-            Debug.LogWarning(
-                "[HammerBooster] No occupied board cell found at target.",
-                this);
+            // A target attempt always resolves the armed state. This lets the
+            // player back out by tapping off the board or an empty board cell,
+            // while retaining the booster use for a later attempt.
+            CancelHammerSelection();
         }
 
         private bool TryStartHammerImpact(

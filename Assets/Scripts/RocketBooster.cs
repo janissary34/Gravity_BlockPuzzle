@@ -214,7 +214,9 @@ namespace GravityPuzzle
 
             if (!PuzzleDragController.TryScreenToBoardWorld(screenPosition, out Vector2 worldPosition))
             {
-                Debug.LogWarning("[RocketBooster] Target click received but the gameplay camera could not convert it to board space.", this);
+                // An invalid target click is an explicit cancellation; it does
+                // not consume a rocket use.
+                CancelRocketSelection();
                 return;
             }
 
@@ -242,9 +244,9 @@ namespace GravityPuzzle
                     target.Piece);
             }
 
-            Debug.LogWarning(
-                "[RocketBooster] No occupied board cell found at target.",
-                this);
+            // Empty-space taps and rejected targets cancel targeting without
+            // consuming the booster, so the player can resume normal play.
+            CancelRocketSelection();
         }
 
         private bool TryStartRocketImpact(PuzzlePiece piece)
