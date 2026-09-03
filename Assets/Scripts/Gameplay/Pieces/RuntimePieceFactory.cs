@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using GravityPuzzle.Config;
+using GravityPuzzle.Presentation.VFX;
 using UnityEngine;
 
 namespace GravityPuzzle.Gameplay.Pieces
@@ -26,6 +27,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static Material sharedOutlineMaterial;
         private static IRuntimePieceRootProvider rootProvider;
         private static PieceVisualConfig pieceVisualConfig;
+        private static IIceBlockParticleVfx iceParticleVfx;
         private static bool useVoxelShardGrid = false;
         private static readonly HashSet<string> warnedMissingVisualIds = new HashSet<string>();
 
@@ -37,6 +39,11 @@ namespace GravityPuzzle.Gameplay.Pieces
         public static void SetVisualConfig(PieceVisualConfig config)
         {
             pieceVisualConfig = config;
+        }
+
+        public static void SetIceParticleVfx(IIceBlockParticleVfx particleVfx)
+        {
+            iceParticleVfx = particleVfx;
         }
 
         public static void SetPresentationMode(bool useVoxelGrid)
@@ -51,6 +58,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             rootProvider = null;
             sharedOutlineMaterial = null;
             pieceVisualConfig = null;
+            iceParticleVfx = null;
             warnedMissingVisualIds.Clear();
         }
 
@@ -320,6 +328,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             CompositeCollider2D pieceComposite,
             PieceRuntimeContent content)
         {
+            puzzlePiece.ConfigureIceParticleVfx(iceParticleVfx);
             puzzlePiece.Configure(new PieceRuntimeSetup(
                 sourcePieceId,
                 Mathf.Max(1, content.ProgressUnits),

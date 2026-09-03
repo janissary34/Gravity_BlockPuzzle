@@ -8,6 +8,7 @@ using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Presentation.Views;
+using GravityPuzzle.Presentation.VFX;
 
 namespace GravityPuzzle
 {
@@ -119,6 +120,8 @@ namespace GravityPuzzle
         private Sprite iceOverlaySprite;
         private Color iceOverlayTint = new Color(1f, 1f, 1f, .42f);
         private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
+        private IIceBlockParticleVfx iceParticleVfx;
+        private IIceBlockParticleVfxHandle iceParticleVfxHandle;
         private readonly List<ShredderReservationCell> shredderReservationCells =
             new List<ShredderReservationCell>();
         private readonly List<GridCoordinate> shredderCellsReadyToRelease =
@@ -573,6 +576,9 @@ namespace GravityPuzzle
                 setup.IceCounterOutlineColor,
                 setup.IceCounterOutlineWidth,
                 setup.IceCounterOffset);
+            iceParticleVfxHandle = setup.SpecialBlockType != PieceSpecialBlockType.Bomb && setup.FrozenMoveCount > 0
+                ? iceParticleVfx?.RentPair()
+                : null;
             ConfigureBomb(
                 setup.SpecialBlockType == PieceSpecialBlockType.Bomb,
                 setup.BombTimerSeconds,
@@ -581,6 +587,11 @@ namespace GravityPuzzle
                 setup.BombCounterOutlineColor,
                 setup.BombCounterOutlineWidth,
                 setup.BombCounterOffset);
+        }
+
+        public void ConfigureIceParticleVfx(IIceBlockParticleVfx particleVfx)
+        {
+            iceParticleVfx = particleVfx;
         }
 
         private void PrepareForRuntimeSetup()
@@ -1100,7 +1111,7 @@ namespace GravityPuzzle
 
                 int remainingCount = frozenUntilDestroyedCount - destroyedPieceCount;
                 if (previousFrozenRemaining >= 0 && remainingCount < previousFrozenRemaining)
-                    PlayIceCrackFeedback(remainingCount, previousFrozenRemaining);
+                    PlayIceCrackFeedback();
 
                 iceReleaseAnimating = false;
                 previousFrozenRemaining = remainingCount;
@@ -1845,12 +1856,11 @@ namespace GravityPuzzle
             iceRenderers.Add(renderer);
         }
 
-        private void PlayIceCrackFeedback(int remainingCount, int previousRemainingCount)
+        private void PlayIceCrackFeedback()
         {
             TweenConfig tweenConfig = GridFallView != null ? GridFallView.Config : null;
-            float remainingFraction = previousRemainingCount > 0
-                ? Mathf.Clamp01((float)remainingCount / previousRemainingCount)
-                : 0f;
+            GetIceEffectPresentation(out Vector3 position, out int sortingLayerId, out int sortingOrder);
+            iceParticleVfxHandle?.PlayCrack(position, sortingLayerId, sortingOrder);
 
             for (int index = 0; index < iceRenderers.Count; index++)
             {
@@ -1860,23 +1870,16 @@ namespace GravityPuzzle
 
                 DOTween.Kill(renderer);
                 Vector3 restingScale = renderer.transform.localScale;
-                float targetAlpha = renderer.color.a * Mathf.Lerp(.55f, .9f, remainingFraction);
 
                 if (tweenConfig == null)
-                {
-                    Color color = renderer.color;
-                    color.a = targetAlpha;
-                    renderer.color = color;
                     continue;
-                }
 
-                Sequence crack = DOTween.Sequence()
-                    .Append(renderer.transform.DOPunchScale(
+                Sequence crack = DOTween.Sequence().Append(
+                    renderer.transform.DOPunchScale(
                         restingScale * tweenConfig.IceCrackScaleMultiplier,
                         tweenConfig.IceCrackDuration,
                         tweenConfig.IceCrackVibrato,
-                        tweenConfig.IceCrackElasticity))
-                    .Join(renderer.DOFade(targetAlpha, tweenConfig.IceCrackDuration));
+                        tweenConfig.IceCrackElasticity));
                 crack.SetLink(renderer.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
             }
@@ -1885,6 +1888,8 @@ namespace GravityPuzzle
         private void PlayIceReleaseAnimation()
         {
             iceReleaseAnimating = true;
+            GetIceEffectPresentation(out Vector3 position, out int sortingLayerId, out int sortingOrder);
+            iceParticleVfxHandle?.PlayBreak(position, sortingLayerId, sortingOrder);
             TweenConfig tweenConfig = GridFallView != null ? GridFallView.Config : null;
             if (tweenConfig == null)
             {
@@ -1919,6 +1924,48 @@ namespace GravityPuzzle
             release.OnComplete(ClearIceVisuals)
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
+        }
+
+        private Vector3 GetIceEffectPosition()
+        {
+            Bounds combinedBounds = default;
+            bool hasIceVisual = false;
+            for (int index = 0; index < iceRenderers.Count; index++)
+            {
+                SpriteRenderer visual = iceRenderers[index];
+                if (visual == null || !visual.enabled)
+                    continue;
+
+                if (hasIceVisual)
+                    combinedBounds.Encapsulate(visual.bounds);
+                else
+                {
+                    combinedBounds = visual.bounds;
+                    hasIceVisual = true;
+                }
+            }
+
+            return hasIceVisual ? combinedBounds.center : transform.position;
+        }
+
+        private void GetIceEffectPresentation(
+            out Vector3 position,
+            out int sortingLayerId,
+            out int sortingOrder)
+        {
+            position = GetIceEffectPosition();
+            sortingLayerId = 0;
+            sortingOrder = 1;
+
+            for (int index = 0; index < iceRenderers.Count; index++)
+            {
+                SpriteRenderer renderer = iceRenderers[index];
+                if (renderer == null || !renderer.enabled)
+                    continue;
+
+                sortingLayerId = renderer.sortingLayerID;
+                sortingOrder = Mathf.Max(sortingOrder, renderer.sortingOrder + 1);
+            }
         }
 
         private void ClearIceVisuals()

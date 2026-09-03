@@ -1,7 +1,9 @@
 using GravityPuzzle.Config;
+using System.Collections.Generic;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Presentation.Views;
+using GravityPuzzle.Presentation.VFX;
 using GravityPuzzle;
 using UnityEngine;
 
@@ -40,6 +42,13 @@ namespace GravityPuzzle.Bootstrap
         [Header("Piece Visuals")]
         [Tooltip("Optional visual lookup for level piece Visual Id values. Empty IDs keep their authored legacy colours.")]
         [SerializeField] private PieceVisualConfig pieceVisualConfig;
+
+        [Header("Ice Block Particles")]
+        [Tooltip("Prefab template prewarmed once per possible ice block. A separate instance plays at every ice block.")]
+        [SerializeField] private ParticleSystem iceCrackParticleSystem;
+
+        [Tooltip("Higher-emission prefab template prewarmed once per possible ice block.")]
+        [SerializeField] private ParticleSystem iceBreakParticleSystem;
 
         [Tooltip("Optional parent for inactive pooled pieces. Uses this object when empty.")]
         [SerializeField] private Transform poolParent;
@@ -96,6 +105,13 @@ namespace GravityPuzzle.Bootstrap
             poolService.Register<PuzzlePiece>(piecePool);
             RuntimePieceFactory.SetRootProvider(new PooledRuntimePieceRootProvider(poolService));
             RuntimePieceFactory.SetVisualConfig(pieceVisualConfig);
+            int iceEffectCapacity = CountIcePieces(selectedLevel);
+            RuntimePieceFactory.SetIceParticleVfx(new IceBlockParticleVfxPool(
+                this,
+                iceCrackParticleSystem,
+                iceBreakParticleSystem,
+                parent,
+                iceEffectCapacity));
 
             RuntimePieceFactory.SetPresentationMode(poolConfig.UseVoxelShardGrid);
 
@@ -125,6 +141,19 @@ namespace GravityPuzzle.Bootstrap
 
             WarnForUnresolvedVisualIds(selectedLevel);
             isReady = true;
+        }
+
+        private static int CountIcePieces(GravityLevelDefinition level)
+        {
+            int count = 0;
+            for (int index = 0; index < level.pieces.Count; index++)
+            {
+                PieceDefinition piece = level.pieces[index];
+                if (piece != null && piece.specialBlockType != PieceSpecialBlockType.Bomb && piece.frozenMoveCount > 0)
+                    count++;
+            }
+
+            return Mathf.Max(1, count);
         }
 
         private void Start()
