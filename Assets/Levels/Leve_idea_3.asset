@@ -15,7 +15,7 @@ MonoBehaviour:
   levelName: New Level
   timeLimit: 60
   boardColumns: 14
-  boardRows: 12
+  boardRows: 13
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
@@ -40,8 +40,8 @@ MonoBehaviour:
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 22, y: 22}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 20
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -187,8 +187,8 @@ MonoBehaviour:
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 24, y: 22}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 23
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -366,8 +366,8 @@ MonoBehaviour:
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 24, y: 22}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 21
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -481,8 +481,8 @@ MonoBehaviour:
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 24, y: 22}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 24
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -532,8 +532,8 @@ MonoBehaviour:
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 24, y: 22}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 22
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -647,8 +647,8 @@ MonoBehaviour:
     color: {r: 1, g: 0.9003024, b: 0.2980392, a: 1}
     origin: {x: 24, y: 22}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 16
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -762,8 +762,8 @@ MonoBehaviour:
     color: {r: 0.9793788, g: 0.2980392, b: 1, a: 1}
     origin: {x: 24, y: 22}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 19
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -877,8 +877,8 @@ MonoBehaviour:
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 17
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1056,8 +1056,8 @@ MonoBehaviour:
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 18
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1171,8 +1171,8 @@ MonoBehaviour:
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 12
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1318,9 +1318,9 @@ MonoBehaviour:
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
-    iceCounterFontSize: 36
+    specialBlockType: 1
+    frozenMoveCount: 13
+    iceCounterFontSize: 15
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
@@ -1465,8 +1465,8 @@ MonoBehaviour:
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 14
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1580,8 +1580,8 @@ MonoBehaviour:
     color: {r: 0.5240001, g: 1, b: 0.3, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 15
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1695,8 +1695,8 @@ MonoBehaviour:
     color: {r: 0.3, g: 1, b: 0.8739998, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 16
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1810,8 +1810,8 @@ MonoBehaviour:
     color: {r: 0.3, g: 0.32800016, b: 1, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 10
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1976,8 +1976,8 @@ MonoBehaviour:
     color: {r: 1, g: 0.46799985, b: 0.3, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 11
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2238,9 +2238,9 @@ MonoBehaviour:
     color: {r: 0.3, g: 1, b: 0.6639998, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
-    iceCounterFontSize: 36
+    specialBlockType: 1
+    frozenMoveCount: 1
+    iceCounterFontSize: 20
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
@@ -2353,8 +2353,8 @@ MonoBehaviour:
     color: {r: 0.3, g: 0.5380001, b: 1, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 2
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2436,8 +2436,8 @@ MonoBehaviour:
     color: {r: 0.8599998, g: 0.3, b: 1, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 3
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2551,8 +2551,8 @@ MonoBehaviour:
     color: {r: 1, g: 0.3, b: 0.3420003, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 4
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2666,8 +2666,8 @@ MonoBehaviour:
     color: {r: 0.94400024, g: 1, b: 0.3, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 5
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2749,8 +2749,8 @@ MonoBehaviour:
     color: {r: 0.3, g: 1, b: 0.45399988, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 6
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2864,8 +2864,8 @@ MonoBehaviour:
     color: {r: 0.3, g: 0.74800026, b: 1, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 7
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -2979,8 +2979,8 @@ MonoBehaviour:
     color: {r: 0.6499997, g: 0.3, b: 1, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 8
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -3094,8 +3094,8 @@ MonoBehaviour:
     color: {r: 1, g: 0.3, b: 0.55200046, a: 1}
     origin: {x: 26, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 0
+    specialBlockType: 1
+    frozenMoveCount: 9
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}

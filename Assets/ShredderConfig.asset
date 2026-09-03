@@ -15,7 +15,7 @@ MonoBehaviour:
   particlesPerShreddedCell: 40
   exitSeamOffsetBelowShredder: 2
   wheelPrefab: {fileID: 6496321627930684527, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
-  wheelPoolCapacity: 16
+  wheelPoolCapacity: 32
   catchZonePrefab: {fileID: 1348796746018862400, guid: 38977ea9b7627446fb5feb095e7ae1d6, type: 3}
   catchZonePoolCapacity: 1
   feedMaskPrefab: {fileID: 0}

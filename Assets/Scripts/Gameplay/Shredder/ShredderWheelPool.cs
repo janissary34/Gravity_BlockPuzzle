@@ -7,6 +7,11 @@ namespace GravityPuzzle
     {
         private static GameObjectPool<ShredderWheel> pool;
 
+        public static bool HasCapacity(int requiredCapacity)
+        {
+            return pool != null && pool.Capacity >= requiredCapacity;
+        }
+
         public static void Configure(ShredderWheel prefab, Transform parent, int capacity)
         {
             if (prefab == null)

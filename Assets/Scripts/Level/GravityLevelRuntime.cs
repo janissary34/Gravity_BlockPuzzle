@@ -186,6 +186,16 @@ namespace GravityPuzzle
                 return;
             }
 
+            if (!TryValidateShredderPools(level, BlockShredder.Instance != null
+                    ? BlockShredder.Instance.Config
+                    : null))
+            {
+                // Do not initialize the board snapshot until every required
+                // runtime object is available. A partial level build leaves no
+                // pieces to count and would otherwise be interpreted as a win.
+                return;
+            }
+
             float halfHeight = level.boardRows * .5f;
             float cameraSize = ResolveCameraSize(level);
             PrototypeBootstrap.ConfigureCamera(cameraSize, level.backgroundColor);
@@ -201,9 +211,7 @@ namespace GravityPuzzle
             CreateBoardBackground(level);
             CreateBoardFrame(level, exitWidth);
 
-            ShredderConfig shredderConfig = BlockShredder.Instance != null
-                ? BlockShredder.Instance.Config
-                : null;
+            ShredderConfig shredderConfig = BlockShredder.Instance.Config;
             if (shredderConfig != null)
                 boardState.SetFinalShredderGraceSeconds(
                     shredderConfig.FinalPieceTimerGraceSeconds);
@@ -489,9 +497,6 @@ namespace GravityPuzzle
             float halfHeight,
             ShredderConfig shredderConfig)
         {
-            float radiusMultiplier = shredderConfig != null
-                ? shredderConfig.WheelRadiusMultiplier
-                : 1f;
             float rotationMultiplier = shredderConfig != null
                 ? shredderConfig.WheelRotationSpeedMultiplier
                 : 1f;
@@ -500,8 +505,7 @@ namespace GravityPuzzle
             // decorative frame exit. Cover every board column including both
             // outermost cells, so pieces cannot bypass it through a corner.
             float coverageWidth = level.boardColumns;
-            float requestedRadius = Mathf.Max(.2f, level.shredderRadius * radiusMultiplier);
-            int count = Mathf.Max(1, Mathf.CeilToInt(coverageWidth / (requestedRadius * 2f)));
+            int count = CalculateRequiredShredderWheelCount(level, shredderConfig);
             // Fit an integer number of touching wheels exactly across the full
             // board width. The first/last wheel edges land on the board edges.
             float radius = coverageWidth / (count * 2f);
@@ -541,6 +545,47 @@ namespace GravityPuzzle
             shredder.name = name;
             shredder.transform.position = position;
             wheel.Configure(radius, speed);
+        }
+
+        private static bool TryValidateShredderPools(
+            GravityLevelDefinition level,
+            ShredderConfig shredderConfig)
+        {
+            if (shredderConfig == null)
+            {
+                Debug.LogError(
+                    "[LevelRuntime] BlockShredder requires a ShredderConfig before a level can be built.");
+                return false;
+            }
+
+            int requiredWheelCount = CalculateRequiredShredderWheelCount(level, shredderConfig);
+            if (!ShredderWheelPool.HasCapacity(requiredWheelCount))
+            {
+                Debug.LogError(
+                    $"[ShredderPool] Level requires {requiredWheelCount} wheel(s), but the configured wheel pool capacity is insufficient. " +
+                    "Increase Wheel Pool Capacity in ShredderConfig before playing this level.");
+                return false;
+            }
+
+            if (!ShredderCatchZonePool.HasCapacity(1))
+            {
+                Debug.LogError(
+                    "[ShredderPool] Catch-zone pool is not configured. Create and assign the ShredderCatchZone prefab in ShredderConfig.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private static int CalculateRequiredShredderWheelCount(
+            GravityLevelDefinition level,
+            ShredderConfig shredderConfig)
+        {
+            float radiusMultiplier = shredderConfig != null
+                ? shredderConfig.WheelRadiusMultiplier
+                : 1f;
+            float requestedRadius = Mathf.Max(.2f, level.shredderRadius * radiusMultiplier);
+            return Mathf.Max(1, Mathf.CeilToInt(level.boardColumns / (requestedRadius * 2f)));
         }
 
         private static void CreateShredderCatchZone(
