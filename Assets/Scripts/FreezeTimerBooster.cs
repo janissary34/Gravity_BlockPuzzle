@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using GravityPuzzle.Presentation.Views;
 
 namespace GravityPuzzle
 {
@@ -175,6 +176,9 @@ namespace GravityPuzzle
         private void RefreshButtonState()
         {
             if (boosterButton == null)
+                return;
+
+            if (BoosterTargetingPresentation.IsBoosterButtonSuppressed(buttonCanvasGroup))
                 return;
 
             // Keep the GameObject active so this coroutine continues even when

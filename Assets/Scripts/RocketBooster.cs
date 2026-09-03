@@ -158,17 +158,21 @@ namespace GravityPuzzle
             }
 
             activeBooster = this;
+            BoosterTargetingPresentation.Show(BoosterTargetingPresentation.Mode.Rocket);
             Debug.Log($"[RocketBooster] Targeting enabled. remainingUses={currentUses}.", this);
             RefreshButtonState();
         }
 
         public void CancelRocketSelection()
         {
-            if (activeBooster == this)
+            bool ownedSelection = activeBooster == this;
+            if (ownedSelection)
             {
                 activeBooster = null;
             }
 
+            if (ownedSelection)
+                BoosterTargetingPresentation.Hide();
             RefreshButtonState();
         }
 
@@ -227,6 +231,7 @@ namespace GravityPuzzle
                     Debug.Log($"[RocketBooster] Target tap accepted: {target.Piece.name}");
                     boundBoard.StartTimer();
                     activeBooster = null;
+                    BoosterTargetingPresentation.Hide();
                     suppressGameplayThroughFrame = Time.frameCount;
                     RefreshButtonState();
                     return;
@@ -557,6 +562,9 @@ namespace GravityPuzzle
 
         private void RefreshButtonState()
         {
+            if (BoosterTargetingPresentation.IsBoosterButtonSuppressed(buttonCanvasGroup))
+                return;
+
             if (boosterButtonRef != null)
             {
                 boosterButtonRef.RefreshButtonState();

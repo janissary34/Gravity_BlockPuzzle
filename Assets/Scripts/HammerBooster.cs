@@ -142,6 +142,7 @@ namespace GravityPuzzle
             }
 
             activeBooster = this;
+            BoosterTargetingPresentation.Show(BoosterTargetingPresentation.Mode.Hammer);
             Debug.Log("[HammerBooster] Targeting enabled.", this);
             RefreshButtonState();
         }
@@ -149,9 +150,12 @@ namespace GravityPuzzle
         /// <summary>Cancels targeting without consuming the booster.</summary>
         public void CancelHammerSelection()
         {
-            if (activeBooster == this)
+            bool ownedSelection = activeBooster == this;
+            if (ownedSelection)
                 activeBooster = null;
 
+            if (ownedSelection)
+                BoosterTargetingPresentation.Hide();
             RefreshButtonState();
         }
 
@@ -194,6 +198,7 @@ namespace GravityPuzzle
             {
                 boundBoard.StartTimer();
                 activeBooster = null;
+                BoosterTargetingPresentation.Hide();
                 // Update order between UI/booster/drag components is not fixed.
                 // Suppress the rest of this frame so the target tap cannot also
                 // begin dragging the newly modified piece.
@@ -475,6 +480,9 @@ namespace GravityPuzzle
         private void RefreshButtonState()
         {
             if (boosterButton == null)
+                return;
+
+            if (BoosterTargetingPresentation.IsBoosterButtonSuppressed(buttonCanvasGroup))
                 return;
 
             bool visible = true;

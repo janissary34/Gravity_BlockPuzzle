@@ -47,7 +47,7 @@ MonoBehaviour:
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
-    bombTimerSeconds: 20
+    bombTimerSeconds: 30
     bombCounterFontSize: 15
     bombCounterTextColor: {r: 0, g: 0.38664228, b: 0.990566, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}

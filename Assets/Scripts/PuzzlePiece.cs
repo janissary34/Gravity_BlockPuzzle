@@ -19,6 +19,18 @@ namespace GravityPuzzle
     [RequireComponent(typeof(Rigidbody2D), typeof(CompositeCollider2D), typeof(LineRenderer))]
     public sealed class PuzzlePiece : MonoBehaviour, IPoolable, IPoolReturnReceiver<PuzzlePiece>
     {
+        public readonly struct TargetableCell
+        {
+            public Vector2 Center { get; }
+            public Vector2 Size { get; }
+
+            public TargetableCell(Vector2 center, Vector2 size)
+            {
+                Center = center;
+                Size = size;
+            }
+        }
+
         public readonly struct RemovedCell
         {
             public readonly Vector2 worldPosition;
@@ -146,6 +158,9 @@ namespace GravityPuzzle
         private bool gridDespawned;
         private bool useFullCollisionGeometry;
         private bool isSelected;
+        // Presentation-only state for an armed Rocket or Hammer booster.
+        // It never participates in board occupancy or input ownership.
+        private bool isBoosterTargeted;
         private bool destructionReported;
         private bool iceReleaseAnimating;
         private int frozenUntilDestroyedCount;
@@ -279,10 +294,12 @@ namespace GravityPuzzle
             previousFrozenRemaining = -1;
             useFullCollisionGeometry = false;
             isSelected = false;
+            isBoosterTargeted = false;
             IsFrozen = false;
             SourcePieceId = -1;
             if (rootOutline != null)
                 rootOutline.enabled = true;
+            ApplyOutlinePresentation();
             if (compositeCollider != null)
                 compositeCollider.enabled = true;
             RestoreDefaultCollisionMaterials();
@@ -292,6 +309,8 @@ namespace GravityPuzzle
         public void OnDespawn()
         {
             isSelected = false;
+            isBoosterTargeted = false;
+            ApplyOutlinePresentation();
             returnToPool = null;
             ClearIceVisuals();
             RestoreShredderPresentation();
@@ -515,15 +534,58 @@ namespace GravityPuzzle
 
             this.isSelected = isSelected;
 
+            ApplyOutlinePresentation();
+        }
+
+        /// <summary>
+        /// Enables the existing selected-outline styling for booster targeting
+        /// without changing gameplay state or drag selection.
+        /// </summary>
+        public void SetBoosterTargeted(bool isTargeted)
+        {
+            isBoosterTargeted = isTargeted;
+            ApplyOutlinePresentation();
+        }
+
+        /// <summary>
+        /// Appends the current world-space footprints of each runtime cell
+        /// without allocating. Hammer targeting uses these only as visual
+        /// overlays; the board remains the action authority.
+        /// </summary>
+        public void CollectTargetableCells(List<TargetableCell> results)
+        {
+            if (results == null || IsBeingShredded || collisionCells == null ||
+                fullCollisionCellSizes == null)
+                return;
+
+            int cellCount = Mathf.Min(collisionCells.Count, fullCollisionCellSizes.Count);
+            for (int index = 0; index < cellCount; index++)
+            {
+                BoxCollider2D cell = collisionCells[index];
+                if (cell == null || !cell.enabled)
+                    continue;
+
+                Vector3 scale = cell.transform.lossyScale;
+                Vector2 localSize = fullCollisionCellSizes[index];
+                Vector2 worldSize = new Vector2(
+                    localSize.x * Mathf.Abs(scale.x),
+                    localSize.y * Mathf.Abs(scale.y));
+                results.Add(new TargetableCell(cell.bounds.center, worldSize));
+            }
+        }
+
+        private void ApplyOutlinePresentation()
+        {
             if (rootOutline != null)
             {
-                float outlineWidth = isSelected ? selectedOutlineWidth : restingOutlineWidth;
+                bool useTargetOutline = isSelected || isBoosterTargeted;
+                float outlineWidth = useTargetOutline ? selectedOutlineWidth : restingOutlineWidth;
                 rootOutline.startWidth = outlineWidth;
                 rootOutline.endWidth = outlineWidth;
-                Color outlineColor = isSelected ? selectedOutlineColor : restingOutlineColor;
+                Color outlineColor = useTargetOutline ? selectedOutlineColor : restingOutlineColor;
                 rootOutline.startColor = outlineColor;
                 rootOutline.endColor = outlineColor;
-                rootOutline.sortingOrder = isSelected ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
+                rootOutline.sortingOrder = useTargetOutline ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
             }
         }
 
@@ -541,7 +603,7 @@ namespace GravityPuzzle
             selectedOutlineColor = selectedColor;
             restingOutlineSortingOrder = restingSortingOrder;
             selectedOutlineSortingOrder = selectedSortingOrder;
-            SetSelected(isSelected);
+            ApplyOutlinePresentation();
         }
 
         public void ConfigureCollisionGeometry(
