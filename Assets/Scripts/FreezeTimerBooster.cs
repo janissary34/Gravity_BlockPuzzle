@@ -52,6 +52,15 @@ namespace GravityPuzzle
             RefreshButtonState();
         }
 
+        private void Start()
+        {
+            // The board can finish its startup after this UI object receives
+            // OnEnable. Synchronize once more so the badge always uses the
+            // active level's timerBoosterCount instead of its prefab value.
+            SynchronizeLevel();
+            RefreshButtonState();
+        }
+
         private void Update()
         {
             // Supports a persistent UI canvas: a newly created board represents

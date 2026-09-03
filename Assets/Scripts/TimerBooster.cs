@@ -404,6 +404,10 @@ namespace GravityPuzzle
 
             if (presentationCamera == null)
                 Debug.LogError("[TimerBooster] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level != null)
+                GetTimerBoosterButton()?.ConfigureLevelUseCount(level.timerBoosterCount);
         }
 
         private void OnEnable()
