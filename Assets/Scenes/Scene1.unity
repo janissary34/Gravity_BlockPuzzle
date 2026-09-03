@@ -45964,8 +45964,8 @@ MonoBehaviour:
   prototypeBoard: {fileID: 1938475614}
   puzzleDragController: {fileID: 1938475613}
   pieceVisualConfig: {fileID: 11400000, guid: 6ce7ef2d0321457a93c6ec7053eb6224, type: 2}
-  iceCrackParticleSystem: {fileID: 0}
-  iceBreakParticleSystem: {fileID: 0}
+  iceCrackParticleSystem: {fileID: 201103893946865826, guid: 1d43b1e304cd647cd9efe8e2b5850a0a, type: 3}
+  iceBreakParticleSystem: {fileID: 2705653447207242337, guid: 29661e01a9dad4bcc989a5f51be98bc7, type: 3}
   poolParent: {fileID: 1938475611}
 --- !u!114 &1938475613
 MonoBehaviour:
