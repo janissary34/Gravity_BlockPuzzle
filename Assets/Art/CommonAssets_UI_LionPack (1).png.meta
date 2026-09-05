@@ -1,0 +1,1456 @@
+fileFormatVersion: 2
+guid: e6806e9b571d641229bcd51e248b7f2a
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 2
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_1
+      rect:
+        serializedVersion: 2
+        x: 1520
+        y: 1878
+        width: 112
+        height: 146
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 14c04c6a79cbd4138b865f6bf997e2aa
+      internalID: 1410485693
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_2
+      rect:
+        serializedVersion: 2
+        x: 1612
+        y: 1692
+        width: 185
+        height: 204
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 704b500c31bab4eecadfa96bfcbc057d
+      internalID: 1959921019
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_3
+      rect:
+        serializedVersion: 2
+        x: 1613
+        y: 1881
+        width: 13
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ff492ebc9765845d9a084be3608e8239
+      internalID: 1144794793
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_4
+      rect:
+        serializedVersion: 2
+        x: 1799
+        y: 1692
+        width: 201
+        height: 200
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0cf68c6edfd48491d88e0b2d9a312c60
+      internalID: 965006765
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_5
+      rect:
+        serializedVersion: 2
+        x: 1436
+        y: 1681
+        width: 176
+        height: 183
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eb56c99cfd5704247b4e1f6ceb7db4f4
+      internalID: -1522491564
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_6
+      rect:
+        serializedVersion: 2
+        x: 1596
+        y: 1692
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4b8bdcbe9e5a74e13910f87a0df66318
+      internalID: -763147038
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_7
+      rect:
+        serializedVersion: 2
+        x: 1628
+        y: 1504
+        width: 197
+        height: 212
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f5b76fd1b65c84927ae304ed78ce88a4
+      internalID: 797907828
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_8
+      rect:
+        serializedVersion: 2
+        x: 1785
+        y: 1692
+        width: 31
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9a39d91379ce34ca3970606826b4ebde
+      internalID: 496005527
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_9
+      rect:
+        serializedVersion: 2
+        x: 1529
+        y: 1676
+        width: 10
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e49cfb457449b4f03b0736238f5f52a0
+      internalID: -774148210
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_10
+      rect:
+        serializedVersion: 2
+        x: 1444
+        y: 1548
+        width: 172
+        height: 120
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0eb2e7b479b514e3a8b664a2796a5730
+      internalID: -1674250854
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_11
+      rect:
+        serializedVersion: 2
+        x: 1612
+        y: 1612
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c7b565b43de0a49f1a4e69ce896c3677
+      internalID: 149986834
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_12
+      rect:
+        serializedVersion: 2
+        x: 1496
+        y: 1412
+        width: 131
+        height: 134
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5f7e798ad7a434c8c8cab9a8acad30f5
+      internalID: -1262350694
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_13
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 644
+        width: 368
+        height: 516
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b123d952184f84ed19c28ccfc1a1cdd9
+      internalID: -6349577
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_14
+      rect:
+        serializedVersion: 2
+        x: 348
+        y: 1096
+        width: 230
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 22c58bace7fc549fa986090640522d59
+      internalID: 1108933010
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_15
+      rect:
+        serializedVersion: 2
+        x: 828
+        y: 1128
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 18bb77a03b6364648b7b304d1a805adf
+      internalID: 848656935
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_16
+      rect:
+        serializedVersion: 2
+        x: 872
+        y: 1128
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e73ddbb0846454eb0936a38019268f8c
+      internalID: -1136639585
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_17
+      rect:
+        serializedVersion: 2
+        x: 928
+        y: 1128
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3b3e3c27c916b4ad497a6e9e5973190b
+      internalID: -440439094
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_18
+      rect:
+        serializedVersion: 2
+        x: 1080
+        y: 1106
+        width: 120
+        height: 122
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: abb68800a3c6a4b0b93b8697c9cfc4a6
+      internalID: 41528459
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_19
+      rect:
+        serializedVersion: 2
+        x: 1209
+        y: 1023
+        width: 508
+        height: 227
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 73a57be041c3e40bc934b7820bcc2e92
+      internalID: -832982349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_20
+      rect:
+        serializedVersion: 2
+        x: 1728
+        y: 1092
+        width: 244
+        height: 135
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d1168e92f37014321a5f640a58b29d3d
+      internalID: 890847462
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_21
+      rect:
+        serializedVersion: 2
+        x: 348
+        y: 932
+        width: 301
+        height: 152
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 97a0510165e8f46bb95bc26f4c3efed8
+      internalID: 222430232
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_22
+      rect:
+        serializedVersion: 2
+        x: 670
+        y: 971
+        width: 341
+        height: 128
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fd7d7cf0257e14605abcef62f7931557
+      internalID: 883737079
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_23
+      rect:
+        serializedVersion: 2
+        x: 1101
+        y: 815
+        width: 344
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3603bd0dc1bee4a9f9e3f5ba999ed3b8
+      internalID: 977437785
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_24
+      rect:
+        serializedVersion: 2
+        x: 1464
+        y: 817
+        width: 149
+        height: 175
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 50f06f815f4cb463d8fc50e18e816899
+      internalID: -613782403
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_25
+      rect:
+        serializedVersion: 2
+        x: 1529
+        y: 988
+        width: 7
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b9e41ca4a3ebc46d1b674f89cb5572c1
+      internalID: -1297332372
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_26
+      rect:
+        serializedVersion: 2
+        x: 1711
+        y: 915
+        width: 277
+        height: 168
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0e73e148dea5c4e1eb6dbd4bbd1e43b7
+      internalID: 813511280
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_27
+      rect:
+        serializedVersion: 2
+        x: 644
+        y: 924
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ebf22908c236a49279e58eb38e03c463
+      internalID: 577381881
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_28
+      rect:
+        serializedVersion: 2
+        x: 349
+        y: 769
+        width: 300
+        height: 151
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b12ab4c4805404d4c92dda9f7183aa24
+      internalID: -95687652
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_29
+      rect:
+        serializedVersion: 2
+        x: 1076
+        y: 892
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: da79b3cc379cf433a9b4d8731e4ea6c4
+      internalID: -930586199
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_30
+      rect:
+        serializedVersion: 2
+        x: 668
+        y: 832
+        width: 412
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7843e415063fc4daaa35e2d4211c46cb
+      internalID: 320847171
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_31
+      rect:
+        serializedVersion: 2
+        x: 1078
+        y: 883
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6c3ca911d73c140349aa0aeab105ae17
+      internalID: 2138732412
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_32
+      rect:
+        serializedVersion: 2
+        x: 668
+        y: 758
+        width: 412
+        height: 63
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 53c1600b528cb42688c7714d979bbea8
+      internalID: -1608581275
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_33
+      rect:
+        serializedVersion: 2
+        x: 349
+        y: 651
+        width: 336
+        height: 100
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 669c5563f79c74cda9886fe085feb742
+      internalID: 483412611
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_34
+      rect:
+        serializedVersion: 2
+        x: 734
+        y: 670
+        width: 182
+        height: 76
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 14}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dbfc82cb788944f188907a6d4c473a6e
+      internalID: -722621198
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_35
+      rect:
+        serializedVersion: 2
+        x: 216
+        y: 640
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 932576bc373d946bca2950f9d6cde048
+      internalID: 1215103335
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_37
+      rect:
+        serializedVersion: 2
+        x: 352
+        y: 632
+        width: 12
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 66f414ab5e06c47b79dbcd52e053eaee
+      internalID: 973131638
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_38
+      rect:
+        serializedVersion: 2
+        x: 27
+        y: 476
+        width: 308
+        height: 164
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c2ba5a6a3da854fd1a4aca500caaa15f
+      internalID: -1374965542
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_39
+      rect:
+        serializedVersion: 2
+        x: 732
+        y: 572
+        width: 182
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ab81bfc18f3004862bd197ea09f3a5c6
+      internalID: 399107936
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_40
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 292
+        width: 319
+        height: 164
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 52d70c308b06b49de971f46f054841d3
+      internalID: -1593256305
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_42
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 655
+        width: 308
+        height: 164
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0ebd012b1906a4ec09a9f236e4793d34
+      internalID: 1589143943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_43
+      rect:
+        serializedVersion: 2
+        x: 26
+        y: 827
+        width: 308
+        height: 164
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c37e4efd718ed4d77964251a3e24c6b5
+      internalID: -1200275381
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_44
+      rect:
+        serializedVersion: 2
+        x: 23
+        y: 996
+        width: 308
+        height: 164
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 265fa793868b34a3e933865eab4c0da5
+      internalID: 468919262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_45
+      rect:
+        serializedVersion: 2
+        x: 1095
+        y: 1687
+        width: 176
+        height: 183
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 08c9acd9518aa4b34938cf8f3aba272c
+      internalID: -1475679262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_46
+      rect:
+        serializedVersion: 2
+        x: 1271
+        y: 1687
+        width: 176
+        height: 183
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eac3305c540514958b8429c83798abc4
+      internalID: -388365328
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_47
+      rect:
+        serializedVersion: 2
+        x: 1104
+        y: 1520
+        width: 150
+        height: 158
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e5e01c3e4545041979d0ef0a5f9a9339
+      internalID: -1160026708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_48
+      rect:
+        serializedVersion: 2
+        x: 1258
+        y: 1533
+        width: 175
+        height: 158
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 15, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 553bb2c9b79214c19a6e7192ed54c3bd
+      internalID: -590615343
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_49
+      rect:
+        serializedVersion: 2
+        x: 1362
+        y: 1897
+        width: 134
+        height: 146
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e112a3fbdff6440379901ae097d4a99a
+      internalID: 1948475505
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_0
+      rect:
+        serializedVersion: 2
+        x: 15
+        y: 1179
+        width: 741
+        height: 858
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 80611627f57dc4194a98fa3db9cc1fcb
+      internalID: -1433657032
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_41
+      rect:
+        serializedVersion: 2
+        x: 1225
+        y: 1894
+        width: 134
+        height: 146
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 64935e4463aba426ba3b3d0083c9ceba
+      internalID: 31340527
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_50
+      rect:
+        serializedVersion: 2
+        x: 772
+        y: 1878
+        width: 453
+        height: 156
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e8ed615c5ab9442fbabdc37dca7cdf59
+      internalID: 559792640
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_51
+      rect:
+        serializedVersion: 2
+        x: 1375
+        y: 1418
+        width: 131
+        height: 130
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 331c3a3e3f7b94f0282bad94a945ce85
+      internalID: 1588332676
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_52
+      rect:
+        serializedVersion: 2
+        x: 1228
+        y: 1418
+        width: 131
+        height: 130
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e554972d1a7be40d0a1b2007f5db1d1e
+      internalID: -973268096
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_53
+      rect:
+        serializedVersion: 2
+        x: 1091
+        y: 1418
+        width: 131
+        height: 130
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8864c6b91f4a545cbaf9538f74790f74
+      internalID: 346258641
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_54
+      rect:
+        serializedVersion: 2
+        x: 1094
+        y: 1303
+        width: 153
+        height: 114
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d0f3a426d03a743858354ace7a327e40
+      internalID: 1322489402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_55
+      rect:
+        serializedVersion: 2
+        x: 1397
+        y: 1319
+        width: 106
+        height: 101
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b915a7851bcc24c03a82d26cfffd40bb
+      internalID: -23533234
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_56
+      rect:
+        serializedVersion: 2
+        x: 762
+        y: 1539
+        width: 335
+        height: 332
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bd19dd95d1a2f4a448fc3b3d42f5e82d
+      internalID: -1769951838
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_57
+      rect:
+        serializedVersion: 2
+        x: 759
+        y: 1223
+        width: 335
+        height: 332
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 56e9922e5d89342b4b7d3f2c134060cd
+      internalID: 1568358945
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_36
+      rect:
+        serializedVersion: 2
+        x: 344
+        y: 378
+        width: 315
+        height: 124
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 226949fc8ed1b48cd82b34fe7421e498
+      internalID: 1173381308
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_58
+      rect:
+        serializedVersion: 2
+        x: 344
+        y: 512
+        width: 315
+        height: 124
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0c4d4d7415cec41e68d28bcfb9835747
+      internalID: 949745028
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_59
+      rect:
+        serializedVersion: 2
+        x: 665
+        y: 902
+        width: 412
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e5e6a8b8729304b9d9918f3d70cb7a44
+      internalID: 1986154679
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_60
+      rect:
+        serializedVersion: 2
+        x: 1104
+        y: 898
+        width: 344
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 14bf94b5b21e242f09583aca424773c1
+      internalID: -1573868798
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      CommonAssets_UI_LionPack (1)_0: -1433657032
+      CommonAssets_UI_LionPack (1)_1: 1410485693
+      CommonAssets_UI_LionPack (1)_10: -1674250854
+      CommonAssets_UI_LionPack (1)_11: 149986834
+      CommonAssets_UI_LionPack (1)_12: -1262350694
+      CommonAssets_UI_LionPack (1)_13: -6349577
+      CommonAssets_UI_LionPack (1)_14: 1108933010
+      CommonAssets_UI_LionPack (1)_15: 848656935
+      CommonAssets_UI_LionPack (1)_16: -1136639585
+      CommonAssets_UI_LionPack (1)_17: -440439094
+      CommonAssets_UI_LionPack (1)_18: 41528459
+      CommonAssets_UI_LionPack (1)_19: -832982349
+      CommonAssets_UI_LionPack (1)_2: 1959921019
+      CommonAssets_UI_LionPack (1)_20: 890847462
+      CommonAssets_UI_LionPack (1)_21: 222430232
+      CommonAssets_UI_LionPack (1)_22: 883737079
+      CommonAssets_UI_LionPack (1)_23: 977437785
+      CommonAssets_UI_LionPack (1)_24: -613782403
+      CommonAssets_UI_LionPack (1)_25: -1297332372
+      CommonAssets_UI_LionPack (1)_26: 813511280
+      CommonAssets_UI_LionPack (1)_27: 577381881
+      CommonAssets_UI_LionPack (1)_28: -95687652
+      CommonAssets_UI_LionPack (1)_29: -930586199
+      CommonAssets_UI_LionPack (1)_3: 1144794793
+      CommonAssets_UI_LionPack (1)_30: 320847171
+      CommonAssets_UI_LionPack (1)_31: 2138732412
+      CommonAssets_UI_LionPack (1)_32: -1608581275
+      CommonAssets_UI_LionPack (1)_33: 483412611
+      CommonAssets_UI_LionPack (1)_34: -722621198
+      CommonAssets_UI_LionPack (1)_35: 1215103335
+      CommonAssets_UI_LionPack (1)_36: 1173381308
+      CommonAssets_UI_LionPack (1)_37: 973131638
+      CommonAssets_UI_LionPack (1)_38: -1374965542
+      CommonAssets_UI_LionPack (1)_39: 399107936
+      CommonAssets_UI_LionPack (1)_4: 965006765
+      CommonAssets_UI_LionPack (1)_40: -1593256305
+      CommonAssets_UI_LionPack (1)_41: 31340527
+      CommonAssets_UI_LionPack (1)_42: 1589143943
+      CommonAssets_UI_LionPack (1)_43: -1200275381
+      CommonAssets_UI_LionPack (1)_44: 468919262
+      CommonAssets_UI_LionPack (1)_45: -1475679262
+      CommonAssets_UI_LionPack (1)_46: -388365328
+      CommonAssets_UI_LionPack (1)_47: -1160026708
+      CommonAssets_UI_LionPack (1)_48: -590615343
+      CommonAssets_UI_LionPack (1)_49: 1948475505
+      CommonAssets_UI_LionPack (1)_5: -1522491564
+      CommonAssets_UI_LionPack (1)_50: 559792640
+      CommonAssets_UI_LionPack (1)_51: 1588332676
+      CommonAssets_UI_LionPack (1)_52: -973268096
+      CommonAssets_UI_LionPack (1)_53: 346258641
+      CommonAssets_UI_LionPack (1)_54: 1322489402
+      CommonAssets_UI_LionPack (1)_55: -23533234
+      CommonAssets_UI_LionPack (1)_56: -1769951838
+      CommonAssets_UI_LionPack (1)_57: 1568358945
+      CommonAssets_UI_LionPack (1)_58: 949745028
+      CommonAssets_UI_LionPack (1)_59: 1986154679
+      CommonAssets_UI_LionPack (1)_6: -763147038
+      CommonAssets_UI_LionPack (1)_60: -1573868798
+      CommonAssets_UI_LionPack (1)_7: 797907828
+      CommonAssets_UI_LionPack (1)_8: 496005527
+      CommonAssets_UI_LionPack (1)_9: -774148210
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
