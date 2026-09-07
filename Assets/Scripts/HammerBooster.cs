@@ -468,8 +468,6 @@ namespace GravityPuzzle
             else
             {
                 remainingCount = levelUseCount;
-                if (remainingCount == 0)
-                    gameObject.SetActive(false);
             }
             RefreshButtonState();
         }
@@ -490,17 +488,20 @@ namespace GravityPuzzle
             if (BoosterTargetingPresentation.IsBoosterButtonSuppressed(buttonCanvasGroup))
                 return;
 
-            bool visible = true;
+            bool hasUses = GetRemainingUseCount() > 0;
             if (buttonCanvasGroup != null)
             {
-                buttonCanvasGroup.alpha = visible ? 1f : 0f;
-                buttonCanvasGroup.interactable = visible;
-                buttonCanvasGroup.blocksRaycasts = visible;
+                buttonCanvasGroup.alpha = hasUses ? 1f : 0.55f;
+                buttonCanvasGroup.interactable = hasUses;
+                buttonCanvasGroup.blocksRaycasts = hasUses;
             }
+
+            // The selection remains armed after the first click, so keeping this
+            // button interactable is safe: a further click is intentionally a no-op.
+            // More importantly, it prevents Unity's disabled Color Tint from
+            // darkening the selected Hammer icon.
             boosterButton.interactable =
-                visible &&
-                GetRemainingUseCount() > 0 &&
-                activeBooster != this &&
+                hasUses &&
                 boundBoard != null &&
                 boundBoard.IsLevelRunning &&
                 !LevelTimerUI.IsGameOver;

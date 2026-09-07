@@ -87,7 +87,7 @@ namespace GravityPuzzle
 
         /// <summary>
         /// Applies the active level's explicit booster allowance. A zero
-        /// allowance removes this booster from the level UI entirely.
+        /// allowance leaves this booster visible but unavailable in the level UI.
         /// </summary>
         public void ConfigureLevelUseCount(int count)
         {
@@ -95,8 +95,6 @@ namespace GravityPuzzle
             UpdateCountUI();
             RefreshButtonState();
 
-            if (remainingCount == 0)
-                gameObject.SetActive(false);
         }
 
         /// <summary>

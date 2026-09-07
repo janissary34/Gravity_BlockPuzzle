@@ -1072,7 +1072,7 @@ TextureImporter:
         height: 858
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 178, y: 195, z: 185, w: 179}
       outline: []
       physicsShape: []
       tessellationDetail: 0
@@ -1234,13 +1234,13 @@ TextureImporter:
       name: Panel_Blue_Square
       rect:
         serializedVersion: 2
-        x: 762
+        x: 765
         y: 1539
         width: 335
         height: 332
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 88, y: 90, z: 96, w: 82}
       outline: []
       physicsShape: []
       tessellationDetail: 0

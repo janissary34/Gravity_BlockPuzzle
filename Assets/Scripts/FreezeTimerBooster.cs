@@ -151,8 +151,6 @@ namespace GravityPuzzle
             else
             {
                 remainingCount = levelUseCount;
-                if (remainingCount == 0)
-                    gameObject.SetActive(false);
             }
             RefreshButtonState();
         }
@@ -181,25 +179,27 @@ namespace GravityPuzzle
             if (BoosterTargetingPresentation.IsBoosterButtonSuppressed(buttonCanvasGroup))
                 return;
 
-            // Keep the GameObject active so this coroutine continues even when
-            // the booster component lives directly on the Button. CanvasGroup
-            // hides the whole visual hierarchy without disabling the component.
-            bool visible = HasUses;
-            if (buttonCanvasGroup != null)
-            {
-                buttonCanvasGroup.alpha = visible ? 1f : 0f;
-                buttonCanvasGroup.interactable = visible;
-                buttonCanvasGroup.blocksRaycasts = visible;
-            }
-
-            boosterButton.interactable =
-                visible &&
-                boundBoard != null &&
+            // Keep unavailable boosters visible as a subdued option instead of
+            // removing them from the HUD. The whole button is also locked while
+            // its timer-freeze sequence owns the board timer.
+            bool hasUses = HasUses;
+            bool canInteract =
+                hasUses &&
                 !IsFreezeActive &&
+                boundBoard != null &&
                 !LevelTimerUI.IsGameOver &&
                 boundBoard.IsTimerActive &&
                 boundBoard.IsTimerStarted &&
                 boundBoard.TimeRemaining > 0f;
+
+            if (buttonCanvasGroup != null)
+            {
+                buttonCanvasGroup.alpha = canInteract ? 1f : 0.55f;
+                buttonCanvasGroup.interactable = canInteract;
+                buttonCanvasGroup.blocksRaycasts = canInteract;
+            }
+
+            boosterButton.interactable = canInteract;
         }
 
         private void EnsureReferences()

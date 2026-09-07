@@ -47,7 +47,7 @@ MonoBehaviour:
   progressSliderPulseCooldown: 0.09
   timerEntranceDuration: 0.75
   timerEntranceEase: 9
-  timerFreezeFillDuration: 0.85
+  timerFreezeFillDuration: 1.2
   timerFreezeFillEase: 12
   timerFlyToTargetDuration: 0.5
   timerFlyToTargetEase: 5
@@ -90,7 +90,6 @@ MonoBehaviour:
   timerFreezeGlowFadeInEase: 6
   timerFreezeGlowFadeOutDuration: 0.35
   timerFreezeGlowFadeOutEase: 15
-  timerAnticipationDuration: 0.12
   timerFlightScaleTarget: 0.6
   freezeImpactStartScale: 0.4
   freezeImpactPeakScale: 1.4

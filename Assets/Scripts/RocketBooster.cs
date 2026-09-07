@@ -552,8 +552,6 @@ namespace GravityPuzzle
             {
                 remainingCount = levelUseCount;
                 UpdateCountUI();
-                if (remainingCount == 0)
-                    gameObject.SetActive(false);
             }
             RefreshButtonState();
         }
@@ -571,27 +569,22 @@ namespace GravityPuzzle
             if (BoosterTargetingPresentation.IsBoosterButtonSuppressed(buttonCanvasGroup))
                 return;
 
-            if (boosterButtonRef != null)
-            {
-                boosterButtonRef.RefreshButtonState();
-                return;
-            }
-
             if (boosterButton == null)
                 return;
 
-            bool visible = true;
+            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+            bool hasUses = currentUses > 0;
             if (buttonCanvasGroup != null)
             {
-                buttonCanvasGroup.alpha = visible ? 1f : 0.4f;
-                buttonCanvasGroup.interactable = visible;
-                buttonCanvasGroup.blocksRaycasts = visible;
+                buttonCanvasGroup.alpha = hasUses ? 1f : 0.55f;
+                buttonCanvasGroup.interactable = hasUses;
+                buttonCanvasGroup.blocksRaycasts = hasUses;
             }
-            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+
+            // A repeat click while targeting is already armed is a no-op, so
+            // retaining interactivity prevents Unity from tinting its icon as disabled.
             boosterButton.interactable =
-                visible &&
-                currentUses > 0 &&
-                activeBooster != this &&
+                hasUses &&
                 boundBoard != null &&
                 boundBoard.IsLevelRunning &&
                 !LevelTimerUI.IsGameOver;
