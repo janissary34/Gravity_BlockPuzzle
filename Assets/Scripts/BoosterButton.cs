@@ -94,7 +94,9 @@ namespace GravityPuzzle
             remainingCount = Mathf.Max(0, count);
             UpdateCountUI();
             RefreshButtonState();
-
+            // A zero allowance means the booster has not been introduced yet.
+            // Hide the authored HUD object rather than leaving a disabled icon.
+            gameObject.SetActive(remainingCount > 0);
         }
 
         /// <summary>

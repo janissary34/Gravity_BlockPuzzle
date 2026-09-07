@@ -21,6 +21,7 @@ MonoBehaviour:
   frameColor: {r: 0.5137255, g: 0.5137255, b: 0.5137255, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
+  coinAmount: 20
   rocketBoosterCount: 3
   hammerBoosterCount: 3
   timerBoosterCount: 3
@@ -39,12 +40,19 @@ MonoBehaviour:
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 14}
     quarterTurns: 0
+    specialBlockType: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: 2, y: 2}
       type: 0
@@ -275,12 +283,19 @@ MonoBehaviour:
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 12, y: 14}
     quarterTurns: 0
+    specialBlockType: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: -4, y: 6}
       type: 0
@@ -415,12 +430,19 @@ MonoBehaviour:
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 12, y: 14}
     quarterTurns: 0
+    specialBlockType: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: -4, y: 10}
       type: 0
@@ -523,12 +545,19 @@ MonoBehaviour:
     color: {r: 1, g: 0.6103293, b: 0.2980392, a: 1}
     origin: {x: 12, y: 14}
     quarterTurns: 0
+    specialBlockType: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: 4, y: 6}
       type: 0
@@ -599,12 +628,19 @@ MonoBehaviour:
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 14, y: 14}
     quarterTurns: 0
+    specialBlockType: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: 2, y: -2}
       type: 0
@@ -707,12 +743,19 @@ MonoBehaviour:
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
     origin: {x: 14, y: 14}
     quarterTurns: 0
+    specialBlockType: 0
     frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
     cells:
     - localCell: {x: 6, y: 10}
       type: 0

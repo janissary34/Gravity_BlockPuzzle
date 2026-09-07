@@ -2,8 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Core.StateMachine;
+using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Infrastructure.Services;
+using GravityPuzzle.Presentation.Views;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -571,6 +574,8 @@ namespace GravityPuzzle
         private bool boardFailed;
         private float bombElapsedSeconds;
         private bool sequentialLevelsEnabled = true;
+        private bool awaitingBoosterRewardDismissal;
+        private BoosterRewardConfig pendingBoosterRewardConfig;
         private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
         private readonly StateMachine<GameState> gameStateMachine = new StateMachine<GameState>(
             GameState.Initialize,
@@ -597,6 +602,11 @@ namespace GravityPuzzle
 
         [Tooltip("Win Panel içindeki, tamamlanan levelin coin ödülünü gösteren TMP metni.")]
         [SerializeField] private TMP_Text winPanelCoinAmountText;
+
+        [Header("Booster Reward Unlock UI")]
+        [SerializeField] private NewBoosterPanelView newBoosterPanel;
+        [SerializeField] private BoosterRewardConfig[] boosterRewardConfigs;
+        [SerializeField] private GameObject winVfx;
 
         [Header("Level Clear Effects")]
         [Tooltip("Scene instance of the first one-shot particle effect to play when the level is cleared.")]
@@ -637,6 +647,8 @@ namespace GravityPuzzle
 
             if (nextLevelButton != null)
                 nextLevelButton.onClick.AddListener(LoadNextLevelFromWinPanel);
+            if (newBoosterPanel != null)
+                newBoosterPanel.Dismissed += LoadNextLevelAfterBoosterReward;
         }
 
         private void OnEnable()
@@ -654,6 +666,8 @@ namespace GravityPuzzle
         {
             if (nextLevelButton != null)
                 nextLevelButton.onClick.RemoveListener(LoadNextLevelFromWinPanel);
+            if (newBoosterPanel != null)
+                newBoosterPanel.Dismissed -= LoadNextLevelAfterBoosterReward;
         }
 
         public void SetTimeLimit(float timeLimit)
@@ -1289,6 +1303,56 @@ namespace GravityPuzzle
         }
 
         private void LoadNextLevelFromWinPanel()
+        {
+            if (!boardCleared)
+                return;
+
+            if (TryShowBoosterRewardForCompletedLevel())
+            {
+                if (winPanel != null)
+                    winPanel.SetActive(false);
+                if (winVfx != null)
+                    winVfx.SetActive(false);
+                return;
+            }
+
+            LoadNextLevelAfterWinPanel();
+        }
+
+        private bool TryShowBoosterRewardForCompletedLevel()
+        {
+            if (newBoosterPanel == null || boosterRewardConfigs == null)
+                return false;
+
+            int completedLevel = GravityLevelRuntime.CurrentLevelNumber;
+            for (int index = 0; index < boosterRewardConfigs.Length; index++)
+            {
+                BoosterRewardConfig config = boosterRewardConfigs[index];
+                if (config == null || config.PresentationLevel != completedLevel + 1 ||
+                    BoosterRewardUnlockState.HasBeenPresented(config))
+                    continue;
+
+                awaitingBoosterRewardDismissal = true;
+                pendingBoosterRewardConfig = config;
+                newBoosterPanel.Show(config);
+                return true;
+            }
+
+            return false;
+        }
+
+        private void LoadNextLevelAfterBoosterReward()
+        {
+            if (!awaitingBoosterRewardDismissal)
+                return;
+
+            awaitingBoosterRewardDismissal = false;
+            BoosterRewardUnlockState.MarkPresented(pendingBoosterRewardConfig);
+            pendingBoosterRewardConfig = null;
+            LoadNextLevelAfterWinPanel();
+        }
+
+        private void LoadNextLevelAfterWinPanel()
         {
             if (!boardCleared)
                 return;
