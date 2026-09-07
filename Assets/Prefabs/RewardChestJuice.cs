@@ -17,23 +17,37 @@ namespace ThreadFever.UI
         [SerializeField] private float _duration = 1.2f;
 
         private Vector3 _originalScale;
+        private Tween _pulseTween;
+        private bool _hasOriginalScale;
 
-        private void Start()
+        private void OnEnable()
         {
-            // Store the original scale so it scales relative to its initial size in the scene
             _originalScale = transform.localScale;
-
-            // Start the breathing animation
-            transform.DOScale(_originalScale * _pulseScale, _duration)
+            _hasOriginalScale = true;
+            _pulseTween = transform.DOScale(_originalScale * _pulseScale, _duration)
                 .SetEase(Ease.InOutSine)
-                .SetLoops(-1, LoopType.Yoyo);
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable);
+        }
+
+        private void OnDisable()
+        {
+            StopPulse();
         }
 
         private void OnDestroy()
         {
-            // Safely kill all tweens on this object to prevent memory leaks or orphan tweens
-            // when the object is destroyed or the scene changes.
-            transform.DOKill();
+            StopPulse();
+        }
+
+        private void StopPulse()
+        {
+            if (_pulseTween != null && _pulseTween.IsActive())
+                _pulseTween.Kill();
+
+            _pulseTween = null;
+            if (_hasOriginalScale)
+                transform.localScale = _originalScale;
         }
     }
 }

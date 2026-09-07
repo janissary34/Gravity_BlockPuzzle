@@ -1328,9 +1328,13 @@ namespace GravityPuzzle
             for (int index = 0; index < boosterRewardConfigs.Length; index++)
             {
                 BoosterRewardConfig config = boosterRewardConfigs[index];
-                if (config == null || config.PresentationLevel != completedLevel + 1 ||
-                    BoosterRewardUnlockState.HasBeenPresented(config))
+                if (config == null || config.PresentationLevel != completedLevel + 1)
                     continue;
+
+#if !UNITY_EDITOR
+                if (BoosterRewardUnlockState.HasBeenPresented(config))
+                    continue;
+#endif
 
                 awaitingBoosterRewardDismissal = true;
                 pendingBoosterRewardConfig = config;

@@ -1,6 +1,7 @@
 using GravityPuzzle.Config;
 using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
+using ThreadFever.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -131,6 +132,8 @@ namespace GravityPuzzle.Editor
                 Debug.LogError($"[New Booster Rewards] '{visualObjectName}' must be a prefab instance.", visualTransform);
                 return null;
             }
+
+            EnsureRewardJuice(prefabSource);
 
             BoosterRewardConfig config = GetOrCreateConfig(rewardType, prefabSource);
             BoosterRewardContentView contentView = contentTransform.GetComponent<BoosterRewardContentView>();
@@ -285,6 +288,30 @@ namespace GravityPuzzle.Editor
                 AssetDatabase.CreateFolder("Assets", "Config");
             if (!AssetDatabase.IsValidFolder(ConfigFolderPath))
                 AssetDatabase.CreateFolder("Assets/Config", "Boosters");
+        }
+
+        private static void EnsureRewardJuice(GameObject prefabSource)
+        {
+            string prefabPath = AssetDatabase.GetAssetPath(prefabSource);
+            if (string.IsNullOrEmpty(prefabPath))
+            {
+                Debug.LogError($"[New Booster Rewards] Could not resolve the prefab for '{prefabSource.name}'.");
+                return;
+            }
+
+            GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                if (prefabRoot.GetComponent<RewardChestJuice>() != null)
+                    return;
+
+                prefabRoot.AddComponent<RewardChestJuice>();
+                PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
         }
 
         private static void SetContentActive(BoosterRewardContentView content, bool active)

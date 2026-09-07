@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4732166140686775164}
   - component: {fileID: 7143493165741356626}
+  - component: {fileID: 6660002457141844484}
   m_Layer: 0
   m_Name: hammer
   m_TagString: Untagged
@@ -84,3 +85,17 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &6660002457141844484
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3906762110601829613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6157d81e425f34800b53306d05dd67cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _pulseScale: 1.08
+  _duration: 1.2

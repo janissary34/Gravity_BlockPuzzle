@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4524368692205569183}
   - component: {fileID: 3599592644018365853}
   - component: {fileID: 4765223490843289187}
+  - component: {fileID: 8574242880857459088}
   m_Layer: 5
   m_Name: FrozenClock_newBooster
   m_TagString: Untagged
@@ -75,3 +76,17 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8574242880857459088
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3077085159410347079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6157d81e425f34800b53306d05dd67cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _pulseScale: 1.08
+  _duration: 1.2
