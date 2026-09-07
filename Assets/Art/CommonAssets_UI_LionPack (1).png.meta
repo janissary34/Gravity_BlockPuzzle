@@ -97,7 +97,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_1
+      name: Icon_RewardedAd
       rect:
         serializedVersion: 2
         x: 1520
@@ -105,7 +105,7 @@ TextureImporter:
         width: 112
         height: 146
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -118,7 +118,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_2
+      name: Icon_Train_Gold
       rect:
         serializedVersion: 2
         x: 1612
@@ -126,7 +126,7 @@ TextureImporter:
         width: 185
         height: 204
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -147,7 +147,7 @@ TextureImporter:
         width: 13
         height: 5
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -160,7 +160,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_4
+      name: Icon_Train_Gray
       rect:
         serializedVersion: 2
         x: 1799
@@ -168,7 +168,7 @@ TextureImporter:
         width: 201
         height: 200
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -181,15 +181,15 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_5
+      name: Icon_Timer_Broken
       rect:
         serializedVersion: 2
         x: 1436
-        y: 1681
+        y: 1678
         width: 176
         height: 183
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -210,7 +210,7 @@ TextureImporter:
         width: 16
         height: 16
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -223,7 +223,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_7
+      name: Icon_Timer_Gray
       rect:
         serializedVersion: 2
         x: 1628
@@ -231,7 +231,7 @@ TextureImporter:
         width: 197
         height: 212
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -252,7 +252,7 @@ TextureImporter:
         width: 31
         height: 29
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -273,7 +273,7 @@ TextureImporter:
         width: 10
         height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -286,7 +286,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_10
+      name: Icon_Heart_Broken
       rect:
         serializedVersion: 2
         x: 1444
@@ -294,7 +294,7 @@ TextureImporter:
         width: 172
         height: 120
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -315,7 +315,7 @@ TextureImporter:
         width: 4
         height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -328,7 +328,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_12
+      name: Icon_Refresh
       rect:
         serializedVersion: 2
         x: 1496
@@ -336,7 +336,7 @@ TextureImporter:
         width: 131
         height: 134
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -349,28 +349,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_13
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 644
-        width: 368
-        height: 516
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: b123d952184f84ed19c28ccfc1a1cdd9
-      internalID: -6349577
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_14
+      name: Pill_White_Small
       rect:
         serializedVersion: 2
         x: 348
@@ -378,7 +357,7 @@ TextureImporter:
         width: 230
         height: 64
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -399,7 +378,7 @@ TextureImporter:
         width: 4
         height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -420,7 +399,7 @@ TextureImporter:
         width: 4
         height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -441,7 +420,7 @@ TextureImporter:
         width: 4
         height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -454,7 +433,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_18
+      name: Button_Circle_Lavender
       rect:
         serializedVersion: 2
         x: 1080
@@ -462,7 +441,7 @@ TextureImporter:
         width: 120
         height: 122
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -475,7 +454,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_19
+      name: Bubble_Speech_Large
       rect:
         serializedVersion: 2
         x: 1209
@@ -483,7 +462,7 @@ TextureImporter:
         width: 508
         height: 227
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -496,7 +475,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_20
+      name: Bubble_Speech_Small
       rect:
         serializedVersion: 2
         x: 1728
@@ -504,7 +483,7 @@ TextureImporter:
         width: 244
         height: 135
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -517,7 +496,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_21
+      name: Field_Red_White
       rect:
         serializedVersion: 2
         x: 348
@@ -525,7 +504,7 @@ TextureImporter:
         width: 301
         height: 152
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -538,7 +517,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_22
+      name: Field_Purple_White_Large
       rect:
         serializedVersion: 2
         x: 670
@@ -546,7 +525,7 @@ TextureImporter:
         width: 341
         height: 128
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -559,7 +538,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_23
+      name: Button_Green_Dark_Pill
       rect:
         serializedVersion: 2
         x: 1101
@@ -567,7 +546,7 @@ TextureImporter:
         width: 344
         height: 64
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -580,7 +559,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_24
+      name: Icon_Coin_Gold
       rect:
         serializedVersion: 2
         x: 1464
@@ -588,7 +567,7 @@ TextureImporter:
         width: 149
         height: 175
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -609,7 +588,7 @@ TextureImporter:
         width: 7
         height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -622,7 +601,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_26
+      name: Effect_Glow_White
       rect:
         serializedVersion: 2
         x: 1711
@@ -630,7 +609,7 @@ TextureImporter:
         width: 277
         height: 168
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -651,7 +630,7 @@ TextureImporter:
         width: 4
         height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -664,7 +643,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_28
+      name: Field_Blue_White
       rect:
         serializedVersion: 2
         x: 349
@@ -672,7 +651,7 @@ TextureImporter:
         width: 300
         height: 151
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -693,7 +672,7 @@ TextureImporter:
         width: 4
         height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -706,7 +685,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_30
+      name: Button_Lime_Pill
       rect:
         serializedVersion: 2
         x: 668
@@ -714,7 +693,7 @@ TextureImporter:
         width: 412
         height: 60
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -735,7 +714,7 @@ TextureImporter:
         width: 6
         height: 6
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -748,7 +727,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_32
+      name: Button_Blue_Pill
       rect:
         serializedVersion: 2
         x: 668
@@ -756,7 +735,7 @@ TextureImporter:
         width: 412
         height: 63
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -769,7 +748,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_33
+      name: Panel_Red_Base
       rect:
         serializedVersion: 2
         x: 349
@@ -777,7 +756,7 @@ TextureImporter:
         width: 336
         height: 100
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -790,16 +769,16 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_34
+      name: Toggle_Purple
       rect:
         serializedVersion: 2
         x: 734
-        y: 670
+        y: 660
         width: 182
         height: 76
       alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 14}
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
@@ -819,7 +798,7 @@ TextureImporter:
         width: 4
         height: 4
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -840,7 +819,7 @@ TextureImporter:
         width: 12
         height: 9
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -853,7 +832,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_38
+      name: Button_Blue_Metallic
       rect:
         serializedVersion: 2
         x: 27
@@ -861,7 +840,7 @@ TextureImporter:
         width: 308
         height: 164
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -874,7 +853,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_39
+      name: Toggle_Green
       rect:
         serializedVersion: 2
         x: 732
@@ -882,7 +861,7 @@ TextureImporter:
         width: 182
         height: 64
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -895,7 +874,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_40
+      name: Button_Gray_Metallic
       rect:
         serializedVersion: 2
         x: 24
@@ -903,7 +882,7 @@ TextureImporter:
         width: 319
         height: 164
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -916,15 +895,15 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_42
+      name: Button_Gray_Glossy
       rect:
         serializedVersion: 2
         x: 26
-        y: 655
+        y: 658
         width: 308
         height: 164
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -937,7 +916,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_43
+      name: Button_Blue_Glossy
       rect:
         serializedVersion: 2
         x: 26
@@ -945,7 +924,7 @@ TextureImporter:
         width: 308
         height: 164
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -958,7 +937,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_44
+      name: Button_Green_Large
       rect:
         serializedVersion: 2
         x: 23
@@ -966,7 +945,7 @@ TextureImporter:
         width: 308
         height: 164
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -979,7 +958,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_45
+      name: Icon_Timer_Frozen
       rect:
         serializedVersion: 2
         x: 1095
@@ -987,7 +966,7 @@ TextureImporter:
         width: 176
         height: 183
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1000,7 +979,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_46
+      name: Icon_Timer_Short
       rect:
         serializedVersion: 2
         x: 1271
@@ -1008,7 +987,7 @@ TextureImporter:
         width: 176
         height: 183
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1021,7 +1000,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_47
+      name: Icon_Heart
       rect:
         serializedVersion: 2
         x: 1104
@@ -1029,7 +1008,7 @@ TextureImporter:
         width: 150
         height: 158
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1042,7 +1021,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_48
+      name: Icon_Heart_Infinite
       rect:
         serializedVersion: 2
         x: 1258
@@ -1050,7 +1029,7 @@ TextureImporter:
         width: 175
         height: 158
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 15, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1063,7 +1042,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_49
+      name: Icon_StarCoin
       rect:
         serializedVersion: 2
         x: 1362
@@ -1071,7 +1050,7 @@ TextureImporter:
         width: 134
         height: 146
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1084,7 +1063,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_0
+      name: Panel_Blue_Large
       rect:
         serializedVersion: 2
         x: 15
@@ -1092,7 +1071,7 @@ TextureImporter:
         width: 741
         height: 858
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1105,7 +1084,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_41
+      name: Icon_Close_Red
       rect:
         serializedVersion: 2
         x: 1225
@@ -1113,7 +1092,7 @@ TextureImporter:
         width: 134
         height: 146
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1126,7 +1105,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_50
+      name: Header_Yellow
       rect:
         serializedVersion: 2
         x: 772
@@ -1134,7 +1113,7 @@ TextureImporter:
         width: 453
         height: 156
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1147,7 +1126,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_51
+      name: Icon_Settings
       rect:
         serializedVersion: 2
         x: 1375
@@ -1155,7 +1134,7 @@ TextureImporter:
         width: 131
         height: 130
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1168,7 +1147,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_52
+      name: Icon_Vibration
       rect:
         serializedVersion: 2
         x: 1228
@@ -1176,7 +1155,7 @@ TextureImporter:
         width: 131
         height: 130
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1189,7 +1168,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_53
+      name: Icon_Sound
       rect:
         serializedVersion: 2
         x: 1091
@@ -1197,7 +1176,7 @@ TextureImporter:
         width: 131
         height: 130
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1210,7 +1189,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_54
+      name: Icon_Arrow_Down
       rect:
         serializedVersion: 2
         x: 1094
@@ -1218,7 +1197,7 @@ TextureImporter:
         width: 153
         height: 114
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1231,7 +1210,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_55
+      name: Icon_Add_Green
       rect:
         serializedVersion: 2
         x: 1397
@@ -1239,7 +1218,7 @@ TextureImporter:
         width: 106
         height: 101
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1252,7 +1231,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_56
+      name: Panel_Blue_Square
       rect:
         serializedVersion: 2
         x: 762
@@ -1260,7 +1239,7 @@ TextureImporter:
         width: 335
         height: 332
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1273,7 +1252,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_57
+      name: Panel_Blue_Tall
       rect:
         serializedVersion: 2
         x: 759
@@ -1281,7 +1260,7 @@ TextureImporter:
         width: 335
         height: 332
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1294,15 +1273,15 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_36
+      name: Button_Red_Outlined
       rect:
         serializedVersion: 2
         x: 344
-        y: 378
+        y: 375
         width: 315
         height: 124
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1315,7 +1294,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_58
+      name: Button_Indigo_Outlined
       rect:
         serializedVersion: 2
         x: 344
@@ -1323,7 +1302,7 @@ TextureImporter:
         width: 315
         height: 124
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1336,7 +1315,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_59
+      name: Pill_White_Large
       rect:
         serializedVersion: 2
         x: 665
@@ -1344,7 +1323,7 @@ TextureImporter:
         width: 412
         height: 60
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1357,7 +1336,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_60
+      name: Button_Green_Outlined
       rect:
         serializedVersion: 2
         x: 1104
@@ -1365,7 +1344,7 @@ TextureImporter:
         width: 344
         height: 64
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -1388,67 +1367,67 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      CommonAssets_UI_LionPack (1)_0: -1433657032
-      CommonAssets_UI_LionPack (1)_1: 1410485693
-      CommonAssets_UI_LionPack (1)_10: -1674250854
+      Bubble_Speech_Large: -832982349
+      Bubble_Speech_Small: 890847462
+      Button_Blue_Glossy: -1200275381
+      Button_Blue_Metallic: -1374965542
+      Button_Blue_Pill: -1608581275
+      Button_Circle_Lavender: 41528459
+      Button_Gray_Glossy: 1589143943
+      Button_Gray_Metallic: -1593256305
+      Button_Green_Dark_Pill: 977437785
+      Button_Green_Large: 468919262
+      Button_Green_Outlined: -1573868798
+      Button_Indigo_Outlined: 949745028
+      Button_Lime_Pill: 320847171
+      Button_Red_Outlined: 1173381308
       CommonAssets_UI_LionPack (1)_11: 149986834
-      CommonAssets_UI_LionPack (1)_12: -1262350694
       CommonAssets_UI_LionPack (1)_13: -6349577
-      CommonAssets_UI_LionPack (1)_14: 1108933010
       CommonAssets_UI_LionPack (1)_15: 848656935
       CommonAssets_UI_LionPack (1)_16: -1136639585
       CommonAssets_UI_LionPack (1)_17: -440439094
-      CommonAssets_UI_LionPack (1)_18: 41528459
-      CommonAssets_UI_LionPack (1)_19: -832982349
-      CommonAssets_UI_LionPack (1)_2: 1959921019
-      CommonAssets_UI_LionPack (1)_20: 890847462
-      CommonAssets_UI_LionPack (1)_21: 222430232
-      CommonAssets_UI_LionPack (1)_22: 883737079
-      CommonAssets_UI_LionPack (1)_23: 977437785
-      CommonAssets_UI_LionPack (1)_24: -613782403
       CommonAssets_UI_LionPack (1)_25: -1297332372
-      CommonAssets_UI_LionPack (1)_26: 813511280
       CommonAssets_UI_LionPack (1)_27: 577381881
-      CommonAssets_UI_LionPack (1)_28: -95687652
       CommonAssets_UI_LionPack (1)_29: -930586199
       CommonAssets_UI_LionPack (1)_3: 1144794793
-      CommonAssets_UI_LionPack (1)_30: 320847171
       CommonAssets_UI_LionPack (1)_31: 2138732412
-      CommonAssets_UI_LionPack (1)_32: -1608581275
-      CommonAssets_UI_LionPack (1)_33: 483412611
-      CommonAssets_UI_LionPack (1)_34: -722621198
       CommonAssets_UI_LionPack (1)_35: 1215103335
-      CommonAssets_UI_LionPack (1)_36: 1173381308
       CommonAssets_UI_LionPack (1)_37: 973131638
-      CommonAssets_UI_LionPack (1)_38: -1374965542
-      CommonAssets_UI_LionPack (1)_39: 399107936
-      CommonAssets_UI_LionPack (1)_4: 965006765
-      CommonAssets_UI_LionPack (1)_40: -1593256305
-      CommonAssets_UI_LionPack (1)_41: 31340527
-      CommonAssets_UI_LionPack (1)_42: 1589143943
-      CommonAssets_UI_LionPack (1)_43: -1200275381
-      CommonAssets_UI_LionPack (1)_44: 468919262
-      CommonAssets_UI_LionPack (1)_45: -1475679262
-      CommonAssets_UI_LionPack (1)_46: -388365328
-      CommonAssets_UI_LionPack (1)_47: -1160026708
-      CommonAssets_UI_LionPack (1)_48: -590615343
-      CommonAssets_UI_LionPack (1)_49: 1948475505
-      CommonAssets_UI_LionPack (1)_5: -1522491564
-      CommonAssets_UI_LionPack (1)_50: 559792640
-      CommonAssets_UI_LionPack (1)_51: 1588332676
-      CommonAssets_UI_LionPack (1)_52: -973268096
-      CommonAssets_UI_LionPack (1)_53: 346258641
-      CommonAssets_UI_LionPack (1)_54: 1322489402
-      CommonAssets_UI_LionPack (1)_55: -23533234
-      CommonAssets_UI_LionPack (1)_56: -1769951838
-      CommonAssets_UI_LionPack (1)_57: 1568358945
-      CommonAssets_UI_LionPack (1)_58: 949745028
-      CommonAssets_UI_LionPack (1)_59: 1986154679
       CommonAssets_UI_LionPack (1)_6: -763147038
-      CommonAssets_UI_LionPack (1)_60: -1573868798
-      CommonAssets_UI_LionPack (1)_7: 797907828
       CommonAssets_UI_LionPack (1)_8: 496005527
       CommonAssets_UI_LionPack (1)_9: -774148210
+      Effect_Glow_White: 813511280
+      Field_Blue_White: -95687652
+      Field_Purple_White_Large: 883737079
+      Field_Red_White: 222430232
+      Header_Yellow: 559792640
+      Icon_Add_Green: -23533234
+      Icon_Arrow_Down: 1322489402
+      Icon_Close_Red: 31340527
+      Icon_Coin_Gold: -613782403
+      Icon_Heart: -1160026708
+      Icon_Heart_Broken: -1674250854
+      Icon_Heart_Infinite: -590615343
+      Icon_Refresh: -1262350694
+      Icon_RewardedAd: 1410485693
+      Icon_Settings: 1588332676
+      Icon_Sound: 346258641
+      Icon_StarCoin: 1948475505
+      Icon_Timer_Broken: -1522491564
+      Icon_Timer_Frozen: -1475679262
+      Icon_Timer_Gray: 797907828
+      Icon_Timer_Short: -388365328
+      Icon_Train_Gold: 1959921019
+      Icon_Train_Gray: 965006765
+      Icon_Vibration: -973268096
+      Panel_Blue_Large: -1433657032
+      Panel_Blue_Square: -1769951838
+      Panel_Blue_Tall: 1568358945
+      Panel_Red_Base: 483412611
+      Pill_White_Large: 1986154679
+      Pill_White_Small: 1108933010
+      Toggle_Green: 399107936
+      Toggle_Purple: -722621198
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
