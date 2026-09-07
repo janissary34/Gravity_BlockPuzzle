@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using GravityPuzzle.Presentation.Views;
 
 namespace GravityPuzzle
 {
@@ -21,6 +22,8 @@ namespace GravityPuzzle
         [SerializeField] private AudioSource[] musicSources;
         private bool soundEnabled;
         private bool musicEnabled;
+        private PrototypeBoard pausedBoard;
+        private SettingsPopupView settingsPopupView;
 
         private void Awake()
         {
@@ -31,7 +34,12 @@ namespace GravityPuzzle
                 settingsButton = GetComponent<Button>();
 
             if (settingsPanel != null)
+            {
                 settingsPanel.SetActive(false);
+                settingsPopupView = settingsPanel.GetComponent<SettingsPopupView>();
+                if (settingsPopupView != null)
+                    settingsPopupView.Closed += CloseSettingsPanel;
+            }
 
             if (settingsButton != null)
                 settingsButton.onClick.AddListener(ToggleSettingsPanel);
@@ -59,12 +67,22 @@ namespace GravityPuzzle
                 soundButton.onClick.RemoveListener(ToggleSound);
             if (musicButton != null)
                 musicButton.onClick.RemoveListener(ToggleMusic);
+            if (settingsPopupView != null)
+                settingsPopupView.Closed -= CloseSettingsPanel;
+
+            ResumeTimer();
         }
 
         public void ToggleSettingsPanel()
         {
             if (settingsPanel != null)
-                settingsPanel.SetActive(!settingsPanel.activeSelf);
+                SetSettingsPanelVisible(!settingsPanel.activeSelf);
+        }
+
+        /// <summary>Called by the popup's close control to restore timer ownership.</summary>
+        public void CloseSettingsPanel()
+        {
+            SetSettingsPanelVisible(false);
         }
 
         public void ToggleSound()
@@ -87,6 +105,41 @@ namespace GravityPuzzle
         {
             ApplyMuteState(soundSources, !soundEnabled);
             ApplyMuteState(musicSources, !musicEnabled);
+        }
+
+        private void SetSettingsPanelVisible(bool visible)
+        {
+            if (settingsPanel == null)
+                return;
+
+            if (visible)
+            {
+                settingsPanel.SetActive(true);
+                PauseTimer();
+                return;
+            }
+
+            ResumeTimer();
+            settingsPanel.SetActive(false);
+        }
+
+        private void PauseTimer()
+        {
+            if (pausedBoard != null)
+                return;
+
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            if (activeBoard != null && activeBoard.TryPauseTimer(this))
+                pausedBoard = activeBoard;
+        }
+
+        private void ResumeTimer()
+        {
+            if (pausedBoard == null)
+                return;
+
+            pausedBoard.ResumeTimer(this);
+            pausedBoard = null;
         }
 
         private static void ApplyMuteState(AudioSource[] sources, bool muted)

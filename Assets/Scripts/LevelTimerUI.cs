@@ -155,8 +155,8 @@ namespace GravityPuzzle
             }
             else
             {
-                // Maintain default white color before the final 5 seconds
-                timerText.color = Color.white; 
+                // Keep the authored black timer colour until the final warning window.
+                timerText.color = Color.black;
             }
         }
 

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System;
 
 namespace GravityPuzzle.Presentation.Views
 {
@@ -22,6 +23,9 @@ namespace GravityPuzzle.Presentation.Views
 
         private bool soundEnabled;
         private bool vibrationEnabled;
+        private PrototypeBoard pausedBoard;
+
+        public event Action Closed;
 
         private void Awake()
         {
@@ -38,6 +42,24 @@ namespace GravityPuzzle.Presentation.Views
             RefreshToggleVisuals();
         }
 
+        private void OnEnable()
+        {
+            // The popup can be opened through a parent overlay as well as the
+            // Settings button. Its active state is therefore the authoritative
+            // presentation signal for this pause owner.
+            if (pausedBoard != null)
+                return;
+
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            if (activeBoard != null && activeBoard.TryPauseTimer(this))
+                pausedBoard = activeBoard;
+        }
+
+        private void OnDisable()
+        {
+            ResumeTimer();
+        }
+
         private void OnDestroy()
         {
             if (closeButton != null)
@@ -46,10 +68,13 @@ namespace GravityPuzzle.Presentation.Views
                 soundToggleButton.onClick.RemoveListener(ToggleSoundVisual);
             if (vibrationToggleButton != null)
                 vibrationToggleButton.onClick.RemoveListener(ToggleVibration);
+
+            ResumeTimer();
         }
 
         private void Close()
         {
+            Closed?.Invoke();
             gameObject.SetActive(false);
         }
 
@@ -75,6 +100,15 @@ namespace GravityPuzzle.Presentation.Views
                 soundToggleImage.sprite = soundEnabled ? toggleOnSprite : toggleOffSprite;
             if (vibrationToggleImage != null)
                 vibrationToggleImage.sprite = vibrationEnabled ? toggleOnSprite : toggleOffSprite;
+        }
+
+        private void ResumeTimer()
+        {
+            if (pausedBoard == null)
+                return;
+
+            pausedBoard.ResumeTimer(this);
+            pausedBoard = null;
         }
     }
 }
