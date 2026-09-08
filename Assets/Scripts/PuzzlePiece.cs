@@ -903,6 +903,13 @@ namespace GravityPuzzle
         public void BeginShredderPresentation(SpriteRenderer[] renderers)
         {
             RestoreShredderPresentation();
+            // The collider footprint shrinks one board cell at a time during
+            // a shredder feed. Its outline would therefore draw artificial
+            // horizontal seams through the still-visible voxel presentation.
+            // The next pool spawn restores the authored root outline.
+            if (rootOutline != null)
+                rootOutline.enabled = false;
+
             if (renderers == null || renderers.Length == 0)
                 return;
 
@@ -1030,7 +1037,11 @@ namespace GravityPuzzle
             if (compositeCollider != null)
                 compositeCollider.GenerateGeometry();
             CacheSolidColliders();
-            RuntimePieceFactory.RefreshOutline(this);
+            // The shredder releases collision cells before their individual
+            // voxel visuals finish crossing the cutter. Do not rebuild the
+            // root outline from that intermediate collision geometry.
+            if (!beingShredded)
+                RuntimePieceFactory.RefreshOutline(this);
             InvalidateVoxelCache();
             Physics2D.SyncTransforms();
         }

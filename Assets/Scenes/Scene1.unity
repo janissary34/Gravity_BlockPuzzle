@@ -11579,7 +11579,6 @@ GameObject:
   m_Component:
   - component: {fileID: 255200812}
   - component: {fileID: 255200811}
-  - component: {fileID: 255200813}
   - component: {fileID: 255200814}
   m_Layer: 0
   m_Name: ShopItem_Coin_3
@@ -11656,18 +11655,6 @@ Transform:
   - {fileID: 128278039}
   m_Father: {fileID: 931620432}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &255200813
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 255200810}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 933f2f565c6a8451fb3dff3bd18144c1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &255200814
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -58290,6 +58277,10 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5195095718260928325, guid: aa0f474c221ab4090a3367c66061d735, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: c53b60dbac9db438fa427e3dbf92010e, type: 3}
     - target: {fileID: 6957382919499924901, guid: aa0f474c221ab4090a3367c66061d735, type: 3}
       propertyPath: m_Name
       value: Hammer_Booster_Button

@@ -18,7 +18,7 @@ MonoBehaviour:
   wheelPoolCapacity: 32
   catchZonePrefab: {fileID: 1348796746018862400, guid: 38977ea9b7627446fb5feb095e7ae1d6, type: 3}
   catchZonePoolCapacity: 1
-  feedMaskPrefab: {fileID: 0}
+  feedMaskPrefab: {fileID: 7388911840364374829, guid: bce66f74d48164638a9b3d050d7db5c3, type: 3}
   feedPhysicsMaterial: {fileID: 6200000, guid: 9eb6102580d2f4baa88e6b9e2ee5187f, type: 2}
   feedMaskVerticalOffset: -15
   feedMaskScale: {x: 60, y: 30}

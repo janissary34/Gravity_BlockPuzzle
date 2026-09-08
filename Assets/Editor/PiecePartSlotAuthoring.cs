@@ -7,7 +7,9 @@ namespace GravityPuzzle.EditorTools
     public static class PiecePartSlotAuthoring
     {
         private const string PrefabPath = "Assets/Prefabs/BlockPiece.prefab";
-        private const int SlotCount = 128;
+        // Matches the largest authored piece in the current level set. Slots
+        // are prefab-owned and reused at runtime; gameplay never adds them.
+        private const int SlotCount = 160;
 
         [MenuItem("Gravity Puzzle/Refactor/Add BlockPiece Part Slots")]
         private static void AddSlots()
@@ -52,7 +54,7 @@ namespace GravityPuzzle.EditorTools
                 }
 
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, PrefabPath);
-                Debug.Log("[PiecePartSlots] Configured 128 reusable visual and collision slots on BlockPiece.prefab.");
+                Debug.Log($"[PiecePartSlots] Configured {SlotCount} reusable visual and collision slots on BlockPiece.prefab.");
             }
             finally
             {
