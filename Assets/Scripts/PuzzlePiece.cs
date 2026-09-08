@@ -1208,14 +1208,16 @@ namespace GravityPuzzle
         /// rocket owns the already-reserved piece, so the frozen state is
         /// cleared before the carrier takes transform ownership.
         /// </summary>
-        public void BreakIceForRocket()
+        public void BreakIceForRocket(
+            int? effectSortingLayerId = null,
+            int? effectSortingOrder = null)
         {
             if (!IsFrozen)
                 return;
 
             IsFrozen = false;
             previousFrozenRemaining = -1;
-            PlayIceReleaseAnimation();
+            PlayIceReleaseAnimation(effectSortingLayerId, effectSortingOrder);
         }
 
         public void ReportDestroyed()
@@ -1978,10 +1980,16 @@ namespace GravityPuzzle
             }
         }
 
-        private void PlayIceReleaseAnimation()
+        private void PlayIceReleaseAnimation(
+            int? effectSortingLayerId = null,
+            int? effectSortingOrder = null)
         {
             iceReleaseAnimating = true;
             GetIceEffectPresentation(out Vector3 position, out int sortingLayerId, out int sortingOrder);
+            if (effectSortingLayerId.HasValue)
+                sortingLayerId = effectSortingLayerId.Value;
+            if (effectSortingOrder.HasValue)
+                sortingOrder = effectSortingOrder.Value;
             iceParticleVfxHandle?.PlayBreak(position, sortingLayerId, sortingOrder);
             TweenConfig tweenConfig = GridFallView != null ? GridFallView.Config : null;
             if (tweenConfig == null)

@@ -338,7 +338,9 @@ namespace GravityPuzzle
             // 3. The rocket reached the piece. Ice is broken at this impact
             // moment, rather than when the player first selected the target.
             if (piece.IsFrozen)
-                piece.BreakIceForRocket();
+                piece.BreakIceForRocket(
+                    GetRocketSortingLayerId(rocket),
+                    rocketSortingOrder + 1);
 
             // 4. The rocket reached a real occupied cell, not the bounding-box
             // centre (which can be empty for an L-shaped piece). Parenting at
@@ -472,6 +474,14 @@ namespace GravityPuzzle
                     c.sortingOrder = order;
                 }
             }
+        }
+
+        private static int GetRocketSortingLayerId(GameObject rocket)
+        {
+            SpriteRenderer renderer = rocket != null
+                ? rocket.GetComponentInChildren<SpriteRenderer>(true)
+                : null;
+            return renderer != null ? renderer.sortingLayerID : 0;
         }
 
         private static void SetPieceSortingOrder(PuzzlePiece piece, int order)
