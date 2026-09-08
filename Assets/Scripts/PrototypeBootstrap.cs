@@ -1062,9 +1062,10 @@ namespace GravityPuzzle
                 return;
 
             // A bomb's contract is stricter than ordinary piece removal: it
-            // must enter a shredder. Falling off the board or being removed by
-            // another destruction path cannot silently satisfy its objective.
-            if (destroyedPiece.IsBomb && !destroyedPiece.IsBeingShredded)
+            // must enter a shredder or be explicitly defused by a hammer.
+            // Falling off the board or another destruction path cannot
+            // silently satisfy its objective.
+            if (destroyedPiece.IsBomb && !destroyedPiece.IsBombDefused && !destroyedPiece.IsBeingShredded)
             {
                 Debug.Log($"[BombBlock] '{destroyedPiece.name}' was removed without entering a shredder.", destroyedPiece);
                 FailLevel();
@@ -1242,7 +1243,7 @@ namespace GravityPuzzle
             for (int i = 0; i < pieces.Count; i++)
             {
                 PuzzlePiece piece = pieces[i];
-                if (piece == null || !piece.IsBomb || piece.IsBeingShredded)
+                if (piece == null || !piece.IsBomb || piece.IsBombDefused || piece.IsBeingShredded)
                     continue;
 
                 float remainingSeconds = piece.BombTimerSeconds - bombElapsedSeconds;

@@ -359,7 +359,7 @@ namespace GravityPuzzle
         private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)
         {
             if (TopologyEditingEnabled &&
-                piece != null && piece.TryRemoveCellAt(impactPosition, out PuzzlePiece.RemovedCell cell))
+                piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
                 Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
                 LevelProgressManager manager = LevelProgressManager.Instance;

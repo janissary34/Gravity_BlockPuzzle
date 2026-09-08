@@ -67,6 +67,7 @@ namespace GravityPuzzle
         public bool IsBeingShredded => beingShredded;
         public bool IsFrozen { get; private set; }
         public bool IsBomb { get; private set; }
+        public bool IsBombDefused { get; private set; }
         public float BombTimerSeconds { get; private set; }
         public int SourcePieceId { get; private set; } = -1;
         /// <summary>Authored board-block units represented by this draggable piece.</summary>
@@ -296,6 +297,7 @@ namespace GravityPuzzle
             isSelected = false;
             isBoosterTargeted = false;
             IsFrozen = false;
+            IsBombDefused = false;
             SourcePieceId = -1;
             if (rootOutline != null)
                 rootOutline.enabled = true;
@@ -671,6 +673,7 @@ namespace GravityPuzzle
             isSelected = false;
             IsFrozen = false;
             IsBomb = false;
+            IsBombDefused = false;
             BombTimerSeconds = 0f;
             previousBombRemaining = -1;
             InvalidateVoxelCache();
@@ -1144,6 +1147,7 @@ namespace GravityPuzzle
             Vector2 counterOffset)
         {
             IsBomb = isBomb;
+            IsBombDefused = false;
             BombTimerSeconds = isBomb ? Mathf.Max(1f, timerSeconds) : 0f;
             bombCounterFontSize = Mathf.Max(1f, counterFontSize);
             bombCounterTextColor = counterTextColor;
@@ -1417,7 +1421,24 @@ namespace GravityPuzzle
             if (!TryGetCellIndexAt(worldPosition, out int targetIndex))
                 return false;
 
-            return TryRemoveCellAtIndex(targetIndex, out removedCell);
+            return TryRemoveCellAtIndex(targetIndex, out removedCell, false);
+        }
+
+        /// <summary>
+        /// Applies a hammer hit to a visible cell. A successful hammer impact
+        /// defuses a bomb before reporting its removal, so the bomb is an
+        /// intentional booster resolution rather than a failed board exit.
+        /// </summary>
+        public bool TryRemoveCellWithHammer(Vector2 worldPosition, out RemovedCell removedCell)
+        {
+            removedCell = default;
+            if (beingShredded || collisionCells == null || collisionCellVisuals == null)
+                return false;
+
+            if (!TryGetCellIndexAt(worldPosition, out int targetIndex))
+                return false;
+
+            return TryRemoveCellAtIndex(targetIndex, out removedCell, IsBomb);
         }
 
         /// <summary>
@@ -1437,7 +1458,10 @@ namespace GravityPuzzle
                 out removedCell);
         }
 
-        private bool TryRemoveCellAtIndex(int targetIndex, out RemovedCell removedCell)
+        private bool TryRemoveCellAtIndex(
+            int targetIndex,
+            out RemovedCell removedCell,
+            bool defuseBombWithHammer)
         {
             removedCell = default;
             if (targetIndex < 0 || collisionCells == null || collisionCellVisuals == null ||
@@ -1448,6 +1472,10 @@ namespace GravityPuzzle
             // topology. A damaged visual with the old grid footprint is never
             // a valid gameplay state: it causes suspended fragments, overlap
             // with obstacles and an incomplete selection outline.
+            bool defusedBomb = defuseBombWithHammer && IsBomb;
+            if (defusedBomb)
+                SetBombDefused(true);
+
             List<int> preHitIndices = new List<int>(collisionCells.Count);
             for (int index = 0; index < collisionCells.Count; index++)
                 preHitIndices.Add(index);
@@ -1515,6 +1543,8 @@ namespace GravityPuzzle
                 if (!topologyCommitted)
                 {
                     RestoreRejectedHammerHit(preHitCells, remainingBeforeHit);
+                    if (defusedBomb)
+                        SetBombDefused(false);
                     removedCell = default;
                     return false;
                 }
@@ -1528,6 +1558,13 @@ namespace GravityPuzzle
             }
 
             return true;
+        }
+
+        private void SetBombDefused(bool isDefused)
+        {
+            IsBombDefused = isDefused;
+            if (isDefused && iceCounterText != null)
+                iceCounterText.enabled = false;
         }
 
         // The rendered voxel grid is intentionally made of child VoxelShard
