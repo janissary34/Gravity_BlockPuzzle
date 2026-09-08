@@ -16,7 +16,7 @@ namespace GravityPuzzle
         [Header("Timer UI")]
         [Tooltip("The text component that displays the remaining time (e.g., 01:30)")]
         public TMP_Text timerText;
-        
+
         [Header("Fail Popup")]
         [Tooltip("The popup panel to show when the timer runs out")]
         public GameObject failPopupPanel;
@@ -134,6 +134,7 @@ namespace GravityPuzzle
         {
             if (timerText != null && timerText.gameObject.activeSelf != visible)
                 timerText.gameObject.SetActive(visible);
+
         }
 
         private void UpdateTimerDisplay(float timeRemaining)

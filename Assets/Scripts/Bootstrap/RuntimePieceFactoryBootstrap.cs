@@ -5,6 +5,7 @@ using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Presentation.Views;
 using GravityPuzzle.Presentation.VFX;
 using GravityPuzzle;
+using TMPro;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -38,6 +39,10 @@ namespace GravityPuzzle.Bootstrap
 
         [Tooltip("The sole gameplay input adapter for the active scene. Author this on the bootstrap object.")]
         [SerializeField] private PuzzleDragController puzzleDragController;
+
+        [Header("Gameplay HUD")]
+        [Tooltip("Text that displays the active campaign level number.")]
+        [SerializeField] private TMP_Text levelDisplayText;
 
         [Header("Piece Visuals")]
         [Tooltip("Optional visual lookup for level piece Visual Id values. Empty IDs keep their authored legacy colours.")]
@@ -75,6 +80,10 @@ namespace GravityPuzzle.Bootstrap
                 Debug.LogError("[LevelSequence] RuntimePieceFactoryBootstrap could not resolve a playable level.", this);
                 return;
             }
+
+            if (levelDisplayText != null)
+                levelDisplayText.SetText("Level {0}", GravityLevelRuntime.CurrentLevelNumber);
+
             string pieceValidationError = "BlockPiece prefab or PoolConfig is not assigned.";
             if (blockPiecePrefab == null || poolConfig == null ||
                 poolConfig.BlockPieceCapacity <= 0 ||
