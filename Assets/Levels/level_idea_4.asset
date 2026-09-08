@@ -15,7 +15,7 @@ MonoBehaviour:
   levelName: New Level
   timeLimit: 60
   boardColumns: 7
-  boardRows: 7
+  boardRows: 9
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
@@ -38,7 +38,7 @@ MonoBehaviour:
   - name: Piece 1
     visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
-    origin: {x: 10, y: 14}
+    origin: {x: 10, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -249,7 +249,7 @@ MonoBehaviour:
   - name: Piece 2
     visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-    origin: {x: 14, y: 14}
+    origin: {x: 14, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -428,7 +428,7 @@ MonoBehaviour:
   - name: Piece 3
     visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
-    origin: {x: 14, y: 14}
+    origin: {x: 14, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -543,7 +543,7 @@ MonoBehaviour:
   - name: Piece 4
     visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
-    origin: {x: 14, y: 14}
+    origin: {x: 14, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -658,7 +658,7 @@ MonoBehaviour:
   - name: Piece 5
     visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
-    origin: {x: 14, y: 14}
+    origin: {x: 14, y: 22}
     quarterTurns: 0
     specialBlockType: 1
     frozenMoveCount: 5
@@ -773,7 +773,7 @@ MonoBehaviour:
   - name: Piece 6
     visualId: 
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
-    origin: {x: 14, y: 14}
+    origin: {x: 14, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -888,7 +888,7 @@ MonoBehaviour:
   - name: Piece 7
     visualId: 
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
-    origin: {x: 14, y: 14}
+    origin: {x: 14, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -971,7 +971,7 @@ MonoBehaviour:
   - name: Piece 8
     visualId: 
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
-    origin: {x: 14, y: 14}
+    origin: {x: 14, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1055,7 +1055,7 @@ MonoBehaviour:
   obstacles:
   - name: Obstacle 1
     usesGridCells: 1
-    gridCell: {x: 6, y: 1}
+    gridCell: {x: 6, y: 3}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1063,7 +1063,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 2
     usesGridCells: 1
-    gridCell: {x: 3, y: 2}
+    gridCell: {x: 3, y: 4}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1071,7 +1071,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 3
     usesGridCells: 1
-    gridCell: {x: 2, y: 2}
+    gridCell: {x: 2, y: 4}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
