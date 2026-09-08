@@ -252,9 +252,7 @@ namespace GravityPuzzle
         private bool TryStartRocketImpact(PuzzlePiece piece)
         {
             int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
-            // Frozen pieces are locked until their required destruction count is
-            // met. The rocket must respect the same rule as normal dragging.
-            if (piece == null || piece.IsFrozen || piece.IsBeingShredded || launchInProgress || currentUses <= 0)
+            if (piece == null || piece.IsBeingShredded || launchInProgress || currentUses <= 0)
                 return false;
 
             // Prevent an in-flight grid presentation tween from continuing to
@@ -303,11 +301,14 @@ namespace GravityPuzzle
             // on a prefab being configured.
             if (!TryRentRocketVisual(out BoosterVisualView rocketView))
             {
-                // Preserve the authored launch timing even if the pooled
-                // presentation is temporarily unavailable. Progress must not
-                // jump ahead of the rocket action in this fallback path.
+                // Preserve the same ice-impact timing when the optional
+                // visual is unavailable: the ice breaks only once the
+                // entrance travel has reached the targeted piece.
+                yield return new WaitForSeconds(tweenConfig.RocketEntranceDuration);
+                if (piece != null && piece.IsFrozen)
+                    piece.BreakIceForRocket();
+
                 yield return new WaitForSeconds(
-                    tweenConfig.RocketEntranceDuration +
                     tweenConfig.RocketTargetPauseDuration +
                     tweenConfig.RocketLaunchDuration);
                 CompleteRocketImpact(piece, piecePos, camY + camOrtho + 7f);
@@ -334,7 +335,12 @@ namespace GravityPuzzle
                 yield break;
             }
 
-            // 3. The rocket reached a real occupied cell, not the bounding-box
+            // 3. The rocket reached the piece. Ice is broken at this impact
+            // moment, rather than when the player first selected the target.
+            if (piece.IsFrozen)
+                piece.BreakIceForRocket();
+
+            // 4. The rocket reached a real occupied cell, not the bounding-box
             // centre (which can be empty for an L-shaped piece). Parenting at
             // this point makes the carrier feel physically attached to it.
             piece.transform.SetParent(rocket.transform, true);
@@ -343,7 +349,7 @@ namespace GravityPuzzle
             // above the board, while the rocket is one step higher.
             SetPieceSortingOrder(piece, rocketSortingOrder - 1);
 
-            // 4. Pause at piece center for target-pause duration (with engine ignition micro-rumble)
+            // 5. Pause at piece center for target-pause duration (with engine ignition micro-rumble)
             Vector3 initialPos = rocket.transform.position;
             float elapsed = 0f;
             while (piece != null && rocket != null && elapsed < tweenConfig.RocketTargetPauseDuration)
@@ -361,7 +367,7 @@ namespace GravityPuzzle
                 yield break;
             }
 
-            // 5. BLAST OFF! Launch rocket + piece into the sky
+            // 6. BLAST OFF! Launch rocket + piece into the sky
             float targetY = camY + camOrtho + 7f;
 
 
@@ -371,7 +377,7 @@ namespace GravityPuzzle
                 .SetAutoKill(true);
             yield return launchTween.WaitForCompletion();
 
-            // 6. Rocket launch animation finished.
+            // 7. Rocket launch animation finished.
             CompleteRocketImpact(piece, piecePos, targetY);
             rocketVisualPool.Return(rocketView);
         }

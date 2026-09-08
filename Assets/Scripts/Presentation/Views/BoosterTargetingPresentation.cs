@@ -327,7 +327,9 @@ namespace GravityPuzzle.Presentation.Views
                 if (piece == null)
                     continue;
 
-                bool isValidTarget = !piece.IsBeingShredded && !piece.IsFrozen;
+                // Rocket explicitly breaks ice before carrying the underlying
+                // piece, so frozen pieces are valid rocket targets.
+                bool isValidTarget = !piece.IsBeingShredded;
                 piece.SetBoosterTargeted(isValidTarget);
             }
         }
@@ -365,7 +367,7 @@ namespace GravityPuzzle.Presentation.Views
             for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
             {
                 PuzzlePiece piece = pieces[pieceIndex];
-                if (piece == null || piece.IsBeingShredded)
+                if (piece == null || piece.IsFrozen || piece.IsBeingShredded)
                     continue;
 
                 targetableCellBuffer.Clear();

@@ -554,7 +554,7 @@ namespace GravityPuzzle
         /// </summary>
         public void CollectTargetableCells(List<TargetableCell> results)
         {
-            if (results == null || IsBeingShredded || collisionCells == null ||
+            if (results == null || IsFrozen || IsBeingShredded || collisionCells == null ||
                 fullCollisionCellSizes == null)
                 return;
 
@@ -1201,6 +1201,21 @@ namespace GravityPuzzle
                 if (Body != null)
                     Body.WakeUp();
             }
+        }
+
+        /// <summary>
+        /// Removes this piece's ice presentation for a rocket action. The
+        /// rocket owns the already-reserved piece, so the frozen state is
+        /// cleared before the carrier takes transform ownership.
+        /// </summary>
+        public void BreakIceForRocket()
+        {
+            if (!IsFrozen)
+                return;
+
+            IsFrozen = false;
+            previousFrozenRemaining = -1;
+            PlayIceReleaseAnimation();
         }
 
         public void ReportDestroyed()

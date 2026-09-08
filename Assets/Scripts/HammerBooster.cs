@@ -223,7 +223,10 @@ namespace GravityPuzzle
         {
             // Validate before consuming the booster. The actual removal happens
             // at the animation impact frame, not at target selection.
-            if (piece == null || impactInProgress)
+            // Ice is a rocket-only obstacle. Keep this validation here as the
+            // authoritative gameplay guard; targeting presentation is only a
+            // visual affordance and must not decide the outcome.
+            if (piece == null || piece.IsFrozen || impactInProgress)
                 return false;
 
             // A falling piece has already committed its destination in the
