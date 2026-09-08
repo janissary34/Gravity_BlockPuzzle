@@ -17,6 +17,9 @@ namespace GravityPuzzle
         [Tooltip("The text component that displays the remaining time (e.g., 01:30)")]
         public TMP_Text timerText;
 
+        [Tooltip("Slider that visually represents the remaining level time.")]
+        [SerializeField] private Slider timerSlider;
+
         [Header("Fail Popup")]
         [Tooltip("The popup panel to show when the timer runs out")]
         public GameObject failPopupPanel;
@@ -38,6 +41,7 @@ namespace GravityPuzzle
         private PrototypeBoard board;
         private int lastDisplayedSecond = -1;
         private bool timerPresentationLocked;
+        private float configuredSliderTimeLimit = -1f;
 
         private void Awake()
         {
@@ -87,6 +91,7 @@ namespace GravityPuzzle
                 return;
 
             UpdateTimerDisplay(board.TimeRemaining);
+            UpdateTimerSlider(board.TimeRemaining);
         }
 
         private void BindBoard(PrototypeBoard nextBoard)
@@ -102,6 +107,7 @@ namespace GravityPuzzle
 
             board = nextBoard;
             lastDisplayedSecond = -1;
+            configuredSliderTimeLimit = -1f;
             timerPresentationLocked = board != null &&
                 (board.GameState == GravityPuzzle.Core.StateMachine.GameState.LevelComplete ||
                  board.GameState == GravityPuzzle.Core.StateMachine.GameState.Result);
@@ -135,6 +141,24 @@ namespace GravityPuzzle
             if (timerText != null && timerText.gameObject.activeSelf != visible)
                 timerText.gameObject.SetActive(visible);
 
+            if (timerSlider != null && timerSlider.gameObject.activeSelf != visible)
+                timerSlider.gameObject.SetActive(visible);
+        }
+
+        private void UpdateTimerSlider(float timeRemaining)
+        {
+            if (timerSlider == null || board == null)
+                return;
+
+            float timeLimit = Mathf.Max(0f, board.TimeLimit);
+            if (!Mathf.Approximately(configuredSliderTimeLimit, timeLimit))
+            {
+                configuredSliderTimeLimit = timeLimit;
+                timerSlider.minValue = 0f;
+                timerSlider.maxValue = timeLimit;
+            }
+
+            timerSlider.SetValueWithoutNotify(Mathf.Clamp(timeRemaining, 0f, timeLimit));
         }
 
         private void UpdateTimerDisplay(float timeRemaining)
