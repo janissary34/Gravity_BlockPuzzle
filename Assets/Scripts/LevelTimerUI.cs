@@ -31,6 +31,22 @@ namespace GravityPuzzle
         [Tooltip("Drag your Main Menu button here")]
         public Button mainMenuButton;
 
+        [Header("Retry Confirmation Panel")]
+        [Tooltip("Confirmation panel shown before the current level is restarted.")]
+        [SerializeField] private GameObject retryConfirmationPanel;
+
+        [Tooltip("HUD button that opens the retry confirmation panel.")]
+        [SerializeField] private Button openRetryConfirmationButton;
+
+        [Tooltip("Button in the confirmation panel that restarts the current level.")]
+        [SerializeField] private Button confirmRetryButton;
+
+        [Tooltip("Button in the confirmation panel that dismisses it.")]
+        [SerializeField] private Button closeRetryConfirmationButton;
+
+        [Tooltip("Legacy settings handler on the replay icon. It is closed before the retry panel opens.")]
+        [SerializeField] private SettingsPanelButton retryButtonSettingsHandler;
+
         [Header("Scene Navigation")]
         [Tooltip("Name of your Main Menu scene. Leave blank to reload current level directly.")]
         public string mainMenuSceneName = "";
@@ -54,6 +70,9 @@ namespace GravityPuzzle
             // tap, depending on Unity's component update order.
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(false);
+
+            if (retryConfirmationPanel != null)
+                retryConfirmationPanel.SetActive(false);
         }
 
         private void OnEnable()
@@ -77,6 +96,15 @@ namespace GravityPuzzle
                 
             if (mainMenuButton != null)
                 mainMenuButton.onClick.AddListener(OnMainMenuClicked);
+
+            if (openRetryConfirmationButton != null)
+                openRetryConfirmationButton.onClick.AddListener(OpenRetryConfirmation);
+
+            if (confirmRetryButton != null)
+                confirmRetryButton.onClick.AddListener(OnRetryClicked);
+
+            if (closeRetryConfirmationButton != null)
+                closeRetryConfirmationButton.onClick.AddListener(CloseRetryConfirmation);
 
             SetTimerVisible(false);
         }
@@ -191,6 +219,21 @@ namespace GravityPuzzle
             
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(true);
+        }
+
+        public void OpenRetryConfirmation()
+        {
+            if (retryButtonSettingsHandler != null)
+                retryButtonSettingsHandler.CloseSettingsPanel();
+
+            if (retryConfirmationPanel != null)
+                retryConfirmationPanel.SetActive(true);
+        }
+
+        public void CloseRetryConfirmation()
+        {
+            if (retryConfirmationPanel != null)
+                retryConfirmationPanel.SetActive(false);
         }
 
         // Hook this up to your "Retry" button's OnClick event in the inspector

@@ -925,7 +925,7 @@ TextureImporter:
         height: 164
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 69, y: 46, z: 66, w: 54}
+      border: {x: 42, y: 46, z: 46, w: 36}
       outline: []
       physicsShape: []
       tessellationDetail: 0
@@ -1003,10 +1003,10 @@ TextureImporter:
       name: Icon_Heart
       rect:
         serializedVersion: 2
-        x: 1104
-        y: 1520
-        width: 150
-        height: 158
+        x: 1113
+        y: 1545
+        width: 147
+        height: 131
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}

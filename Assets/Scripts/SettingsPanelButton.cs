@@ -22,6 +22,7 @@ namespace GravityPuzzle
         [SerializeField] private AudioSource[] musicSources;
         private bool soundEnabled;
         private bool musicEnabled;
+        private bool listenersBound;
         private PrototypeBoard pausedBoard;
         private SettingsPopupView settingsPopupView;
 
@@ -37,9 +38,24 @@ namespace GravityPuzzle
             {
                 settingsPanel.SetActive(false);
                 settingsPopupView = settingsPanel.GetComponent<SettingsPopupView>();
-                if (settingsPopupView != null)
-                    settingsPopupView.Closed += CloseSettingsPanel;
             }
+
+            BindListeners();
+            ApplyAudioState();
+        }
+
+        private void OnEnable()
+        {
+            BindListeners();
+        }
+
+        private void BindListeners()
+        {
+            if (listenersBound)
+                return;
+
+            if (settingsPopupView != null)
+                settingsPopupView.Closed += CloseSettingsPanel;
 
             if (settingsButton != null)
                 settingsButton.onClick.AddListener(ToggleSettingsPanel);
@@ -56,11 +72,24 @@ namespace GravityPuzzle
             else
                 Debug.LogWarning("[Settings] Music button reference is missing.", this);
 
-            ApplyAudioState();
+            listenersBound = true;
+        }
+
+        private void OnDisable()
+        {
+            RemoveListenersAndResumeTimer();
         }
 
         private void OnDestroy()
         {
+            RemoveListenersAndResumeTimer();
+        }
+
+        private void RemoveListenersAndResumeTimer()
+        {
+            if (!listenersBound)
+                return;
+
             if (settingsButton != null)
                 settingsButton.onClick.RemoveListener(ToggleSettingsPanel);
             if (soundButton != null)
@@ -70,6 +99,7 @@ namespace GravityPuzzle
             if (settingsPopupView != null)
                 settingsPopupView.Closed -= CloseSettingsPanel;
 
+            listenersBound = false;
             ResumeTimer();
         }
 

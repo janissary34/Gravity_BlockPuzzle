@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using System;
 
 namespace GravityPuzzle.Presentation.Views
@@ -14,14 +15,20 @@ namespace GravityPuzzle.Presentation.Views
         private const string VibrationPreferenceKey = "GravityPuzzle.VibrationEnabled";
 
         [SerializeField] private Button closeButton;
+        [SerializeField] private Button resumeButton;
+        [SerializeField] private Button quitButton;
         [SerializeField] private Button soundToggleButton;
+        [SerializeField] private Button musicToggleButton;
         [SerializeField] private Button vibrationToggleButton;
         [SerializeField] private Image soundToggleImage;
+        [SerializeField] private Image musicToggleImage;
         [SerializeField] private Image vibrationToggleImage;
         [SerializeField] private Sprite toggleOffSprite;
         [SerializeField] private Sprite toggleOnSprite;
+        [SerializeField] private string mainMenuSceneName = "Main_Menu";
 
         private bool soundEnabled;
+        private bool musicEnabled;
         private bool vibrationEnabled;
         private PrototypeBoard pausedBoard;
 
@@ -30,12 +37,19 @@ namespace GravityPuzzle.Presentation.Views
         private void Awake()
         {
             soundEnabled = PlayerPrefs.GetInt("GravityPuzzle.SoundEnabled", 1) == 1;
+            musicEnabled = PlayerPrefs.GetInt("GravityPuzzle.MusicEnabled", 1) == 1;
             vibrationEnabled = PlayerPrefs.GetInt(VibrationPreferenceKey, 1) == 1;
 
             if (closeButton != null)
                 closeButton.onClick.AddListener(Close);
+            if (resumeButton != null)
+                resumeButton.onClick.AddListener(Close);
+            if (quitButton != null)
+                quitButton.onClick.AddListener(QuitToMainMenu);
             if (soundToggleButton != null)
                 soundToggleButton.onClick.AddListener(ToggleSoundVisual);
+            if (musicToggleButton != null)
+                musicToggleButton.onClick.AddListener(ToggleMusic);
             if (vibrationToggleButton != null)
                 vibrationToggleButton.onClick.AddListener(ToggleVibration);
 
@@ -64,8 +78,14 @@ namespace GravityPuzzle.Presentation.Views
         {
             if (closeButton != null)
                 closeButton.onClick.RemoveListener(Close);
+            if (resumeButton != null)
+                resumeButton.onClick.RemoveListener(Close);
+            if (quitButton != null)
+                quitButton.onClick.RemoveListener(QuitToMainMenu);
             if (soundToggleButton != null)
                 soundToggleButton.onClick.RemoveListener(ToggleSoundVisual);
+            if (musicToggleButton != null)
+                musicToggleButton.onClick.RemoveListener(ToggleMusic);
             if (vibrationToggleButton != null)
                 vibrationToggleButton.onClick.RemoveListener(ToggleVibration);
 
@@ -86,6 +106,14 @@ namespace GravityPuzzle.Presentation.Views
             RefreshToggleVisuals();
         }
 
+        private void ToggleMusic()
+        {
+            musicEnabled = !musicEnabled;
+            PlayerPrefs.SetInt("GravityPuzzle.MusicEnabled", musicEnabled ? 1 : 0);
+            PlayerPrefs.Save();
+            RefreshToggleVisuals();
+        }
+
         private void ToggleVibration()
         {
             vibrationEnabled = !vibrationEnabled;
@@ -98,8 +126,17 @@ namespace GravityPuzzle.Presentation.Views
         {
             if (soundToggleImage != null)
                 soundToggleImage.sprite = soundEnabled ? toggleOnSprite : toggleOffSprite;
+            if (musicToggleImage != null)
+                musicToggleImage.sprite = musicEnabled ? toggleOnSprite : toggleOffSprite;
             if (vibrationToggleImage != null)
                 vibrationToggleImage.sprite = vibrationEnabled ? toggleOnSprite : toggleOffSprite;
+        }
+
+        private void QuitToMainMenu()
+        {
+            Closed?.Invoke();
+            ResumeTimer();
+            SceneManager.LoadScene(mainMenuSceneName);
         }
 
         private void ResumeTimer()
