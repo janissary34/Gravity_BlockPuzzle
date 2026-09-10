@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level_idea_7
   m_EditorClassIdentifier: 
   levelName: New Level
-  timeLimit: 150
+  timeLimit: 200
   boardColumns: 8
   boardRows: 14
   subdivisions: 4
@@ -1043,6 +1043,38 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells:
+    - localCell: {x: -12, y: -14}
+      type: 0
+    - localCell: {x: -11, y: -14}
+      type: 0
+    - localCell: {x: -10, y: -14}
+      type: 0
+    - localCell: {x: -9, y: -14}
+      type: 0
+    - localCell: {x: -12, y: -13}
+      type: 0
+    - localCell: {x: -11, y: -13}
+      type: 0
+    - localCell: {x: -10, y: -13}
+      type: 0
+    - localCell: {x: -9, y: -13}
+      type: 0
+    - localCell: {x: -12, y: -12}
+      type: 0
+    - localCell: {x: -11, y: -12}
+      type: 0
+    - localCell: {x: -10, y: -12}
+      type: 0
+    - localCell: {x: -9, y: -12}
+      type: 0
+    - localCell: {x: -12, y: -11}
+      type: 0
+    - localCell: {x: -11, y: -11}
+      type: 0
+    - localCell: {x: -10, y: -11}
+      type: 0
+    - localCell: {x: -9, y: -11}
+      type: 0
     - localCell: {x: -8, y: -14}
       type: 0
     - localCell: {x: -7, y: -14}
@@ -1075,37 +1107,37 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -5, y: -11}
       type: 0
-    - localCell: {x: -12, y: -14}
+    - localCell: {x: -4, y: -14}
       type: 0
-    - localCell: {x: -11, y: -14}
+    - localCell: {x: -3, y: -14}
       type: 0
-    - localCell: {x: -10, y: -14}
+    - localCell: {x: -2, y: -14}
       type: 0
-    - localCell: {x: -9, y: -14}
+    - localCell: {x: -1, y: -14}
       type: 0
-    - localCell: {x: -12, y: -13}
+    - localCell: {x: -4, y: -13}
       type: 0
-    - localCell: {x: -11, y: -13}
+    - localCell: {x: -3, y: -13}
       type: 0
-    - localCell: {x: -10, y: -13}
+    - localCell: {x: -2, y: -13}
       type: 0
-    - localCell: {x: -9, y: -13}
+    - localCell: {x: -1, y: -13}
       type: 0
-    - localCell: {x: -12, y: -12}
+    - localCell: {x: -4, y: -12}
       type: 0
-    - localCell: {x: -11, y: -12}
+    - localCell: {x: -3, y: -12}
       type: 0
-    - localCell: {x: -10, y: -12}
+    - localCell: {x: -2, y: -12}
       type: 0
-    - localCell: {x: -9, y: -12}
+    - localCell: {x: -1, y: -12}
       type: 0
-    - localCell: {x: -12, y: -11}
+    - localCell: {x: -4, y: -11}
       type: 0
-    - localCell: {x: -11, y: -11}
+    - localCell: {x: -3, y: -11}
       type: 0
-    - localCell: {x: -10, y: -11}
+    - localCell: {x: -2, y: -11}
       type: 0
-    - localCell: {x: -9, y: -11}
+    - localCell: {x: -1, y: -11}
       type: 0
   - name: Piece 17
     visualId: 
@@ -1771,38 +1803,6 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells:
-    - localCell: {x: -4, y: -16}
-      type: 0
-    - localCell: {x: -3, y: -16}
-      type: 0
-    - localCell: {x: -2, y: -16}
-      type: 0
-    - localCell: {x: -1, y: -16}
-      type: 0
-    - localCell: {x: -4, y: -15}
-      type: 0
-    - localCell: {x: -3, y: -15}
-      type: 0
-    - localCell: {x: -2, y: -15}
-      type: 0
-    - localCell: {x: -1, y: -15}
-      type: 0
-    - localCell: {x: -4, y: -14}
-      type: 0
-    - localCell: {x: -3, y: -14}
-      type: 0
-    - localCell: {x: -2, y: -14}
-      type: 0
-    - localCell: {x: -1, y: -14}
-      type: 0
-    - localCell: {x: -4, y: -13}
-      type: 0
-    - localCell: {x: -3, y: -13}
-      type: 0
-    - localCell: {x: -2, y: -13}
-      type: 0
-    - localCell: {x: -1, y: -13}
-      type: 0
     - localCell: {x: 0, y: -16}
       type: 0
     - localCell: {x: 1, y: -16}
@@ -2127,14 +2127,6 @@ MonoBehaviour:
   - name: Obstacle 11
     usesGridCells: 1
     gridCell: {x: 3, y: 2}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 12
-    usesGridCells: 1
-    gridCell: {x: 2, y: 2}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
