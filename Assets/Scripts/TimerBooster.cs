@@ -27,6 +27,9 @@ namespace GravityPuzzle
         [Tooltip("Optional UI Button to trigger the Timer Booster.")]
         [SerializeField] private Button boosterButton;
 
+        [Tooltip("Scene-authored selection glow shown only while this timer booster is activating.")]
+        [SerializeField] private GameObject selectionGlow;
+
         [Tooltip("Booster count component on this timer booster button.")]
         [SerializeField] private BoosterButton boosterButtonRef;
 
@@ -393,6 +396,7 @@ namespace GravityPuzzle
             SetUrgencyPresentationVisible(false, true);
             SetTimerFreezeGlowVisible(false, true);
             SetTimerImpactImageVisible(false);
+            SetSelectionGlowVisible(false);
 
             ResetFreezeFXState();
         }
@@ -425,6 +429,7 @@ namespace GravityPuzzle
 
         private void OnDisable()
         {
+            SetSelectionGlowVisible(false);
             if (boosterButton != null)
             {
                 boosterButton.onClick.RemoveListener(PlayTimerBoosterSequence);
@@ -526,6 +531,7 @@ namespace GravityPuzzle
             }
 
             sequencePausedBoard = activeBoard;
+            SetSelectionGlowVisible(true);
 
             if (activeSequence != null && activeSequence.IsActive())
             {
@@ -678,6 +684,7 @@ namespace GravityPuzzle
             // Step 4: Arrival Event (Particle Burst + Deactivate)
             seq.AppendCallback(() =>
             {
+                SetSelectionGlowVisible(false);
                 // The visual freeze begins at the exact impact moment, not on
                 // button press. This keeps the vignette synchronized with the
                 // clock reaching the timer display.
@@ -731,6 +738,12 @@ namespace GravityPuzzle
                 }
                 OnSequenceCompleted();
             });
+        }
+
+        private void SetSelectionGlowVisible(bool visible)
+        {
+            if (selectionGlow != null)
+                selectionGlow.SetActive(visible);
         }
 
         private Vector3 GetTargetWorldPosition(Transform target, Transform mover)
