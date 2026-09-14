@@ -29,6 +29,9 @@ namespace GravityPuzzle
         [Tooltip("Seconds remaining at which the urgency frame becomes visible.")]
         [Min(0.01f)] [SerializeField] private float timerUrgencyThresholdSeconds = 10f;
 
+        [Tooltip("First campaign level allowed to show the red vignette. Earlier levels keep their timer-only warning.")]
+        [Min(1)] [SerializeField] private int redVignetteFirstLevel = 4;
+
         [Tooltip("Shared presentation timing for the urgency-frame fade.")]
         [SerializeField] private TweenConfig timerUrgencyTweenConfig;
 
@@ -207,7 +210,8 @@ namespace GravityPuzzle
                 hasTimeLimit &&
                 board.IsTimerStarted &&
                 board.TimeRemaining > 0f &&
-                board.TimeRemaining <= timerUrgencyThresholdSeconds);
+                board.TimeRemaining <= timerUrgencyThresholdSeconds &&
+                GravityLevelRuntime.CurrentLevelNumber >= redVignetteFirstLevel);
             SetTimerTextUrgencyPulseVisible(
                 hasTimeLimit &&
                 board.IsTimerStarted &&

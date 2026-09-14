@@ -43,7 +43,6 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private GameObject rocketButtonGlow;
         [Tooltip("A scene-authored glow child behind the Hammer button.")]
         [SerializeField] private GameObject hammerButtonGlow;
-
         [Header("HUD Suppression")]
         [Tooltip("Normal HUD groups hidden while a Rocket or Hammer target mode is armed. Their original state is restored afterward.")]
         [SerializeField] private CanvasGroup[] gameplayHudGroups;
@@ -73,7 +72,6 @@ namespace GravityPuzzle.Presentation.Views
             new List<HudGroupState>();
         private readonly List<HudGroupState> hiddenBoosterButtonStates =
             new List<HudGroupState>();
-
         private readonly struct HudGroupState
         {
             public readonly CanvasGroup Group;

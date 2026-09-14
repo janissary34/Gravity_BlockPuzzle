@@ -20,6 +20,7 @@ namespace GravityPuzzle
         private static PrototypeBoard configuredBoard;
         private static PuzzleDragController configuredDragController;
         private static int currentLevelIndex = -1;
+        private static BoosterRewardConfig queuedBoosterReward;
         private static bool levelSequenceInitialized;
         private static bool previewLaunchRequested;
 
@@ -31,6 +32,7 @@ namespace GravityPuzzle
             configuredBoard = null;
             configuredDragController = null;
             currentLevelIndex = -1;
+            queuedBoosterReward = null;
             levelSequenceInitialized = false;
             previewLaunchRequested = false;
         }
@@ -146,6 +148,22 @@ namespace GravityPuzzle
             return true;
         }
 
+        /// <summary>
+        /// Carries an earned booster presentation across the scene reload so
+        /// it can appear over the level that was just unlocked.
+        /// </summary>
+        public static void QueueBoosterReward(BoosterRewardConfig rewardConfig)
+        {
+            queuedBoosterReward = rewardConfig;
+        }
+
+        public static bool TryTakeQueuedBoosterReward(out BoosterRewardConfig rewardConfig)
+        {
+            rewardConfig = queuedBoosterReward;
+            queuedBoosterReward = null;
+            return rewardConfig != null;
+        }
+
         private static GravityLevelDefinition CurrentLevel =>
             currentLevelIndex >= 0 && currentLevelIndex < levels.Length
                 ? levels[currentLevelIndex]
@@ -232,6 +250,8 @@ namespace GravityPuzzle
             LevelProgressManager progressManager = LevelProgressManager.EnsureInstance();
             if (progressManager != null)
                 progressManager.InitializeLevelProgress(level);
+
+            boardState.ShowQueuedBoosterReward();
         }
 
         private static float ResolveCameraSize(GravityLevelDefinition level)

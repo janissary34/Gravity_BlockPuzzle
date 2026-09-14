@@ -651,7 +651,7 @@ namespace GravityPuzzle
             if (nextLevelButton != null)
                 nextLevelButton.onClick.AddListener(LoadNextLevelFromWinPanel);
             if (newBoosterPanel != null)
-                newBoosterPanel.Dismissed += LoadNextLevelAfterBoosterReward;
+                newBoosterPanel.Dismissed += CompleteQueuedBoosterReward;
         }
 
         private void OnEnable()
@@ -670,7 +670,7 @@ namespace GravityPuzzle
             if (nextLevelButton != null)
                 nextLevelButton.onClick.RemoveListener(LoadNextLevelFromWinPanel);
             if (newBoosterPanel != null)
-                newBoosterPanel.Dismissed -= LoadNextLevelAfterBoosterReward;
+                newBoosterPanel.Dismissed -= CompleteQueuedBoosterReward;
         }
 
         public void SetTimeLimit(float timeLimit)
@@ -1352,21 +1352,20 @@ namespace GravityPuzzle
             if (!boardCleared)
                 return;
 
-            if (TryShowBoosterRewardForCompletedLevel())
+            if (TryQueueBoosterRewardForCompletedLevel())
             {
                 if (winPanel != null)
                     winPanel.SetActive(false);
                 if (winVfx != null)
                     winVfx.SetActive(false);
-                return;
             }
 
             LoadNextLevelAfterWinPanel();
         }
 
-        private bool TryShowBoosterRewardForCompletedLevel()
+        private bool TryQueueBoosterRewardForCompletedLevel()
         {
-            if (newBoosterPanel == null || boosterRewardConfigs == null)
+            if (boosterRewardConfigs == null || !GravityLevelRuntime.HasNextLevel)
                 return false;
 
             int completedLevel = GravityLevelRuntime.CurrentLevelNumber;
@@ -1381,16 +1380,26 @@ namespace GravityPuzzle
                     continue;
 #endif
 
-                awaitingBoosterRewardDismissal = true;
-                pendingBoosterRewardConfig = config;
-                newBoosterPanel.Show(config);
+                GravityLevelRuntime.QueueBoosterReward(config);
                 return true;
             }
 
             return false;
         }
 
-        private void LoadNextLevelAfterBoosterReward()
+        /// <summary>Shows a queued unlock after the destination level is ready.</summary>
+        public void ShowQueuedBoosterReward()
+        {
+            if (newBoosterPanel == null ||
+                !GravityLevelRuntime.TryTakeQueuedBoosterReward(out BoosterRewardConfig rewardConfig))
+                return;
+
+            awaitingBoosterRewardDismissal = true;
+            pendingBoosterRewardConfig = rewardConfig;
+            newBoosterPanel.Show(rewardConfig);
+        }
+
+        private void CompleteQueuedBoosterReward()
         {
             if (!awaitingBoosterRewardDismissal)
                 return;
@@ -1398,7 +1407,6 @@ namespace GravityPuzzle
             awaitingBoosterRewardDismissal = false;
             BoosterRewardUnlockState.MarkPresented(pendingBoosterRewardConfig);
             pendingBoosterRewardConfig = null;
-            LoadNextLevelAfterWinPanel();
         }
 
         private void LoadNextLevelAfterWinPanel()
