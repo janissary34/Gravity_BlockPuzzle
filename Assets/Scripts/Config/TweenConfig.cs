@@ -82,6 +82,15 @@ namespace GravityPuzzle.Config
         [Min(.001f)] [SerializeField] private float buttonReleaseDuration = .25f;
         [SerializeField] private Ease buttonReleaseEase = Ease.OutBack;
 
+        [Header("Modal Panel Presentation")]
+        [Min(.001f)] [SerializeField] private float modalPanelRevealDuration = .32f;
+        [Min(.001f)] [SerializeField] private float modalPanelRevealStartScale = .68f;
+        [SerializeField] private Ease modalPanelRevealEase = Ease.OutBack;
+        [Min(0f)] [SerializeField] private float modalPanelSequenceDelay = .1f;
+        [Min(.001f)] [SerializeField] private float keepOnPlayingSlideDuration = .42f;
+        [Min(0f)] [SerializeField] private float keepOnPlayingTopOffset = 1200f;
+        [SerializeField] private Ease keepOnPlayingSlideEase = Ease.OutCubic;
+
         [Header("Timer Freeze Presentation")]
         [Min(0f)] [SerializeField] private float timerCenterPauseDuration = 1f;
         [Min(.001f)] [SerializeField] private float timerUrgencyFadeInDuration = .45f;
@@ -203,6 +212,13 @@ namespace GravityPuzzle.Config
         public Ease ButtonPressEase => buttonPressEase;
         public float ButtonReleaseDuration => buttonReleaseDuration;
         public Ease ButtonReleaseEase => buttonReleaseEase;
+        public float ModalPanelRevealDuration => modalPanelRevealDuration;
+        public float ModalPanelRevealStartScale => modalPanelRevealStartScale;
+        public Ease ModalPanelRevealEase => modalPanelRevealEase;
+        public float ModalPanelSequenceDelay => modalPanelSequenceDelay;
+        public float KeepOnPlayingSlideDuration => keepOnPlayingSlideDuration;
+        public float KeepOnPlayingTopOffset => keepOnPlayingTopOffset;
+        public Ease KeepOnPlayingSlideEase => keepOnPlayingSlideEase;
         public float TimerCenterPauseDuration => timerCenterPauseDuration;
         public float TimerUrgencyFadeInDuration => timerUrgencyFadeInDuration;
         public Ease TimerUrgencyFadeInEase => timerUrgencyFadeInEase;

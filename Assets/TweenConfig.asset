@@ -75,6 +75,13 @@ MonoBehaviour:
   buttonPressEase: 6
   buttonReleaseDuration: 0.25
   buttonReleaseEase: 24
+  modalPanelRevealDuration: 0.5
+  modalPanelRevealStartScale: 0.8
+  modalPanelRevealEase: 9
+  modalPanelSequenceDelay: 0.1
+  keepOnPlayingSlideDuration: 0.42
+  keepOnPlayingTopOffset: 1200
+  keepOnPlayingSlideEase: 4
   timerCenterPauseDuration: 1
   timerUrgencyFadeInDuration: 0.45
   timerUrgencyFadeInEase: 6
