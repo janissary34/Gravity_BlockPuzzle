@@ -185,12 +185,12 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1436
-        y: 1678
-        width: 176
-        height: 183
+        y: 1707
+        width: 143
+        height: 154
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 13, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
@@ -961,10 +961,10 @@ TextureImporter:
       name: Icon_Timer_Frozen
       rect:
         serializedVersion: 2
-        x: 1095
-        y: 1687
-        width: 176
-        height: 183
+        x: 1112
+        y: 1697
+        width: 151
+        height: 161
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -982,10 +982,10 @@ TextureImporter:
       name: Icon_Timer_Short
       rect:
         serializedVersion: 2
-        x: 1271
-        y: 1687
-        width: 176
-        height: 183
+        x: 1283
+        y: 1711
+        width: 127
+        height: 145
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
