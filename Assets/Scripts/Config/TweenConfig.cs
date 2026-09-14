@@ -107,6 +107,7 @@ namespace GravityPuzzle.Config
 
         [Header("Timer Countdown Urgency Presentation")]
         [Min(.001f)] [SerializeField] private float timerUrgencyTextPulseHalfDuration = .3f;
+        [Min(0f)] [SerializeField] private float timerUrgencyTextPulseWaitDuration = .5f;
         [Min(1f)] [SerializeField] private float timerUrgencyTextPulseScale = 1.1f;
         [SerializeField] private Ease timerUrgencyTextPulseEase = Ease.InOutSine;
 
@@ -211,6 +212,7 @@ namespace GravityPuzzle.Config
         public float TimerUrgencyFrameStartScale => timerUrgencyFrameStartScale;
         public Ease TimerUrgencyFrameRevealEase => timerUrgencyFrameRevealEase;
         public float TimerUrgencyTextPulseHalfDuration => timerUrgencyTextPulseHalfDuration;
+        public float TimerUrgencyTextPulseWaitDuration => timerUrgencyTextPulseWaitDuration;
         public float TimerUrgencyTextPulseScale => timerUrgencyTextPulseScale;
         public Ease TimerUrgencyTextPulseEase => timerUrgencyTextPulseEase;
         public float TimerImpactDuration => timerImpactDuration;

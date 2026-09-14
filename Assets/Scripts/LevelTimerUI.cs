@@ -368,12 +368,21 @@ namespace GravityPuzzle
                 return;
             }
 
-            timerTextUrgencyPulseTween = timerTextRect
-                .DOScale(
-                    timerTextInitialScale * timerUrgencyTweenConfig.TimerUrgencyTextPulseScale,
-                    timerUrgencyTweenConfig.TimerUrgencyTextPulseHalfDuration)
-                .SetEase(timerUrgencyTweenConfig.TimerUrgencyTextPulseEase)
-                .SetLoops(-1, LoopType.Yoyo)
+            timerTextUrgencyPulseTween = DOTween.Sequence()
+                .Append(
+                    timerTextRect
+                        .DOScale(
+                            timerTextInitialScale * timerUrgencyTweenConfig.TimerUrgencyTextPulseScale,
+                            timerUrgencyTweenConfig.TimerUrgencyTextPulseHalfDuration)
+                        .SetEase(timerUrgencyTweenConfig.TimerUrgencyTextPulseEase))
+                .Append(
+                    timerTextRect
+                        .DOScale(
+                            timerTextInitialScale,
+                            timerUrgencyTweenConfig.TimerUrgencyTextPulseHalfDuration)
+                        .SetEase(timerUrgencyTweenConfig.TimerUrgencyTextPulseEase))
+                .AppendInterval(timerUrgencyTweenConfig.TimerUrgencyTextPulseWaitDuration)
+                .SetLoops(-1)
                 .SetLink(timerText.gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
         }

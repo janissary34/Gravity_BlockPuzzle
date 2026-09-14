@@ -93,8 +93,9 @@ MonoBehaviour:
   timerUrgencyFrameRevealDuration: 6
   timerUrgencyFrameStartScale: 1.35
   timerUrgencyFrameRevealEase: 6
-  timerUrgencyTextPulseHalfDuration: 1
-  timerUrgencyTextPulseScale: 1.5
+  timerUrgencyTextPulseHalfDuration: 0.3
+  timerUrgencyTextPulseWaitDuration: 0.5
+  timerUrgencyTextPulseScale: 1.1
   timerUrgencyTextPulseEase: 4
   timerFlightScaleTarget: 0.6
   freezeImpactStartScale: 0.4
