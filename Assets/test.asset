@@ -38,7 +38,7 @@ MonoBehaviour:
   - name: Piece 1
     visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
-    origin: {x: 22, y: 14}
+    origin: {x: 30, y: -2}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -313,7 +313,7 @@ MonoBehaviour:
   - name: Piece 2
     visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-    origin: {x: 18, y: 18}
+    origin: {x: 26, y: 18}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -524,7 +524,7 @@ MonoBehaviour:
   - name: Piece 3
     visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
-    origin: {x: 18, y: 18}
+    origin: {x: 30, y: 26}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -671,7 +671,7 @@ MonoBehaviour:
   - name: Piece 4
     visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
-    origin: {x: 18, y: 18}
+    origin: {x: 34, y: 34}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
