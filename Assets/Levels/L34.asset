@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
-  m_Name: Mid_lvl1
+  m_Name: L34
   m_EditorClassIdentifier: 
   levelName: New Level
   timeLimit: 180
@@ -156,7 +156,7 @@ MonoBehaviour:
     origin: {x: 16, y: 16}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 10
+    frozenMoveCount: 12
     iceCounterFontSize: 20
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1050,7 +1050,7 @@ MonoBehaviour:
     origin: {x: 12, y: 14}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 10
+    frozenMoveCount: 12
     iceCounterFontSize: 26
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
