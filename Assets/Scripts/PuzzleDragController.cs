@@ -321,6 +321,15 @@ namespace GravityPuzzle
 
             RemoveFinishedGridFalls();
 
+            // A release commits its destination in the authoritative grid before
+            // the short visual snap reaches that destination.  Starting a new
+            // gravity tween now would let a newly unsupported piece fall through
+            // the releasing piece's in-flight visual path. Existing falls retain
+            // their presentation ownership; only new cascade planning waits for
+            // the release pose to converge with the committed grid anchor.
+            if (gridReleasePresentationPiece != null)
+                return gridFallingPieces.Count > 0;
+
             PrototypeBoard activeBoard = PrototypeBoard.Active;
             LevelBoardSnapshot snapshot = activeBoard != null
                 ? activeBoard.BoardSnapshot

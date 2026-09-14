@@ -1849,6 +1849,12 @@ namespace GravityPuzzle
                     CaptureShredderReservationCells(model);
 
                 board.TryLockFinalShredderOutcome(this);
+
+                // The reservation replaces this piece's occupied footprint as
+                // soon as the feed takes ownership. Replan immediately so a
+                // piece above can start its legal approach to the shrinking
+                // reservation without waiting for a later feed-frame release.
+                PuzzleDragController.WakeUpGravity();
             }
 
             // The normal shredder owns destruction at handoff time. Rocket
