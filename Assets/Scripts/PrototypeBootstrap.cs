@@ -637,6 +637,9 @@ namespace GravityPuzzle
         public bool IsTimerActive => TimeLimit > 0f && IsTimerStarted && !boardCleared && !boardFailed;
         public bool IsTimerPaused => timerPauseOwners.Count > 0;
         public bool IsLevelRunning => GameState == GameState.Ready || GameState == GameState.Playing;
+        public bool HasFailed => boardFailed;
+        public bool WasTimerExpiryFailure { get; private set; }
+        public bool HasUsedTimerExpiryContinue { get; private set; }
         public GameState GameState => gameStateMachine.Current;
         public LevelBoardSnapshot BoardSnapshot { get; private set; }
 
@@ -678,6 +681,8 @@ namespace GravityPuzzle
             DestroyedPieceCount = 0;
             timerPauseOwners.Clear();
             finalShredderOutcomeLocked = false;
+            WasTimerExpiryFailure = false;
+            HasUsedTimerExpiryContinue = false;
             bombElapsedSeconds = 0f;
         }
 
@@ -1100,6 +1105,44 @@ namespace GravityPuzzle
         }
 
         /// <summary>
+        /// Restores a board that failed solely because its countdown reached
+        /// zero. The board authorizes only one recovery per level and owns
+        /// both the state transition and timer mutation.
+        /// </summary>
+        public bool TryResumeAfterTimerExpiry(float seconds)
+        {
+            if (seconds <= 0f ||
+                TimeLimit <= 0f ||
+                !boardFailed ||
+                boardCleared ||
+                GameState != GameState.Result ||
+                !WasTimerExpiryFailure ||
+                HasUsedTimerExpiryContinue ||
+                TimeRemaining > 0f)
+            {
+                Debug.LogWarning("[Timer] Continue was rejected because the board is not awaiting a timer-expiry recovery.", this);
+                return false;
+            }
+
+            boardFailed = false;
+            WasTimerExpiryFailure = false;
+            finalShredderOutcomeLocked = false;
+            timerPauseOwners.Clear();
+            AddTime(seconds);
+
+            if (TryTransitionGameState(GameState.Playing))
+            {
+                HasUsedTimerExpiryContinue = true;
+                return true;
+            }
+
+            boardFailed = true;
+            WasTimerExpiryFailure = true;
+            TimeRemaining = 0f;
+            return false;
+        }
+
+        /// <summary>
         /// Adds an owner-specific timer pause. Multiple systems may pause the
         /// timer safely; it resumes only after every owner releases its pause.
         /// </summary>
@@ -1232,7 +1275,7 @@ namespace GravityPuzzle
 
                     if (allSettled)
                     {
-                        FailLevel();
+                        FailLevel(true);
                     }
                 }
             }
@@ -1259,12 +1302,13 @@ namespace GravityPuzzle
             return false;
         }
 
-        private void FailLevel()
+        private void FailLevel(bool wasTimerExpiry = false)
         {
             if (boardFailed || boardCleared)
                 return;
 
             boardFailed = true;
+            WasTimerExpiryFailure = wasTimerExpiry;
             TryTransitionGameState(GameState.Result);
             Debug.Log("LEVEL FAILED!");
             LevelFailed?.Invoke();

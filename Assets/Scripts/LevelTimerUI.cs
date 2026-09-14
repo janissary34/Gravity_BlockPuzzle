@@ -24,6 +24,22 @@ namespace GravityPuzzle
         [Tooltip("The popup panel to show when the timer runs out")]
         public GameObject failPopupPanel;
 
+        [Header("Continue Popup")]
+        [Tooltip("Panel shown once when the level timer first expires.")]
+        [SerializeField] private GameObject keepOnPlayingPanel;
+
+        [Tooltip("Button that grants the one-time timer extension.")]
+        [SerializeField] private Button liveAddsButton;
+
+        [Tooltip("Non-ad continue button on the keep-on-playing panel.")]
+        [SerializeField] private Button playOnButton;
+
+        [Tooltip("Button that declines the continue offer and opens the fail panel.")]
+        [SerializeField] private Button closeKeepOnPlayingButton;
+
+        [Tooltip("Seconds granted after the player accepts the continue offer.")]
+        [Min(0.01f)] [SerializeField] private float continueTimeSeconds = 60f;
+
         [Header("Buttons")]
         [Tooltip("Drag your Retry button here")]
         public Button retryButton;
@@ -58,6 +74,8 @@ namespace GravityPuzzle
         private int lastDisplayedSecond = -1;
         private bool timerPresentationLocked;
         private float configuredSliderTimeLimit = -1f;
+        private bool continueOfferIsActive;
+        private bool levelFailureHandled;
 
         private void Awake()
         {
@@ -70,6 +88,9 @@ namespace GravityPuzzle
             // tap, depending on Unity's component update order.
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(false);
+
+            if (keepOnPlayingPanel != null)
+                keepOnPlayingPanel.SetActive(false);
 
             if (retryConfirmationPanel != null)
                 retryConfirmationPanel.SetActive(false);
@@ -97,6 +118,15 @@ namespace GravityPuzzle
             if (mainMenuButton != null)
                 mainMenuButton.onClick.AddListener(OnMainMenuClicked);
 
+            if (liveAddsButton != null)
+                liveAddsButton.onClick.AddListener(OnLiveAddsClicked);
+
+            if (playOnButton != null)
+                playOnButton.onClick.AddListener(OnKeepOnPlayingClosed);
+
+            if (closeKeepOnPlayingButton != null)
+                closeKeepOnPlayingButton.onClick.AddListener(OnKeepOnPlayingClosed);
+
             if (openRetryConfirmationButton != null)
                 openRetryConfirmationButton.onClick.AddListener(OpenRetryConfirmation);
 
@@ -112,6 +142,19 @@ namespace GravityPuzzle
         private void Update()
         {
             BindBoard(PrototypeBoard.Active);
+
+            // LevelFailed is the primary notification path. This check covers
+            // a failure that occurs before this UI has subscribed, such as a
+            // timer expiring during scene initialization. Once the one-time
+            // continue has been used, keep the fail overlay authoritative
+            // while the board remains failed.
+            if (board != null && board.HasFailed)
+            {
+                if (board.HasUsedTimerExpiryContinue)
+                    ShowFailPopup();
+                else if (!levelFailureHandled)
+                    HandleLevelFailed();
+            }
 
             bool hasTimeLimit = board != null && board.TimeLimit > 0f && !timerPresentationLocked;
             SetTimerVisible(hasTimeLimit);
@@ -136,6 +179,7 @@ namespace GravityPuzzle
             board = nextBoard;
             lastDisplayedSecond = -1;
             configuredSliderTimeLimit = -1f;
+            levelFailureHandled = false;
             timerPresentationLocked = board != null &&
                 (board.GameState == GravityPuzzle.Core.StateMachine.GameState.LevelComplete ||
                  board.GameState == GravityPuzzle.Core.StateMachine.GameState.Result);
@@ -149,6 +193,19 @@ namespace GravityPuzzle
 
         private void HandleLevelFailed()
         {
+            if (levelFailureHandled)
+                return;
+
+            levelFailureHandled = true;
+
+            if (board != null &&
+                !board.HasUsedTimerExpiryContinue &&
+                board.WasTimerExpiryFailure)
+            {
+                ShowKeepOnPlayingPopup();
+                return;
+            }
+
             ShowFailPopup();
         }
 
@@ -216,9 +273,52 @@ namespace GravityPuzzle
         public void ShowFailPopup()
         {
             IsGameOver = true;
+            continueOfferIsActive = false;
+
+            if (keepOnPlayingPanel != null)
+                keepOnPlayingPanel.SetActive(false);
             
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(true);
+        }
+
+        private void ShowKeepOnPlayingPopup()
+        {
+            IsGameOver = true;
+            continueOfferIsActive = true;
+
+            if (failPopupPanel != null)
+                failPopupPanel.SetActive(false);
+
+            if (keepOnPlayingPanel != null)
+                keepOnPlayingPanel.SetActive(true);
+        }
+
+        /// <summary>
+        /// Handles the keep-on-playing panel's live-adds button. Advertising
+        /// completion can call this same method after its reward is granted.
+        /// </summary>
+        public void OnLiveAddsClicked()
+        {
+            if (!continueOfferIsActive || board == null)
+                return;
+
+            if (!board.TryResumeAfterTimerExpiry(continueTimeSeconds))
+                return;
+
+            continueOfferIsActive = false;
+            levelFailureHandled = false;
+            IsGameOver = false;
+            lastDisplayedSecond = -1;
+
+            if (keepOnPlayingPanel != null)
+                keepOnPlayingPanel.SetActive(false);
+        }
+
+        private void OnKeepOnPlayingClosed()
+        {
+            if (continueOfferIsActive)
+                ShowFailPopup();
         }
 
         public void OpenRetryConfirmation()

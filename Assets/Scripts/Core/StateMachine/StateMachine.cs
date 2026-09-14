@@ -23,6 +23,9 @@ namespace GravityPuzzle.Core.StateMachine
             yield return new StateTransition<GameState>(GameState.Playing, GameState.LevelComplete);
             yield return new StateTransition<GameState>(GameState.Playing, GameState.Result);
             yield return new StateTransition<GameState>(GameState.LevelComplete, GameState.Result);
+            // A timer-only failure may be recovered once through the continue
+            // flow. The board validates that recovery before using this edge.
+            yield return new StateTransition<GameState>(GameState.Result, GameState.Playing);
         }
     }
 

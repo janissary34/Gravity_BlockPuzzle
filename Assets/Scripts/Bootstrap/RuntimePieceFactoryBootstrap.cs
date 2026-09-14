@@ -44,6 +44,12 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Text that displays the active campaign level number.")]
         [SerializeField] private TMP_Text levelDisplayText;
 
+        [Tooltip("Text in the retry confirmation panel that displays the active campaign level number.")]
+        [SerializeField] private TMP_Text retryLevelText;
+
+        [Tooltip("Text in the fail panel that displays the active campaign level number.")]
+        [SerializeField] private TMP_Text failedLevelText;
+
         [Header("Piece Visuals")]
         [Tooltip("Optional visual lookup for level piece Visual Id values. Empty IDs keep their authored legacy colours.")]
         [SerializeField] private PieceVisualConfig pieceVisualConfig;
@@ -81,8 +87,7 @@ namespace GravityPuzzle.Bootstrap
                 return;
             }
 
-            if (levelDisplayText != null)
-                levelDisplayText.SetText("Level {0}", GravityLevelRuntime.CurrentLevelNumber);
+            UpdateLevelDisplays();
 
             string pieceValidationError = "BlockPiece prefab or PoolConfig is not assigned.";
             if (blockPiecePrefab == null || poolConfig == null ||
@@ -150,6 +155,20 @@ namespace GravityPuzzle.Bootstrap
 
             WarnForUnresolvedVisualIds(selectedLevel);
             isReady = true;
+        }
+
+        private void UpdateLevelDisplays()
+        {
+            int currentLevelNumber = GravityLevelRuntime.CurrentLevelNumber;
+
+            if (levelDisplayText != null)
+                levelDisplayText.SetText("Level {0}", currentLevelNumber);
+
+            if (retryLevelText != null)
+                retryLevelText.SetText("Level {0}", currentLevelNumber);
+
+            if (failedLevelText != null)
+                failedLevelText.SetText("Level {0} failed", currentLevelNumber);
         }
 
         private static int CountIcePieces(GravityLevelDefinition level)
