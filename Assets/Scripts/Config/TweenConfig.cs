@@ -88,6 +88,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private Ease timerUrgencyFadeInEase = Ease.OutSine;
         [Min(.001f)] [SerializeField] private float timerUrgencyFadeOutDuration = .45f;
         [SerializeField] private Ease timerUrgencyFadeOutEase = Ease.InSine;
+
         [Min(.001f)] [SerializeField] private float timerImpactDuration = .42f;
         [SerializeField] private Ease timerImpactScaleEase = Ease.OutQuad;
         [Min(0f)] [SerializeField] private float timerImpactStartScale = .22f;
@@ -98,6 +99,11 @@ namespace GravityPuzzle.Config
         [SerializeField] private Ease timerFreezeGlowFadeInEase = Ease.OutSine;
         [Min(.001f)] [SerializeField] private float timerFreezeGlowFadeOutDuration = .35f;
         [SerializeField] private Ease timerFreezeGlowFadeOutEase = Ease.InSine;
+
+        [Header("Red Vignette Presentation")]
+        [Min(.001f)] [SerializeField] private float timerUrgencyFrameRevealDuration = 1.1f;
+        [Min(1f)] [SerializeField] private float timerUrgencyFrameStartScale = 1.35f;
+        [SerializeField] private Ease timerUrgencyFrameRevealEase = Ease.OutSine;
 
         [Header("Freeze FX Presentation")]
         [Tooltip("Target localScale multiplier applied to timer_obj while it flies toward the timer display.")]
@@ -196,6 +202,9 @@ namespace GravityPuzzle.Config
         public Ease TimerUrgencyFadeInEase => timerUrgencyFadeInEase;
         public float TimerUrgencyFadeOutDuration => timerUrgencyFadeOutDuration;
         public Ease TimerUrgencyFadeOutEase => timerUrgencyFadeOutEase;
+        public float TimerUrgencyFrameRevealDuration => timerUrgencyFrameRevealDuration;
+        public float TimerUrgencyFrameStartScale => timerUrgencyFrameStartScale;
+        public Ease TimerUrgencyFrameRevealEase => timerUrgencyFrameRevealEase;
         public float TimerImpactDuration => timerImpactDuration;
         public Ease TimerImpactScaleEase => timerImpactScaleEase;
         public float TimerImpactStartScale => timerImpactStartScale;

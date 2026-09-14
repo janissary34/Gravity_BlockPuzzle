@@ -1,3 +1,5 @@
+using DG.Tweening;
+using GravityPuzzle.Config;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -20,6 +22,19 @@ namespace GravityPuzzle
         [Tooltip("Slider that visually represents the remaining level time.")]
         [SerializeField] private Slider timerSlider;
 
+        [Header("Timer Urgency Presentation")]
+        [Tooltip("Full-screen red frame shown during the final seconds of an active countdown.")]
+        [SerializeField] private GameObject timerUrgencyFrame;
+
+        [Tooltip("Seconds remaining at which the urgency frame becomes visible.")]
+        [Min(0.01f)] [SerializeField] private float timerUrgencyThresholdSeconds = 10f;
+
+        [Tooltip("Shared presentation timing for the urgency-frame fade.")]
+        [SerializeField] private TweenConfig timerUrgencyTweenConfig;
+
+        [Tooltip("Canvas group on the urgency frame used for its fade.")]
+        [SerializeField] private CanvasGroup timerUrgencyCanvasGroup;
+
         [Header("Fail Popup")]
         [Tooltip("The popup panel to show when the timer runs out")]
         public GameObject failPopupPanel;
@@ -38,7 +53,7 @@ namespace GravityPuzzle
         [SerializeField] private Button closeKeepOnPlayingButton;
 
         [Tooltip("Seconds granted after the player accepts the continue offer.")]
-        [Min(0.01f)] [SerializeField] private float continueTimeSeconds = 60f;
+        [Min(0.01f)] [SerializeField] private float continueTimeSeconds = 20f;
 
         [Header("Buttons")]
         [Tooltip("Drag your Retry button here")]
@@ -73,6 +88,10 @@ namespace GravityPuzzle
         private PrototypeBoard board;
         private int lastDisplayedSecond = -1;
         private bool timerPresentationLocked;
+        private bool timerUrgencyFrameVisible;
+        private Tween timerUrgencyFadeTween;
+        private Tween timerUrgencyScaleTween;
+        private RectTransform timerUrgencyFrameRect;
         private float configuredSliderTimeLimit = -1f;
         private bool continueOfferIsActive;
         private bool levelFailureHandled;
@@ -92,6 +111,15 @@ namespace GravityPuzzle
             if (keepOnPlayingPanel != null)
                 keepOnPlayingPanel.SetActive(false);
 
+            if (timerUrgencyFrame != null && timerUrgencyCanvasGroup == null)
+                timerUrgencyCanvasGroup = timerUrgencyFrame.GetComponent<CanvasGroup>();
+
+            if (timerUrgencyFrame != null)
+                timerUrgencyFrameRect = timerUrgencyFrame.GetComponent<RectTransform>();
+
+            timerUrgencyFrameVisible = true;
+            SetTimerUrgencyFrameVisible(false);
+
             if (retryConfirmationPanel != null)
                 retryConfirmationPanel.SetActive(false);
         }
@@ -104,6 +132,10 @@ namespace GravityPuzzle
 
         private void OnDisable()
         {
+            timerUrgencyFadeTween?.Kill();
+            timerUrgencyFadeTween = null;
+            timerUrgencyScaleTween?.Kill();
+            timerUrgencyScaleTween = null;
             BindBoard(null);
 
             if (Active == this)
@@ -158,6 +190,11 @@ namespace GravityPuzzle
 
             bool hasTimeLimit = board != null && board.TimeLimit > 0f && !timerPresentationLocked;
             SetTimerVisible(hasTimeLimit);
+            SetTimerUrgencyFrameVisible(
+                hasTimeLimit &&
+                board.IsTimerStarted &&
+                board.TimeRemaining > 0f &&
+                board.TimeRemaining <= timerUrgencyThresholdSeconds);
             if (!hasTimeLimit)
                 return;
 
@@ -218,7 +255,10 @@ namespace GravityPuzzle
                 nextState == GravityPuzzle.Core.StateMachine.GameState.Result;
 
             if (timerPresentationLocked)
+            {
                 SetTimerVisible(false);
+                SetTimerUrgencyFrameVisible(false);
+            }
         }
 
         private void SetTimerVisible(bool visible)
@@ -228,6 +268,69 @@ namespace GravityPuzzle
 
             if (timerSlider != null && timerSlider.gameObject.activeSelf != visible)
                 timerSlider.gameObject.SetActive(visible);
+        }
+
+        private void SetTimerUrgencyFrameVisible(bool visible)
+        {
+            if (timerUrgencyFrame == null || timerUrgencyFrameVisible == visible)
+                return;
+
+            timerUrgencyFrameVisible = visible;
+            timerUrgencyFadeTween?.Kill();
+            timerUrgencyScaleTween?.Kill();
+
+            if (timerUrgencyCanvasGroup == null || timerUrgencyTweenConfig == null)
+            {
+                if (timerUrgencyCanvasGroup != null)
+                    timerUrgencyCanvasGroup.alpha = visible ? 1f : 0f;
+
+                if (timerUrgencyFrameRect != null)
+                    timerUrgencyFrameRect.localScale = Vector3.one;
+
+                timerUrgencyFrame.SetActive(visible);
+                return;
+            }
+
+            if (visible)
+            {
+                if (!timerUrgencyFrame.activeSelf)
+                    timerUrgencyFrame.SetActive(true);
+
+                timerUrgencyCanvasGroup.alpha = 0f;
+                if (timerUrgencyFrameRect != null)
+                {
+                    timerUrgencyFrameRect.localScale = Vector3.one * timerUrgencyTweenConfig.TimerUrgencyFrameStartScale;
+                    timerUrgencyScaleTween = timerUrgencyFrameRect
+                        .DOScale(Vector3.one, timerUrgencyTweenConfig.TimerUrgencyFrameRevealDuration)
+                        .SetEase(timerUrgencyTweenConfig.TimerUrgencyFrameRevealEase)
+                        .SetLink(timerUrgencyFrame, LinkBehaviour.KillOnDisable)
+                        .SetAutoKill(true);
+                }
+
+                timerUrgencyFadeTween = timerUrgencyCanvasGroup
+                    .DOFade(1f, timerUrgencyTweenConfig.TimerUrgencyFadeInDuration)
+                    .SetEase(timerUrgencyTweenConfig.TimerUrgencyFadeInEase)
+                    .SetLink(timerUrgencyFrame, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
+                return;
+            }
+
+            if (!timerUrgencyFrame.activeSelf)
+                return;
+
+            if (timerUrgencyFrameRect != null)
+                timerUrgencyFrameRect.localScale = Vector3.one;
+
+            timerUrgencyFadeTween = timerUrgencyCanvasGroup
+                .DOFade(0f, timerUrgencyTweenConfig.TimerUrgencyFadeOutDuration)
+                .SetEase(timerUrgencyTweenConfig.TimerUrgencyFadeOutEase)
+                .SetLink(timerUrgencyFrame, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true)
+                .OnComplete(() =>
+                {
+                    if (timerUrgencyFrame != null && !timerUrgencyFrameVisible)
+                        timerUrgencyFrame.SetActive(false);
+                });
         }
 
         private void UpdateTimerSlider(float timeRemaining)
@@ -277,6 +380,8 @@ namespace GravityPuzzle
 
             if (keepOnPlayingPanel != null)
                 keepOnPlayingPanel.SetActive(false);
+
+            SetTimerUrgencyFrameVisible(false);
             
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(true);
@@ -286,6 +391,7 @@ namespace GravityPuzzle
         {
             IsGameOver = true;
             continueOfferIsActive = true;
+            SetTimerUrgencyFrameVisible(false);
 
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(false);
@@ -310,6 +416,7 @@ namespace GravityPuzzle
             levelFailureHandled = false;
             IsGameOver = false;
             lastDisplayedSecond = -1;
+            SetTimerUrgencyFrameVisible(false);
 
             if (keepOnPlayingPanel != null)
                 keepOnPlayingPanel.SetActive(false);

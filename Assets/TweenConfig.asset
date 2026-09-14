@@ -90,6 +90,9 @@ MonoBehaviour:
   timerFreezeGlowFadeInEase: 6
   timerFreezeGlowFadeOutDuration: 0.35
   timerFreezeGlowFadeOutEase: 15
+  timerUrgencyFrameRevealDuration: 6
+  timerUrgencyFrameStartScale: 1.35
+  timerUrgencyFrameRevealEase: 6
   timerFlightScaleTarget: 0.6
   freezeImpactStartScale: 0.4
   freezeImpactPeakScale: 1.4
