@@ -102,6 +102,7 @@ namespace GravityPuzzle
         private float configuredSliderTimeLimit = -1f;
         private bool continueOfferIsActive;
         private bool levelFailureHandled;
+        private PrototypeBoard retryConfirmationPausedBoard;
 
         private void Awake()
         {
@@ -145,6 +146,7 @@ namespace GravityPuzzle
 
         private void OnDisable()
         {
+            ResumeTimerForRetryConfirmation();
             timerUrgencyFadeTween?.Kill();
             timerUrgencyFadeTween = null;
             timerUrgencyScaleTween?.Kill();
@@ -495,11 +497,16 @@ namespace GravityPuzzle
                 retryButtonSettingsHandler.CloseSettingsPanel();
 
             if (retryConfirmationPanel != null)
+            {
                 retryConfirmationPanel.SetActive(true);
+                PauseTimerForRetryConfirmation();
+            }
         }
 
         public void CloseRetryConfirmation()
         {
+            ResumeTimerForRetryConfirmation();
+
             if (retryConfirmationPanel != null)
                 retryConfirmationPanel.SetActive(false);
         }
@@ -507,12 +514,32 @@ namespace GravityPuzzle
         // Hook this up to your "Retry" button's OnClick event in the inspector
         public void OnRetryClicked()
         {
+            ResumeTimerForRetryConfirmation();
             IsGameOver = false;
             // Tell the runtime to skip the main menu and immediately start this level again
             GravityLevelRuntime.RequestRestart();
             // Reload the current level from scratch
             Scene activeScene = SceneManager.GetActiveScene();
             SceneManager.LoadScene(activeScene.name);
+        }
+
+        private void PauseTimerForRetryConfirmation()
+        {
+            if (retryConfirmationPausedBoard != null)
+                return;
+
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            if (activeBoard != null && activeBoard.TryPauseTimer(this))
+                retryConfirmationPausedBoard = activeBoard;
+        }
+
+        private void ResumeTimerForRetryConfirmation()
+        {
+            if (retryConfirmationPausedBoard == null)
+                return;
+
+            retryConfirmationPausedBoard.ResumeTimer(this);
+            retryConfirmationPausedBoard = null;
         }
 
         // Hook this up to your "Main Menu" button's OnClick event in the inspector
