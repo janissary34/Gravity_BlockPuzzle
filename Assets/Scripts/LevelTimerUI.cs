@@ -91,7 +91,11 @@ namespace GravityPuzzle
         private bool timerUrgencyFrameVisible;
         private Tween timerUrgencyFadeTween;
         private Tween timerUrgencyScaleTween;
+        private Tween timerTextUrgencyPulseTween;
         private RectTransform timerUrgencyFrameRect;
+        private RectTransform timerTextRect;
+        private Vector3 timerTextInitialScale;
+        private bool timerTextUrgencyPulseVisible;
         private float configuredSliderTimeLimit = -1f;
         private bool continueOfferIsActive;
         private bool levelFailureHandled;
@@ -117,6 +121,12 @@ namespace GravityPuzzle
             if (timerUrgencyFrame != null)
                 timerUrgencyFrameRect = timerUrgencyFrame.GetComponent<RectTransform>();
 
+            if (timerText != null)
+            {
+                timerTextRect = timerText.rectTransform;
+                timerTextInitialScale = timerTextRect.localScale;
+            }
+
             timerUrgencyFrameVisible = true;
             SetTimerUrgencyFrameVisible(false);
 
@@ -136,6 +146,9 @@ namespace GravityPuzzle
             timerUrgencyFadeTween = null;
             timerUrgencyScaleTween?.Kill();
             timerUrgencyScaleTween = null;
+            timerTextUrgencyPulseTween?.Kill();
+            timerTextUrgencyPulseTween = null;
+            timerTextUrgencyPulseVisible = false;
             BindBoard(null);
 
             if (Active == this)
@@ -191,6 +204,11 @@ namespace GravityPuzzle
             bool hasTimeLimit = board != null && board.TimeLimit > 0f && !timerPresentationLocked;
             SetTimerVisible(hasTimeLimit);
             SetTimerUrgencyFrameVisible(
+                hasTimeLimit &&
+                board.IsTimerStarted &&
+                board.TimeRemaining > 0f &&
+                board.TimeRemaining <= timerUrgencyThresholdSeconds);
+            SetTimerTextUrgencyPulseVisible(
                 hasTimeLimit &&
                 board.IsTimerStarted &&
                 board.TimeRemaining > 0f &&
@@ -258,6 +276,7 @@ namespace GravityPuzzle
             {
                 SetTimerVisible(false);
                 SetTimerUrgencyFrameVisible(false);
+                SetTimerTextUrgencyPulseVisible(false);
             }
         }
 
@@ -333,6 +352,32 @@ namespace GravityPuzzle
                 });
         }
 
+        private void SetTimerTextUrgencyPulseVisible(bool visible)
+        {
+            if (timerTextRect == null ||
+                timerUrgencyTweenConfig == null ||
+                timerTextUrgencyPulseVisible == visible)
+                return;
+
+            timerTextUrgencyPulseVisible = visible;
+            timerTextUrgencyPulseTween?.Kill();
+
+            if (!visible)
+            {
+                timerTextRect.localScale = timerTextInitialScale;
+                return;
+            }
+
+            timerTextUrgencyPulseTween = timerTextRect
+                .DOScale(
+                    timerTextInitialScale * timerUrgencyTweenConfig.TimerUrgencyTextPulseScale,
+                    timerUrgencyTweenConfig.TimerUrgencyTextPulseHalfDuration)
+                .SetEase(timerUrgencyTweenConfig.TimerUrgencyTextPulseEase)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetLink(timerText.gameObject, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
+        }
+
         private void UpdateTimerSlider(float timeRemaining)
         {
             if (timerSlider == null || board == null)
@@ -362,13 +407,13 @@ namespace GravityPuzzle
             int seconds = totalSeconds % 60;
             timerText.text = $"{minutes:00}:{seconds:00}";
             
-            if (totalSeconds <= 5 && totalSeconds > 0)
+            if (totalSeconds <= Mathf.CeilToInt(timerUrgencyThresholdSeconds) && totalSeconds > 0)
             {
                 timerText.color = Color.red;
             }
             else
             {
-                // Keep the authored black timer colour until the final warning window.
+                // Keep the authored black timer colour until the urgency window.
                 timerText.color = Color.black;
             }
         }
@@ -382,6 +427,7 @@ namespace GravityPuzzle
                 keepOnPlayingPanel.SetActive(false);
 
             SetTimerUrgencyFrameVisible(false);
+            SetTimerTextUrgencyPulseVisible(false);
             
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(true);
@@ -392,6 +438,7 @@ namespace GravityPuzzle
             IsGameOver = true;
             continueOfferIsActive = true;
             SetTimerUrgencyFrameVisible(false);
+            SetTimerTextUrgencyPulseVisible(false);
 
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(false);
@@ -417,6 +464,7 @@ namespace GravityPuzzle
             IsGameOver = false;
             lastDisplayedSecond = -1;
             SetTimerUrgencyFrameVisible(false);
+            SetTimerTextUrgencyPulseVisible(false);
 
             if (keepOnPlayingPanel != null)
                 keepOnPlayingPanel.SetActive(false);

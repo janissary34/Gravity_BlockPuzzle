@@ -105,6 +105,11 @@ namespace GravityPuzzle.Config
         [Min(1f)] [SerializeField] private float timerUrgencyFrameStartScale = 1.35f;
         [SerializeField] private Ease timerUrgencyFrameRevealEase = Ease.OutSine;
 
+        [Header("Timer Countdown Urgency Presentation")]
+        [Min(.001f)] [SerializeField] private float timerUrgencyTextPulseHalfDuration = .3f;
+        [Min(1f)] [SerializeField] private float timerUrgencyTextPulseScale = 1.1f;
+        [SerializeField] private Ease timerUrgencyTextPulseEase = Ease.InOutSine;
+
         [Header("Freeze FX Presentation")]
         [Tooltip("Target localScale multiplier applied to timer_obj while it flies toward the timer display.")]
         [Min(0f)] [SerializeField] private float timerFlightScaleTarget = .60f;
@@ -205,6 +210,9 @@ namespace GravityPuzzle.Config
         public float TimerUrgencyFrameRevealDuration => timerUrgencyFrameRevealDuration;
         public float TimerUrgencyFrameStartScale => timerUrgencyFrameStartScale;
         public Ease TimerUrgencyFrameRevealEase => timerUrgencyFrameRevealEase;
+        public float TimerUrgencyTextPulseHalfDuration => timerUrgencyTextPulseHalfDuration;
+        public float TimerUrgencyTextPulseScale => timerUrgencyTextPulseScale;
+        public Ease TimerUrgencyTextPulseEase => timerUrgencyTextPulseEase;
         public float TimerImpactDuration => timerImpactDuration;
         public Ease TimerImpactScaleEase => timerImpactScaleEase;
         public float TimerImpactStartScale => timerImpactStartScale;
