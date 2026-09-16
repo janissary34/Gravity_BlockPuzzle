@@ -28438,7 +28438,8 @@ MonoBehaviour:
   entranceStyle: 0
   immediateBackdrop: {fileID: 41319586}
   sequentialContent: []
-  pulseComponentsAfterEntrance: []
+  pulseComponentsAfterEntrance:
+  - {fileID: 1265163028}
 --- !u!1 &946162840
 GameObject:
   m_ObjectHideFlags: 0
@@ -42686,7 +42687,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1265163022}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6157d81e425f34800b53306d05dd67cf, type: 3}
   m_Name: 
