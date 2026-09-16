@@ -193,7 +193,8 @@ namespace GravityPuzzle.Editor
                 newHammerBoosterCount != level.hammerBoosterCount ||
                 newTimerBoosterCount != level.timerBoosterCount ||
                 !Mathf.Approximately(newExitWidth, level.exitWidth) ||
-                newBackground != level.backgroundColor || newFrame != level.frameColor ||
+                newBackground != level.backgroundColor ||
+                newFrame != level.frameColor ||
                 !Mathf.Approximately(newFrameThickness, level.frameThickness))
             {
                 Undo.RecordObject(level, "Edit map settings");

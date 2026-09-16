@@ -290,7 +290,15 @@ namespace GravityPuzzle
         private static void CreateBoardBackground(GravityLevelDefinition level)
         {
             GameObject background = new GameObject("Board Background");
-            Color alternate = Color.Lerp(level.backgroundColor, Color.white, .08f);
+            // The board uses its own background palette. Frame colour is
+            // reserved for the exterior border created below.
+            // Background alpha is not a meaningful board-design setting: a
+            // transparent cell would reveal the camera and make the authored
+            // chequered palette look like the fallback blue. Always render
+            // the selected RGB value as an opaque board cell.
+            Color baseColor = level.backgroundColor;
+            baseColor.a = 1f;
+            Color alternate = Color.Lerp(baseColor, Color.white, .08f);
             float fineCellSize = 1f / level.subdivisions;
 
             for (int boardY = 0; boardY < level.boardRows; boardY++)
@@ -299,7 +307,7 @@ namespace GravityPuzzle
                 {
                     Vector2Int boardCell = new Vector2Int(boardX, boardY);
                     Color color = (boardX + boardY) % 2 == 0
-                        ? level.backgroundColor
+                        ? baseColor
                         : alternate;
 
                     if (IsBoardCellFullyActive(level, boardCell))
@@ -341,6 +349,14 @@ namespace GravityPuzzle
             int edgeIndex = 0;
             GameObject frameRoot = new GameObject("Composite Board Frame");
 
+            // Map Shape defines playable board topology, not decorative walls.
+            // Only the outside perimeter is rendered as a frame; cut-outs stay
+            // visually open while their collision geometry is still generated
+            // below by CreateMapCollisionBlocks.
+            HashSet<Vector2Int> outerTopEdges = new HashSet<Vector2Int>();
+            HashSet<Vector2Int> outerLeftEdges = new HashSet<Vector2Int>();
+            HashSet<Vector2Int> outerRightEdges = new HashSet<Vector2Int>();
+
             for (int y = 0; y < level.FineRows; y++)
             {
                 for (int x = 0; x < level.FineColumns; x++)
@@ -350,26 +366,124 @@ namespace GravityPuzzle
                         continue;
 
                     Vector2 centre = CellWorldPosition(level, cell);
-                    float edgeOffset = fineCellSize * .5f + thickness * .5f;
 
                     if (!IsFineCellActive(level, cell + Vector2Int.left))
-                        CreateFrameEdge(frameRoot.transform, $"Frame Edge {++edgeIndex}", centre + Vector2.left * edgeOffset, new Vector2(thickness, fineCellSize + thickness), level.frameColor);
+                    {
+                        if (x == 0)
+                            outerLeftEdges.Add(cell);
+                    }
+
                     if (!IsFineCellActive(level, cell + Vector2Int.right))
-                        CreateFrameEdge(frameRoot.transform, $"Frame Edge {++edgeIndex}", centre + Vector2.right * edgeOffset, new Vector2(thickness, fineCellSize + thickness), level.frameColor);
+                    {
+                        if (x == level.FineColumns - 1)
+                            outerRightEdges.Add(cell);
+                    }
+
                     if (!IsFineCellActive(level, cell + Vector2Int.up))
-                        CreateFrameEdge(frameRoot.transform, $"Frame Edge {++edgeIndex}", centre + Vector2.up * edgeOffset, new Vector2(fineCellSize + thickness, thickness), level.frameColor);
+                    {
+                        if (y == level.FineRows - 1)
+                            outerTopEdges.Add(cell);
+                    }
 
                     if (!IsFineCellActive(level, cell + Vector2Int.down))
                     {
                         if (y == 0)
                             CreateBottomEdgeWithExit(frameRoot.transform, level, centre, fineCellSize, exitWidth, thickness, ref edgeIndex);
-                        else
-                            CreateFrameEdge(frameRoot.transform, $"Frame Edge {++edgeIndex}", centre + Vector2.down * edgeOffset, new Vector2(fineCellSize + thickness, thickness), level.frameColor);
                     }
                 }
             }
 
+            CreateHorizontalFrameRuns(frameRoot.transform, level, outerTopEdges, fineCellSize, thickness, 1f, ref edgeIndex);
+            CreateVerticalFrameRuns(frameRoot.transform, level, outerLeftEdges, fineCellSize, thickness, -1f, ref edgeIndex);
+            CreateVerticalFrameRuns(frameRoot.transform, level, outerRightEdges, fineCellSize, thickness, 1f, ref edgeIndex);
+
             CreateMapCollisionBlocks(level, exitWidth, fineCellSize);
+        }
+
+        private static void CreateHorizontalFrameRuns(
+            Transform frameRoot,
+            GravityLevelDefinition level,
+            HashSet<Vector2Int> edges,
+            float fineCellSize,
+            float thickness,
+            float verticalDirection,
+            ref int edgeIndex)
+        {
+            for (int y = 0; y < level.FineRows; y++)
+            {
+                for (int x = 0; x < level.FineColumns;)
+                {
+                    Vector2Int cell = new Vector2Int(x, y);
+                    if (!edges.Contains(cell))
+                    {
+                        x++;
+                        continue;
+                    }
+
+                    int startX = x;
+                    do
+                    {
+                        x++;
+                    }
+                    while (x < level.FineColumns && edges.Contains(new Vector2Int(x, y)));
+
+                    int length = x - startX;
+                    Vector2 firstCentre = CellWorldPosition(level, new Vector2Int(startX, y));
+                    Vector2 lastCentre = CellWorldPosition(level, new Vector2Int(x - 1, y));
+                    Vector2 position = new Vector2(
+                        (firstCentre.x + lastCentre.x) * .5f,
+                        firstCentre.y + verticalDirection * (fineCellSize + thickness) * .5f);
+                    CreateFrameEdge(
+                        frameRoot,
+                        $"Frame Edge {++edgeIndex}",
+                        position,
+                        new Vector2(length * fineCellSize + thickness, thickness),
+                        level.frameColor);
+                }
+            }
+        }
+
+        private static void CreateVerticalFrameRuns(
+            Transform frameRoot,
+            GravityLevelDefinition level,
+            HashSet<Vector2Int> edges,
+            float fineCellSize,
+            float thickness,
+            float horizontalDirection,
+            ref int edgeIndex)
+        {
+            for (int x = 0; x < level.FineColumns; x++)
+            {
+                for (int y = 0; y < level.FineRows;)
+                {
+                    Vector2Int cell = new Vector2Int(x, y);
+                    if (!edges.Contains(cell))
+                    {
+                        y++;
+                        continue;
+                    }
+
+                    int startY = y;
+                    do
+                    {
+                        y++;
+                    }
+                    while (y < level.FineRows && edges.Contains(new Vector2Int(x, y)));
+
+                    int length = y - startY;
+                    Vector2 firstCentre = CellWorldPosition(level, new Vector2Int(x, startY));
+                    Vector2 lastCentre = CellWorldPosition(level, new Vector2Int(x, y - 1));
+                    Vector2 position = new Vector2(
+                        firstCentre.x + horizontalDirection * (fineCellSize + thickness) * .5f,
+                        (firstCentre.y + lastCentre.y) * .5f);
+                    CreateFrameEdge(
+                        frameRoot,
+                        $"Frame Edge {++edgeIndex}",
+                        position,
+                        new Vector2(thickness, length * fineCellSize + thickness),
+                        level.frameColor);
+                }
+            }
         }
 
         private static void CreateMapCollisionBlocks(
