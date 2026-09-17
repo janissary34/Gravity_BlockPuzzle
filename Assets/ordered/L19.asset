@@ -187,14 +187,14 @@ MonoBehaviour:
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
     origin: {x: 18, y: 16}
     quarterTurns: 0
-    specialBlockType: 0
-    frozenMoveCount: 1
+    specialBlockType: 2
+    frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
-    bombTimerSeconds: 10
+    bombTimerSeconds: 30
     bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
