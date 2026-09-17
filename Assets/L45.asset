@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
-  m_Name: idea_arda
+  m_Name: L45
   m_EditorClassIdentifier: 
   levelName: New Level
   timeLimit: 60
@@ -603,70 +603,6 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells:
-    - localCell: {x: -6, y: -6}
-      type: 0
-    - localCell: {x: -5, y: -6}
-      type: 0
-    - localCell: {x: -4, y: -6}
-      type: 0
-    - localCell: {x: -3, y: -6}
-      type: 0
-    - localCell: {x: -6, y: -5}
-      type: 0
-    - localCell: {x: -5, y: -5}
-      type: 0
-    - localCell: {x: -4, y: -5}
-      type: 0
-    - localCell: {x: -3, y: -5}
-      type: 0
-    - localCell: {x: -6, y: -4}
-      type: 0
-    - localCell: {x: -5, y: -4}
-      type: 0
-    - localCell: {x: -4, y: -4}
-      type: 0
-    - localCell: {x: -3, y: -4}
-      type: 0
-    - localCell: {x: -6, y: -3}
-      type: 0
-    - localCell: {x: -5, y: -3}
-      type: 0
-    - localCell: {x: -4, y: -3}
-      type: 0
-    - localCell: {x: -3, y: -3}
-      type: 0
-    - localCell: {x: -6, y: -10}
-      type: 0
-    - localCell: {x: -5, y: -10}
-      type: 0
-    - localCell: {x: -4, y: -10}
-      type: 0
-    - localCell: {x: -3, y: -10}
-      type: 0
-    - localCell: {x: -6, y: -9}
-      type: 0
-    - localCell: {x: -5, y: -9}
-      type: 0
-    - localCell: {x: -4, y: -9}
-      type: 0
-    - localCell: {x: -3, y: -9}
-      type: 0
-    - localCell: {x: -6, y: -8}
-      type: 0
-    - localCell: {x: -5, y: -8}
-      type: 0
-    - localCell: {x: -4, y: -8}
-      type: 0
-    - localCell: {x: -3, y: -8}
-      type: 0
-    - localCell: {x: -6, y: -7}
-      type: 0
-    - localCell: {x: -5, y: -7}
-      type: 0
-    - localCell: {x: -4, y: -7}
-      type: 0
-    - localCell: {x: -3, y: -7}
-      type: 0
     - localCell: {x: -2, y: -10}
       type: 0
     - localCell: {x: -1, y: -10}
@@ -698,6 +634,70 @@ MonoBehaviour:
     - localCell: {x: 0, y: -7}
       type: 0
     - localCell: {x: 1, y: -7}
+      type: 0
+    - localCell: {x: -2, y: -6}
+      type: 0
+    - localCell: {x: -1, y: -6}
+      type: 0
+    - localCell: {x: 0, y: -6}
+      type: 0
+    - localCell: {x: 1, y: -6}
+      type: 0
+    - localCell: {x: -2, y: -5}
+      type: 0
+    - localCell: {x: -1, y: -5}
+      type: 0
+    - localCell: {x: 0, y: -5}
+      type: 0
+    - localCell: {x: 1, y: -5}
+      type: 0
+    - localCell: {x: -2, y: -4}
+      type: 0
+    - localCell: {x: -1, y: -4}
+      type: 0
+    - localCell: {x: 0, y: -4}
+      type: 0
+    - localCell: {x: 1, y: -4}
+      type: 0
+    - localCell: {x: -2, y: -3}
+      type: 0
+    - localCell: {x: -1, y: -3}
+      type: 0
+    - localCell: {x: 0, y: -3}
+      type: 0
+    - localCell: {x: 1, y: -3}
+      type: 0
+    - localCell: {x: -6, y: -6}
+      type: 0
+    - localCell: {x: -5, y: -6}
+      type: 0
+    - localCell: {x: -4, y: -6}
+      type: 0
+    - localCell: {x: -3, y: -6}
+      type: 0
+    - localCell: {x: -6, y: -5}
+      type: 0
+    - localCell: {x: -5, y: -5}
+      type: 0
+    - localCell: {x: -4, y: -5}
+      type: 0
+    - localCell: {x: -3, y: -5}
+      type: 0
+    - localCell: {x: -6, y: -4}
+      type: 0
+    - localCell: {x: -5, y: -4}
+      type: 0
+    - localCell: {x: -4, y: -4}
+      type: 0
+    - localCell: {x: -3, y: -4}
+      type: 0
+    - localCell: {x: -6, y: -3}
+      type: 0
+    - localCell: {x: -5, y: -3}
+      type: 0
+    - localCell: {x: -4, y: -3}
+      type: 0
+    - localCell: {x: -3, y: -3}
       type: 0
   - name: Piece 9
     visualId: 
@@ -750,37 +750,37 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 5, y: -7}
       type: 0
-    - localCell: {x: 6, y: -10}
+    - localCell: {x: 2, y: -6}
       type: 0
-    - localCell: {x: 7, y: -10}
+    - localCell: {x: 3, y: -6}
       type: 0
-    - localCell: {x: 8, y: -10}
+    - localCell: {x: 4, y: -6}
       type: 0
-    - localCell: {x: 9, y: -10}
+    - localCell: {x: 5, y: -6}
       type: 0
-    - localCell: {x: 6, y: -9}
+    - localCell: {x: 2, y: -5}
       type: 0
-    - localCell: {x: 7, y: -9}
+    - localCell: {x: 3, y: -5}
       type: 0
-    - localCell: {x: 8, y: -9}
+    - localCell: {x: 4, y: -5}
       type: 0
-    - localCell: {x: 9, y: -9}
+    - localCell: {x: 5, y: -5}
       type: 0
-    - localCell: {x: 6, y: -8}
+    - localCell: {x: 2, y: -4}
       type: 0
-    - localCell: {x: 7, y: -8}
+    - localCell: {x: 3, y: -4}
       type: 0
-    - localCell: {x: 8, y: -8}
+    - localCell: {x: 4, y: -4}
       type: 0
-    - localCell: {x: 9, y: -8}
+    - localCell: {x: 5, y: -4}
       type: 0
-    - localCell: {x: 6, y: -7}
+    - localCell: {x: 2, y: -3}
       type: 0
-    - localCell: {x: 7, y: -7}
+    - localCell: {x: 3, y: -3}
       type: 0
-    - localCell: {x: 8, y: -7}
+    - localCell: {x: 4, y: -3}
       type: 0
-    - localCell: {x: 9, y: -7}
+    - localCell: {x: 5, y: -3}
       type: 0
     - localCell: {x: 6, y: -6}
       type: 0
@@ -836,10 +836,10 @@ MonoBehaviour:
   - name: Piece 11
     visualId: 
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
-    origin: {x: 26, y: 22}
+    origin: {x: 26, y: 18}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 1
+    frozenMoveCount: 11
     iceCounterFontSize: 25
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -919,10 +919,10 @@ MonoBehaviour:
   - name: Piece 12
     visualId: 
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
-    origin: {x: 26, y: 22}
+    origin: {x: 26, y: 18}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 1
+    frozenMoveCount: 11
     iceCounterFontSize: 25
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1002,7 +1002,7 @@ MonoBehaviour:
   - name: Piece 13
     visualId: 
     color: {r: 0.47597352, g: 0.2980392, b: 1, a: 1}
-    origin: {x: 22, y: 14}
+    origin: {x: 22, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1018,70 +1018,6 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells:
-    - localCell: {x: -14, y: 6}
-      type: 0
-    - localCell: {x: -13, y: 6}
-      type: 0
-    - localCell: {x: -12, y: 6}
-      type: 0
-    - localCell: {x: -11, y: 6}
-      type: 0
-    - localCell: {x: -14, y: 7}
-      type: 0
-    - localCell: {x: -13, y: 7}
-      type: 0
-    - localCell: {x: -12, y: 7}
-      type: 0
-    - localCell: {x: -11, y: 7}
-      type: 0
-    - localCell: {x: -14, y: 8}
-      type: 0
-    - localCell: {x: -13, y: 8}
-      type: 0
-    - localCell: {x: -12, y: 8}
-      type: 0
-    - localCell: {x: -11, y: 8}
-      type: 0
-    - localCell: {x: -14, y: 9}
-      type: 0
-    - localCell: {x: -13, y: 9}
-      type: 0
-    - localCell: {x: -12, y: 9}
-      type: 0
-    - localCell: {x: -11, y: 9}
-      type: 0
-    - localCell: {x: -10, y: 6}
-      type: 0
-    - localCell: {x: -9, y: 6}
-      type: 0
-    - localCell: {x: -8, y: 6}
-      type: 0
-    - localCell: {x: -7, y: 6}
-      type: 0
-    - localCell: {x: -10, y: 7}
-      type: 0
-    - localCell: {x: -9, y: 7}
-      type: 0
-    - localCell: {x: -8, y: 7}
-      type: 0
-    - localCell: {x: -7, y: 7}
-      type: 0
-    - localCell: {x: -10, y: 8}
-      type: 0
-    - localCell: {x: -9, y: 8}
-      type: 0
-    - localCell: {x: -8, y: 8}
-      type: 0
-    - localCell: {x: -7, y: 8}
-      type: 0
-    - localCell: {x: -10, y: 9}
-      type: 0
-    - localCell: {x: -9, y: 9}
-      type: 0
-    - localCell: {x: -8, y: 9}
-      type: 0
-    - localCell: {x: -7, y: 9}
-      type: 0
     - localCell: {x: -10, y: 10}
       type: 0
     - localCell: {x: -9, y: 10}
@@ -1114,10 +1050,42 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -7, y: 13}
       type: 0
+    - localCell: {x: -14, y: 10}
+      type: 0
+    - localCell: {x: -13, y: 10}
+      type: 0
+    - localCell: {x: -12, y: 10}
+      type: 0
+    - localCell: {x: -11, y: 10}
+      type: 0
+    - localCell: {x: -14, y: 11}
+      type: 0
+    - localCell: {x: -13, y: 11}
+      type: 0
+    - localCell: {x: -12, y: 11}
+      type: 0
+    - localCell: {x: -11, y: 11}
+      type: 0
+    - localCell: {x: -14, y: 12}
+      type: 0
+    - localCell: {x: -13, y: 12}
+      type: 0
+    - localCell: {x: -12, y: 12}
+      type: 0
+    - localCell: {x: -11, y: 12}
+      type: 0
+    - localCell: {x: -14, y: 13}
+      type: 0
+    - localCell: {x: -13, y: 13}
+      type: 0
+    - localCell: {x: -12, y: 13}
+      type: 0
+    - localCell: {x: -11, y: 13}
+      type: 0
   - name: Piece 14
     visualId: 
     color: {r: 1, g: 0.2980392, b: 0.9758462, a: 1}
-    origin: {x: 30, y: 14}
+    origin: {x: 30, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1165,69 +1133,37 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 9, y: 13}
       type: 0
-    - localCell: {x: 6, y: 6}
+    - localCell: {x: 10, y: 10}
       type: 0
-    - localCell: {x: 7, y: 6}
+    - localCell: {x: 11, y: 10}
       type: 0
-    - localCell: {x: 8, y: 6}
+    - localCell: {x: 12, y: 10}
       type: 0
-    - localCell: {x: 9, y: 6}
+    - localCell: {x: 13, y: 10}
       type: 0
-    - localCell: {x: 6, y: 7}
+    - localCell: {x: 10, y: 11}
       type: 0
-    - localCell: {x: 7, y: 7}
+    - localCell: {x: 11, y: 11}
       type: 0
-    - localCell: {x: 8, y: 7}
+    - localCell: {x: 12, y: 11}
       type: 0
-    - localCell: {x: 9, y: 7}
+    - localCell: {x: 13, y: 11}
       type: 0
-    - localCell: {x: 6, y: 8}
+    - localCell: {x: 10, y: 12}
       type: 0
-    - localCell: {x: 7, y: 8}
+    - localCell: {x: 11, y: 12}
       type: 0
-    - localCell: {x: 8, y: 8}
+    - localCell: {x: 12, y: 12}
       type: 0
-    - localCell: {x: 9, y: 8}
+    - localCell: {x: 13, y: 12}
       type: 0
-    - localCell: {x: 6, y: 9}
+    - localCell: {x: 10, y: 13}
       type: 0
-    - localCell: {x: 7, y: 9}
+    - localCell: {x: 11, y: 13}
       type: 0
-    - localCell: {x: 8, y: 9}
+    - localCell: {x: 12, y: 13}
       type: 0
-    - localCell: {x: 9, y: 9}
-      type: 0
-    - localCell: {x: 10, y: 6}
-      type: 0
-    - localCell: {x: 11, y: 6}
-      type: 0
-    - localCell: {x: 12, y: 6}
-      type: 0
-    - localCell: {x: 13, y: 6}
-      type: 0
-    - localCell: {x: 10, y: 7}
-      type: 0
-    - localCell: {x: 11, y: 7}
-      type: 0
-    - localCell: {x: 12, y: 7}
-      type: 0
-    - localCell: {x: 13, y: 7}
-      type: 0
-    - localCell: {x: 10, y: 8}
-      type: 0
-    - localCell: {x: 11, y: 8}
-      type: 0
-    - localCell: {x: 12, y: 8}
-      type: 0
-    - localCell: {x: 13, y: 8}
-      type: 0
-    - localCell: {x: 10, y: 9}
-      type: 0
-    - localCell: {x: 11, y: 9}
-      type: 0
-    - localCell: {x: 12, y: 9}
-      type: 0
-    - localCell: {x: 13, y: 9}
+    - localCell: {x: 13, y: 13}
       type: 0
   - name: Piece 15
     visualId: 
@@ -1270,7 +1206,7 @@ MonoBehaviour:
   - name: Piece 17
     visualId: 
     color: {r: 1, g: 0.46799985, b: 0.3, a: 1}
-    origin: {x: 26, y: 22}
+    origin: {x: 30, y: 18}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1385,7 +1321,7 @@ MonoBehaviour:
   - name: Piece 18
     visualId: 
     color: {r: 0.73400015, g: 1, b: 0.3, a: 1}
-    origin: {x: 34, y: 22}
+    origin: {x: 34, y: 18}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
