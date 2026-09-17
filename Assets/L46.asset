@@ -3775,6 +3775,38 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -17, y: -25}
       type: 0
+    - localCell: {x: -16, y: -28}
+      type: 0
+    - localCell: {x: -15, y: -28}
+      type: 0
+    - localCell: {x: -14, y: -28}
+      type: 0
+    - localCell: {x: -13, y: -28}
+      type: 0
+    - localCell: {x: -16, y: -27}
+      type: 0
+    - localCell: {x: -15, y: -27}
+      type: 0
+    - localCell: {x: -14, y: -27}
+      type: 0
+    - localCell: {x: -13, y: -27}
+      type: 0
+    - localCell: {x: -16, y: -26}
+      type: 0
+    - localCell: {x: -15, y: -26}
+      type: 0
+    - localCell: {x: -14, y: -26}
+      type: 0
+    - localCell: {x: -13, y: -26}
+      type: 0
+    - localCell: {x: -16, y: -25}
+      type: 0
+    - localCell: {x: -15, y: -25}
+      type: 0
+    - localCell: {x: -14, y: -25}
+      type: 0
+    - localCell: {x: -13, y: -25}
+      type: 0
   - name: Piece 53
     visualId: 
     color: {r: 1, g: 0.3, b: 0.8040005, a: 1}
@@ -3911,14 +3943,6 @@ MonoBehaviour:
       type: 0
   pins: []
   obstacles:
-  - name: Obstacle 4
-    usesGridCells: 1
-    gridCell: {x: 2, y: 3}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 9
     usesGridCells: 1
     gridCell: {x: 10, y: 7}
