@@ -10936,7 +10936,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19939786, guid: 36bdc02b23d9ca94d93bd715c0cca5c0, type: 3}
       propertyPath: m_SortingOrder
-      value: 2000
+      value: 32767
       objectReference: {fileID: 0}
     - target: {fileID: 19939786, guid: 36bdc02b23d9ca94d93bd715c0cca5c0, type: 3}
       propertyPath: m_Materials.Array.size
@@ -12524,7 +12524,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19915638, guid: 9bcdb1b8180c1394ea37716601148607, type: 3}
       propertyPath: m_SortingOrder
-      value: 2000
+      value: 32767
       objectReference: {fileID: 0}
     - target: {fileID: 19939216, guid: 9bcdb1b8180c1394ea37716601148607, type: 3}
       propertyPath: m_SortingOrder
@@ -21962,7 +21962,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19948398, guid: 039f0809d882b7f44ac9a410a3f7fa26, type: 3}
       propertyPath: m_SortingOrder
-      value: 2000
+      value: 32767
       objectReference: {fileID: 0}
     - target: {fileID: 19948398, guid: 039f0809d882b7f44ac9a410a3f7fa26, type: 3}
       propertyPath: m_Materials.Array.size
@@ -33567,7 +33567,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19939786, guid: 36bdc02b23d9ca94d93bd715c0cca5c0, type: 3}
       propertyPath: m_SortingOrder
-      value: 2000
+      value: 32767
       objectReference: {fileID: 0}
     - target: {fileID: 19939786, guid: 36bdc02b23d9ca94d93bd715c0cca5c0, type: 3}
       propertyPath: m_Materials.Array.size
@@ -49037,6 +49037,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1462149325}
+  - component: {fileID: 1462149326}
   m_Layer: 0
   m_Name: WinVFX
   m_TagString: Untagged
@@ -49044,16 +49045,15 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1462149325
-Transform:
+--- !u!224 &1462149325
+RectTransform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1462149324}
-  serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 306.4565, y: -875.9272, z: -0.11738305}
+  m_LocalPosition: {x: 0, y: 0, z: -0.11738305}
   m_LocalScale: {x: 117.67213, y: 117.67213, z: 117.67213}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -49064,6 +49064,34 @@ Transform:
   - {fileID: 1799509835}
   m_Father: {fileID: 527882130}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 306.4565, y: -875.9272}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!223 &1462149326
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1462149324}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 1
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 5000
+  m_TargetDisplay: 0
 --- !u!1 &1478467314
 GameObject:
   m_ObjectHideFlags: 0
@@ -49468,7 +49496,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19919144, guid: 8f6a3d95cdec3f148b48cc4604a41a59, type: 3}
       propertyPath: m_SortingOrder
-      value: 2000
+      value: 32767
       objectReference: {fileID: 0}
     - target: {fileID: 19930796, guid: 8f6a3d95cdec3f148b48cc4604a41a59, type: 3}
       propertyPath: m_SortingOrder
