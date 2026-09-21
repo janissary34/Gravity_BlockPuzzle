@@ -1510,51 +1510,6 @@ MonoBehaviour:
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  shredders:
-  - name: Shredder 1
-    cell: {x: 1, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 2
-    cell: {x: 5, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 3
-    cell: {x: 10, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 4
-    cell: {x: 13, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 5
-    cell: {x: 18, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 6
-    cell: {x: 22, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 7
-    cell: {x: 25, y: 1}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 8
-    cell: {x: 29, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 9
-    cell: {x: 34, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
+  shredders: []
   inactiveBoardCells: []
   inactiveFineCells: []
