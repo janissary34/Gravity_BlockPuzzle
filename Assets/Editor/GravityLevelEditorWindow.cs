@@ -1024,9 +1024,11 @@ namespace GravityPuzzle.Editor
             bool isInsideBoard = board.Contains(current.mousePosition);
             if (current.type == EventType.MouseDown && !isInsideBoard)
                 return;
-            bool isMovingPiece = tool == EditTool.Select || tool == EditTool.MovePiece;
-            if (current.type == EventType.MouseDrag && !isInsideBoard &&
-                (!isMovingPiece || !HasSelectedPiece()))
+            // MouseToCell deliberately supports arbitrary positions for the
+            // editor's drawing math, but a move must never use coordinates
+            // outside the visible board. Doing so made a piece appear to jump
+            // into an invisible continuation of the map.
+            if (current.type == EventType.MouseDrag && !isInsideBoard)
                 return;
 
             Vector2Int cell = MouseToCell(board, cellSize, current.mousePosition);
@@ -1037,6 +1039,9 @@ namespace GravityPuzzle.Editor
             switch (tool)
             {
                 case EditTool.Select:
+                    if (current.type == EventType.MouseDown)
+                        SelectAt(cell);
+                    break;
                 case EditTool.MovePiece:
                     if (current.type == EventType.MouseDown)
                         SelectAt(cell);
@@ -1071,12 +1076,22 @@ namespace GravityPuzzle.Editor
                 clickedCell.x / level.subdivisions * level.subdivisions,
                 clickedCell.y / level.subdivisions * level.subdivisions);
             Undo.RecordObject(level, "Paint block");
+
+            PieceDefinition piece = level.pieces[selectedPiece];
+            // A newly created piece has no geometry and its default origin is
+            // only a placeholder. Anchor its first block at the painted grid
+            // cell before authoring local cells. Otherwise the first block is
+            // stored as a large offset from the board centre, which lets a
+            // later selection/move interaction appear to discard it.
+            if (piece.cells.Count == 0)
+                piece.origin = coarseOrigin;
+
             for (int y = 0; y < level.subdivisions; y++)
             for (int x = 0; x < level.subdivisions; x++)
             {
                 Vector2Int fineCell = coarseOrigin + new Vector2Int(x, y);
                 if (IsInside(fineCell))
-                    SetPieceCell(level.pieces[selectedPiece], fineCell, PieceCellType.Block);
+                    SetPieceCell(piece, fineCell, PieceCellType.Block);
             }
             MarkDirty();
         }
@@ -1267,7 +1282,15 @@ namespace GravityPuzzle.Editor
                     Mathf.RoundToInt((float)targetFineCell.x / subs) * subs,
                     Mathf.RoundToInt((float)targetFineCell.y / subs) * subs);
                 Vector2Int rotMin = GetPieceFineMinimumRotated(piece);
+                Vector2Int rotMax = GetPieceFineMaximumRotated(piece);
+                Vector2Int minimumBoundOrigin = -rotMin;
+                Vector2Int maximumBoundOrigin = new Vector2Int(
+                    level.FineColumns - 1 - rotMax.x,
+                    level.FineRows - 1 - rotMax.y);
                 Vector2Int newOrigin = snappedBoundMin - rotMin;
+                newOrigin = new Vector2Int(
+                    Mathf.Clamp(newOrigin.x, minimumBoundOrigin.x, maximumBoundOrigin.x),
+                    Mathf.Clamp(newOrigin.y, minimumBoundOrigin.y, maximumBoundOrigin.y));
                 piece.origin = newOrigin;
                 MarkDirty();
             }

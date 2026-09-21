@@ -15,7 +15,7 @@ MonoBehaviour:
   levelName: New Level
   timeLimit: 200
   boardColumns: 9
-  boardRows: 13
+  boardRows: 12
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
@@ -1652,69 +1652,69 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -11, y: 9}
       type: 0
-    - localCell: {x: -14, y: 2}
+    - localCell: {x: -18, y: 2}
       type: 0
-    - localCell: {x: -13, y: 2}
+    - localCell: {x: -17, y: 2}
       type: 0
-    - localCell: {x: -12, y: 2}
+    - localCell: {x: -16, y: 2}
       type: 0
-    - localCell: {x: -11, y: 2}
+    - localCell: {x: -15, y: 2}
       type: 0
-    - localCell: {x: -14, y: 3}
+    - localCell: {x: -18, y: 3}
       type: 0
-    - localCell: {x: -13, y: 3}
+    - localCell: {x: -17, y: 3}
       type: 0
-    - localCell: {x: -12, y: 3}
+    - localCell: {x: -16, y: 3}
       type: 0
-    - localCell: {x: -11, y: 3}
+    - localCell: {x: -15, y: 3}
       type: 0
-    - localCell: {x: -14, y: 4}
+    - localCell: {x: -18, y: 4}
       type: 0
-    - localCell: {x: -13, y: 4}
+    - localCell: {x: -17, y: 4}
       type: 0
-    - localCell: {x: -12, y: 4}
+    - localCell: {x: -16, y: 4}
       type: 0
-    - localCell: {x: -11, y: 4}
+    - localCell: {x: -15, y: 4}
       type: 0
-    - localCell: {x: -14, y: 5}
+    - localCell: {x: -18, y: 5}
       type: 0
-    - localCell: {x: -13, y: 5}
+    - localCell: {x: -17, y: 5}
       type: 0
-    - localCell: {x: -12, y: 5}
+    - localCell: {x: -16, y: 5}
       type: 0
-    - localCell: {x: -11, y: 5}
+    - localCell: {x: -15, y: 5}
       type: 0
-    - localCell: {x: -10, y: 2}
+    - localCell: {x: -18, y: 6}
       type: 0
-    - localCell: {x: -9, y: 2}
+    - localCell: {x: -17, y: 6}
       type: 0
-    - localCell: {x: -8, y: 2}
+    - localCell: {x: -16, y: 6}
       type: 0
-    - localCell: {x: -7, y: 2}
+    - localCell: {x: -15, y: 6}
       type: 0
-    - localCell: {x: -10, y: 3}
+    - localCell: {x: -18, y: 7}
       type: 0
-    - localCell: {x: -9, y: 3}
+    - localCell: {x: -17, y: 7}
       type: 0
-    - localCell: {x: -8, y: 3}
+    - localCell: {x: -16, y: 7}
       type: 0
-    - localCell: {x: -7, y: 3}
+    - localCell: {x: -15, y: 7}
       type: 0
-    - localCell: {x: -10, y: 4}
+    - localCell: {x: -18, y: 8}
       type: 0
-    - localCell: {x: -9, y: 4}
+    - localCell: {x: -17, y: 8}
       type: 0
-    - localCell: {x: -8, y: 4}
+    - localCell: {x: -16, y: 8}
       type: 0
-    - localCell: {x: -7, y: 4}
+    - localCell: {x: -15, y: 8}
       type: 0
-    - localCell: {x: -10, y: 5}
+    - localCell: {x: -18, y: 9}
       type: 0
-    - localCell: {x: -9, y: 5}
+    - localCell: {x: -17, y: 9}
       type: 0
-    - localCell: {x: -8, y: 5}
+    - localCell: {x: -16, y: 9}
       type: 0
-    - localCell: {x: -7, y: 5}
+    - localCell: {x: -15, y: 9}
       type: 0
   - name: Piece 13
     visualId: 
@@ -1799,38 +1799,6 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 17, y: 21}
       type: 0
-    - localCell: {x: 14, y: 22}
-      type: 0
-    - localCell: {x: 15, y: 22}
-      type: 0
-    - localCell: {x: 16, y: 22}
-      type: 0
-    - localCell: {x: 17, y: 22}
-      type: 0
-    - localCell: {x: 14, y: 23}
-      type: 0
-    - localCell: {x: 15, y: 23}
-      type: 0
-    - localCell: {x: 16, y: 23}
-      type: 0
-    - localCell: {x: 17, y: 23}
-      type: 0
-    - localCell: {x: 14, y: 24}
-      type: 0
-    - localCell: {x: 15, y: 24}
-      type: 0
-    - localCell: {x: 16, y: 24}
-      type: 0
-    - localCell: {x: 17, y: 24}
-      type: 0
-    - localCell: {x: 14, y: 25}
-      type: 0
-    - localCell: {x: 15, y: 25}
-      type: 0
-    - localCell: {x: 16, y: 25}
-      type: 0
-    - localCell: {x: 17, y: 25}
-      type: 0
     - localCell: {x: 14, y: 14}
       type: 0
     - localCell: {x: 15, y: 14}
@@ -1881,71 +1849,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
-    cells:
-    - localCell: {x: 10, y: 22}
-      type: 0
-    - localCell: {x: 11, y: 22}
-      type: 0
-    - localCell: {x: 12, y: 22}
-      type: 0
-    - localCell: {x: 13, y: 22}
-      type: 0
-    - localCell: {x: 10, y: 23}
-      type: 0
-    - localCell: {x: 11, y: 23}
-      type: 0
-    - localCell: {x: 12, y: 23}
-      type: 0
-    - localCell: {x: 13, y: 23}
-      type: 0
-    - localCell: {x: 10, y: 24}
-      type: 0
-    - localCell: {x: 11, y: 24}
-      type: 0
-    - localCell: {x: 12, y: 24}
-      type: 0
-    - localCell: {x: 13, y: 24}
-      type: 0
-    - localCell: {x: 10, y: 25}
-      type: 0
-    - localCell: {x: 11, y: 25}
-      type: 0
-    - localCell: {x: 12, y: 25}
-      type: 0
-    - localCell: {x: 13, y: 25}
-      type: 0
-    - localCell: {x: 6, y: 22}
-      type: 0
-    - localCell: {x: 7, y: 22}
-      type: 0
-    - localCell: {x: 8, y: 22}
-      type: 0
-    - localCell: {x: 9, y: 22}
-      type: 0
-    - localCell: {x: 6, y: 23}
-      type: 0
-    - localCell: {x: 7, y: 23}
-      type: 0
-    - localCell: {x: 8, y: 23}
-      type: 0
-    - localCell: {x: 9, y: 23}
-      type: 0
-    - localCell: {x: 6, y: 24}
-      type: 0
-    - localCell: {x: 7, y: 24}
-      type: 0
-    - localCell: {x: 8, y: 24}
-      type: 0
-    - localCell: {x: 9, y: 24}
-      type: 0
-    - localCell: {x: 6, y: 25}
-      type: 0
-    - localCell: {x: 7, y: 25}
-      type: 0
-    - localCell: {x: 8, y: 25}
-      type: 0
-    - localCell: {x: 9, y: 25}
-      type: 0
+    cells: []
   - name: Piece 14
     visualId: 
     color: {r: 0.2980392, g: 0.3123867, b: 1, a: 1}
@@ -2080,70 +1984,6 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells:
-    - localCell: {x: -2, y: 22}
-      type: 0
-    - localCell: {x: -1, y: 22}
-      type: 0
-    - localCell: {x: 0, y: 22}
-      type: 0
-    - localCell: {x: 1, y: 22}
-      type: 0
-    - localCell: {x: -2, y: 23}
-      type: 0
-    - localCell: {x: -1, y: 23}
-      type: 0
-    - localCell: {x: 0, y: 23}
-      type: 0
-    - localCell: {x: 1, y: 23}
-      type: 0
-    - localCell: {x: -2, y: 24}
-      type: 0
-    - localCell: {x: -1, y: 24}
-      type: 0
-    - localCell: {x: 0, y: 24}
-      type: 0
-    - localCell: {x: 1, y: 24}
-      type: 0
-    - localCell: {x: -2, y: 25}
-      type: 0
-    - localCell: {x: -1, y: 25}
-      type: 0
-    - localCell: {x: 0, y: 25}
-      type: 0
-    - localCell: {x: 1, y: 25}
-      type: 0
-    - localCell: {x: 2, y: 22}
-      type: 0
-    - localCell: {x: 3, y: 22}
-      type: 0
-    - localCell: {x: 4, y: 22}
-      type: 0
-    - localCell: {x: 5, y: 22}
-      type: 0
-    - localCell: {x: 2, y: 23}
-      type: 0
-    - localCell: {x: 3, y: 23}
-      type: 0
-    - localCell: {x: 4, y: 23}
-      type: 0
-    - localCell: {x: 5, y: 23}
-      type: 0
-    - localCell: {x: 2, y: 24}
-      type: 0
-    - localCell: {x: 3, y: 24}
-      type: 0
-    - localCell: {x: 4, y: 24}
-      type: 0
-    - localCell: {x: 5, y: 24}
-      type: 0
-    - localCell: {x: 2, y: 25}
-      type: 0
-    - localCell: {x: 3, y: 25}
-      type: 0
-    - localCell: {x: 4, y: 25}
-      type: 0
-    - localCell: {x: 5, y: 25}
-      type: 0
     - localCell: {x: 2, y: 18}
       type: 0
     - localCell: {x: 3, y: 18}
