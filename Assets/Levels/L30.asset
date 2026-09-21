@@ -658,7 +658,7 @@ MonoBehaviour:
   - name: Piece 5
     visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
-    origin: {x: 14, y: 22}
+    origin: {x: 2, y: 34}
     quarterTurns: 0
     specialBlockType: 1
     frozenMoveCount: 5

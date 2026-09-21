@@ -15,5 +15,5 @@ MonoBehaviour:
   blockPieceCapacity: 50
   shredVoxelCapacity: 6800
   progressVoxelCapacity: 96
-  voxelSubdivisions: 14
-  useVoxelShardGrid: 1
+  useVoxelShardGrid: 0
+  voxelSubdivisions: 20

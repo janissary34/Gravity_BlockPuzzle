@@ -1112,7 +1112,7 @@ MonoBehaviour:
   - name: Piece 8
     visualId: 
     color: {r: 1, g: 0.7165555, b: 0.2980392, a: 1}
-    origin: {x: 22, y: 22}
+    origin: {x: -14, y: 54}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
