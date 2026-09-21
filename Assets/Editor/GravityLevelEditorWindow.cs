@@ -21,6 +21,43 @@ namespace GravityPuzzle.Editor
         private const float ToolbarHeight = 38f;
         private const string PreviewPathKey = "GravityPuzzle.PreviewLevelPath";
 
+        // Editor-only source of truth for the palette preview and generated pieces.
+        private static readonly CommonPieceTemplate[] CommonPieceTemplates =
+        {
+            new CommonPieceTemplate("Single", new[] { new Vector2Int(0, 0) }),
+            new CommonPieceTemplate("Double", new[] { new Vector2Int(0, 0), new Vector2Int(1, 0) }),
+            new CommonPieceTemplate("3L", CreateLCells(3)),
+            new CommonPieceTemplate("HS", CreateHorseshoeCells(3, 3)),
+            new CommonPieceTemplate("Square", new[]
+            {
+                new Vector2Int(0, 0), new Vector2Int(1, 0),
+                new Vector2Int(0, 1), new Vector2Int(1, 1)
+            }),
+            new CommonPieceTemplate("T", new[]
+            {
+                new Vector2Int(0, 1), new Vector2Int(1, 1), new Vector2Int(2, 1),
+                new Vector2Int(1, 0)
+            }),
+            new CommonPieceTemplate("Plus", new[]
+            {
+                new Vector2Int(1, 2),
+                new Vector2Int(0, 1), new Vector2Int(1, 1), new Vector2Int(2, 1),
+                new Vector2Int(1, 0)
+            }),
+            new CommonPieceTemplate("4L", CreateLCells(4)),
+            new CommonPieceTemplate("5L", CreateLCells(5)),
+            new CommonPieceTemplate("Z Horizontal", new[]
+            {
+                new Vector2Int(0, 1), new Vector2Int(1, 1),
+                new Vector2Int(1, 0), new Vector2Int(2, 0)
+            }),
+            new CommonPieceTemplate("Z Vertical", new[]
+            {
+                new Vector2Int(1, 2), new Vector2Int(1, 1),
+                new Vector2Int(0, 1), new Vector2Int(0, 0)
+            })
+        };
+
         private GravityLevelDefinition level;
         private EditTool tool = EditTool.Select;
         private int selectedPiece = -1;
@@ -107,6 +144,9 @@ namespace GravityPuzzle.Editor
 
             GUILayout.Label("Tools", EditorStyles.boldLabel);
             DrawToolButtons();
+            GUILayout.Space(10f);
+
+            DrawCommonPiecePalette();
             GUILayout.Space(10f);
 
             GUILayout.BeginHorizontal();
@@ -225,6 +265,59 @@ namespace GravityPuzzle.Editor
             }
         }
 
+        private void DrawCommonPiecePalette()
+        {
+            GUILayout.Label("Common Pieces", EditorStyles.boldLabel);
+            GUILayout.Label("Click to add at the board centre", EditorStyles.miniLabel);
+
+            for (int index = 0; index < CommonPieceTemplates.Length; index += 2)
+            {
+                GUILayout.BeginHorizontal();
+                DrawCommonPieceButton(CommonPieceTemplates[index]);
+                if (index + 1 < CommonPieceTemplates.Length)
+                    DrawCommonPieceButton(CommonPieceTemplates[index + 1]);
+                else
+                    GUILayout.Space(138f);
+                GUILayout.EndHorizontal();
+            }
+        }
+
+        private void DrawCommonPieceButton(CommonPieceTemplate template)
+        {
+            Rect rect = GUILayoutUtility.GetRect(138f, 62f, GUILayout.Width(138f), GUILayout.Height(62f));
+            if (GUI.Button(rect, GUIContent.none))
+                AddCommonPiece(template);
+
+            GUI.Label(
+                new Rect(rect.x + 5f, rect.y + 3f, rect.width - 10f, 16f),
+                template.Name,
+                EditorStyles.centeredGreyMiniLabel);
+            DrawCommonPiecePreview(rect, template);
+        }
+
+        private static void DrawCommonPiecePreview(Rect rect, CommonPieceTemplate template)
+        {
+            template.GetBounds(out Vector2Int minimum, out Vector2Int maximum);
+            int width = maximum.x - minimum.x + 1;
+            int height = maximum.y - minimum.y + 1;
+            float cellSize = Mathf.Min(8f, 42f / Mathf.Max(width, height));
+            Vector2 previewSize = new Vector2(width * cellSize, height * cellSize);
+            Vector2 origin = new Vector2(
+                rect.center.x - previewSize.x * .5f,
+                rect.yMax - 5f - previewSize.y);
+            Color fill = new Color(.34f, .72f, 1f);
+
+            foreach (Vector2Int cell in template.Cells)
+            {
+                Rect cellRect = new Rect(
+                    origin.x + (cell.x - minimum.x) * cellSize,
+                    origin.y + (maximum.y - cell.y) * cellSize,
+                    cellSize,
+                    cellSize);
+                EditorGUI.DrawRect(new Rect(cellRect.x + 1f, cellRect.y + 1f, cellRect.width - 2f, cellRect.height - 2f), fill);
+            }
+        }
+
         private void DrawSelectedInspector()
         {
             if (selectedPiece >= 0 && selectedPiece < level.pieces.Count)
@@ -237,7 +330,16 @@ namespace GravityPuzzle.Editor
                     new GUIContent("Visual Id", "Optional key resolved through Piece Visual Config."),
                     piece.visualId);
                 Vector2Int newOrigin = EditorGUILayout.Vector2IntField("Origin", piece.origin);
-                int newRotation = EditorGUILayout.Popup("Start Rotation", piece.quarterTurns, new[] { "0°", "90°", "180°", "270°" });
+                int newRotation = piece.quarterTurns;
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Rotation", GUILayout.Width(EditorGUIUtility.labelWidth - 4f));
+                if (GUILayout.Button("Rotate 90°"))
+                    newRotation = (piece.quarterTurns + 1) % 4;
+                if (GUILayout.Button("Rotate 180°"))
+                    newRotation = (piece.quarterTurns + 2) % 4;
+                GUILayout.EndHorizontal();
+                if (newRotation != piece.quarterTurns)
+                    newOrigin = RotatePieceOriginAroundOwnCentre(piece, newOrigin, newRotation, level.subdivisions);
                 PieceSpecialBlockType resolvedSpecialType = piece.specialBlockType == PieceSpecialBlockType.Normal &&
                                                             piece.frozenMoveCount > 0
                     ? PieceSpecialBlockType.Ice
@@ -916,7 +1018,15 @@ namespace GravityPuzzle.Editor
             }
 
             bool pointerEvent = current.type == EventType.MouseDown || current.type == EventType.MouseDrag;
-            if (!pointerEvent || current.button != 0 || !board.Contains(current.mousePosition))
+            if (!pointerEvent || current.button != 0)
+                return;
+
+            bool isInsideBoard = board.Contains(current.mousePosition);
+            if (current.type == EventType.MouseDown && !isInsideBoard)
+                return;
+            bool isMovingPiece = tool == EditTool.Select || tool == EditTool.MovePiece;
+            if (current.type == EventType.MouseDrag && !isInsideBoard &&
+                (!isMovingPiece || !HasSelectedPiece()))
                 return;
 
             Vector2Int cell = MouseToCell(board, cellSize, current.mousePosition);
@@ -1157,10 +1267,7 @@ namespace GravityPuzzle.Editor
                     Mathf.RoundToInt((float)targetFineCell.x / subs) * subs,
                     Mathf.RoundToInt((float)targetFineCell.y / subs) * subs);
                 Vector2Int rotMin = GetPieceFineMinimumRotated(piece);
-                Vector2Int rotMax = GetPieceFineMaximumRotated(piece);
                 Vector2Int newOrigin = snappedBoundMin - rotMin;
-                newOrigin.x = Mathf.Clamp(newOrigin.x, -rotMin.x, level.FineColumns - 1 - rotMax.x);
-                newOrigin.y = Mathf.Clamp(newOrigin.y, -rotMin.y, level.FineRows - 1 - rotMax.y);
                 piece.origin = newOrigin;
                 MarkDirty();
             }
@@ -1238,6 +1345,84 @@ namespace GravityPuzzle.Editor
             SelectPiece(level.pieces.Count - 1);
             tool = EditTool.PaintBlock;
             MarkDirty();
+        }
+
+        private void AddCommonPiece(CommonPieceTemplate template)
+        {
+            template.GetBounds(out Vector2Int minimum, out Vector2Int maximum);
+            int widthInBoardCells = maximum.x - minimum.x + 1;
+            int heightInBoardCells = maximum.y - minimum.y + 1;
+            int boardX = Mathf.FloorToInt((level.boardColumns - widthInBoardCells) * .5f);
+            int boardY = Mathf.FloorToInt((level.boardRows - heightInBoardCells) * .5f);
+            int subdivisions = level.subdivisions;
+
+            PieceDefinition piece = new PieceDefinition
+            {
+                name = $"{template.Name} {level.pieces.Count + 1}",
+                origin = new Vector2Int(
+                    boardX * subdivisions - minimum.x * subdivisions,
+                    boardY * subdivisions - minimum.y * subdivisions),
+                color = Color.HSVToRGB((level.pieces.Count * .19f) % 1f, .7f, 1f)
+            };
+
+            foreach (Vector2Int boardCell in template.Cells)
+            {
+                Vector2Int fineOrigin = boardCell * subdivisions;
+                for (int y = 0; y < subdivisions; y++)
+                for (int x = 0; x < subdivisions; x++)
+                    piece.cells.Add(new PieceCellDefinition(fineOrigin + new Vector2Int(x, y), PieceCellType.Block));
+            }
+
+            Undo.RecordObject(level, "Add common puzzle piece");
+            level.pieces.Add(piece);
+            SelectPiece(level.pieces.Count - 1);
+            tool = EditTool.MovePiece;
+            MarkDirty();
+        }
+
+        private static Vector2Int RotatePieceOriginAroundOwnCentre(
+            PieceDefinition piece,
+            Vector2Int currentOrigin,
+            int newQuarterTurns,
+            int subdivisions)
+        {
+            GetPieceRotatedBounds(piece, piece.quarterTurns, out Vector2Int currentMinimum, out Vector2Int currentMaximum);
+            GetPieceRotatedBounds(piece, newQuarterTurns, out Vector2Int nextMinimum, out Vector2Int nextMaximum);
+
+            // Cell centres, rather than their lower-left grid coordinates, define
+            // the visual pivot. This keeps modular pieces on the fine grid.
+            Vector2Int currentCentreDoubled = currentOrigin * 2 + currentMinimum + currentMaximum + Vector2Int.one;
+            Vector2Int nextLocalCentreDoubled = nextMinimum + nextMaximum + Vector2Int.one;
+            Vector2Int centrePreservingOrigin = new Vector2Int(
+                Mathf.RoundToInt((currentCentreDoubled.x - nextLocalCentreDoubled.x) * .5f),
+                Mathf.RoundToInt((currentCentreDoubled.y - nextLocalCentreDoubled.y) * .5f));
+            Vector2Int intendedBoundMinimum = centrePreservingOrigin + nextMinimum;
+            int gridSize = Mathf.Max(1, subdivisions);
+            Vector2Int snappedBoundMinimum = new Vector2Int(
+                Mathf.RoundToInt((float)intendedBoundMinimum.x / gridSize) * gridSize,
+                Mathf.RoundToInt((float)intendedBoundMinimum.y / gridSize) * gridSize);
+            return snappedBoundMinimum - nextMinimum;
+        }
+
+        private static void GetPieceRotatedBounds(
+            PieceDefinition piece,
+            int quarterTurns,
+            out Vector2Int minimum,
+            out Vector2Int maximum)
+        {
+            minimum = Vector2Int.zero;
+            maximum = Vector2Int.zero;
+            if (piece.cells == null || piece.cells.Count == 0)
+                return;
+
+            minimum = QuarterTurnUtility.Rotate(piece.cells[0].localCell, quarterTurns);
+            maximum = minimum;
+            for (int index = 1; index < piece.cells.Count; index++)
+            {
+                Vector2Int rotated = QuarterTurnUtility.Rotate(piece.cells[index].localCell, quarterTurns);
+                minimum = Vector2Int.Min(minimum, rotated);
+                maximum = Vector2Int.Max(maximum, rotated);
+            }
         }
 
         private void CreateNewLevel()
@@ -1552,6 +1737,52 @@ namespace GravityPuzzle.Editor
                 Vector2Int absolute = piece.origin + QuarterTurnUtility.Rotate(cell.localCell, piece.quarterTurns);
                 minimum = Vector2Int.Min(minimum, absolute);
                 maximum = Vector2Int.Max(maximum, absolute);
+            }
+        }
+
+        private static Vector2Int[] CreateLCells(int armLength)
+        {
+            List<Vector2Int> cells = new List<Vector2Int>(armLength * 2 - 1);
+            for (int y = 0; y < armLength; y++)
+                cells.Add(new Vector2Int(0, y));
+            for (int x = 1; x < armLength; x++)
+                cells.Add(new Vector2Int(x, 0));
+            return cells.ToArray();
+        }
+
+        private static Vector2Int[] CreateHorseshoeCells(int width, int height)
+        {
+            List<Vector2Int> cells = new List<Vector2Int>(width + (height - 1) * 2);
+            for (int x = 0; x < width; x++)
+                cells.Add(new Vector2Int(x, 0));
+            for (int y = 1; y < height; y++)
+            {
+                cells.Add(new Vector2Int(0, y));
+                cells.Add(new Vector2Int(width - 1, y));
+            }
+            return cells.ToArray();
+        }
+
+        private sealed class CommonPieceTemplate
+        {
+            public readonly string Name;
+            public readonly Vector2Int[] Cells;
+
+            public CommonPieceTemplate(string name, Vector2Int[] cells)
+            {
+                Name = name;
+                Cells = cells;
+            }
+
+            public void GetBounds(out Vector2Int minimum, out Vector2Int maximum)
+            {
+                minimum = Cells[0];
+                maximum = Cells[0];
+                for (int index = 1; index < Cells.Length; index++)
+                {
+                    minimum = Vector2Int.Min(minimum, Cells[index]);
+                    maximum = Vector2Int.Max(maximum, Cells[index]);
+                }
             }
         }
 
