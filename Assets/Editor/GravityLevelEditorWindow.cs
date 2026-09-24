@@ -64,8 +64,14 @@ namespace GravityPuzzle.Editor
         private int selectedPin = -1;
         private int selectedObstacle = -1;
         private int selectedShredder = -1;
+        private readonly HashSet<int> selectedPieceIndices = new HashSet<int>();
+        private readonly HashSet<int> selectedObstacleIndices = new HashSet<int>();
         private Vector2Int dragOffset;
         private Vector2 sidebarScroll;
+        private bool selectionBoxActive;
+        private bool selectionBoxAdditive;
+        private Vector2 selectionBoxStart;
+        private Vector2 selectionBoxCurrent;
         private Vector2Int lastPaintedCell = new Vector2Int(int.MinValue, int.MinValue);
         private bool mapShapeStrokeActive;
         private bool mapShapeStrokeMakesInactive;
@@ -159,7 +165,7 @@ namespace GravityPuzzle.Editor
             for (int i = 0; i < level.pieces.Count; i++)
             {
                 Color previous = GUI.backgroundColor;
-                if (i == selectedPiece)
+                if (selectedPieceIndices.Contains(i))
                     GUI.backgroundColor = new Color(.55f, .8f, 1f);
                 PieceDefinition listPiece = level.pieces[i];
                 string pieceLabel = listPiece.specialBlockType == PieceSpecialBlockType.Bomb
@@ -168,7 +174,7 @@ namespace GravityPuzzle.Editor
                         ? $"{listPiece.name} [Ice {listPiece.frozenMoveCount}]"
                         : listPiece.name;
                 if (GUILayout.Button(pieceLabel))
-                    SelectPiece(i);
+                    SelectPiece(i, Event.current.command);
                 GUI.backgroundColor = previous;
             }
 
@@ -720,7 +726,28 @@ namespace GravityPuzzle.Editor
             DrawShredders(board, cellSize);
             DrawPieces(board, cellSize);
             DrawGrid(board, cellSize);
+            DrawSelectionBox();
             HandleCanvasInput(board, cellSize);
+        }
+
+        private void DrawSelectionBox()
+        {
+            if (!selectionBoxActive)
+                return;
+
+            Rect rect = Rect.MinMaxRect(
+                Mathf.Min(selectionBoxStart.x, selectionBoxCurrent.x),
+                Mathf.Min(selectionBoxStart.y, selectionBoxCurrent.y),
+                Mathf.Max(selectionBoxStart.x, selectionBoxCurrent.x),
+                Mathf.Max(selectionBoxStart.y, selectionBoxCurrent.y));
+            EditorGUI.DrawRect(rect, new Color(.35f, .7f, 1f, .16f));
+            Handles.BeginGUI();
+            Handles.color = new Color(.55f, .82f, 1f);
+            Handles.DrawAAPolyLine(1.5f,
+                new Vector3(rect.xMin, rect.yMin), new Vector3(rect.xMax, rect.yMin),
+                new Vector3(rect.xMax, rect.yMax), new Vector3(rect.xMin, rect.yMax),
+                new Vector3(rect.xMin, rect.yMin));
+            Handles.EndGUI();
         }
 
         private void DrawBoardShape(Rect board, float cellSize)
@@ -865,6 +892,17 @@ namespace GravityPuzzle.Editor
                     DrawIceCounterPreview(pieceBounds, piece);
                 }
 
+                if (selectedPieceIndices.Contains(pieceIndex) && hasVisibleCell)
+                {
+                    Handles.BeginGUI();
+                    Handles.color = Color.white;
+                    Handles.DrawAAPolyLine(2f,
+                        new Vector3(pieceBounds.xMin, pieceBounds.yMin), new Vector3(pieceBounds.xMax, pieceBounds.yMin),
+                        new Vector3(pieceBounds.xMax, pieceBounds.yMax), new Vector3(pieceBounds.xMin, pieceBounds.yMax),
+                        new Vector3(pieceBounds.xMin, pieceBounds.yMin));
+                    Handles.EndGUI();
+                }
+
                 if (pieceIndex == selectedPiece && IsInside(piece.origin))
                 {
                     Rect origin = CellRect(board, cellSize, piece.origin);
@@ -996,7 +1034,7 @@ namespace GravityPuzzle.Editor
                         fineSize.y * cellSize);
                 }
                 EditorGUI.DrawRect(rect, obstacle.color);
-                if (i == selectedObstacle)
+                if (selectedObstacleIndices.Contains(i))
                 {
                     Handles.BeginGUI();
                     Handles.color = Color.white;
@@ -1014,6 +1052,14 @@ namespace GravityPuzzle.Editor
             Event current = Event.current;
             if (current.type == EventType.MouseUp && current.button == 0)
             {
+                if (selectionBoxActive)
+                {
+                    selectionBoxCurrent = current.mousePosition;
+                    CompleteSelectionBox(board, cellSize);
+                    selectionBoxActive = false;
+                    current.Use();
+                    Repaint();
+                }
                 mapShapeStrokeActive = false;
                 lastPaintedCell = new Vector2Int(int.MinValue, int.MinValue);
                 return;
@@ -1040,15 +1086,34 @@ namespace GravityPuzzle.Editor
 
             switch (tool)
             {
-                case EditTool.Select:
+            case EditTool.Select:
+            case EditTool.MovePiece:
                     if (current.type == EventType.MouseDown)
-                        SelectAt(cell);
-                    break;
-                case EditTool.MovePiece:
-                    if (current.type == EventType.MouseDown)
-                        SelectAt(cell);
-                    else if (current.type == EventType.MouseDrag)
+                    {
+                        bool additive = current.command;
+                        if (SelectAt(cell, additive))
+                        {
+                            selectionBoxActive = false;
+                            SetDragOffset(cell);
+                        }
+                        else
+                        {
+                            if (!additive)
+                                ClearSelection();
+                            selectionBoxActive = true;
+                            selectionBoxAdditive = additive;
+                            selectionBoxStart = current.mousePosition;
+                            selectionBoxCurrent = current.mousePosition;
+                        }
+                    }
+                    else if (current.type == EventType.MouseDrag && selectionBoxActive)
+                    {
+                        selectionBoxCurrent = current.mousePosition;
+                    }
+                    else if (tool == EditTool.MovePiece && current.type == EventType.MouseDrag)
+                    {
                         MoveSelectedItemTo(cell + dragOffset);
+                    }
                     break;
                 case EditTool.MapShape:
                     if (current.type == EventType.MouseDown)
@@ -1231,7 +1296,7 @@ namespace GravityPuzzle.Editor
             return maximum;
         }
 
-        private void SelectAt(Vector2Int cell)
+        private bool SelectAt(Vector2Int cell, bool additive)
         {
             for (int i = level.pieces.Count - 1; i >= 0; i--)
             {
@@ -1239,19 +1304,26 @@ namespace GravityPuzzle.Editor
                 Vector2Int local = QuarterTurnUtility.InverseRotate(cell - piece.origin, piece.quarterTurns);
                 if (piece.cells.Exists(c => c.localCell == local))
                 {
-                    SelectPiece(i);
-                    Vector2Int rotMin = GetPieceFineMinimumRotated(piece);
-                    Vector2Int pieceBoundMin = piece.origin + rotMin;
-                    int subs = Mathf.Max(1, level.subdivisions);
-                    Vector2Int coarsePieceAnchor = new Vector2Int(
-                        Mathf.FloorToInt((float)pieceBoundMin.x / subs) * subs,
-                        Mathf.FloorToInt((float)pieceBoundMin.y / subs) * subs);
-                    Vector2Int coarseClick = new Vector2Int(
-                        Mathf.FloorToInt((float)cell.x / subs) * subs,
-                        Mathf.FloorToInt((float)cell.y / subs) * subs);
-                    dragOffset = coarsePieceAnchor - coarseClick;
-                    return;
+                    if (!additive && tool == EditTool.MovePiece && selectedPieceIndices.Contains(i))
+                    {
+                        SetPrimaryPiece(i);
+                        return true;
+                    }
+                    SelectPiece(i, additive);
+                    return true;
                 }
+            }
+
+            int obstacle = level.obstacles.FindIndex(o => ObstacleContains(o, cell));
+            if (obstacle >= 0)
+            {
+                if (!additive && tool == EditTool.MovePiece && selectedObstacleIndices.Contains(obstacle))
+                {
+                    SetPrimaryObstacle(obstacle);
+                    return true;
+                }
+                SelectObstacle(obstacle, additive);
+                return true;
             }
 
             int shredder = FindShredderAt(cell);
@@ -1260,21 +1332,20 @@ namespace GravityPuzzle.Editor
                 ClearSelection();
                 selectedShredder = shredder;
                 dragOffset = level.shredders[shredder].cell - cell;
-                return;
+                return true;
             }
 
-            int obstacle = level.obstacles.FindIndex(o => ObstacleContains(o, cell));
-            ClearSelection();
-            if (obstacle >= 0)
-            {
-                selectedObstacle = obstacle;
-                var obs = level.obstacles[obstacle];
-                dragOffset = (obs.usesGridCells ? (obs.gridCell * level.subdivisions) : obs.centreCell) - cell;
-            }
+            return false;
         }
 
         private void MoveSelectedItemTo(Vector2Int targetFineCell)
         {
+            if (selectedPieceIndices.Count > 0 || selectedObstacleIndices.Count > 0)
+            {
+                MoveSelectedItemsTo(targetFineCell);
+                return;
+            }
+
             if (HasSelectedPiece())
             {
                 Undo.RecordObject(level, "Move puzzle piece");
@@ -1314,6 +1385,126 @@ namespace GravityPuzzle.Editor
             }
         }
 
+        private void SetDragOffset(Vector2Int clickedCell)
+        {
+            if (TryGetSelectionAnchor(out Vector2Int anchor))
+                dragOffset = anchor - clickedCell;
+        }
+
+        private bool TryGetSelectionAnchor(out Vector2Int anchor)
+        {
+            if (selectedPiece >= 0 && selectedPieceIndices.Contains(selectedPiece) &&
+                selectedPiece < level.pieces.Count)
+            {
+                anchor = level.pieces[selectedPiece].origin + GetPieceFineMinimumRotated(level.pieces[selectedPiece]);
+                return true;
+            }
+
+            if (selectedObstacle >= 0 && selectedObstacleIndices.Contains(selectedObstacle) &&
+                selectedObstacle < level.obstacles.Count)
+            {
+                ObstacleDefinition obstacle = level.obstacles[selectedObstacle];
+                anchor = obstacle.usesGridCells
+                    ? obstacle.gridCell * level.subdivisions
+                    : obstacle.centreCell;
+                return true;
+            }
+
+            anchor = Vector2Int.zero;
+            return false;
+        }
+
+        private void MoveSelectedItemsTo(Vector2Int targetFineCell)
+        {
+            if (!TryGetSelectionAnchor(out Vector2Int anchor))
+                return;
+
+            int subdivisions = Mathf.Max(1, level.subdivisions);
+            Vector2Int snappedTarget = new Vector2Int(
+                Mathf.RoundToInt((float)targetFineCell.x / subdivisions) * subdivisions,
+                Mathf.RoundToInt((float)targetFineCell.y / subdivisions) * subdivisions);
+            Vector2Int delta = ClampSelectionDeltaToBoard(snappedTarget - anchor);
+            if (delta == Vector2Int.zero)
+                return;
+
+            Undo.RecordObject(level, "Move selected level items");
+            foreach (int index in selectedPieceIndices)
+            {
+                if (index >= 0 && index < level.pieces.Count)
+                    level.pieces[index].origin += delta;
+            }
+            foreach (int index in selectedObstacleIndices)
+            {
+                if (index < 0 || index >= level.obstacles.Count)
+                    continue;
+
+                ObstacleDefinition obstacle = level.obstacles[index];
+                if (obstacle.usesGridCells)
+                    obstacle.gridCell += new Vector2Int(delta.x / subdivisions, delta.y / subdivisions);
+                else
+                    obstacle.centreCell += delta;
+            }
+            MarkDirty();
+        }
+
+        private Vector2Int ClampSelectionDeltaToBoard(Vector2Int requestedDelta)
+        {
+            int minimumX = int.MinValue;
+            int maximumX = int.MaxValue;
+            int minimumY = int.MinValue;
+            int maximumY = int.MaxValue;
+
+            foreach (int index in selectedPieceIndices)
+            {
+                if (index < 0 || index >= level.pieces.Count)
+                    continue;
+                GetPieceFineBounds(level.pieces[index], out Vector2Int minimum, out Vector2Int maximum);
+                ConstrainDeltaToBounds(minimum, maximum, ref minimumX, ref maximumX, ref minimumY, ref maximumY);
+            }
+            foreach (int index in selectedObstacleIndices)
+            {
+                if (index < 0 || index >= level.obstacles.Count)
+                    continue;
+                GetObstacleFineBounds(level.obstacles[index], out Vector2Int minimum, out Vector2Int maximum);
+                ConstrainDeltaToBounds(minimum, maximum, ref minimumX, ref maximumX, ref minimumY, ref maximumY);
+            }
+
+            return new Vector2Int(
+                Mathf.Clamp(requestedDelta.x, minimumX, maximumX),
+                Mathf.Clamp(requestedDelta.y, minimumY, maximumY));
+        }
+
+        private void ConstrainDeltaToBounds(
+            Vector2Int minimum,
+            Vector2Int maximum,
+            ref int minimumX,
+            ref int maximumX,
+            ref int minimumY,
+            ref int maximumY)
+        {
+            minimumX = Mathf.Max(minimumX, -minimum.x);
+            maximumX = Mathf.Min(maximumX, level.FineColumns - 1 - maximum.x);
+            minimumY = Mathf.Max(minimumY, -minimum.y);
+            maximumY = Mathf.Min(maximumY, level.FineRows - 1 - maximum.y);
+        }
+
+        private void GetObstacleFineBounds(
+            ObstacleDefinition obstacle,
+            out Vector2Int minimum,
+            out Vector2Int maximum)
+        {
+            if (obstacle.usesGridCells)
+            {
+                minimum = obstacle.gridCell * level.subdivisions;
+                maximum = minimum + RotatedGridSize(obstacle) * level.subdivisions - Vector2Int.one;
+                return;
+            }
+
+            Vector2Int size = RotatedFineSize(obstacle);
+            minimum = obstacle.centreCell - size / 2;
+            maximum = minimum + size - Vector2Int.one;
+        }
+
         private void AddObstacle(Vector2Int cell)
         {
             if (!IsInside(cell))
@@ -1331,10 +1522,7 @@ namespace GravityPuzzle.Editor
                 gridCell = gridCell,
                 sizeInGridCells = Vector2Int.one
             });
-            selectedPiece = -1;
-            selectedPin = -1;
-            selectedShredder = -1;
-            selectedObstacle = level.obstacles.Count - 1;
+            SelectObstacle(level.obstacles.Count - 1, false);
             MarkDirty();
         }
 
@@ -1350,9 +1538,7 @@ namespace GravityPuzzle.Editor
                 cell = cell,
                 clockwise = level.shredders.Count % 2 == 0
             });
-            selectedPiece = -1;
-            selectedPin = -1;
-            selectedObstacle = -1;
+            ClearSelection();
             selectedShredder = level.shredders.Count - 1;
             MarkDirty();
         }
@@ -1496,12 +1682,157 @@ namespace GravityPuzzle.Editor
             EditorApplication.isPlaying = true;
         }
 
-        private void SelectPiece(int index)
+        private void CompleteSelectionBox(Rect board, float cellSize)
         {
-            selectedPiece = index;
+            Rect selectionRect = Rect.MinMaxRect(
+                Mathf.Min(selectionBoxStart.x, selectionBoxCurrent.x),
+                Mathf.Min(selectionBoxStart.y, selectionBoxCurrent.y),
+                Mathf.Max(selectionBoxStart.x, selectionBoxCurrent.x),
+                Mathf.Max(selectionBoxStart.y, selectionBoxCurrent.y));
+            if (!selectionBoxAdditive)
+                ClearSelection();
+
+            for (int index = 0; index < level.pieces.Count; index++)
+            {
+                if (TryGetPieceEditorBounds(board, cellSize, level.pieces[index], out Rect bounds) &&
+                    selectionRect.Overlaps(bounds, true))
+                {
+                    selectedPieceIndices.Add(index);
+                    selectedPiece = index;
+                    selectedObstacle = -1;
+                }
+            }
+
+            for (int index = 0; index < level.obstacles.Count; index++)
+            {
+                Rect bounds = GetObstacleEditorRect(board, cellSize, level.obstacles[index]);
+                if (!selectionRect.Overlaps(bounds, true))
+                    continue;
+
+                selectedObstacleIndices.Add(index);
+                selectedObstacle = index;
+                selectedPiece = -1;
+            }
+        }
+
+        private bool TryGetPieceEditorBounds(
+            Rect board,
+            float cellSize,
+            PieceDefinition piece,
+            out Rect bounds)
+        {
+            bounds = default;
+            bool hasVisibleCell = false;
+            foreach (PieceCellDefinition cell in piece.cells)
+            {
+                Vector2Int absolute = piece.origin + QuarterTurnUtility.Rotate(cell.localCell, piece.quarterTurns);
+                if (!IsInside(absolute))
+                    continue;
+
+                Rect cellRect = CellRect(board, cellSize, absolute);
+                if (!hasVisibleCell)
+                {
+                    bounds = cellRect;
+                    hasVisibleCell = true;
+                    continue;
+                }
+
+                bounds = Rect.MinMaxRect(
+                    Mathf.Min(bounds.xMin, cellRect.xMin),
+                    Mathf.Min(bounds.yMin, cellRect.yMin),
+                    Mathf.Max(bounds.xMax, cellRect.xMax),
+                    Mathf.Max(bounds.yMax, cellRect.yMax));
+            }
+            return hasVisibleCell;
+        }
+
+        private Rect GetObstacleEditorRect(Rect board, float cellSize, ObstacleDefinition obstacle)
+        {
+            if (obstacle.usesGridCells)
+                return GridRect(board, cellSize, obstacle.gridCell, RotatedGridSize(obstacle));
+
+            Vector2Int fineSize = RotatedFineSize(obstacle);
+            Vector2 centre = CellRect(board, cellSize, obstacle.centreCell).center;
+            return new Rect(
+                centre.x - fineSize.x * cellSize * .5f,
+                centre.y - fineSize.y * cellSize * .5f,
+                fineSize.x * cellSize,
+                fineSize.y * cellSize);
+        }
+
+        private void SelectPiece(int index, bool additive = false)
+        {
+            if (!additive)
+                ClearSelection();
+            else
+            {
+                selectedPin = -1;
+                selectedShredder = -1;
+            }
+
+            if (additive && selectedPieceIndices.Contains(index))
+            {
+                selectedPieceIndices.Remove(index);
+                SetPrimaryToRemainingSelection();
+                return;
+            }
+
+            selectedPieceIndices.Add(index);
+            SetPrimaryPiece(index);
+        }
+
+        private void SelectObstacle(int index, bool additive)
+        {
+            if (!additive)
+                ClearSelection();
+            else
+            {
+                selectedPin = -1;
+                selectedShredder = -1;
+            }
+
+            if (additive && selectedObstacleIndices.Contains(index))
+            {
+                selectedObstacleIndices.Remove(index);
+                SetPrimaryToRemainingSelection();
+                return;
+            }
+
+            selectedObstacleIndices.Add(index);
+            SetPrimaryObstacle(index);
+        }
+
+        private void SetPrimaryPiece(int index)
+        {
+            selectedPiece = -1;
             selectedPin = -1;
+            selectedPiece = index;
             selectedObstacle = -1;
             selectedShredder = -1;
+        }
+
+        private void SetPrimaryObstacle(int index)
+        {
+            selectedPiece = -1;
+            selectedPin = -1;
+            selectedObstacle = index;
+            selectedShredder = -1;
+        }
+
+        private void SetPrimaryToRemainingSelection()
+        {
+            selectedPiece = -1;
+            selectedObstacle = -1;
+            foreach (int index in selectedPieceIndices)
+            {
+                selectedPiece = index;
+                return;
+            }
+            foreach (int index in selectedObstacleIndices)
+            {
+                selectedObstacle = index;
+                return;
+            }
         }
 
         private void ClearSelection()
@@ -1510,6 +1841,8 @@ namespace GravityPuzzle.Editor
             selectedPin = -1;
             selectedObstacle = -1;
             selectedShredder = -1;
+            selectedPieceIndices.Clear();
+            selectedObstacleIndices.Clear();
         }
 
         private bool HasSelectedPiece()

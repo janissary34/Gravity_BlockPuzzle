@@ -15,7 +15,7 @@ MonoBehaviour:
   levelName: New Level
   timeLimit: 800
   boardColumns: 10
-  boardRows: 12
+  boardRows: 11
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
@@ -38,7 +38,7 @@ MonoBehaviour:
   - name: Piece 1
     visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
-    origin: {x: 26, y: 22}
+    origin: {x: 26, y: 18}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -185,7 +185,7 @@ MonoBehaviour:
   - name: Piece 2
     visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-    origin: {x: 20, y: 18}
+    origin: {x: 20, y: 14}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -332,7 +332,7 @@ MonoBehaviour:
   - name: Piece 3
     visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
-    origin: {x: 20, y: 18}
+    origin: {x: 20, y: 14}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -479,7 +479,7 @@ MonoBehaviour:
   - name: Piece 4
     visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
-    origin: {x: 24, y: 22}
+    origin: {x: 24, y: 18}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -626,7 +626,7 @@ MonoBehaviour:
   - name: Piece 5
     visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
-    origin: {x: 20, y: 18}
+    origin: {x: 20, y: 14}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -741,7 +741,7 @@ MonoBehaviour:
   - name: Piece 6
     visualId: 
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
-    origin: {x: 12, y: -2}
+    origin: {x: 12, y: -6}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -888,7 +888,7 @@ MonoBehaviour:
   - name: Piece 7
     visualId: 
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
-    origin: {x: 12, y: 14}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1003,7 +1003,7 @@ MonoBehaviour:
   - name: Piece 8
     visualId: 
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
-    origin: {x: 20, y: 24}
+    origin: {x: 20, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1118,7 +1118,7 @@ MonoBehaviour:
   - name: Piece 9
     visualId: 
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
-    origin: {x: 20, y: 24}
+    origin: {x: 20, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1233,7 +1233,7 @@ MonoBehaviour:
   - name: Piece 10
     visualId: 
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
-    origin: {x: 20, y: 24}
+    origin: {x: 20, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1380,7 +1380,7 @@ MonoBehaviour:
   - name: Piece 11
     visualId: 
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
-    origin: {x: 20, y: 24}
+    origin: {x: 20, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1527,7 +1527,7 @@ MonoBehaviour:
   - name: Piece 12
     visualId: 
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
-    origin: {x: 20, y: 24}
+    origin: {x: 20, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1642,7 +1642,7 @@ MonoBehaviour:
   - name: Piece 13
     visualId: 
     color: {r: 0.5240001, g: 1, b: 0.3, a: 1}
-    origin: {x: 20, y: 24}
+    origin: {x: 20, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1757,7 +1757,7 @@ MonoBehaviour:
   - name: Piece 14
     visualId: 
     color: {r: 0.084549636, g: 0.14074, b: 0.9433962, a: 1}
-    origin: {x: 20, y: 24}
+    origin: {x: 20, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1905,7 +1905,7 @@ MonoBehaviour:
   obstacles:
   - name: Obstacle 1
     usesGridCells: 1
-    gridCell: {x: 1, y: 1}
+    gridCell: {x: 1, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1913,7 +1913,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 2
     usesGridCells: 1
-    gridCell: {x: 0, y: 1}
+    gridCell: {x: 0, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1921,7 +1921,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 4
     usesGridCells: 1
-    gridCell: {x: 2, y: 1}
+    gridCell: {x: 2, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1929,7 +1929,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 9
     usesGridCells: 1
-    gridCell: {x: 1, y: 2}
+    gridCell: {x: 1, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1937,7 +1937,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 10
     usesGridCells: 1
-    gridCell: {x: 0, y: 2}
+    gridCell: {x: 0, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1945,7 +1945,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 11
     usesGridCells: 1
-    gridCell: {x: 0, y: 3}
+    gridCell: {x: 0, y: 2}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1953,7 +1953,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 14
     usesGridCells: 1
-    gridCell: {x: 3, y: 1}
+    gridCell: {x: 3, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1961,7 +1961,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 15
     usesGridCells: 1
-    gridCell: {x: 6, y: 1}
+    gridCell: {x: 6, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1969,7 +1969,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 16
     usesGridCells: 1
-    gridCell: {x: 7, y: 1}
+    gridCell: {x: 7, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1977,7 +1977,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 17
     usesGridCells: 1
-    gridCell: {x: 8, y: 1}
+    gridCell: {x: 8, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1985,7 +1985,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 18
     usesGridCells: 1
-    gridCell: {x: 9, y: 1}
+    gridCell: {x: 9, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1993,7 +1993,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 19
     usesGridCells: 1
-    gridCell: {x: 9, y: 2}
+    gridCell: {x: 9, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2001,7 +2001,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 20
     usesGridCells: 1
-    gridCell: {x: 8, y: 2}
+    gridCell: {x: 8, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2009,13 +2009,29 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 21
     usesGridCells: 1
-    gridCell: {x: 7, y: 2}
+    gridCell: {x: 7, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 22
+    usesGridCells: 1
+    gridCell: {x: 9, y: 2}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 23
+    usesGridCells: 1
+    gridCell: {x: 8, y: 2}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 24
     usesGridCells: 1
     gridCell: {x: 9, y: 3}
     sizeInGridCells: {x: 1, y: 1}
@@ -2023,25 +2039,9 @@ MonoBehaviour:
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 23
-    usesGridCells: 1
-    gridCell: {x: 8, y: 3}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 24
-    usesGridCells: 1
-    gridCell: {x: 9, y: 4}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 25
     usesGridCells: 1
-    gridCell: {x: 2, y: 2}
+    gridCell: {x: 2, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2049,7 +2049,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 26
     usesGridCells: 1
-    gridCell: {x: 1, y: 3}
+    gridCell: {x: 1, y: 2}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2057,7 +2057,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 27
     usesGridCells: 1
-    gridCell: {x: 0, y: 4}
+    gridCell: {x: 0, y: 3}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2065,7 +2065,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 21
     usesGridCells: 1
-    gridCell: {x: 0, y: 11}
+    gridCell: {x: 0, y: 10}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2073,7 +2073,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 22
     usesGridCells: 1
-    gridCell: {x: 1, y: 11}
+    gridCell: {x: 1, y: 10}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2081,7 +2081,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 23
     usesGridCells: 1
-    gridCell: {x: 1, y: 10}
+    gridCell: {x: 1, y: 9}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2089,7 +2089,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 24
     usesGridCells: 1
-    gridCell: {x: 0, y: 10}
+    gridCell: {x: 0, y: 9}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2097,7 +2097,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 25
     usesGridCells: 1
-    gridCell: {x: 2, y: 11}
+    gridCell: {x: 2, y: 10}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2105,7 +2105,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 26
     usesGridCells: 1
-    gridCell: {x: 0, y: 9}
+    gridCell: {x: 0, y: 8}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2113,7 +2113,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 27
     usesGridCells: 1
-    gridCell: {x: 7, y: 11}
+    gridCell: {x: 7, y: 10}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2121,7 +2121,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 28
     usesGridCells: 1
-    gridCell: {x: 8, y: 11}
+    gridCell: {x: 8, y: 10}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2129,7 +2129,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 29
     usesGridCells: 1
-    gridCell: {x: 9, y: 11}
+    gridCell: {x: 9, y: 10}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2137,7 +2137,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 30
     usesGridCells: 1
-    gridCell: {x: 9, y: 10}
+    gridCell: {x: 9, y: 9}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2145,7 +2145,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 31
     usesGridCells: 1
-    gridCell: {x: 8, y: 10}
+    gridCell: {x: 8, y: 9}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -2153,71 +2153,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 32
     usesGridCells: 1
-    gridCell: {x: 9, y: 9}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 33
-    usesGridCells: 1
-    gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 34
-    usesGridCells: 1
-    gridCell: {x: 1, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 35
-    usesGridCells: 1
-    gridCell: {x: 2, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 36
-    usesGridCells: 1
-    gridCell: {x: 3, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 37
-    usesGridCells: 1
-    gridCell: {x: 6, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 38
-    usesGridCells: 1
-    gridCell: {x: 7, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 39
-    usesGridCells: 1
-    gridCell: {x: 8, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 40
-    usesGridCells: 1
-    gridCell: {x: 9, y: 0}
+    gridCell: {x: 9, y: 8}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}

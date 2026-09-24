@@ -632,7 +632,7 @@ MonoBehaviour:
   - name: Piece 7
     visualId: 
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
-    origin: {x: 14, y: 14}
+    origin: {x: 18, y: 14}
     quarterTurns: 0
     specialBlockType: 1
     frozenMoveCount: 7
@@ -1100,233 +1100,177 @@ MonoBehaviour:
   - name: Obstacle 15
     usesGridCells: 1
     gridCell: {x: 6, y: 1}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Obstacle 16
     usesGridCells: 1
     gridCell: {x: 6, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 15
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 1, y: 9}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 16
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 0, y: 9}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 17
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 0, y: 8}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 18
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 0, y: 7}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 19
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 1, y: 8}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 20
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 2, y: 8}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 21
     usesGridCells: 0
-    gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    gridCell: {x: 0, y: 6}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 2, y: 9}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 22
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 3, y: 8}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 23
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 3, y: 9}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 24
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 3, y: 7}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 25
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 3, y: 11}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 26
     usesGridCells: 0
-    gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    gridCell: {x: 2, y: 5}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 2, y: 11}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 27
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 1, y: 11}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Thin Obstacle 28
     usesGridCells: 0
     gridCell: {x: 0, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 0, y: 11}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Obstacle 29
-    usesGridCells: 1
+    usesGridCells: 0
     gridCell: {x: 4, y: 2}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   - name: Obstacle 30
-    usesGridCells: 1
+    usesGridCells: 0
     gridCell: {x: 4, y: 1}
-    sizeInGridCells: {x: 1, y: 1}
+    sizeInGridCells: {x: 0, y: 0}
     centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
+    sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 31
-    usesGridCells: 1
-    gridCell: {x: 4, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 28
-    usesGridCells: 1
-    gridCell: {x: 2, y: 6}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 30
-    usesGridCells: 1
-    gridCell: {x: 3, y: 5}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 31
-    usesGridCells: 1
-    gridCell: {x: 3, y: 6}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 32
-    usesGridCells: 1
-    gridCell: {x: 7, y: 1}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 33
-    usesGridCells: 1
-    gridCell: {x: 7, y: 0}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 33
-    usesGridCells: 1
-    gridCell: {x: 2, y: 5}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+    color: {r: 0, g: 0, b: 0, a: 0}
   shredders:
-  - name: Shredder 1
-    cell: {x: 5, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 2
-    cell: {x: 8, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
+  - name: 
+    cell: {x: 0, y: 0}
+    radiusInFineCells: 0
+    rotationSpeed: 0
     clockwise: 0
-  - name: Shredder 3
-    cell: {x: 11, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 4
-    cell: {x: 13, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
+  - name: 
+    cell: {x: 0, y: 0}
+    radiusInFineCells: 0
+    rotationSpeed: 0
     clockwise: 0
-  - name: Shredder 5
-    cell: {x: 9, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
+  - name: 
+    cell: {x: 0, y: 0}
+    radiusInFineCells: 0
+    rotationSpeed: 0
+    clockwise: 0
+  - name: 
+    cell: {x: 0, y: 0}
+    radiusInFineCells: 0
+    rotationSpeed: 0
+    clockwise: 0
+  - name: 
+    cell: {x: 0, y: 0}
+    radiusInFineCells: 0
+    rotationSpeed: 0
+    clockwise: 0
   - name: Shredder 6
     cell: {x: 6, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
+    radiusInFineCells: 0
+    rotationSpeed: 0
     clockwise: 0
   - name: Shredder 7
     cell: {x: 15, y: 0}
