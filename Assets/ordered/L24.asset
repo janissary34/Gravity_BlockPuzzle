@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelName: New Level
   timeLimit: 120
-  boardColumns: 9
+  boardColumns: 8
   boardRows: 9
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
@@ -775,39 +775,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
-    cells:
-    - localCell: {x: 14, y: 14}
-      type: 0
-    - localCell: {x: 15, y: 14}
-      type: 0
-    - localCell: {x: 16, y: 14}
-      type: 0
-    - localCell: {x: 17, y: 14}
-      type: 0
-    - localCell: {x: 14, y: 15}
-      type: 0
-    - localCell: {x: 15, y: 15}
-      type: 0
-    - localCell: {x: 16, y: 15}
-      type: 0
-    - localCell: {x: 17, y: 15}
-      type: 0
-    - localCell: {x: 14, y: 16}
-      type: 0
-    - localCell: {x: 15, y: 16}
-      type: 0
-    - localCell: {x: 16, y: 16}
-      type: 0
-    - localCell: {x: 17, y: 16}
-      type: 0
-    - localCell: {x: 14, y: 17}
-      type: 0
-    - localCell: {x: 15, y: 17}
-      type: 0
-    - localCell: {x: 16, y: 17}
-      type: 0
-    - localCell: {x: 17, y: 17}
-      type: 0
+    cells: []
   - name: Piece 8
     visualId: 
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
@@ -1361,102 +1329,6 @@ MonoBehaviour:
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 22
-    usesGridCells: 1
-    gridCell: {x: 8, y: 6}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 23
-    usesGridCells: 1
-    gridCell: {x: 8, y: 7}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 24
-    usesGridCells: 1
-    gridCell: {x: 8, y: 5}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 25
-    usesGridCells: 1
-    gridCell: {x: 8, y: 4}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 26
-    usesGridCells: 1
-    gridCell: {x: 8, y: 3}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 27
-    usesGridCells: 1
-    gridCell: {x: 8, y: 2}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 28
-    usesGridCells: 1
-    gridCell: {x: 8, y: 1}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  shredders:
-  - name: Shredder 1
-    cell: {x: 1, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 2
-    cell: {x: 5, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 3
-    cell: {x: 9, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 4
-    cell: {x: 14, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 5
-    cell: {x: 17, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 6
-    cell: {x: 22, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
-  - name: Shredder 7
-    cell: {x: 25, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 1
-  - name: Shredder 8
-    cell: {x: 30, y: 0}
-    radiusInFineCells: 1.7
-    rotationSpeed: 220
-    clockwise: 0
+  shredders: []
   inactiveBoardCells: []
   inactiveFineCells: []

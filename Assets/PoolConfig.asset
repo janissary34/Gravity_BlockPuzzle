@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: PoolConfig
   m_EditorClassIdentifier: 
   blockPieceCapacity: 50
-  shredVoxelCapacity: 6800
+  shredVoxelCapacity: 1200
   progressVoxelCapacity: 96
   useVoxelShardGrid: 1
-  voxelSubdivisions: 20
+  voxelSubdivisions: 8

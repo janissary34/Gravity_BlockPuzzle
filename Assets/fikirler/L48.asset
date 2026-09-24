@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
-  m_Name: fikir - 22
+  m_Name: L48
   m_EditorClassIdentifier: 
   levelName: New Level
   timeLimit: 200
   boardColumns: 6
-  boardRows: 14
+  boardRows: 12
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
@@ -38,17 +38,17 @@ MonoBehaviour:
   - name: Piece 1
     visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
-    specialBlockType: 0
+    specialBlockType: 2
     frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
-    bombTimerSeconds: 10
-    bombCounterFontSize: 36
+    bombTimerSeconds: 30
+    bombCounterFontSize: 20
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
@@ -89,7 +89,7 @@ MonoBehaviour:
   - name: Piece 2
     visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -172,7 +172,7 @@ MonoBehaviour:
   - name: Piece 3
     visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
-    origin: {x: 12, y: 14}
+    origin: {x: 12, y: 6}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -242,7 +242,7 @@ MonoBehaviour:
   - name: Piece 5
     visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -325,7 +325,7 @@ MonoBehaviour:
   - name: Piece 6
     visualId: 
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -408,7 +408,7 @@ MonoBehaviour:
   - name: Piece 7
     visualId: 
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -459,7 +459,7 @@ MonoBehaviour:
   - name: Piece 8
     visualId: 
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -574,7 +574,7 @@ MonoBehaviour:
   - name: Piece 9
     visualId: 
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -753,7 +753,7 @@ MonoBehaviour:
   - name: Piece 10
     visualId: 
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 1
     frozenMoveCount: 5
@@ -804,7 +804,7 @@ MonoBehaviour:
   - name: Piece 11
     visualId: 
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -855,7 +855,7 @@ MonoBehaviour:
   - name: Piece 12
     visualId: 
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
-    origin: {x: 12, y: 18}
+    origin: {x: 12, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -925,7 +925,7 @@ MonoBehaviour:
   - name: Piece 14
     visualId: 
     color: {r: 0.3, g: 1, b: 0.8739998, a: 1}
-    origin: {x: 12, y: 28}
+    origin: {x: 12, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1040,7 +1040,7 @@ MonoBehaviour:
   - name: Piece 15
     visualId: 
     color: {r: 0.3, g: 0.32800016, b: 1, a: 1}
-    origin: {x: 12, y: 28}
+    origin: {x: 12, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -1228,11 +1228,311 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
+  - name: Piece 20
+    visualId: 
+    color: {r: 1, g: 0.35465115, b: 0.2980392, a: 1}
+    origin: {x: 4, y: 40}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 0, y: 0}
+      type: 0
+    - localCell: {x: 1, y: 0}
+      type: 0
+    - localCell: {x: 2, y: 0}
+      type: 0
+    - localCell: {x: 3, y: 0}
+      type: 0
+    - localCell: {x: 0, y: 1}
+      type: 0
+    - localCell: {x: 1, y: 1}
+      type: 0
+    - localCell: {x: 2, y: 1}
+      type: 0
+    - localCell: {x: 3, y: 1}
+      type: 0
+    - localCell: {x: 0, y: 2}
+      type: 0
+    - localCell: {x: 1, y: 2}
+      type: 0
+    - localCell: {x: 2, y: 2}
+      type: 0
+    - localCell: {x: 3, y: 2}
+      type: 0
+    - localCell: {x: 0, y: 3}
+      type: 0
+    - localCell: {x: 1, y: 3}
+      type: 0
+    - localCell: {x: 2, y: 3}
+      type: 0
+    - localCell: {x: 3, y: 3}
+      type: 0
+    - localCell: {x: 0, y: -4}
+      type: 0
+    - localCell: {x: 1, y: -4}
+      type: 0
+    - localCell: {x: 2, y: -4}
+      type: 0
+    - localCell: {x: 3, y: -4}
+      type: 0
+    - localCell: {x: 0, y: -3}
+      type: 0
+    - localCell: {x: 1, y: -3}
+      type: 0
+    - localCell: {x: 2, y: -3}
+      type: 0
+    - localCell: {x: 3, y: -3}
+      type: 0
+    - localCell: {x: 0, y: -2}
+      type: 0
+    - localCell: {x: 1, y: -2}
+      type: 0
+    - localCell: {x: 2, y: -2}
+      type: 0
+    - localCell: {x: 3, y: -2}
+      type: 0
+    - localCell: {x: 0, y: -1}
+      type: 0
+    - localCell: {x: 1, y: -1}
+      type: 0
+    - localCell: {x: 2, y: -1}
+      type: 0
+    - localCell: {x: 3, y: -1}
+      type: 0
+  - name: Piece 21
+    visualId: 
+    color: {r: 0.8599998, g: 0.3, b: 1, a: 1}
+    origin: {x: 16, y: 36}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 0, y: 0}
+      type: 0
+    - localCell: {x: 1, y: 0}
+      type: 0
+    - localCell: {x: 2, y: 0}
+      type: 0
+    - localCell: {x: 3, y: 0}
+      type: 0
+    - localCell: {x: 0, y: 1}
+      type: 0
+    - localCell: {x: 1, y: 1}
+      type: 0
+    - localCell: {x: 2, y: 1}
+      type: 0
+    - localCell: {x: 3, y: 1}
+      type: 0
+    - localCell: {x: 0, y: 2}
+      type: 0
+    - localCell: {x: 1, y: 2}
+      type: 0
+    - localCell: {x: 2, y: 2}
+      type: 0
+    - localCell: {x: 3, y: 2}
+      type: 0
+    - localCell: {x: 0, y: 3}
+      type: 0
+    - localCell: {x: 1, y: 3}
+      type: 0
+    - localCell: {x: 2, y: 3}
+      type: 0
+    - localCell: {x: 3, y: 3}
+      type: 0
+    - localCell: {x: 4, y: 0}
+      type: 0
+    - localCell: {x: 5, y: 0}
+      type: 0
+    - localCell: {x: 6, y: 0}
+      type: 0
+    - localCell: {x: 7, y: 0}
+      type: 0
+    - localCell: {x: 4, y: 1}
+      type: 0
+    - localCell: {x: 5, y: 1}
+      type: 0
+    - localCell: {x: 6, y: 1}
+      type: 0
+    - localCell: {x: 7, y: 1}
+      type: 0
+    - localCell: {x: 4, y: 2}
+      type: 0
+    - localCell: {x: 5, y: 2}
+      type: 0
+    - localCell: {x: 6, y: 2}
+      type: 0
+    - localCell: {x: 7, y: 2}
+      type: 0
+    - localCell: {x: 4, y: 3}
+      type: 0
+    - localCell: {x: 5, y: 3}
+      type: 0
+    - localCell: {x: 6, y: 3}
+      type: 0
+    - localCell: {x: 7, y: 3}
+      type: 0
+  - name: Piece 22
+    visualId: 
+    color: {r: 1, g: 0.6831697, b: 0.2980392, a: 1}
+    origin: {x: 12, y: 32}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 0, y: 0}
+      type: 0
+    - localCell: {x: 1, y: 0}
+      type: 0
+    - localCell: {x: 2, y: 0}
+      type: 0
+    - localCell: {x: 3, y: 0}
+      type: 0
+    - localCell: {x: 0, y: 1}
+      type: 0
+    - localCell: {x: 1, y: 1}
+      type: 0
+    - localCell: {x: 2, y: 1}
+      type: 0
+    - localCell: {x: 3, y: 1}
+      type: 0
+    - localCell: {x: 0, y: 2}
+      type: 0
+    - localCell: {x: 1, y: 2}
+      type: 0
+    - localCell: {x: 2, y: 2}
+      type: 0
+    - localCell: {x: 3, y: 2}
+      type: 0
+    - localCell: {x: 0, y: 3}
+      type: 0
+    - localCell: {x: 1, y: 3}
+      type: 0
+    - localCell: {x: 2, y: 3}
+      type: 0
+    - localCell: {x: 3, y: 3}
+      type: 0
+    - localCell: {x: 4, y: 0}
+      type: 0
+    - localCell: {x: 5, y: 0}
+      type: 0
+    - localCell: {x: 6, y: 0}
+      type: 0
+    - localCell: {x: 7, y: 0}
+      type: 0
+    - localCell: {x: 4, y: 1}
+      type: 0
+    - localCell: {x: 5, y: 1}
+      type: 0
+    - localCell: {x: 6, y: 1}
+      type: 0
+    - localCell: {x: 7, y: 1}
+      type: 0
+    - localCell: {x: 4, y: 2}
+      type: 0
+    - localCell: {x: 5, y: 2}
+      type: 0
+    - localCell: {x: 6, y: 2}
+      type: 0
+    - localCell: {x: 7, y: 2}
+      type: 0
+    - localCell: {x: 4, y: 3}
+      type: 0
+    - localCell: {x: 5, y: 3}
+      type: 0
+    - localCell: {x: 6, y: 3}
+      type: 0
+    - localCell: {x: 7, y: 3}
+      type: 0
+  - name: Piece 23
+    visualId: 
+    color: {r: 0.94400024, g: 1, b: 0.3, a: 1}
+    origin: {x: 16, y: 28}
+    quarterTurns: 0
+    specialBlockType: 1
+    frozenMoveCount: 12
+    iceCounterFontSize: 20
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 0, y: 0}
+      type: 0
+    - localCell: {x: 1, y: 0}
+      type: 0
+    - localCell: {x: 2, y: 0}
+      type: 0
+    - localCell: {x: 3, y: 0}
+      type: 0
+    - localCell: {x: 0, y: 1}
+      type: 0
+    - localCell: {x: 1, y: 1}
+      type: 0
+    - localCell: {x: 2, y: 1}
+      type: 0
+    - localCell: {x: 3, y: 1}
+      type: 0
+    - localCell: {x: 0, y: 2}
+      type: 0
+    - localCell: {x: 1, y: 2}
+      type: 0
+    - localCell: {x: 2, y: 2}
+      type: 0
+    - localCell: {x: 3, y: 2}
+      type: 0
+    - localCell: {x: 0, y: 3}
+      type: 0
+    - localCell: {x: 1, y: 3}
+      type: 0
+    - localCell: {x: 2, y: 3}
+      type: 0
+    - localCell: {x: 3, y: 3}
+      type: 0
   pins: []
   obstacles:
   - name: Obstacle 5
     usesGridCells: 1
-    gridCell: {x: 0, y: 3}
+    gridCell: {x: 0, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1240,7 +1540,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 6
     usesGridCells: 1
-    gridCell: {x: 1, y: 3}
+    gridCell: {x: 1, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1248,7 +1548,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 7
     usesGridCells: 1
-    gridCell: {x: 2, y: 3}
+    gridCell: {x: 2, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1256,7 +1556,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 8
     usesGridCells: 1
-    gridCell: {x: 5, y: 3}
+    gridCell: {x: 5, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1264,7 +1564,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 9
     usesGridCells: 1
-    gridCell: {x: 0, y: 5}
+    gridCell: {x: 0, y: 3}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1272,39 +1572,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 10
     usesGridCells: 1
-    gridCell: {x: 2, y: 6}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 7
-    usesGridCells: 1
-    gridCell: {x: 0, y: 9}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 8
-    usesGridCells: 1
-    gridCell: {x: 1, y: 9}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 9
-    usesGridCells: 1
-    gridCell: {x: 2, y: 9}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 10
-    usesGridCells: 1
-    gridCell: {x: 3, y: 9}
+    gridCell: {x: 2, y: 4}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -1312,7 +1580,39 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 11
     usesGridCells: 1
-    gridCell: {x: 5, y: 12}
+    gridCell: {x: 5, y: 10}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 8
+    usesGridCells: 1
+    gridCell: {x: 0, y: 7}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 9
+    usesGridCells: 1
+    gridCell: {x: 1, y: 7}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 10
+    usesGridCells: 1
+    gridCell: {x: 2, y: 7}
+    sizeInGridCells: {x: 1, y: 1}
+    centreCell: {x: 0, y: 0}
+    sizeInFineCells: {x: 1, y: 1}
+    quarterTurns: 0
+    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
+  - name: Obstacle 11
+    usesGridCells: 1
+    gridCell: {x: 3, y: 7}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}

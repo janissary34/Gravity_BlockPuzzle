@@ -59,11 +59,54 @@ namespace GravityPuzzle
                 if (piece == null || piece.cells == null)
                     continue;
 
+                int fineCellsPerBoardBlock = level.subdivisions * level.subdivisions;
+                Dictionary<Vector2Int, int> blockCounts = new Dictionary<Vector2Int, int>();
                 for (int cellIndex = 0; cellIndex < piece.cells.Count; cellIndex++)
                 {
-                    if (piece.cells[cellIndex].type == PieceCellType.Block)
-                        total += voxelsPerCell;
+                    PieceCellDefinition cell = piece.cells[cellIndex];
+                    if (cell.type != PieceCellType.Block)
+                        continue;
+
+                    Vector2Int absolute = piece.origin +
+                        QuarterTurnUtility.Rotate(cell.localCell, piece.quarterTurns);
+                    Vector2Int boardBlock = new Vector2Int(
+                        Mathf.FloorToInt((float)absolute.x / level.subdivisions),
+                        Mathf.FloorToInt((float)absolute.y / level.subdivisions));
+                    blockCounts.TryGetValue(boardBlock, out int count);
+                    blockCounts[boardBlock] = count + 1;
                 }
+
+                int completeBoardBlocks = 0;
+                foreach (KeyValuePair<Vector2Int, int> blockCount in blockCounts)
+                {
+                    if (blockCount.Value == fineCellsPerBoardBlock)
+                        completeBoardBlocks++;
+                }
+
+                // RuntimePieceFactory merges every complete authored board block
+                // into one visible slot before it creates its voxel grid. Count
+                // those slots once, not once per source fine cell; otherwise the
+                // prewarm pool is subdivisions² too large.
+                int presentationPartCount = completeBoardBlocks;
+                for (int cellIndex = 0; cellIndex < piece.cells.Count; cellIndex++)
+                {
+                    PieceCellDefinition cell = piece.cells[cellIndex];
+                    if (cell.type != PieceCellType.Block)
+                    {
+                        presentationPartCount++;
+                        continue;
+                    }
+
+                    Vector2Int absolute = piece.origin +
+                        QuarterTurnUtility.Rotate(cell.localCell, piece.quarterTurns);
+                    Vector2Int boardBlock = new Vector2Int(
+                        Mathf.FloorToInt((float)absolute.x / level.subdivisions),
+                        Mathf.FloorToInt((float)absolute.y / level.subdivisions));
+                    if (blockCounts[boardBlock] != fineCellsPerBoardBlock)
+                        presentationPartCount++;
+                }
+
+                total += presentationPartCount * voxelsPerCell;
             }
 
             return total;
