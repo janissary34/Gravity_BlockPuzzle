@@ -330,16 +330,19 @@ namespace GravityPuzzle.Editor
                     new GUIContent("Visual Id", "Optional key resolved through Piece Visual Config."),
                     piece.visualId);
                 Vector2Int newOrigin = EditorGUILayout.Vector2IntField("Origin", piece.origin);
-                int newRotation = piece.quarterTurns;
+                int rotationSteps = 0;
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Rotation", GUILayout.Width(EditorGUIUtility.labelWidth - 4f));
                 if (GUILayout.Button("Rotate 90°"))
-                    newRotation = (piece.quarterTurns + 1) % 4;
+                    rotationSteps = 1;
                 if (GUILayout.Button("Rotate 180°"))
-                    newRotation = (piece.quarterTurns + 2) % 4;
+                    rotationSteps = 2;
                 GUILayout.EndHorizontal();
-                if (newRotation != piece.quarterTurns)
-                    newOrigin = RotatePieceOriginAroundOwnCentre(piece, newOrigin, newRotation, level.subdivisions);
+                if (rotationSteps > 0)
+                {
+                    RotatePieceCells(piece, rotationSteps);
+                    return;
+                }
                 PieceSpecialBlockType resolvedSpecialType = piece.specialBlockType == PieceSpecialBlockType.Normal &&
                                                             piece.frozenMoveCount > 0
                     ? PieceSpecialBlockType.Ice
@@ -396,7 +399,7 @@ namespace GravityPuzzle.Editor
 
                 if (newName != piece.name || newColor != piece.color ||
                     newVisualId != piece.visualId ||
-                    newOrigin != piece.origin || newRotation != piece.quarterTurns ||
+                    newOrigin != piece.origin ||
                     newSpecialBlockType != resolvedSpecialType ||
                     newFrozenMoveCount != piece.frozenMoveCount ||
                     !Mathf.Approximately(newCounterFontSize, piece.iceCounterFontSize) ||
@@ -416,7 +419,6 @@ namespace GravityPuzzle.Editor
                     piece.color = newColor;
                     piece.visualId = newVisualId;
                     piece.origin = newOrigin;
-                    piece.quarterTurns = newRotation;
                     piece.specialBlockType = newSpecialBlockType;
                     piece.frozenMoveCount = newFrozenMoveCount;
                     piece.iceCounterFontSize = newCounterFontSize;
@@ -1403,49 +1405,58 @@ namespace GravityPuzzle.Editor
             MarkDirty();
         }
 
-        private static Vector2Int RotatePieceOriginAroundOwnCentre(
-            PieceDefinition piece,
-            Vector2Int currentOrigin,
-            int newQuarterTurns,
-            int subdivisions)
+        private void RotatePieceCells(PieceDefinition piece, int quarterTurns)
         {
-            GetPieceRotatedBounds(piece, piece.quarterTurns, out Vector2Int currentMinimum, out Vector2Int currentMaximum);
-            GetPieceRotatedBounds(piece, newQuarterTurns, out Vector2Int nextMinimum, out Vector2Int nextMaximum);
-
-            // Cell centres, rather than their lower-left grid coordinates, define
-            // the visual pivot. This keeps modular pieces on the fine grid.
-            Vector2Int currentCentreDoubled = currentOrigin * 2 + currentMinimum + currentMaximum + Vector2Int.one;
-            Vector2Int nextLocalCentreDoubled = nextMinimum + nextMaximum + Vector2Int.one;
-            Vector2Int centrePreservingOrigin = new Vector2Int(
-                Mathf.RoundToInt((currentCentreDoubled.x - nextLocalCentreDoubled.x) * .5f),
-                Mathf.RoundToInt((currentCentreDoubled.y - nextLocalCentreDoubled.y) * .5f));
-            Vector2Int intendedBoundMinimum = centrePreservingOrigin + nextMinimum;
-            int gridSize = Mathf.Max(1, subdivisions);
-            Vector2Int snappedBoundMinimum = new Vector2Int(
-                Mathf.RoundToInt((float)intendedBoundMinimum.x / gridSize) * gridSize,
-                Mathf.RoundToInt((float)intendedBoundMinimum.y / gridSize) * gridSize);
-            return snappedBoundMinimum - nextMinimum;
-        }
-
-        private static void GetPieceRotatedBounds(
-            PieceDefinition piece,
-            int quarterTurns,
-            out Vector2Int minimum,
-            out Vector2Int maximum)
-        {
-            minimum = Vector2Int.zero;
-            maximum = Vector2Int.zero;
             if (piece.cells == null || piece.cells.Count == 0)
                 return;
 
-            minimum = QuarterTurnUtility.Rotate(piece.cells[0].localCell, quarterTurns);
-            maximum = minimum;
-            for (int index = 1; index < piece.cells.Count; index++)
+            GetPieceFineBounds(piece, out Vector2Int currentMinimum, out Vector2Int currentMaximum);
+            int currentWidth = currentMaximum.x - currentMinimum.x + 1;
+            int currentHeight = currentMaximum.y - currentMinimum.y + 1;
+            int turns = (quarterTurns % 4 + 4) % 4;
+            List<PieceCellDefinition> rotatedCells = new List<PieceCellDefinition>(piece.cells.Count);
+
+            for (int index = 0; index < piece.cells.Count; index++)
             {
-                Vector2Int rotated = QuarterTurnUtility.Rotate(piece.cells[index].localCell, quarterTurns);
-                minimum = Vector2Int.Min(minimum, rotated);
-                maximum = Vector2Int.Max(maximum, rotated);
+                PieceCellDefinition source = piece.cells[index];
+                Vector2Int absolute = piece.origin + QuarterTurnUtility.Rotate(source.localCell, piece.quarterTurns);
+                Vector2Int rotated = absolute - currentMinimum;
+                int width = currentWidth;
+                int height = currentHeight;
+                for (int turn = 0; turn < turns; turn++)
+                {
+                    rotated = new Vector2Int(height - 1 - rotated.y, rotated.x);
+                    int previousWidth = width;
+                    width = height;
+                    height = previousWidth;
+                }
+                rotatedCells.Add(new PieceCellDefinition(rotated, source.type));
             }
+
+            if (turns % 2 != 0)
+            {
+                int previousWidth = currentWidth;
+                currentWidth = currentHeight;
+                currentHeight = previousWidth;
+            }
+
+            // The centre is preserved as closely as the modular grid allows,
+            // then the rotated bounding box is snapped to a complete board cell.
+            Vector2Int currentCentreDoubled = currentMinimum + currentMaximum + Vector2Int.one;
+            Vector2Int nextCentreLocalDoubled = new Vector2Int(currentWidth, currentHeight);
+            Vector2Int intendedMinimum = new Vector2Int(
+                Mathf.RoundToInt((currentCentreDoubled.x - nextCentreLocalDoubled.x) * .5f),
+                Mathf.RoundToInt((currentCentreDoubled.y - nextCentreLocalDoubled.y) * .5f));
+            int gridSize = Mathf.Max(1, level.subdivisions);
+            Vector2Int snappedMinimum = new Vector2Int(
+                Mathf.RoundToInt((float)intendedMinimum.x / gridSize) * gridSize,
+                Mathf.RoundToInt((float)intendedMinimum.y / gridSize) * gridSize);
+
+            Undo.RecordObject(level, "Rotate puzzle piece");
+            piece.cells = rotatedCells;
+            piece.origin = snappedMinimum;
+            piece.quarterTurns = 0;
+            MarkDirty();
         }
 
         private void CreateNewLevel()

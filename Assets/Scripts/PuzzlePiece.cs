@@ -1003,6 +1003,7 @@ namespace GravityPuzzle
                 renderer.enabled = shredderPresentationEnabledStates[index];
                 renderer.maskInteraction = shredderPresentationMaskStates[index];
                 renderer.sortingOrder = shredderPresentationSortingOrders[index];
+                renderer.SetPropertyBlock(null);
             }
 
             shredderPresentationRenderers = null;

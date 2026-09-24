@@ -151,14 +151,15 @@ namespace GravityPuzzle
                 : null);
             Rigidbody2D rb = piece.Body;
 
-            // 2. Sprite Masking / Visual Clipping: mask out any portion moving below shredderY
+            // 2. Capture the current presentation before the feed mask begins
+            // clipping the piece beneath the cutter.
             SpriteRenderer[] pieceRenderers = piece.ConfiguredShredderRenderers ?? EmptyRenderers;
             piece.BeginShredderPresentation(pieceRenderers);
+            piece.ApplyShredderPresentationClipping();
             // The lead piece stays in front. Followers preserve their vertical
             // spacing and use one shared rear layer, so a deep valid queue
             // cannot disappear behind the board background.
             piece.SetShredderPresentationDepth(feedDepth > 0 ? -10 : 0);
-            piece.ApplyShredderPresentationClipping();
             // Always use the authored PuzzlePiece colour for debris and UI voxels.
             // Renderer colours can be temporarily changed by selection or masking.
             Color tileColor = Opaque(piece.VisualColor);
@@ -283,8 +284,9 @@ namespace GravityPuzzle
                 int activeCount = 0;
                 float topY = float.NegativeInfinity;
 
-                foreach (var r in pieceRenderers)
+                for (int rendererIndex = 0; rendererIndex < pieceRenderers.Length; rendererIndex++)
                 {
+                    SpriteRenderer r = pieceRenderers[rendererIndex];
                     if (r == null || !r.enabled || r.gameObject.name.StartsWith("Selected Fill") || r.gameObject.name.StartsWith("White Selection"))
                         continue;
 
@@ -325,7 +327,8 @@ namespace GravityPuzzle
                 }
 
                 // 4. Clean Object Destruction: destroy immediately as top edge drops below shredderY
-                bool topBelowShredder = topY != float.NegativeInfinity && topY <= shredderY;
+                bool topBelowShredder = topY != float.NegativeInfinity &&
+                                        topY <= shredderY;
                 bool allShardsDone = shardList.Count == 0 || processedShards.Count >= shardList.Count;
 
                 if (topBelowShredder || (allShardsDone && activeCount == 0))
