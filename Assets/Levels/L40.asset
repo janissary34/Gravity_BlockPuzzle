@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: L40
   m_EditorClassIdentifier: 
   levelName: New Level
-  timeLimit: 60
+  timeLimit: 120
   boardColumns: 12
   boardRows: 8
   subdivisions: 4
@@ -1580,7 +1580,7 @@ MonoBehaviour:
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
-    bombTimerSeconds: 120
+    bombTimerSeconds: 70
     bombCounterFontSize: 15
     bombCounterTextColor: {r: 0.1215686, g: 0.9490196, b: 0.7279663, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1631,7 +1631,7 @@ MonoBehaviour:
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
-    bombTimerSeconds: 100
+    bombTimerSeconds: 60
     bombCounterFontSize: 15
     bombCounterTextColor: {r: 0.1215686, g: 0.22911799, b: 0.9490196, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
