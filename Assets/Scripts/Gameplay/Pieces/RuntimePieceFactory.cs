@@ -17,7 +17,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         public Vector2 LocalPosition { get; }
         public Vector2 Size { get; }
     }
-
+    //arda
     public static class RuntimePieceFactory
     {
         private const string GridBlockName = "Grid Block";
@@ -241,6 +241,13 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         private static void ConfigureBody(Rigidbody2D body, GravityLevelDefinition level)
         {
+            // This root is pooled. PrepareRoot has already assigned the new
+            // authored transform position, but a Rigidbody2D can still retain
+            // the physics pose from its previous owner until it is explicitly
+            // updated. Grid-fall tweens drive the Rigidbody2D, so leaving that
+            // stale pose in place makes a newly spawned piece travel sideways
+            // towards its grid target and visibly pass through neighbours.
+            body.position = body.transform.position;
             body.simulated = true;
             body.gravityScale = level.gravityScale;
             body.mass = 1f;

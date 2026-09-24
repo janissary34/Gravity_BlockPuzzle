@@ -330,6 +330,14 @@ namespace GravityPuzzle
             if (gridReleasePresentationPiece != null)
                 return gridFallingPieces.Count > 0;
 
+            // The grid commits a fall destination before its presentation tween
+            // completes. Starting another fall against that future occupancy
+            // makes otherwise legal pieces visually pass through one another.
+            // A fall therefore owns presentation until it reaches its committed
+            // anchor; the next move is planned from that settled visual state.
+            if (gridFallingPieces.Count > 0)
+                return true;
+
             PrototypeBoard activeBoard = PrototypeBoard.Active;
             LevelBoardSnapshot snapshot = activeBoard != null
                 ? activeBoard.BoardSnapshot
@@ -337,11 +345,6 @@ namespace GravityPuzzle
             if (snapshot == null)
                 return gridFallingPieces.Count > 0;
 
-            // Per-piece cascade: do not gate on gridFallingPieces so that new
-            // independent moves can be planned and started while other pieces
-            // are still animating.  Pieces already falling have already been
-            // committed to their target anchors in the grid, so TryGetFallTarget
-            // will not double-assign the same cell.
             if (pendingGridGravityMoves.Count == 0)
                 TryBuildSettledGridGravityPlan(activeBoard, snapshot);
 
@@ -408,28 +411,22 @@ namespace GravityPuzzle
             PrototypeBoard activeBoard,
             LevelBoardSnapshot snapshot)
         {
-            int remainingMoveBudget = snapshot.Pieces.Count;
-            while (remainingMoveBudget-- > 0 &&
-                   GridGravityPlanner.TryPlanNextMove(
-                       snapshot,
-                       IsEligibleForGridGravity,
-                       out GridGravityMove move))
-            {
-                PuzzlePiece piece = FindActivePiece(move.PieceId);
-                if (piece == null || piece.IsFrozen || piece.IsBeingShredded ||
-                    piece.GridFallView == null || !piece.GridFallView.CanPlay ||
-                    !activeBoard.TryCommitGridGravityMove(move, out _))
-                {
-                    // A failed commit means the snapshot changed while this
-                    // cascade was being assembled. Keep the already committed
-                    // moves and retry from a fresh snapshot next gravity tick.
-                    break;
-                }
+            if (!GridGravityPlanner.TryPlanNextMove(
+                    snapshot,
+                    IsEligibleForGridGravity,
+                    out GridGravityMove move))
+                return false;
 
-                pendingGridGravityMoves.Enqueue(move);
+            PuzzlePiece piece = FindActivePiece(move.PieceId);
+            if (piece == null || piece.IsFrozen || piece.IsBeingShredded ||
+                piece.GridFallView == null || !piece.GridFallView.CanPlay ||
+                !activeBoard.TryCommitGridGravityMove(move, out _))
+            {
+                return false;
             }
 
-            return pendingGridGravityMoves.Count > 0;
+            pendingGridGravityMoves.Enqueue(move);
+            return true;
         }
 
         private static bool IsEligibleForGridGravity(PieceModel model)
@@ -457,44 +454,39 @@ namespace GravityPuzzle
                 return false;
             }
 
-            bool playedAnyMove = false;
-            while (pendingGridGravityMoves.Count > 0)
+            if (pendingGridGravityMoves.Count == 0)
+                return false;
+
+            GridGravityMove move = pendingGridGravityMoves.Dequeue();
+            PuzzlePiece piece = FindActivePiece(move.PieceId);
+            if (piece == null || piece.IsFrozen || piece.IsBeingShredded ||
+                piece.GridFallView == null || !piece.GridFallView.CanPlay ||
+                !snapshot.TryGetPiece(move.PieceId, out PieceModel model))
             {
-                GridGravityMove move = pendingGridGravityMoves.Dequeue();
-                PuzzlePiece piece = FindActivePiece(move.PieceId);
-                if (piece == null || piece.IsFrozen || piece.IsBeingShredded ||
-                    piece.GridFallView == null || !piece.GridFallView.CanPlay ||
-                    !snapshot.TryGetPiece(move.PieceId, out PieceModel model))
-                {
-                    pendingGridGravityMoves.Clear();
-                    break;
-                }
-
-                GridCoordinate targetPivot = new GridCoordinate(
-                    move.ToAnchor.X - model.PivotOffset.X,
-                    move.ToAnchor.Y - model.PivotOffset.Y);
-                PrepareKinematicBody(piece.Body);
-                Vector2 targetPosition = GravityLevelGridCoordinates.FineCellToWorld(level, targetPivot);
-                gridFallingPieces.Add(piece);
-                bool settlesAboveShredder = IsSettlingAboveShredderReservation(snapshot, model);
-                bool played = settlesAboveShredder
-                    ? piece.GridFallView.PlayReleaseTo(
-                        targetPosition,
-                        () => CompleteGridGravityPresentation(piece))
-                    : piece.GridFallView.PlayFallTo(
-                        targetPosition,
-                        () => CompleteGridGravityPresentation(piece));
-                if (!played)
-                {
-                    gridFallingPieces.Remove(piece);
-                    activeBoard.TrySetPieceState(piece, PieceState.Placed);
-                    continue;
-                }
-
-                playedAnyMove = true;
+                pendingGridGravityMoves.Clear();
+                return false;
             }
 
-            return playedAnyMove;
+            GridCoordinate targetPivot = new GridCoordinate(
+                move.ToAnchor.X - model.PivotOffset.X,
+                move.ToAnchor.Y - model.PivotOffset.Y);
+            PrepareKinematicBody(piece.Body);
+            Vector2 targetPosition = GravityLevelGridCoordinates.FineCellToWorld(level, targetPivot);
+            gridFallingPieces.Add(piece);
+            bool settlesAboveShredder = IsSettlingAboveShredderReservation(snapshot, model);
+            bool played = settlesAboveShredder
+                ? piece.GridFallView.PlayReleaseTo(
+                    targetPosition,
+                    () => CompleteGridGravityPresentation(piece))
+                : piece.GridFallView.PlayFallTo(
+                    targetPosition,
+                    () => CompleteGridGravityPresentation(piece));
+            if (played)
+                return true;
+
+            gridFallingPieces.Remove(piece);
+            activeBoard.TrySetPieceState(piece, PieceState.Placed);
+            return false;
         }
 
         private static bool IsSettlingAboveShredderReservation(
