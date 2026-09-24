@@ -25,7 +25,7 @@ MonoBehaviour:
   rocketBoosterCount: 3
   hammerBoosterCount: 3
   timerBoosterCount: 3
-  useAutomaticCameraFit: 0
+  useAutomaticCameraFit: 1
   fixedCameraSize: 12
   cameraViewportWidth: 0.88
   cameraViewportHeight: 0.7

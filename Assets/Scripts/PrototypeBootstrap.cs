@@ -976,6 +976,80 @@ namespace GravityPuzzle
             return true;
         }
 
+        /// <summary>
+        /// Aligns an authored piece model with the footprint assembled on its
+        /// pooled runtime root. This is a setup-time integrity transaction:
+        /// grid rules remain model-driven after the footprint has been
+        /// committed. It prevents a generated slot layout from rendering a
+        /// different silhouette than the one gravity reserves on the board.
+        /// </summary>
+        public bool TrySynchronizeRuntimePieceGeometry(PuzzlePiece piece)
+        {
+            if (BoardSnapshot == null || piece == null ||
+                !TryGetPieceModel(piece, out PieceModel existingModel))
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null ||
+                !piece.TryCreateGridModel(level, existingModel.Id, out PieceModel runtimeModel))
+                return false;
+
+            if (HasMatchingGeometry(existingModel, runtimeModel))
+                return true;
+
+            if (existingModel.State != PieceState.Placed)
+            {
+                Debug.LogWarning(
+                    $"[GridFootprint] Cannot synchronize '{piece.name}' while it is {existingModel.State}.",
+                    this);
+                return false;
+            }
+
+            List<GridCoordinate> previousCells = new List<GridCoordinate>(existingModel.LocalCells);
+            GridCoordinate previousAnchor = existingModel.Anchor;
+            GridCoordinate previousPivotOffset = existingModel.PivotOffset;
+
+            BoardSnapshot.Grid.ClearPiece(existingModel);
+            existingModel.ReplaceGeometry(
+                runtimeModel.Anchor,
+                runtimeModel.PivotOffset,
+                new List<GridCoordinate>(runtimeModel.LocalCells));
+
+            if (BoardSnapshot.Grid.TryPlace(existingModel))
+            {
+                Debug.LogWarning(
+                    $"[GridFootprint] Synchronized runtime footprint for '{piece.name}' (id={existingModel.Id}).",
+                    this);
+                return true;
+            }
+
+            existingModel.ReplaceGeometry(
+                previousAnchor,
+                previousPivotOffset,
+                previousCells);
+            BoardSnapshot.Grid.TryPlace(existingModel);
+            Debug.LogError(
+                $"[GridFootprint] Runtime footprint for '{piece.name}' conflicts with the board; restored its authored footprint.",
+                this);
+            return false;
+        }
+
+        private static bool HasMatchingGeometry(PieceModel authored, PieceModel runtime)
+        {
+            if (!authored.Anchor.Equals(runtime.Anchor) ||
+                !authored.PivotOffset.Equals(runtime.PivotOffset) ||
+                authored.LocalCells.Count != runtime.LocalCells.Count)
+                return false;
+
+            for (int index = 0; index < authored.LocalCells.Count; index++)
+            {
+                if (!authored.LocalCells[index].Equals(runtime.LocalCells[index]))
+                    return false;
+            }
+
+            return true;
+        }
+
         public bool TryMovePieceOnGrid(
             PuzzlePiece piece,
             GridCoordinate targetAnchor,

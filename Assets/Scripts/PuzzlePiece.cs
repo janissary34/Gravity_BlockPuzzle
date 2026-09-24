@@ -1205,6 +1205,7 @@ namespace GravityPuzzle
 
                 if (Body != null)
                     Body.WakeUp();
+
             }
         }
 

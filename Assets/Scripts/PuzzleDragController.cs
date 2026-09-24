@@ -471,6 +471,18 @@ namespace GravityPuzzle
                 move.ToAnchor.X - model.PivotOffset.X,
                 move.ToAnchor.Y - model.PivotOffset.Y);
             PrepareKinematicBody(piece.Body);
+            // The grid owns both endpoints of a gravity move. A release tween,
+            // Rigidbody interpolation, or a pooled body's previous pose can
+            // leave the visual root fractionally (or even one fine cell)
+            // sideways from move.FromAnchor. Start every fall from the exact
+            // committed source pivot so a vertical grid move never sweeps a
+            // shifted silhouette through a neighbour or an obstacle.
+            GridCoordinate sourcePivot = new GridCoordinate(
+                move.FromAnchor.X - model.PivotOffset.X,
+                move.FromAnchor.Y - model.PivotOffset.Y);
+            MoveBody(
+                piece.Body,
+                GravityLevelGridCoordinates.FineCellToWorld(level, sourcePivot));
             Vector2 targetPosition = GravityLevelGridCoordinates.FineCellToWorld(level, targetPivot);
             gridFallingPieces.Add(piece);
             bool settlesAboveShredder = IsSettlingAboveShredderReservation(snapshot, model);
@@ -531,7 +543,22 @@ namespace GravityPuzzle
             if (piece == null || !gridFallingPieces.Remove(piece))
                 return;
 
+            SnapPieceToCommittedGridPosition(piece);
             PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Placed);
+        }
+
+        private static void SnapPieceToCommittedGridPosition(PuzzlePiece piece)
+        {
+            PrototypeBoard board = PrototypeBoard.Active;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (piece == null || piece.Body == null || board == null || level == null ||
+                !board.TryGetPieceModel(piece, out PieceModel model))
+                return;
+
+            GridCoordinate pivot = new GridCoordinate(
+                model.Anchor.X - model.PivotOffset.X,
+                model.Anchor.Y - model.PivotOffset.Y);
+            MoveBody(piece.Body, GravityLevelGridCoordinates.FineCellToWorld(level, pivot));
         }
 
         private void RemoveFinishedGridFalls()

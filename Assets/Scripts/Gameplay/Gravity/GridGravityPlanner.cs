@@ -56,6 +56,7 @@ namespace GravityPuzzle.Gameplay.Gravity
 
             return foundMove;
         }
+
     }
 
     public readonly struct GridGravityMove

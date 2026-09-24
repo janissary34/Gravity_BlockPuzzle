@@ -241,8 +241,20 @@ namespace GravityPuzzle
             foreach (PinDefinition pin in level.pins)
                 CreatePin(level, pin);
 
+            List<PuzzlePiece> runtimePieces = new List<PuzzlePiece>(level.pieces.Count);
             for (int pieceIndex = 0; pieceIndex < level.pieces.Count; pieceIndex++)
-                RuntimePieceFactory.Create(level, level.pieces[pieceIndex], pieceIndex);
+            {
+                PuzzlePiece piece = RuntimePieceFactory.Create(level, level.pieces[pieceIndex], pieceIndex);
+                if (piece != null)
+                    runtimePieces.Add(piece);
+            }
+
+            // Generated part slots are the runtime visual footprint. Reconcile
+            // it once before play starts so gravity reserves exactly what the
+            // player sees, rather than relying on an authored approximation.
+            Physics2D.SyncTransforms();
+            for (int pieceIndex = 0; pieceIndex < runtimePieces.Count; pieceIndex++)
+                boardState.TrySynchronizeRuntimePieceGeometry(runtimePieces[pieceIndex]);
 
             ValidateLevelSnapshotRuntimeState(level, boardState);
 

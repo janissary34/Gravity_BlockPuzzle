@@ -187,39 +187,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
-    cells:
-    - localCell: {x: -4, y: 14}
-      type: 0
-    - localCell: {x: -3, y: 14}
-      type: 0
-    - localCell: {x: -2, y: 14}
-      type: 0
-    - localCell: {x: -1, y: 14}
-      type: 0
-    - localCell: {x: -4, y: 15}
-      type: 0
-    - localCell: {x: -3, y: 15}
-      type: 0
-    - localCell: {x: -2, y: 15}
-      type: 0
-    - localCell: {x: -1, y: 15}
-      type: 0
-    - localCell: {x: -4, y: 16}
-      type: 0
-    - localCell: {x: -3, y: 16}
-      type: 0
-    - localCell: {x: -2, y: 16}
-      type: 0
-    - localCell: {x: -1, y: 16}
-      type: 0
-    - localCell: {x: -4, y: 17}
-      type: 0
-    - localCell: {x: -3, y: 17}
-      type: 0
-    - localCell: {x: -2, y: 17}
-      type: 0
-    - localCell: {x: -1, y: 17}
-      type: 0
+    cells: []
   - name: Piece 4
     visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
@@ -753,7 +721,7 @@ MonoBehaviour:
   - name: Piece 10
     visualId: 
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
-    origin: {x: 12, y: 10}
+    origin: {x: 12, y: 20}
     quarterTurns: 0
     specialBlockType: 1
     frozenMoveCount: 5
@@ -769,37 +737,69 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells:
-    - localCell: {x: 0, y: 10}
+    - localCell: {x: 0, y: 0}
       type: 0
-    - localCell: {x: 1, y: 10}
+    - localCell: {x: 1, y: 0}
       type: 0
-    - localCell: {x: 2, y: 10}
+    - localCell: {x: 2, y: 0}
       type: 0
-    - localCell: {x: 3, y: 10}
+    - localCell: {x: 3, y: 0}
       type: 0
-    - localCell: {x: 0, y: 11}
+    - localCell: {x: 0, y: 1}
       type: 0
-    - localCell: {x: 1, y: 11}
+    - localCell: {x: 1, y: 1}
       type: 0
-    - localCell: {x: 2, y: 11}
+    - localCell: {x: 2, y: 1}
       type: 0
-    - localCell: {x: 3, y: 11}
+    - localCell: {x: 3, y: 1}
       type: 0
-    - localCell: {x: 0, y: 12}
+    - localCell: {x: 0, y: 2}
       type: 0
-    - localCell: {x: 1, y: 12}
+    - localCell: {x: 1, y: 2}
       type: 0
-    - localCell: {x: 2, y: 12}
+    - localCell: {x: 2, y: 2}
       type: 0
-    - localCell: {x: 3, y: 12}
+    - localCell: {x: 3, y: 2}
       type: 0
-    - localCell: {x: 0, y: 13}
+    - localCell: {x: 0, y: 3}
       type: 0
-    - localCell: {x: 1, y: 13}
+    - localCell: {x: 1, y: 3}
       type: 0
-    - localCell: {x: 2, y: 13}
+    - localCell: {x: 2, y: 3}
       type: 0
-    - localCell: {x: 3, y: 13}
+    - localCell: {x: 3, y: 3}
+      type: 0
+    - localCell: {x: -4, y: 0}
+      type: 0
+    - localCell: {x: -3, y: 0}
+      type: 0
+    - localCell: {x: -2, y: 0}
+      type: 0
+    - localCell: {x: -1, y: 0}
+      type: 0
+    - localCell: {x: -4, y: 1}
+      type: 0
+    - localCell: {x: -3, y: 1}
+      type: 0
+    - localCell: {x: -2, y: 1}
+      type: 0
+    - localCell: {x: -1, y: 1}
+      type: 0
+    - localCell: {x: -4, y: 2}
+      type: 0
+    - localCell: {x: -3, y: 2}
+      type: 0
+    - localCell: {x: -2, y: 2}
+      type: 0
+    - localCell: {x: -1, y: 2}
+      type: 0
+    - localCell: {x: -4, y: 3}
+      type: 0
+    - localCell: {x: -3, y: 3}
+      type: 0
+    - localCell: {x: -2, y: 3}
+      type: 0
+    - localCell: {x: -1, y: 3}
       type: 0
   - name: Piece 11
     visualId: 
@@ -1483,7 +1483,7 @@ MonoBehaviour:
     origin: {x: 16, y: 28}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 12
+    frozenMoveCount: 11
     iceCounterFontSize: 20
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
