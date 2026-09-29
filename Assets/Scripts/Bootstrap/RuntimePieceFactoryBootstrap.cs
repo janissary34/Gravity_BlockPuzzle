@@ -40,6 +40,13 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("The sole gameplay input adapter for the active scene. Author this on the bootstrap object.")]
         [SerializeField] private PuzzleDragController puzzleDragController;
 
+        [Header("Reveal Area Presentations")]
+        [Tooltip("Optional scene-authored Box/Elevator views, bound by Area Id from the level asset.")]
+        [SerializeField] private RevealAreaPresentation[] revealAreaPresentations;
+
+        [Tooltip("Optional animation and sorting tuning for generated reveal-area covers.")]
+        [SerializeField] private RevealPresentationConfig revealPresentationConfig;
+
         [Header("Gameplay HUD")]
         [Tooltip("Text that displays the active campaign level number.")]
         [SerializeField] private TMP_Text levelDisplayText;
@@ -80,6 +87,8 @@ namespace GravityPuzzle.Bootstrap
             GravityLevelRuntime.ConfigureSceneGameplayDependencies(
                 prototypeBoard,
                 puzzleDragController);
+            GravityLevelRuntime.ConfigureRevealPresentationConfig(revealPresentationConfig);
+            RegisterRevealPresentations();
             GravityLevelDefinition selectedLevel = GravityLevelRuntime.FindLevelToPlay();
             if (selectedLevel == null)
             {
@@ -171,12 +180,24 @@ namespace GravityPuzzle.Bootstrap
                 failedLevelText.SetText("Level {0} failed", currentLevelNumber);
         }
 
+        private void RegisterRevealPresentations()
+        {
+            if (prototypeBoard == null || revealAreaPresentations == null)
+                return;
+
+            for (int index = 0; index < revealAreaPresentations.Length; index++)
+            {
+                RevealAreaPresentation presentation = revealAreaPresentations[index];
+                if (presentation != null)
+                    prototypeBoard.RegisterRevealPresentation(presentation.AreaId, presentation);
+            }
+        }
+
         private static int CountIcePieces(GravityLevelDefinition level)
         {
             int count = 0;
-            for (int index = 0; index < level.pieces.Count; index++)
+            foreach (PieceDefinition piece in level.EnumerateAllPieceDefinitions())
             {
-                PieceDefinition piece = level.pieces[index];
                 if (piece != null && piece.specialBlockType != PieceSpecialBlockType.Bomb && piece.frozenMoveCount > 0)
                     count++;
             }
@@ -276,13 +297,12 @@ namespace GravityPuzzle.Bootstrap
 
         private static int GetMaximumRequiredPartSlots(GravityLevelDefinition level)
         {
-            if (level == null || level.pieces == null)
+            if (level == null)
                 return 0;
 
             int maximum = 0;
-            for (int index = 0; index < level.pieces.Count; index++)
+            foreach (PieceDefinition piece in level.EnumerateAllPieceDefinitions())
             {
-                PieceDefinition piece = level.pieces[index];
                 if (piece != null && piece.cells != null)
                     maximum = Mathf.Max(maximum, piece.cells.Count);
             }
@@ -295,13 +315,12 @@ namespace GravityPuzzle.Bootstrap
         // the configured pool appear undersized.
         private static int CountRuntimePieceRoots(GravityLevelDefinition level)
         {
-            if (level == null || level.pieces == null)
+            if (level == null)
                 return 0;
 
             int count = 0;
-            for (int pieceIndex = 0; pieceIndex < level.pieces.Count; pieceIndex++)
+            foreach (PieceDefinition piece in level.EnumerateAllPieceDefinitions())
             {
-                PieceDefinition piece = level.pieces[pieceIndex];
                 if (piece == null || piece.cells == null)
                     continue;
 
@@ -320,12 +339,11 @@ namespace GravityPuzzle.Bootstrap
 
         private void WarnForUnresolvedVisualIds(GravityLevelDefinition level)
         {
-            if (level == null || level.pieces == null || pieceVisualConfig == null)
+            if (level == null || pieceVisualConfig == null)
                 return;
 
-            for (int index = 0; index < level.pieces.Count; index++)
+            foreach (PieceDefinition piece in level.EnumerateAllPieceDefinitions())
             {
-                PieceDefinition piece = level.pieces[index];
                 if (piece == null || string.IsNullOrWhiteSpace(piece.visualId) ||
                     pieceVisualConfig.TryGet(piece.visualId, out _))
                     continue;

@@ -598,7 +598,9 @@ namespace GravityPuzzle
             while (TryGetNextFineDragStep(out GridCoordinate step))
             {
                 GridCoordinate targetAnchor = model.Anchor.Offset(step);
-                if (!snapshot.Grid.TryMoveIgnoringPiece(model, targetAnchor, model.Id, out _))
+                PrototypeBoard activeBoard = PrototypeBoard.Active;
+                if (activeBoard == null ||
+                    !activeBoard.TryMoveDraggingPieceOnGrid(piece, targetAnchor, out _))
                 {
                     // Drop only the blocked input component. The other axis can
                     // still move this frame and no old cursor position can pull
@@ -859,14 +861,15 @@ namespace GravityPuzzle
             if (piece == null)
                 return;
 
-            PrototypeBoard.Active?.StartTimer();
-
             // A fall can be visually complete while its final presentation
             // callback has not yet converged the model back to Placed. Settle
             // only a non-animating stale fall before trying to begin a drag.
             PrototypeBoard activeBoard = PrototypeBoard.Active;
-            if (activeBoard != null &&
-                activeBoard.TryGetPieceModel(piece, out PieceModel model) &&
+            if (activeBoard == null || !activeBoard.CanBeginPieceInteraction(piece))
+                return;
+
+            activeBoard.StartTimer();
+            if (activeBoard.TryGetPieceModel(piece, out PieceModel model) &&
                 model.State == PieceState.Falling &&
                 (piece.GridFallView == null || !piece.GridFallView.IsAnimating))
             {

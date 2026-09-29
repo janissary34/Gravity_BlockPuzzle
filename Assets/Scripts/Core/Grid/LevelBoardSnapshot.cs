@@ -64,6 +64,28 @@ namespace GravityPuzzle.Core.Grid
             return false;
         }
 
+        /// <summary>
+        /// Removes a model that was registered during a failed all-or-nothing
+        /// runtime content activation. Normal gameplay despawns retain their
+        /// history; this is intentionally only an activation rollback API.
+        /// </summary>
+        public bool TryRemoveRegisteredPiece(PieceModel piece)
+        {
+            if (piece == null)
+                return false;
+
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                if (pieces[index].Id != piece.Id)
+                    continue;
+
+                pieces.RemoveAt(index);
+                return true;
+            }
+
+            return false;
+        }
+
         public bool TryGetPiece(int pieceId, out PieceModel piece)
         {
             for (int index = 0; index < Pieces.Count; index++)

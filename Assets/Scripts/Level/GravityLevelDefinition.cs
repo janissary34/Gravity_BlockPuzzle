@@ -107,6 +107,11 @@ namespace GravityPuzzle
         [Min(0f)] public float shredderRotationSpeed = 220f;
 
         public List<PieceDefinition> pieces = new List<PieceDefinition>();
+        [Header("Reveal Areas")]
+        [Tooltip("Closed boxes whose hidden contents are released after their shred target is met.")]
+        public List<BoxRevealDefinition> boxes = new List<BoxRevealDefinition>();
+        [Tooltip("Elevator areas that open permanently once no live piece overlaps their bounds.")]
+        public List<ElevatorRevealDefinition> elevators = new List<ElevatorRevealDefinition>();
         public List<PinDefinition> pins = new List<PinDefinition>();
         public List<ObstacleDefinition> obstacles = new List<ObstacleDefinition>();
         public List<ShredderDefinition> shredders = new List<ShredderDefinition>();
@@ -117,6 +122,46 @@ namespace GravityPuzzle
 
         public int FineColumns => boardColumns * subdivisions;
         public int FineRows => boardRows * subdivisions;
+
+        /// <summary>
+        /// Enumerates every authored gameplay piece, including content that is
+        /// initially hidden by a reveal area. Callers that calculate a level
+        /// total or pool capacity must use this rather than only <see cref="pieces"/>.
+        /// </summary>
+        public IEnumerable<PieceDefinition> EnumerateAllPieceDefinitions()
+        {
+            if (pieces != null)
+            {
+                for (int index = 0; index < pieces.Count; index++)
+                    yield return pieces[index];
+            }
+
+            if (boxes != null)
+            {
+                for (int boxIndex = 0; boxIndex < boxes.Count; boxIndex++)
+                {
+                    BoxRevealDefinition box = boxes[boxIndex];
+                    if (box == null || box.hiddenPieces == null)
+                        continue;
+
+                    for (int pieceIndex = 0; pieceIndex < box.hiddenPieces.Count; pieceIndex++)
+                        yield return box.hiddenPieces[pieceIndex];
+                }
+            }
+
+            if (elevators != null)
+            {
+                for (int elevatorIndex = 0; elevatorIndex < elevators.Count; elevatorIndex++)
+                {
+                    ElevatorRevealDefinition elevator = elevators[elevatorIndex];
+                    if (elevator == null || elevator.hiddenPieces == null)
+                        continue;
+
+                    for (int pieceIndex = 0; pieceIndex < elevator.hiddenPieces.Count; pieceIndex++)
+                        yield return elevator.hiddenPieces[pieceIndex];
+                }
+            }
+        }
     }
 
     public enum PieceCellType

@@ -4,6 +4,8 @@ using GravityPuzzle.Config;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Gameplay.Reveal;
+using GravityPuzzle.Presentation.Views;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -19,6 +21,8 @@ namespace GravityPuzzle
         private static GravityLevelSequence configuredSequence;
         private static PrototypeBoard configuredBoard;
         private static PuzzleDragController configuredDragController;
+        private static RevealPresentationConfig configuredRevealPresentationConfig;
+        private static RevealPresentationConfig fallbackRevealPresentationConfig;
         private static int currentLevelIndex = -1;
         private static BoosterRewardConfig queuedBoosterReward;
         private static bool levelSequenceInitialized;
@@ -31,6 +35,8 @@ namespace GravityPuzzle
             configuredSequence = null;
             configuredBoard = null;
             configuredDragController = null;
+            configuredRevealPresentationConfig = null;
+            fallbackRevealPresentationConfig = null;
             currentLevelIndex = -1;
             queuedBoosterReward = null;
             levelSequenceInitialized = false;
@@ -76,6 +82,12 @@ namespace GravityPuzzle
 
             configuredBoard = board;
             configuredDragController = dragController;
+        }
+
+        /// <summary>Supplies optional presentation tuning for level-authored reveal areas.</summary>
+        public static void ConfigureRevealPresentationConfig(RevealPresentationConfig config)
+        {
+            configuredRevealPresentationConfig = config;
         }
 
         public static GravityLevelDefinition FindLevelToPlay()
@@ -223,11 +235,13 @@ namespace GravityPuzzle
             boardState.SetTimeLimit(level.timeLimit);
             boardState.EnableSequentialLevels();
             boardState.InitializeBoardSnapshot(LevelBoardSnapshotBuilder.Build(level));
+            boardState.ConfigureRevealAreas(new RevealAreaCoordinator());
 
             float frameThickness = level.frameThickness;
             float exitWidth = Mathf.Clamp(level.exitWidth, .75f, level.boardColumns - frameThickness * 2f);
             CreateBoardBackground(level);
             CreateBoardFrame(level, exitWidth);
+            CreateGeneratedRevealPresentations(level, boardState);
 
             ShredderConfig shredderConfig = BlockShredder.Instance.Config;
             if (shredderConfig != null)
@@ -257,6 +271,8 @@ namespace GravityPuzzle
                 boardState.TrySynchronizeRuntimePieceGeometry(runtimePieces[pieceIndex]);
 
             ValidateLevelSnapshotRuntimeState(level, boardState);
+
+            boardState.InitializeRevealAreas(level);
 
             // Progress UI is authored in the scene; runtime never creates a fallback.
             LevelProgressManager progressManager = LevelProgressManager.EnsureInstance();
@@ -297,6 +313,59 @@ namespace GravityPuzzle
                 boardState.BoardSnapshot,
                 PuzzlePiece.ActivePieces,
                 boardState);
+        }
+
+        private static void CreateGeneratedRevealPresentations(
+            GravityLevelDefinition level,
+            PrototypeBoard boardState)
+        {
+            if (level == null || boardState == null)
+                return;
+
+            RevealPresentationConfig config = configuredRevealPresentationConfig;
+            if (config == null)
+            {
+                if (fallbackRevealPresentationConfig == null)
+                    fallbackRevealPresentationConfig = ScriptableObject.CreateInstance<RevealPresentationConfig>();
+                config = fallbackRevealPresentationConfig;
+            }
+
+            CreateGeneratedRevealPresentations(
+                level.boxes,
+                RevealAreaKind.Box,
+                level,
+                boardState,
+                config);
+            CreateGeneratedRevealPresentations(
+                level.elevators,
+                RevealAreaKind.Elevator,
+                level,
+                boardState,
+                config);
+        }
+
+        private static void CreateGeneratedRevealPresentations<TDefinition>(
+            IReadOnlyList<TDefinition> definitions,
+            RevealAreaKind kind,
+            GravityLevelDefinition level,
+            PrototypeBoard boardState,
+            RevealPresentationConfig config)
+            where TDefinition : RevealAreaDefinition
+        {
+            if (definitions == null)
+                return;
+
+            for (int index = 0; index < definitions.Count; index++)
+            {
+                TDefinition definition = definitions[index];
+                if (definition == null || string.IsNullOrWhiteSpace(definition.areaId) ||
+                    boardState.HasRevealPresentation(definition.areaId))
+                    continue;
+
+                boardState.RegisterRevealPresentation(
+                    definition.areaId,
+                    RuntimeRevealAreaPresentation.Create(level, definition, kind, config));
+            }
         }
 
         private static void CreateBoardBackground(GravityLevelDefinition level)

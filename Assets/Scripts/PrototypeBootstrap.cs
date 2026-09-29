@@ -5,6 +5,7 @@ using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Gameplay.Reveal;
 using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
 using TMPro;
@@ -577,6 +578,9 @@ namespace GravityPuzzle
         private bool awaitingBoosterRewardDismissal;
         private BoosterRewardConfig pendingBoosterRewardConfig;
         private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
+        private readonly Dictionary<string, IRevealAreaPresentation> revealPresentations =
+            new Dictionary<string, IRevealAreaPresentation>();
+        private RevealAreaCoordinator revealAreaCoordinator;
         private readonly StateMachine<GameState> gameStateMachine = new StateMachine<GameState>(
             GameState.Initialize,
             GameStateTransitionRules.Create());
@@ -584,6 +588,8 @@ namespace GravityPuzzle
         public static event System.Action OnLevelCleared;
         public event System.Action<GameState, GameState> GameStateChanged;
         public event System.Action<int, PieceState, PieceState> PieceStateChanged;
+        public event System.Action<int> BlockShredded;
+        public event System.Action BoardOccupancyChanged;
         public event System.Action LevelCleared;
         public event System.Action LevelFailed;
 
@@ -642,6 +648,45 @@ namespace GravityPuzzle
         public bool HasUsedTimerExpiryContinue { get; private set; }
         public GameState GameState => gameStateMachine.Current;
         public LevelBoardSnapshot BoardSnapshot { get; private set; }
+
+        public void ConfigureRevealAreas(RevealAreaCoordinator coordinator)
+        {
+            if (revealAreaCoordinator != null)
+            {
+                BlockShredded -= revealAreaCoordinator.NotifyPieceShredded;
+                BoardOccupancyChanged -= revealAreaCoordinator.NotifyBoardChanged;
+            }
+
+            revealAreaCoordinator = coordinator;
+            if (revealAreaCoordinator != null)
+            {
+                BlockShredded += revealAreaCoordinator.NotifyPieceShredded;
+                BoardOccupancyChanged += revealAreaCoordinator.NotifyBoardChanged;
+            }
+            foreach (KeyValuePair<string, IRevealAreaPresentation> entry in revealPresentations)
+                revealAreaCoordinator?.RegisterPresentation(entry.Key, entry.Value);
+        }
+
+        public void RegisterRevealPresentation(string areaId, IRevealAreaPresentation presentation)
+        {
+            if (string.IsNullOrWhiteSpace(areaId) || presentation == null)
+                return;
+
+            revealPresentations[areaId] = presentation;
+            revealAreaCoordinator?.RegisterPresentation(areaId, presentation);
+        }
+
+        public bool HasRevealPresentation(string areaId)
+        {
+            return !string.IsNullOrWhiteSpace(areaId) &&
+                   revealPresentations.ContainsKey(areaId);
+        }
+
+        /// <summary>Called after regular level roots have been created and synchronized.</summary>
+        public void InitializeRevealAreas(GravityLevelDefinition level)
+        {
+            revealAreaCoordinator?.Initialize(this, level);
+        }
 
         private void Awake()
         {
@@ -840,7 +885,10 @@ namespace GravityPuzzle
                 return false;
 
             BoardSnapshot.Grid.ClearPiece(model);
-            return TryTransitionPieceState(model, PieceState.Despawned);
+            bool despawned = TryTransitionPieceState(model, PieceState.Despawned);
+            if (despawned)
+                BoardOccupancyChanged?.Invoke();
+            return despawned;
         }
 
         /// <summary>
@@ -921,6 +969,7 @@ namespace GravityPuzzle
             for (int index = 0; index < fragmentModels.Count; index++)
                 fragments[index].ConfigureSourcePieceId(fragmentModels[index].Id);
 
+            BoardOccupancyChanged?.Invoke();
             return true;
         }
 
@@ -973,6 +1022,7 @@ namespace GravityPuzzle
             }
 
             PuzzleDragController.WakeUpGravity();
+            BoardOccupancyChanged?.Invoke();
             return true;
         }
 
@@ -1020,6 +1070,7 @@ namespace GravityPuzzle
                 Debug.LogWarning(
                     $"[GridFootprint] Synchronized runtime footprint for '{piece.name}' (id={existingModel.Id}).",
                     this);
+                BoardOccupancyChanged?.Invoke();
                 return true;
             }
 
@@ -1032,6 +1083,71 @@ namespace GravityPuzzle
                 $"[GridFootprint] Runtime footprint for '{piece.name}' conflicts with the board; restored its authored footprint.",
                 this);
             return false;
+        }
+
+        /// <summary>
+        /// Adds hidden reveal content to the existing board snapshot. The
+        /// roots are rented from the typed BlockPiece pool and the method
+        /// rolls back the complete batch if any authored footprint is invalid.
+        /// </summary>
+        public bool TryActivateRevealPieces(IReadOnlyList<PieceDefinition> definitions)
+        {
+            if (BoardSnapshot == null || definitions == null)
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null)
+                return false;
+
+            List<PuzzlePiece> createdPieces = new List<PuzzlePiece>(definitions.Count);
+            List<PieceModel> createdModels = new List<PieceModel>(definitions.Count);
+            for (int index = 0; index < definitions.Count; index++)
+            {
+                PieceDefinition definition = definitions[index];
+                if (definition == null)
+                    continue;
+
+                int pieceId = BoardSnapshot.NextPieceId;
+                PuzzlePiece piece = RuntimePieceFactory.Create(level, definition, pieceId);
+                if (piece == null)
+                    continue;
+
+                Physics2D.SyncTransforms();
+                if (!piece.TryCreateGridModel(level, pieceId, out PieceModel model) ||
+                    !BoardSnapshot.Grid.TryPlace(model) ||
+                    !BoardSnapshot.TryRegisterPlacedPiece(model))
+                {
+                    if (model != null)
+                        BoardSnapshot.Grid.ClearPiece(model);
+                    piece.ReleaseInstance();
+                    RollbackRevealActivation(createdPieces, createdModels);
+                    Debug.LogWarning(
+                        $"[Reveal] Could not activate hidden piece '{definition.name}'.",
+                        this);
+                    return false;
+                }
+
+                createdPieces.Add(piece);
+                createdModels.Add(model);
+            }
+
+            BoardOccupancyChanged?.Invoke();
+            return true;
+        }
+
+        private void RollbackRevealActivation(
+            IReadOnlyList<PuzzlePiece> createdPieces,
+            IReadOnlyList<PieceModel> createdModels)
+        {
+            for (int index = 0; index < createdModels.Count; index++)
+            {
+                PieceModel model = createdModels[index];
+                BoardSnapshot.Grid.ClearPiece(model);
+                BoardSnapshot.TryRemoveRegisteredPiece(model);
+            }
+
+            for (int index = 0; index < createdPieces.Count; index++)
+                createdPieces[index].ReleaseInstance();
         }
 
         private static bool HasMatchingGeometry(PieceModel authored, PieceModel runtime)
@@ -1064,6 +1180,10 @@ namespace GravityPuzzle
             if (!TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
+            if (revealAreaCoordinator != null &&
+                !revealAreaCoordinator.CanMovePiece(model, targetAnchor))
+                return false;
+
             bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
                 model,
                 targetAnchor,
@@ -1071,9 +1191,52 @@ namespace GravityPuzzle
                 out result);
 
             if (moved)
+            {
                 TryTransitionPieceState(model, PieceState.Placed);
+                BoardOccupancyChanged?.Invoke();
+            }
 
             return moved;
+        }
+
+        /// <summary>
+        /// Commits one selected-piece drag step without changing its Dragging
+        /// lifecycle state. Input owns the visual handoff; the board owns the
+        /// reveal-area rule check and authoritative grid mutation.
+        /// </summary>
+        public bool TryMoveDraggingPieceOnGrid(
+            PuzzlePiece piece,
+            GridCoordinate targetAnchor,
+            out GridPlacementResult result)
+        {
+            result = GridPlacementResult.Failure(
+                GridPlacementFailureReason.EmptyPiece,
+                targetAnchor,
+                GridCellState.Empty,
+                default);
+
+            if (!TryGetPieceModel(piece, out PieceModel model) ||
+                (revealAreaCoordinator != null &&
+                 !revealAreaCoordinator.CanMovePiece(model, targetAnchor)))
+            {
+                return false;
+            }
+
+            bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
+                model,
+                targetAnchor,
+                piece.SourcePieceId,
+                out result);
+            if (moved)
+                BoardOccupancyChanged?.Invoke();
+
+            return moved;
+        }
+
+        public bool CanBeginPieceInteraction(PuzzlePiece piece)
+        {
+            return TryGetPieceModel(piece, out PieceModel model) &&
+                   (revealAreaCoordinator == null || revealAreaCoordinator.CanBeginInteraction(model));
         }
 
         public bool TryCommitGridGravityMove(
@@ -1090,13 +1253,20 @@ namespace GravityPuzzle
                 !BoardSnapshot.TryGetPiece(move.PieceId, out PieceModel piece))
                 return false;
 
+            if (revealAreaCoordinator != null &&
+                !revealAreaCoordinator.CanMovePiece(piece, move.ToAnchor))
+                return false;
+
             bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
                 piece,
                 move.ToAnchor,
                 move.PieceId,
                 out result);
             if (moved)
+            {
                 TryTransitionPieceState(piece, PieceState.Falling);
+                BoardOccupancyChanged?.Invoke();
+            }
 
             return moved;
         }
@@ -1158,6 +1328,8 @@ namespace GravityPuzzle
                 TryReservePieceInGrid(destroyedPiece, PieceState.Shredding);
             else
                 TryClearPieceFromGrid(destroyedPiece, PieceState.Shredding);
+            if (destroyedPiece.IsBeingShredded)
+                BlockShredded?.Invoke(destroyedPiece.SourcePieceId);
             DestroyedPieceCount++;
             if (!keepsGridReservation)
                 PuzzleDragController.WakeUpGravity();
@@ -1294,7 +1466,9 @@ namespace GravityPuzzle
                 bool requiresProgress = progress != null && progress.TotalBlockUnits > 0;
                 bool progressReady = !requiresProgress ||
                                      (progress.IsLevelComplete && !progress.HasPendingProgressPresentation);
-                if (livePieceCount == 0 && progressReady)
+                bool revealReady = revealAreaCoordinator == null ||
+                                   !revealAreaCoordinator.HasPendingRevealContent;
+                if (livePieceCount == 0 && progressReady && revealReady)
                 {
                     boardCleared = true;
                     TryTransitionGameState(GameState.LevelComplete);

@@ -48,14 +48,13 @@ namespace GravityPuzzle
 
         public static int EstimateMaximumVoxelCount(GravityLevelDefinition level, int configuredSubdivisions)
         {
-            if (level == null || level.pieces == null)
+            if (level == null)
                 return 0;
 
             int voxelsPerCell = configuredSubdivisions * configuredSubdivisions;
             int total = 0;
-            for (int index = 0; index < level.pieces.Count; index++)
+            foreach (PieceDefinition piece in level.EnumerateAllPieceDefinitions())
             {
-                PieceDefinition piece = level.pieces[index];
                 if (piece == null || piece.cells == null)
                     continue;
 

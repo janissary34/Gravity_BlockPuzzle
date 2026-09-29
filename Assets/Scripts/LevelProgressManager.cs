@@ -563,11 +563,8 @@ namespace GravityPuzzle
                 return 0;
 
             int totalUnits = 0;
-            if (level.pieces == null)
-                return totalUnits;
-
             int subdivisions = Mathf.Max(1, level.subdivisions);
-            foreach (PieceDefinition piece in level.pieces)
+            foreach (PieceDefinition piece in level.EnumerateAllPieceDefinitions())
             {
                 if (piece == null || piece.cells == null)
                     continue;
