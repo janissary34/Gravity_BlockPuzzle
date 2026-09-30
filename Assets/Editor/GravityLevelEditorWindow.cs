@@ -272,18 +272,27 @@ namespace GravityPuzzle.Editor
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("+ Box"))
             {
+                ClearSelection();
                 tool = EditTool.BoxArea;
-                ShowNotification(new GUIContent("Click a grid block on the board to add a Box."));
+                ShowNotification(new GUIContent("Click once to create Box 1, then click more cells to expand the same rectangle."));
             }
             if (GUILayout.Button("+ Elevator"))
             {
+                ClearSelection();
                 tool = EditTool.ElevatorArea;
-                ShowNotification(new GUIContent("Click a grid block on the board to add an Elevator."));
+                ShowNotification(new GUIContent("Click once to create Elevator 1, then click more cells to expand the same rectangle."));
             }
             GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Merge Adjacent Boxes"))
+                MergeAdjacentRevealAreas(level.boxes, "Merge adjacent boxes");
+            if (GUILayout.Button("Merge Adjacent Elevators"))
+                MergeAdjacentRevealAreas(level.elevators, "Merge adjacent elevators");
+            GUILayout.EndHorizontal();
+
             EditorGUILayout.HelpBox(
-                "Use Box Area or Elevator Area like Obstacle: click to place one normal grid block. Select, Move, and Erase work on areas too. Lock only changes the editor overlay; it has no runtime effect.",
+                "Create one rectangular Box/Elevator: the first click creates it and later clicks expand its bounds. Press + Box or + Elevator again to begin a separate area. Merge Adjacent converts existing tile-by-tile areas into one rectangle. Lock is editor-only and turns the area grey while keeping the grid visible.",
                 MessageType.None);
 
             for (int index = 0; index < level.boxes.Count; index++)
@@ -350,11 +359,7 @@ namespace GravityPuzzle.Editor
                 selectedElevator = index;
             }
             if (GUILayout.Button(elevator.editorLocked ? "Unlock" : "Lock", GUILayout.Width(64f)))
-            {
-                Undo.RecordObject(level, "Toggle elevator editor lock");
-                elevator.editorLocked = !elevator.editorLocked;
-                MarkDirty();
-            }
+                ToggleElevatorEditorLock(index);
             GUILayout.EndHorizontal();
             string name = EditorGUILayout.TextField("Name", elevator.name);
             Vector2Int origin = EditorGUILayout.Vector2IntField("Origin (fine)", elevator.bounds.origin);
@@ -370,7 +375,16 @@ namespace GravityPuzzle.Editor
                 MarkDirty();
             }
 
-            DrawHiddenPieces(elevator.hiddenPieces, elevator.bounds, "Elevator");
+            EditorGUILayout.HelpBox(
+                "Fixed interior pieces stay hidden and cannot move until this Elevator opens. " +
+                "Use normal level pieces for movable pieces placed on top; the Elevator opens when those normal pieces no longer overlap its area.",
+                MessageType.None);
+            DrawHiddenPieces(
+                elevator.hiddenPieces,
+                elevator.bounds,
+                "Elevator",
+                "Fixed Interior Pieces (revealed when open)",
+                "+ Fixed Interior Block");
             if (GUILayout.Button("Delete Elevator"))
             {
                 Undo.RecordObject(level, "Delete elevator reveal area");
@@ -380,12 +394,83 @@ namespace GravityPuzzle.Editor
             GUILayout.EndVertical();
         }
 
+        private void ToggleElevatorEditorLock(int elevatorIndex)
+        {
+            if (elevatorIndex < 0 || elevatorIndex >= level.elevators.Count)
+                return;
+
+            ElevatorRevealDefinition elevator = level.elevators[elevatorIndex];
+            if (elevator == null)
+                return;
+
+            bool locking = !elevator.editorLocked;
+            Undo.RecordObject(level, "Toggle elevator editor lock");
+            int capturedPieceCount = locking
+                ? CaptureElevatorInteriorPieces(elevator)
+                : 0;
+            elevator.editorLocked = locking;
+            ClearSelection();
+            selectedElevator = elevatorIndex;
+            MarkDirty();
+
+            if (locking && capturedPieceCount > 0)
+            {
+                ShowNotification(new GUIContent(
+                    $"{capturedPieceCount} piece(s) captured as fixed Elevator interior."));
+            }
+        }
+
+        private int CaptureElevatorInteriorPieces(ElevatorRevealDefinition elevator)
+        {
+            if (elevator.hiddenPieces == null)
+                elevator.hiddenPieces = new List<PieceDefinition>();
+
+            List<PieceDefinition> capturedPieces = new List<PieceDefinition>();
+            for (int index = level.pieces.Count - 1; index >= 0; index--)
+            {
+                PieceDefinition piece = level.pieces[index];
+                if (!PieceIsFullyInsideRevealArea(piece, elevator.bounds))
+                    continue;
+
+                capturedPieces.Insert(0, piece);
+                level.pieces.RemoveAt(index);
+            }
+
+            if (capturedPieces.Count > 0)
+                elevator.hiddenPieces.AddRange(capturedPieces);
+            return capturedPieces.Count;
+        }
+
+        private static bool PieceIsFullyInsideRevealArea(
+            PieceDefinition piece,
+            RevealAreaBounds bounds)
+        {
+            if (piece == null || piece.cells == null || piece.cells.Count == 0)
+                return false;
+
+            for (int index = 0; index < piece.cells.Count; index++)
+            {
+                Vector2Int absoluteCell = piece.origin + QuarterTurnUtility.Rotate(
+                    piece.cells[index].localCell,
+                    piece.quarterTurns);
+                if (absoluteCell.x < bounds.XMin || absoluteCell.x >= bounds.XMaxExclusive ||
+                    absoluteCell.y < bounds.YMin || absoluteCell.y >= bounds.YMaxExclusive)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private void DrawHiddenPieces(
             List<PieceDefinition> hiddenPieces,
             RevealAreaBounds bounds,
-            string ownerLabel)
+            string ownerLabel,
+            string contentLabel = "Hidden Pieces",
+            string addButtonLabel = "+ Hidden Block")
         {
-            GUILayout.Label($"Hidden Pieces ({hiddenPieces.Count})", EditorStyles.miniBoldLabel);
+            GUILayout.Label($"{contentLabel} ({hiddenPieces.Count})", EditorStyles.miniBoldLabel);
             for (int index = 0; index < hiddenPieces.Count; index++)
             {
                 PieceDefinition piece = hiddenPieces[index];
@@ -416,20 +501,27 @@ namespace GravityPuzzle.Editor
                 GUILayout.EndHorizontal();
             }
 
-            if (GUILayout.Button("+ Hidden Single Block"))
+            if (GUILayout.Button(addButtonLabel))
             {
                 Undo.RecordObject(level, $"Add {ownerLabel} hidden piece");
                 hiddenPieces.Add(new PieceDefinition
                 {
                     name = $"{ownerLabel} Hidden {hiddenPieces.Count + 1}",
                     origin = bounds.origin,
-                    cells = new List<PieceCellDefinition>
-                    {
-                        new PieceCellDefinition(Vector2Int.zero, PieceCellType.Block)
-                    }
+                    cells = CreateNormalGridBlockCells()
                 });
                 MarkDirty();
             }
+        }
+
+        private List<PieceCellDefinition> CreateNormalGridBlockCells()
+        {
+            int subdivisions = Mathf.Max(1, level.subdivisions);
+            List<PieceCellDefinition> cells = new List<PieceCellDefinition>(subdivisions * subdivisions);
+            for (int y = 0; y < subdivisions; y++)
+            for (int x = 0; x < subdivisions; x++)
+                cells.Add(new PieceCellDefinition(new Vector2Int(x, y), PieceCellType.Block));
+            return cells;
         }
 
         private void DrawToolButtons()
@@ -769,11 +861,7 @@ namespace GravityPuzzle.Editor
                 GUILayout.Label("Selected Elevator Area", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField("Bounds", $"{elevator.bounds.origin} / {elevator.bounds.size} fine cells");
                 if (GUILayout.Button(elevator.editorLocked ? "Unlock Elevator Overlay" : "Lock Elevator Overlay"))
-                {
-                    Undo.RecordObject(level, "Toggle elevator editor lock");
-                    elevator.editorLocked = !elevator.editorLocked;
-                    MarkDirty();
-                }
+                    ToggleElevatorEditorLock(selectedElevator);
                 return;
             }
 
@@ -926,6 +1014,7 @@ namespace GravityPuzzle.Editor
             DrawPins(board, cellSize);
             DrawShredders(board, cellSize);
             DrawPieces(board, cellSize);
+            DrawLockedRevealAreaForeground(board, cellSize);
             DrawGrid(board, cellSize);
             DrawSelectionBox();
             HandleCanvasInput(board, cellSize);
@@ -970,7 +1059,7 @@ namespace GravityPuzzle.Editor
                 board,
                 cellSize,
                 area.bounds,
-                area.editorLocked ? new Color(.42f, .45f, .5f, .28f) : unlockedColor,
+                area.editorLocked ? new Color(.34f, .36f, .41f, .58f) : unlockedColor,
                 selected,
                 area.editorLocked ? $"{label} · LOCKED" : label);
         }
@@ -999,6 +1088,35 @@ namespace GravityPuzzle.Editor
                 normal = { textColor = selected ? Color.white : new Color(1f, 1f, 1f, .78f) }
             };
             GUI.Label(new Rect(rect.x + 4f, rect.y + 3f, rect.width - 8f, 18f), label, labelStyle);
+        }
+
+        private void DrawLockedRevealAreaForeground(Rect board, float cellSize)
+        {
+            for (int index = 0; index < level.elevators.Count; index++)
+            {
+                ElevatorRevealDefinition elevator = level.elevators[index];
+                if (elevator == null || !elevator.editorLocked)
+                    continue;
+
+                Rect rect = RevealAreaRect(board, cellSize, elevator.bounds);
+                Handles.BeginGUI();
+                Handles.color = new Color(.78f, .8f, .86f, 1f);
+                Handles.DrawAAPolyLine(2.5f,
+                    new Vector3(rect.xMin, rect.yMin), new Vector3(rect.xMax, rect.yMin),
+                    new Vector3(rect.xMax, rect.yMax), new Vector3(rect.xMin, rect.yMax),
+                    new Vector3(rect.xMin, rect.yMin));
+                Handles.EndGUI();
+
+                GUIStyle labelStyle = new GUIStyle(EditorStyles.miniBoldLabel)
+                {
+                    alignment = TextAnchor.UpperLeft,
+                    normal = { textColor = new Color(.9f, .92f, .97f, 1f) }
+                };
+                GUI.Label(
+                    new Rect(rect.x + 4f, rect.y + 3f, rect.width - 8f, 18f),
+                    "ELEVATOR · LOCKED",
+                    labelStyle);
+            }
         }
 
         private void DrawSelectionBox()
@@ -1423,6 +1541,18 @@ namespace GravityPuzzle.Editor
                 size = new Vector2Int(subdivisions, subdivisions)
             };
 
+            if (tool == EditTool.BoxArea && selectedBox >= 0 && selectedBox < level.boxes.Count)
+            {
+                ExpandRevealAreaToInclude(level.boxes[selectedBox], bounds, "Expand box reveal area");
+                return;
+            }
+
+            if (tool == EditTool.ElevatorArea && selectedElevator >= 0 && selectedElevator < level.elevators.Count)
+            {
+                ExpandRevealAreaToInclude(level.elevators[selectedElevator], bounds, "Expand elevator reveal area");
+                return;
+            }
+
             Undo.RecordObject(level, tool == EditTool.BoxArea ? "Add box reveal area" : "Add elevator reveal area");
             ClearSelection();
             if (tool == EditTool.BoxArea)
@@ -1447,6 +1577,107 @@ namespace GravityPuzzle.Editor
             }
 
             MarkDirty();
+        }
+
+        private void ExpandRevealAreaToInclude(
+            RevealAreaDefinition area,
+            RevealAreaBounds additionalBounds,
+            string undoName)
+        {
+            if (area == null)
+                return;
+
+            RevealAreaBounds current = area.bounds;
+            int minX = Mathf.Min(current.XMin, additionalBounds.XMin);
+            int minY = Mathf.Min(current.YMin, additionalBounds.YMin);
+            int maxX = Mathf.Max(current.XMaxExclusive, additionalBounds.XMaxExclusive);
+            int maxY = Mathf.Max(current.YMaxExclusive, additionalBounds.YMaxExclusive);
+            RevealAreaBounds expanded = new RevealAreaBounds
+            {
+                origin = new Vector2Int(minX, minY),
+                size = new Vector2Int(maxX - minX, maxY - minY)
+            };
+            if (expanded.origin == current.origin && expanded.size == current.size)
+                return;
+
+            Undo.RecordObject(level, undoName);
+            area.bounds = expanded;
+            MarkDirty();
+        }
+
+        private void MergeAdjacentRevealAreas<TDefinition>(
+            List<TDefinition> areas,
+            string undoName)
+            where TDefinition : RevealAreaDefinition
+        {
+            if (areas == null || areas.Count < 2)
+                return;
+
+            Undo.RecordObject(level, undoName);
+            int mergedCount = 0;
+            for (int primaryIndex = 0; primaryIndex < areas.Count; primaryIndex++)
+            {
+                TDefinition primary = areas[primaryIndex];
+                if (primary == null)
+                    continue;
+
+                bool mergedThisPrimary;
+                do
+                {
+                    mergedThisPrimary = false;
+                    for (int candidateIndex = areas.Count - 1; candidateIndex > primaryIndex; candidateIndex--)
+                    {
+                        TDefinition candidate = areas[candidateIndex];
+                        if (candidate == null || !RevealAreaBoundsTouchOrOverlap(primary.bounds, candidate.bounds))
+                            continue;
+
+                        primary.bounds = UnionRevealAreaBounds(primary.bounds, candidate.bounds);
+                        if (candidate.hiddenPieces != null && candidate.hiddenPieces.Count > 0)
+                        {
+                            if (primary.hiddenPieces == null)
+                                primary.hiddenPieces = new List<PieceDefinition>();
+                            primary.hiddenPieces.AddRange(candidate.hiddenPieces);
+                        }
+
+                        areas.RemoveAt(candidateIndex);
+                        mergedCount++;
+                        mergedThisPrimary = true;
+                    }
+                }
+                while (mergedThisPrimary);
+            }
+
+            if (mergedCount == 0)
+                return;
+
+            ClearSelection();
+            MarkDirty();
+            ShowNotification(new GUIContent($"Merged {mergedCount} reveal-area tile(s) into rectangular areas."));
+        }
+
+        private static bool RevealAreaBoundsTouchOrOverlap(
+            RevealAreaBounds first,
+            RevealAreaBounds second)
+        {
+            return first.XMin <= second.XMaxExclusive &&
+                   first.XMaxExclusive >= second.XMin &&
+                   first.YMin <= second.YMaxExclusive &&
+                   first.YMaxExclusive >= second.YMin;
+        }
+
+        private static RevealAreaBounds UnionRevealAreaBounds(
+            RevealAreaBounds first,
+            RevealAreaBounds second)
+        {
+            int minX = Mathf.Min(first.XMin, second.XMin);
+            int minY = Mathf.Min(first.YMin, second.YMin);
+            int maxX = Mathf.Max(first.XMaxExclusive, second.XMaxExclusive);
+            int maxY = Mathf.Max(first.YMaxExclusive, second.YMaxExclusive);
+            return new RevealAreaBounds
+            {
+                origin = new Vector2Int(minX, minY),
+                size = new Vector2Int(maxX - minX, maxY - minY)
+            };
         }
 
         private void PaintBlock(Vector2Int clickedCell)

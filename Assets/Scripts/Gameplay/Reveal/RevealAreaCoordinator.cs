@@ -261,6 +261,8 @@ namespace GravityPuzzle.Gameplay.Reveal
 
         private void CompleteElevatorUnlock(ElevatorRuntime elevator)
         {
+            // Fixed interior content remains absent from the board until every
+            // top-layer piece has left and the opening presentation completes.
             if (elevator.State != RevealAreaState.Unlocking ||
                 !ActivateContent(elevator.Definition.hiddenPieces ?? EmptyPieces))
                 return;
@@ -293,6 +295,8 @@ namespace GravityPuzzle.Gameplay.Reveal
         {
             GridBounds bounds = GridBounds.From(elevator.Definition.bounds);
             elevator.NextOccupantIds.Clear();
+            // Only live board pieces are top-layer occupants. Fixed interior
+            // pieces are deliberately not instantiated before the unlock.
             IReadOnlyList<PieceModel> models = board.BoardSnapshot.Pieces;
             for (int index = 0; index < models.Count; index++)
             {
