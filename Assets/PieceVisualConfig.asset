@@ -16,6 +16,81 @@ MonoBehaviour:
   - visualId: ice_block
     sprite: {fileID: 21300000, guid: 972694c4005d54ca49411a2a5a1b2d26, type: 3}
     tint: {r: 1, g: 1, b: 1, a: 1}
+  normalFallbackSprite: {fileID: -1313627307, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+  iceFallbackSprite: {fileID: 0}
+  shapeDefinitions:
+  - shapeKey: 0,0;0,1
+    normalSprite: {fileID: -632471582, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 453979135, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0
+    normalSprite: {fileID: -1771628578, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -160595345, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;0,1
+    normalSprite: {fileID: 2062867630, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -982191573, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 1,0;0,1;1,1
+    normalSprite: {fileID: -705628914, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 745199619, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;0,1;1,1
+    normalSprite: {fileID: 815883505, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -1561476751, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;1,1
+    normalSprite: {fileID: -1618421186, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -1251365498, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;0,1;1,1
+    normalSprite: {fileID: 1399951306, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 1857232792, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;1,1;1,2
+    normalSprite: {fileID: -1861986604, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -1921513650, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;0,1;0,2
+    normalSprite: {fileID: 1849407850, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -2135511069, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 2,0;0,1;1,1;2,1
+    normalSprite: {fileID: -1548598488, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -1835239540, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;0,1;1,1;2,1
+    normalSprite: {fileID: -1464756288, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -1539984102, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;2,0;0,1
+    normalSprite: {fileID: 1904418460, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 678472411, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;2,0;2,1
+    normalSprite: {fileID: -151745583, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 786001183, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;0,1;1,1;0,2
+    normalSprite: {fileID: 815628080, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 1669393809, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 1,0;0,1;1,1;1,2
+    normalSprite: {fileID: -725265999, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -216760062, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 1,0;0,1;1,1;2,1
+    normalSprite: {fileID: -1404922130, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -2042024380, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;2,0;1,1
+    normalSprite: {fileID: 1243754314, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -1209245786, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;0,1;0,2;1,2
+    normalSprite: {fileID: 1094736132, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 491387745, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;1,1;0,2;1,2
+    normalSprite: {fileID: -1759913429, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -1702292985, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;2,0;0,1;1,1;2,1
+    normalSprite: {fileID: -1551653665, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 1479288403, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;2,0;0,1;2,1
+    normalSprite: {fileID: 541350057, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 1394237127, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;1,1;2,1
+    normalSprite: {fileID: -600561072, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 1944917103, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 1,0;0,1;1,1;0,2
+    normalSprite: {fileID: 693656138, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 1230471221, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;0,1;1,1;1,2
+    normalSprite: {fileID: 642778117, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: -1322214796, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
   iceOverlaySprite: {fileID: 21300000, guid: f2196e962baaa4e22a0b38fb055b6660, type: 3}
   iceOverlayTint: {r: 0.72, g: 0.92, b: 1, a: 1}
   iceFrostTint: {r: 0.9, g: 0.98, b: 1, a: 0.32}

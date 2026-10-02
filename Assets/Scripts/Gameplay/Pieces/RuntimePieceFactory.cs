@@ -108,6 +108,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 visualColor,
                 root.CompositeCollider,
                 content);
+            ConfigureWholePiecePresentation(puzzlePiece, level, definition);
 
             return puzzlePiece;
         }
@@ -297,7 +298,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                     slot,
                     new PiecePartGeometry(BlockCellName, fragmentCell.LocalPosition, fragmentCell.Size),
                     color,
-                    null,
+                    GetCellPresentationSprite(GetFallbackSprite(false), fragmentCell.Size),
                     out SpriteRenderer visual,
                     voxelShards);
                 collisionCells.Add(collider);
@@ -396,7 +397,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                     slot,
                     parts[index],
                     visualColor,
-                    voxelSprite,
+                    GetCellPresentationSprite(voxelSprite, parts[index].Size),
                     out SpriteRenderer cellVisual,
                     voxelShards);
                 collisionCells.Add(collider);
@@ -407,7 +408,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                 progressUnits,
                 collisionCells,
                 collisionCellVisuals,
-                voxelShards);
+                voxelShards,
+                GetCompleteModuleShapeKey(parts));
         }
 
         private static void ClearGeneratedContent(PuzzlePiece piece)
@@ -652,7 +654,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             out Sprite voxelSprite)
         {
             color = definition.color;
-            voxelSprite = null;
+            voxelSprite = GetFallbackSprite(
+                definition.specialBlockType == PieceSpecialBlockType.Ice && definition.frozenMoveCount > 0);
             if (string.IsNullOrWhiteSpace(definition.visualId))
                 return;
 
@@ -665,6 +668,189 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             color = visual.Tint;
             voxelSprite = visual.Sprite;
+        }
+
+        private static Sprite GetFallbackSprite(bool isIce)
+        {
+            if (pieceVisualConfig == null)
+                return null;
+
+            return isIce
+                ? pieceVisualConfig.IceFallbackSprite
+                : pieceVisualConfig.NormalFallbackSprite;
+        }
+
+        private static Sprite GetCellPresentationSprite(Sprite fallbackSprite, Vector2 partSize)
+        {
+            // VoxelBlockBuilder subdivides this sprite again. An authored
+            // brick applied there becomes a grid of tiny bricks, so intact
+            // fallback voxels deliberately use its neutral square sprite.
+            // Full blocks still use the configured brick fallback when the
+            // project is using the non-voxel presentation mode.
+            if (useVoxelShardGrid)
+                return null;
+
+            return Mathf.Approximately(partSize.x, 1f) && Mathf.Approximately(partSize.y, 1f)
+                ? fallbackSprite
+                : null;
+        }
+
+        private static void ConfigureWholePiecePresentation(
+            PuzzlePiece piece,
+            GravityLevelDefinition level,
+            PieceDefinition definition)
+        {
+            if (piece == null || pieceVisualConfig == null ||
+                !TryGetAtlasShapeKey(level, definition, out string shapeKey) ||
+                !pieceVisualConfig.TryGetShape(shapeKey, out PieceShapeVisualDefinition visual))
+                return;
+
+            // A normal sprite is retained underneath the ice art so the ice
+            // release returns to the same authored silhouette.
+            piece.ConfigureWholePiecePresentation(visual.NormalSprite, visual.IceSprite);
+        }
+
+        /// <summary>
+        /// Matches the level's authoritative fine-cell geometry to an atlas
+        /// silhouette. Atlas art is authored in module units while levels may
+        /// describe the exact same silhouette in four-by-four fine cells.
+        /// A candidate is valid only when every atlas module maps to a fully
+        /// occupied square of the same scale; irregular damage safely falls
+        /// back to the modular presentation.
+        /// </summary>
+        private static bool TryGetAtlasShapeKey(
+            GravityLevelDefinition level,
+            PieceDefinition definition,
+            out string shapeKey)
+        {
+            shapeKey = null;
+            if (level == null || definition == null || definition.cells == null ||
+                definition.cells.Count == 0)
+                return false;
+
+            HashSet<Vector2Int> occupiedCells = new HashSet<Vector2Int>();
+            int minimumX = int.MaxValue;
+            int minimumY = int.MaxValue;
+            int maximumX = int.MinValue;
+            int maximumY = int.MinValue;
+            for (int index = 0; index < definition.cells.Count; index++)
+            {
+                PieceCellDefinition cell = definition.cells[index];
+                // Hooks and other special cells do not have a compatible
+                // brick-atlas silhouette and must retain their own fallback.
+                if (cell.type != PieceCellType.Block)
+                    return false;
+
+                Vector2Int localCell = QuarterTurnUtility.Rotate(
+                    cell.localCell,
+                    definition.quarterTurns);
+                if (!occupiedCells.Add(localCell))
+                    continue;
+
+                minimumX = Mathf.Min(minimumX, localCell.x);
+                minimumY = Mathf.Min(minimumY, localCell.y);
+                maximumX = Mathf.Max(maximumX, localCell.x);
+                maximumY = Mathf.Max(maximumY, localCell.y);
+            }
+
+            if (occupiedCells.Count == 0)
+                return false;
+
+            int width = maximumX - minimumX + 1;
+            int height = maximumY - minimumY + 1;
+            int largestScale = Mathf.Min(width, height);
+            for (int scale = largestScale; scale >= 1; scale--)
+            {
+                if (width % scale != 0 || height % scale != 0 ||
+                    occupiedCells.Count % (scale * scale) != 0)
+                    continue;
+
+                if (!TryBuildUniformScaledShapeKey(
+                        occupiedCells,
+                        minimumX,
+                        minimumY,
+                        width,
+                        height,
+                        scale,
+                        out string candidateKey))
+                    continue;
+
+                if (pieceVisualConfig.TryGetShape(candidateKey, out _))
+                {
+                    shapeKey = candidateKey;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryBuildUniformScaledShapeKey(
+            HashSet<Vector2Int> occupiedCells,
+            int minimumX,
+            int minimumY,
+            int width,
+            int height,
+            int scale,
+            out string shapeKey)
+        {
+            List<string> modules = new List<string>();
+            for (int moduleY = 0; moduleY < height / scale; moduleY++)
+            {
+                for (int moduleX = 0; moduleX < width / scale; moduleX++)
+                {
+                    int occupiedCount = 0;
+                    int startX = minimumX + moduleX * scale;
+                    int startY = minimumY + moduleY * scale;
+                    for (int y = 0; y < scale; y++)
+                    {
+                        for (int x = 0; x < scale; x++)
+                        {
+                            if (occupiedCells.Contains(new Vector2Int(startX + x, startY + y)))
+                                occupiedCount++;
+                        }
+                    }
+
+                    if (occupiedCount == 0)
+                        continue;
+                    if (occupiedCount != scale * scale)
+                    {
+                        shapeKey = null;
+                        return false;
+                    }
+
+                    modules.Add(moduleX + "," + moduleY);
+                }
+            }
+
+            modules.Sort(System.StringComparer.Ordinal);
+            shapeKey = modules.Count > 0 ? string.Join(";", modules) : null;
+            return !string.IsNullOrEmpty(shapeKey);
+        }
+
+        private static string GetCompleteModuleShapeKey(List<PiecePartGeometry> parts)
+        {
+            if (parts == null || parts.Count == 0)
+                return null;
+
+            float minimumX = float.PositiveInfinity;
+            float minimumY = float.PositiveInfinity;
+            for (int index = 0; index < parts.Count; index++)
+            {
+                PiecePartGeometry part = parts[index];
+                if (part.Name != GridBlockName || part.Size != Vector2.one)
+                    return null;
+
+                minimumX = Mathf.Min(minimumX, part.LocalPosition.x);
+                minimumY = Mathf.Min(minimumY, part.LocalPosition.y);
+            }
+
+            string[] cells = new string[parts.Count];
+            for (int index = 0; index < parts.Count; index++)
+                cells[index] = Mathf.RoundToInt(parts[index].LocalPosition.x - minimumX) + "," +
+                               Mathf.RoundToInt(parts[index].LocalPosition.y - minimumY);
+            System.Array.Sort(cells, System.StringComparer.Ordinal);
+            return string.Join(";", cells);
         }
 
         private static void WarnMissingVisualDefinition(string visualId)
@@ -737,18 +923,21 @@ namespace GravityPuzzle.Gameplay.Pieces
                 int progressUnits,
                 List<BoxCollider2D> collisionCells,
                 List<SpriteRenderer> collisionCellVisuals,
-                List<VoxelShard> voxelShards)
+                List<VoxelShard> voxelShards,
+                string shapeKey)
             {
                 ProgressUnits = progressUnits;
                 CollisionCells = collisionCells;
                 CollisionCellVisuals = collisionCellVisuals;
                 VoxelShards = voxelShards;
+                ShapeKey = shapeKey;
             }
 
             public int ProgressUnits { get; }
             public List<BoxCollider2D> CollisionCells { get; }
             public List<SpriteRenderer> CollisionCellVisuals { get; }
             public List<VoxelShard> VoxelShards { get; }
+            public string ShapeKey { get; }
         }
     }
 }

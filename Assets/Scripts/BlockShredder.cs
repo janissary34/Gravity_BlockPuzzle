@@ -9,6 +9,7 @@ namespace GravityPuzzle
     /// and pooled shard progress handoff to the level progress manager.
     /// </summary>
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(AudioSource))]
     public class BlockShredder : MonoBehaviour
     {
         private static readonly SpriteRenderer[] EmptyRenderers = new SpriteRenderer[0];
@@ -17,6 +18,14 @@ namespace GravityPuzzle
         [Tooltip("Authoring asset used for both this feed behaviour and runtime-created shredder wheels.")]
         [SerializeField] private ShredderConfig shredderConfig;
 
+        [Header("Audio")]
+        [Tooltip("One-shot played when a shredded voxel is handed to the flying particle presentation.")]
+        [SerializeField] private AudioClip particleShredClip;
+        [Tooltip("Cached 2D source used exclusively for shredded-particle feedback.")]
+        [SerializeField] private AudioSource particleShredAudioSource;
+        [Tooltip("Minimum time between particle shred one-shots so a large piece cannot flood the audio mix.")]
+        [Min(0f)] [SerializeField] private float particleShredSoundMinInterval = .08f;
+
         public static BlockShredder Instance { get; private set; }
         public ShredderConfig Config => shredderConfig;
 
@@ -24,6 +33,7 @@ namespace GravityPuzzle
         private int activeFeedCount;
         private readonly Dictionary<float, int> activeFeedsByShredderLine =
             new Dictionary<float, int>();
+        private float nextParticleShredSoundTime;
 
         private void Awake()
         {
@@ -34,6 +44,8 @@ namespace GravityPuzzle
                 return;
             }
             Instance = this;
+            if (particleShredAudioSource == null)
+                particleShredAudioSource = GetComponent<AudioSource>();
             if (shredderConfig != null && shredderConfig.WheelPrefab != null)
                 ShredderWheelPool.Configure(shredderConfig.WheelPrefab, transform, shredderConfig.WheelPoolCapacity);
             if (shredderConfig != null && shredderConfig.CatchZonePrefab != null)
@@ -271,6 +283,7 @@ namespace GravityPuzzle
                                 shardColor,
                                 bufferedParticleProgress,
                                 1);
+                            PlayParticleShredSound();
                             bufferedParticleProgress = 0f;
                         }
                         else
@@ -378,5 +391,15 @@ namespace GravityPuzzle
         }
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);
+
+        private void PlayParticleShredSound()
+        {
+            if (particleShredClip == null || particleShredAudioSource == null ||
+                Time.time < nextParticleShredSoundTime)
+                return;
+
+            particleShredAudioSource.PlayOneShot(particleShredClip);
+            nextParticleShredSoundTime = Time.time + particleShredSoundMinInterval;
+        }
     }
 }

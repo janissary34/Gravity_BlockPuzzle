@@ -125,6 +125,9 @@ namespace GravityPuzzle
 
         private readonly List<SpriteRenderer> iceRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> iceSlots = new List<SpriteRenderer>();
+        private SpriteRenderer wholePieceRenderer;
+        private Sprite wholePieceNormalSprite;
+        private Sprite wholePieceIceSprite;
         private Transform iceSlotsRoot;
         private readonly List<PiecePartSlot> partSlots = new List<PiecePartSlot>();
         private CompositeCollider2D compositeCollider;
@@ -241,6 +244,9 @@ namespace GravityPuzzle
                     break;
                 }
             }
+
+            if (iceSlots.Count > 0)
+                wholePieceRenderer = iceSlots[0];
         }
 
         public int PartSlotCount => partSlots.Count;
@@ -326,6 +332,7 @@ namespace GravityPuzzle
             ApplyOutlinePresentation();
             returnToPool = null;
             ClearIceVisuals();
+            ClearWholePiecePresentation();
             RestoreShredderPresentation();
             RestoreDefaultCollisionMaterials();
             RuntimePieceFactory.ResetPooledPiece(this);
@@ -370,6 +377,31 @@ namespace GravityPuzzle
             configuredShredderRenderers = new SpriteRenderer[visuals.Count];
             for (int index = 0; index < visuals.Count; index++)
                 configuredShredderRenderers[index] = visuals[index];
+        }
+
+        /// <summary>
+        /// Shows a single artist-authored sprite for an intact, module-aligned
+        /// shape. Colliders and cell visuals remain the gameplay authority.
+        /// Hammer edits explicitly return to the modular presentation.
+        /// </summary>
+        public void ConfigureWholePiecePresentation(Sprite normalSprite, Sprite iceSprite)
+        {
+            ClearIceVisuals();
+            wholePieceNormalSprite = normalSprite;
+            wholePieceIceSprite = iceSprite;
+            RefreshWholePiecePresentation();
+            PrototypeBoard board = PrototypeBoard.Active;
+            RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+        }
+
+        public void ClearWholePiecePresentation()
+        {
+            wholePieceNormalSprite = null;
+            wholePieceIceSprite = null;
+            if (wholePieceRenderer != null)
+                wholePieceRenderer.enabled = false;
+
+            SetModularCellPresentationVisible(true);
         }
 
         public IReadOnlyList<VoxelShard> ConfiguredVoxelShards => configuredVoxelShards;
@@ -688,6 +720,7 @@ namespace GravityPuzzle
         private void PrepareForRuntimeSetup()
         {
             ClearIceVisuals();
+            ClearWholePiecePresentation();
             iceOverlaySprite = null;
             iceOverlayTint = new Color(1f, 1f, 1f, .42f);
             iceFrostTint = new Color(1f, 1f, 1f, .18f);
@@ -1216,9 +1249,10 @@ namespace GravityPuzzle
                 !beingShredded;
 
             IsFrozen = shouldBeFrozen;
+            RefreshWholePiecePresentation();
             if (shouldBeFrozen)
             {
-                if (iceRenderers.Count == 0)
+                if (iceRenderers.Count == 0 && wholePieceIceSprite == null)
                     BuildIceVisuals();
 
                 int remainingCount = frozenUntilDestroyedCount - destroyedPieceCount;
@@ -1533,6 +1567,7 @@ namespace GravityPuzzle
                 SetSelected(false);
 
             ClearIceVisuals();
+            ClearWholePiecePresentation();
 
             SpriteRenderer removedVisual = collisionCellVisuals[targetIndex];
             BoxCollider2D removedCollider = collisionCells[targetIndex];
@@ -2258,6 +2293,94 @@ namespace GravityPuzzle
             {
                 iceCounterText.enabled = false;
             }
+        }
+
+        private void RefreshWholePiecePresentation()
+        {
+            if (wholePieceRenderer == null || collisionCellVisuals == null ||
+                collisionCellVisuals.Count == 0)
+                return;
+
+            Sprite sprite = IsFrozen && wholePieceIceSprite != null
+                ? wholePieceIceSprite
+                : wholePieceNormalSprite;
+            if (sprite == null)
+            {
+                wholePieceRenderer.enabled = false;
+                SetModularCellPresentationVisible(true);
+                return;
+            }
+
+            GetModularPresentationBounds(out Vector2 center, out Vector2 size);
+            if (sprite.bounds.size.x <= 0f || sprite.bounds.size.y <= 0f)
+                return;
+
+            wholePieceRenderer.transform.SetParent(transform, false);
+            wholePieceRenderer.transform.localPosition = center;
+            wholePieceRenderer.transform.localRotation = Quaternion.identity;
+            wholePieceRenderer.transform.localScale = new Vector3(
+                size.x / sprite.bounds.size.x,
+                size.y / sprite.bounds.size.y,
+                1f);
+            wholePieceRenderer.sprite = sprite;
+            // The brick atlas is neutral by design; retain the level-authored
+            // colour for normal pieces. Ice artwork owns its blue/white palette.
+            wholePieceRenderer.color = IsFrozen ? Color.white : VisualColor;
+            wholePieceRenderer.sortingOrder = 5;
+            wholePieceRenderer.enabled = true;
+            SetModularCellPresentationVisible(false);
+            configuredShredderRenderers = new[] { wholePieceRenderer };
+        }
+
+        private void SetModularCellPresentationVisible(bool visible)
+        {
+            if (collisionCellVisuals == null)
+                return;
+
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[index];
+                if (visual != null)
+                    visual.enabled = visible;
+            }
+
+            // Voxel shards are a separate pooled presentation path. Leaving
+            // them enabled underneath a whole-piece sprite double-renders the
+            // piece and produces the dense, pixelated patterns seen on partial
+            // transparent artwork.
+            for (int index = 0; index < configuredVoxelShards.Count; index++)
+            {
+                VoxelShard voxel = configuredVoxelShards[index];
+                if (voxel != null)
+                    voxel.Renderer.enabled = visible;
+            }
+        }
+
+        private void GetModularPresentationBounds(out Vector2 center, out Vector2 size)
+        {
+            Vector2 minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[index];
+                if (visual == null || index >= fullCollisionCellSizes.Count)
+                    continue;
+
+                Vector2 halfSize = fullCollisionCellSizes[index] * .5f;
+                Vector2 position = visual.transform.localPosition;
+                minimum = Vector2.Min(minimum, position - halfSize);
+                maximum = Vector2.Max(maximum, position + halfSize);
+            }
+
+            if (float.IsPositiveInfinity(minimum.x))
+            {
+                center = Vector2.zero;
+                size = Vector2.one;
+                return;
+            }
+
+            center = (minimum + maximum) * .5f;
+            size = maximum - minimum;
         }
 
         public float LowestColliderPoint()

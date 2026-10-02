@@ -9,6 +9,14 @@ namespace GravityPuzzle.Config
     {
         [SerializeField] private List<PieceVisualDefinition> definitions = new List<PieceVisualDefinition>();
 
+        [Header("Modular Block Presentation")]
+        [Tooltip("Artist-authored 1x1 brick used when a complete piece has no matching silhouette, including hammer fragments.")]
+        [SerializeField] private Sprite normalFallbackSprite;
+        [Tooltip("Artist-authored 1x1 ice block used when a frozen piece has no matching silhouette.")]
+        [SerializeField] private Sprite iceFallbackSprite;
+        [Tooltip("Whole-piece atlas sprites keyed by a normalized silhouette. Runtime matches compatible fine-cell geometry at a uniform scale.")]
+        [SerializeField] private List<PieceShapeVisualDefinition> shapeDefinitions = new List<PieceShapeVisualDefinition>();
+
         [Header("Ice Presentation")]
         [Tooltip("Sprite rendered only above pieces whose Block Type is Ice. Leave empty to retain the legacy source-sprite overlay.")]
         [SerializeField] private Sprite iceOverlaySprite;
@@ -31,6 +39,8 @@ namespace GravityPuzzle.Config
         [SerializeField, Range(0, 8)] private int outlineCapVertices = 4;
 
         public IReadOnlyList<PieceVisualDefinition> Definitions => definitions;
+        public Sprite NormalFallbackSprite => normalFallbackSprite;
+        public Sprite IceFallbackSprite => iceFallbackSprite;
         public Sprite IceOverlaySprite => iceOverlaySprite;
         public Color IceOverlayTint => iceOverlayTint;
         public Color IceFrostTint => iceFrostTint;
@@ -60,6 +70,22 @@ namespace GravityPuzzle.Config
             definition = default;
             return false;
         }
+
+        public bool TryGetShape(string shapeKey, out PieceShapeVisualDefinition definition)
+        {
+            for (int index = 0; index < shapeDefinitions.Count; index++)
+            {
+                PieceShapeVisualDefinition candidate = shapeDefinitions[index];
+                if (candidate.ShapeKey == shapeKey)
+                {
+                    definition = candidate;
+                    return true;
+                }
+            }
+
+            definition = default;
+            return false;
+        }
     }
 
     [Serializable]
@@ -72,5 +98,22 @@ namespace GravityPuzzle.Config
         public string VisualId => visualId;
         public Sprite Sprite => sprite;
         public Color Tint => tint;
+    }
+
+    /// <summary>
+    /// Presentation-only mapping for an artist-authored silhouette. Runtime
+    /// normalizes compatible fine-cell geometry to this module key; it never
+    /// affects board occupancy, collisions, or any gameplay decision.
+    /// </summary>
+    [Serializable]
+    public struct PieceShapeVisualDefinition
+    {
+        [SerializeField] private string shapeKey;
+        [SerializeField] private Sprite normalSprite;
+        [SerializeField] private Sprite iceSprite;
+
+        public string ShapeKey => shapeKey;
+        public Sprite NormalSprite => normalSprite;
+        public Sprite IceSprite => iceSprite;
     }
 }
