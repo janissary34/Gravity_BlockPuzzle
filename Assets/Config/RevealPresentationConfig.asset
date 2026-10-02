@@ -35,5 +35,5 @@ MonoBehaviour:
   elevatorDoorCenterYOffset: -0.04
   elevatorVisualWidthScale: 1.15
   elevatorOpeningColor: {r: 0.04, g: 0.08, b: 0.14, a: 1}
-  elevatorSortingOrder: 2
+  elevatorSortingOrder: 1
   boxSortingOrder: 200

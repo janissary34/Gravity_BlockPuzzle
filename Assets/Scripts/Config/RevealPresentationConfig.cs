@@ -48,8 +48,8 @@ namespace GravityPuzzle.Config
         [Range(.8f, 1.4f)] public float elevatorVisualWidthScale = 1.15f;
         [Tooltip("Colour shown in the doorway while the fixed interior content is being activated.")]
         public Color elevatorOpeningColor = new Color(.04f, .08f, .14f, 1f);
-        [Tooltip("Elevator doors must stay behind normal piece visuals (which render at order 5).")]
-        public int elevatorSortingOrder = 2;
+        [Tooltip("The Elevator is board decoration: frame, opening and both doors render behind normal piece visuals (which render at order 5).")]
+        public int elevatorSortingOrder = 1;
         [Tooltip("Box cover layer. Keep this higher than Elevator so overlapping Boxes remain in front.")]
         public int boxSortingOrder = 200;
     }

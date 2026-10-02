@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using GravityPuzzle.Config;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Input;
+using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
 using UnityEngine;
@@ -203,8 +204,8 @@ namespace GravityPuzzle.Gameplay.Tutorial
             if (boosterType != BoosterRewardType.Hammer)
                 return true;
 
-            Vector2Int expectedCell = activeConfig.TutorialTargetFineCell;
-            return target.Cell.Equals(new GridCoordinate(expectedCell.x, expectedCell.y));
+            return TryGetExpectedHammerCell(target.Piece, out GridCoordinate expectedCell) &&
+                   target.Cell.Equals(expectedCell);
         }
 
         public void NotifyEffectApplied(BoosterRewardType boosterType)
@@ -310,14 +311,16 @@ namespace GravityPuzzle.Gameplay.Tutorial
                     return true;
                 }
 
+                if (!TryGetExpectedHammerCell(piece, out GridCoordinate targetCell))
+                    return false;
+
                 GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
                 if (level == null)
                     return false;
 
-                Vector2Int targetCell = activeConfig.TutorialTargetFineCell;
                 position = GravityLevelGridCoordinates.FineCellToWorld(
                     level,
-                    new GridCoordinate(targetCell.x, targetCell.y));
+                    targetCell);
                 return true;
             }
 
@@ -366,6 +369,65 @@ namespace GravityPuzzle.Gameplay.Tutorial
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Resolves the authored Hammer cell through the live piece model. The
+        /// authored coordinate identifies a local cell at spawn, while the
+        /// model anchor follows gravity; using the model prevents the tutorial
+        /// marker and input gate from remaining at the old board position.
+        /// </summary>
+        private bool TryGetExpectedHammerCell(PuzzlePiece expectedPiece, out GridCoordinate expectedCell)
+        {
+            expectedCell = default;
+            if (activeConfig == null || expectedPiece == null || board == null ||
+                !board.TryGetPieceModel(expectedPiece, out PieceModel model) ||
+                !TryGetExpectedDefinition(expectedPiece, out PieceDefinition definition) ||
+                definition.cells == null || definition.cells.Count == 0)
+                return false;
+
+            Vector2Int minimum = QuarterTurnUtility.Rotate(
+                definition.cells[0].localCell,
+                definition.quarterTurns);
+            for (int index = 1; index < definition.cells.Count; index++)
+            {
+                Vector2Int rotated = QuarterTurnUtility.Rotate(
+                    definition.cells[index].localCell,
+                    definition.quarterTurns);
+                minimum = new Vector2Int(
+                    Mathf.Min(minimum.x, rotated.x),
+                    Mathf.Min(minimum.y, rotated.y));
+            }
+
+            Vector2Int initialAnchor = definition.origin + minimum;
+            Vector2Int requestedLocalCell = activeConfig.TutorialTargetFineCell - initialAnchor;
+            GridCoordinate requestedLocal = new GridCoordinate(
+                requestedLocalCell.x,
+                requestedLocalCell.y);
+            IReadOnlyList<GridCoordinate> localCells = model.LocalCells;
+            for (int index = 0; index < localCells.Count; index++)
+            {
+                if (!localCells[index].Equals(requestedLocal))
+                    continue;
+
+                expectedCell = model.GetWorldCell(index);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryGetExpectedDefinition(PuzzlePiece expectedPiece, out PieceDefinition definition)
+        {
+            definition = null;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            int sourcePieceId = expectedPiece != null ? expectedPiece.SourcePieceId : -1;
+            if (level == null || level.pieces == null || sourcePieceId < 0 ||
+                sourcePieceId >= level.pieces.Count)
+                return false;
+
+            definition = level.pieces[sourcePieceId];
+            return definition != null;
         }
     }
 

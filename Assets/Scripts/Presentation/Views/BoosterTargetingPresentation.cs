@@ -258,12 +258,12 @@ namespace GravityPuzzle.Presentation.Views
         {
             ClearPieceHighlights();
             ReturnHammerCellOutlines();
+            tutorialTargetIndicator?.Hide();
 
             if (boosterType == BoosterRewardType.Rocket && expectedPiece != null)
             {
                 expectedPiece.SetBoosterTargeted(true);
-                if (TryGetPieceBounds(expectedPiece, out Vector2 center, out Vector2 size))
-                    tutorialTargetIndicator?.Show(center, size, tutorialDimSortingOrder + 1);
+                expectedPiece.SetTutorialTargeted(true, tutorialDimSortingOrder + 2);
                 return;
             }
 
@@ -464,33 +464,6 @@ namespace GravityPuzzle.Presentation.Views
             }
         }
 
-        private bool TryGetPieceBounds(PuzzlePiece piece, out Vector2 center, out Vector2 size)
-        {
-            center = default;
-            size = default;
-            if (piece == null)
-                return false;
-
-            targetableCellBuffer.Clear();
-            piece.CollectTargetableCells(targetableCellBuffer);
-            if (targetableCellBuffer.Count == 0)
-                return false;
-
-            Vector2 minimum = new Vector2(float.MaxValue, float.MaxValue);
-            Vector2 maximum = new Vector2(float.MinValue, float.MinValue);
-            for (int index = 0; index < targetableCellBuffer.Count; index++)
-            {
-                PuzzlePiece.TargetableCell cell = targetableCellBuffer[index];
-                Vector2 halfSize = cell.Size * .5f;
-                minimum = Vector2.Min(minimum, cell.Center - halfSize);
-                maximum = Vector2.Max(maximum, cell.Center + halfSize);
-            }
-
-            center = (minimum + maximum) * .5f;
-            size = maximum - minimum;
-            return true;
-        }
-
         private void PrewarmHammerOutlines()
         {
             if (hammerCellOutlinePrefab == null)
@@ -571,7 +544,10 @@ namespace GravityPuzzle.Presentation.Views
             {
                 PuzzlePiece piece = pieces[index];
                 if (piece != null)
+                {
                     piece.SetBoosterTargeted(false);
+                    piece.SetTutorialTargeted(false);
+                }
             }
         }
     }

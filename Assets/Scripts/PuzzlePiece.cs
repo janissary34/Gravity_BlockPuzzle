@@ -166,6 +166,10 @@ namespace GravityPuzzle
         // Presentation-only state for an armed Rocket or Hammer booster.
         // It never participates in board occupancy or input ownership.
         private bool isBoosterTargeted;
+        // A forced tutorial target must render over its dimmer without
+        // changing piece state or normal booster targeting presentation.
+        private bool isTutorialTargeted;
+        private int tutorialTargetSortingOrder;
         private bool destructionReported;
         private bool iceReleaseAnimating;
         private int frozenUntilDestroyedCount;
@@ -301,6 +305,7 @@ namespace GravityPuzzle
             useFullCollisionGeometry = false;
             isSelected = false;
             isBoosterTargeted = false;
+            isTutorialTargeted = false;
             IsFrozen = false;
             IsBombDefused = false;
             SourcePieceId = -1;
@@ -317,6 +322,7 @@ namespace GravityPuzzle
         {
             isSelected = false;
             isBoosterTargeted = false;
+            isTutorialTargeted = false;
             ApplyOutlinePresentation();
             returnToPool = null;
             ClearIceVisuals();
@@ -555,6 +561,18 @@ namespace GravityPuzzle
         }
 
         /// <summary>
+        /// Raises the already-authored contour of one piece above a tutorial
+        /// dimmer. This preserves the real, possibly irregular piece outline
+        /// instead of drawing an approximate filled rectangle over it.
+        /// </summary>
+        public void SetTutorialTargeted(bool isTargeted, int sortingOrder = 0)
+        {
+            isTutorialTargeted = isTargeted;
+            tutorialTargetSortingOrder = sortingOrder;
+            ApplyOutlinePresentation();
+        }
+
+        /// <summary>
         /// Appends the current world-space footprints of each runtime cell
         /// without allocating. Hammer targeting uses these only as visual
         /// overlays; the board remains the action authority.
@@ -585,14 +603,16 @@ namespace GravityPuzzle
         {
             if (rootOutline != null)
             {
-                bool useTargetOutline = isSelected || isBoosterTargeted;
+                bool useTargetOutline = isSelected || isBoosterTargeted || isTutorialTargeted;
                 float outlineWidth = useTargetOutline ? selectedOutlineWidth : restingOutlineWidth;
                 rootOutline.startWidth = outlineWidth;
                 rootOutline.endWidth = outlineWidth;
                 Color outlineColor = useTargetOutline ? selectedOutlineColor : restingOutlineColor;
                 rootOutline.startColor = outlineColor;
                 rootOutline.endColor = outlineColor;
-                rootOutline.sortingOrder = useTargetOutline ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
+                rootOutline.sortingOrder = isTutorialTargeted
+                    ? tutorialTargetSortingOrder
+                    : useTargetOutline ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
             }
         }
 
@@ -680,6 +700,8 @@ namespace GravityPuzzle
             destructionReported = false;
             useFullCollisionGeometry = false;
             isSelected = false;
+            isBoosterTargeted = false;
+            isTutorialTargeted = false;
             IsFrozen = false;
             IsBomb = false;
             IsBombDefused = false;
