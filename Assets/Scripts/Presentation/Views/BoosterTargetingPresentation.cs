@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TMPro;
+using GravityPuzzle.Config;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -117,6 +118,17 @@ namespace GravityPuzzle.Presentation.Views
         }
 
         /// <summary>
+        /// Reuses the authored dimmer and button glow while a first-use lesson
+        /// permits exactly one booster button. The targeting header remains
+        /// hidden until that button has actually armed its board action.
+        /// </summary>
+        public static void ShowFirstUseBoosterFocus(BoosterRewardType boosterType)
+        {
+            if (Active != null)
+                Active.ShowFirstUseBoosterFocusInternal(boosterType);
+        }
+
+        /// <summary>
         /// Lets a booster's existing button-refresh code respect the temporary
         /// visibility owned by this presentation. This avoids a competing
         /// component re-enabling a non-selected button during targeting.
@@ -151,6 +163,24 @@ namespace GravityPuzzle.Presentation.Views
                 ApplyRocketPieceHighlights();
             else
                 ShowHammerCellOutlines();
+        }
+
+        private void ShowFirstUseBoosterFocusInternal(BoosterRewardType boosterType)
+        {
+            HideGameplayHud();
+            HideInactiveBoosterButtons(boosterType);
+            if (boardDimBackdrop != null)
+                boardDimBackdrop.SetActive(true);
+            if (targetingUi != null)
+                targetingUi.SetActive(false);
+
+            bool? rocketFocus = boosterType == BoosterRewardType.Rocket
+                ? true
+                : boosterType == BoosterRewardType.Hammer ? false : (bool?)null;
+            SetSelectionGlow(rocketFocus);
+            StopSelectionSparkles();
+            if (rocketFocus.HasValue)
+                PlaySelectionSparkles(rocketFocus.Value);
         }
 
         private void SetVisible(bool visible)
@@ -230,6 +260,19 @@ namespace GravityPuzzle.Presentation.Views
 
             HideBoosterButton(rocketBoosterButtonGroup);
             HideBoosterButton(timerBoosterButtonGroup);
+        }
+
+        private void HideInactiveBoosterButtons(BoosterRewardType boosterType)
+        {
+            if (hiddenBoosterButtonStates.Count > 0)
+                return;
+
+            if (boosterType != BoosterRewardType.Rocket)
+                HideBoosterButton(rocketBoosterButtonGroup);
+            if (boosterType != BoosterRewardType.Hammer)
+                HideBoosterButton(hammerBoosterButtonGroup);
+            if (boosterType != BoosterRewardType.FreezeTimer)
+                HideBoosterButton(timerBoosterButtonGroup);
         }
 
         private void HideBoosterButton(CanvasGroup group)

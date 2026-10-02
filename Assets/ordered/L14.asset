@@ -904,6 +904,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -5, y: 13}
       type: 0
+  boxes: []
+  elevators: []
   pins: []
   obstacles:
   - name: Obstacle 1

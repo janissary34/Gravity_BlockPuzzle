@@ -146,8 +146,11 @@ namespace GravityPuzzle
                 // The particles must render in front of the world-space
                 // progress canvas; otherwise their final position is hidden
                 // behind the slider handle/pin.
-                progressVoxelVfx.SetRendererSortingOrder(progressCanvas.sortingOrder + 1);
-                progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
+                if (progressCanvas != null)
+                {
+                    progressVoxelVfx.SetRendererSortingOrder(progressCanvas.sortingOrder + 1);
+                    progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
+                }
             }
         }
 
@@ -190,7 +193,10 @@ namespace GravityPuzzle
             if (progressSlider == null)
                 return;
 
-            progressCanvas = progressSlider.GetComponentInParent<Canvas>();
+            // Timer_Canvas starts disabled and is activated by the gameplay
+            // bootstrap. It is still the authored owner of this Slider, so it
+            // must be considered while caching presentation dependencies.
+            progressCanvas = progressSlider.GetComponentInParent<Canvas>(true);
             progressCanvasRect = progressCanvas != null ? progressCanvas.transform as RectTransform : null;
             progressTargetRect = progressSlider.handleRect != null
                 ? progressSlider.handleRect

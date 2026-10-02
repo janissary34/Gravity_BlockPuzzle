@@ -24,6 +24,7 @@ namespace GravityPuzzle.Presentation.Views
         private readonly Transform elevatorRightDoor;
         private readonly SpriteRenderer[] doorRenderers;
         private readonly GameObject boxCover;
+        private readonly SpriteRenderer boxCoverRenderer;
         private readonly Transform[] boxBurstFragments;
         private readonly SpriteRenderer[] boxBurstRenderers;
         private readonly TextMesh boxCounter;
@@ -43,6 +44,7 @@ namespace GravityPuzzle.Presentation.Views
             Transform elevatorRightDoor,
             SpriteRenderer[] doorRenderers,
             GameObject boxCover,
+            SpriteRenderer boxCoverRenderer,
             Transform[] boxBurstFragments,
             SpriteRenderer[] boxBurstRenderers,
             TextMesh boxCounter)
@@ -55,6 +57,7 @@ namespace GravityPuzzle.Presentation.Views
             this.elevatorRightDoor = elevatorRightDoor;
             this.doorRenderers = doorRenderers;
             this.boxCover = boxCover;
+            this.boxCoverRenderer = boxCoverRenderer;
             this.boxBurstFragments = boxBurstFragments;
             this.boxBurstRenderers = boxBurstRenderers;
             this.boxCounter = boxCounter;
@@ -80,7 +83,7 @@ namespace GravityPuzzle.Presentation.Views
 
             return kind == RevealAreaKind.Box
                 ? CreateBox(root, size, config)
-                : CreateElevator(root, size, config);
+                : CreateElevator(root, size, level.backgroundColor, config);
         }
 
         public void SetBoxRemaining(int remaining)
@@ -101,7 +104,7 @@ namespace GravityPuzzle.Presentation.Views
             if (kind == RevealAreaKind.Box && boxShutter != null)
             {
                 Transform coverTransform = boxCover != null ? boxCover.transform : null;
-                float fullHeight = coverTransform != null ? coverTransform.localScale.y : 0f;
+                float fullHeight = GetVisualBlockSize(boxCoverRenderer).y;
                 float residualHeight = Mathf.Min(fullHeight, config.boxBurstResidualHeight);
                 float fixedTopY = coverTransform != null
                     ? coverTransform.localPosition.y + fullHeight * .5f
@@ -113,9 +116,14 @@ namespace GravityPuzzle.Presentation.Views
 
                 if (coverTransform != null)
                 {
-                    openingSequence.Append(coverTransform.DOScaleY(
+                    openingSequence.Append(DOVirtual.Float(
+                        fullHeight,
                         residualHeight,
-                        config.boxOpenDuration).SetEase(config.boxOpenEase));
+                        config.boxOpenDuration,
+                        height => SetVisualBlockSize(
+                            boxCoverRenderer,
+                            new Vector2(GetVisualBlockSize(boxCoverRenderer).x, height)))
+                        .SetEase(config.boxOpenEase));
                     openingSequence.Join(coverTransform.DOLocalMoveY(
                         residualCentreY,
                         config.boxOpenDuration).SetEase(config.boxOpenEase));
@@ -128,30 +136,47 @@ namespace GravityPuzzle.Presentation.Views
                         config.boxOpenDuration).SetEase(config.boxOpenEase));
                 }
 
-            openingSequence.AppendCallback(PlayBoxBurst);
+                openingSequence.AppendCallback(PlayBoxBurst);
                 openingSequence.AppendInterval(config.boxBurstDuration);
             }
             else if (kind == RevealAreaKind.Elevator)
             {
+                bool hasDoorMotion = false;
                 if (elevatorLeftDoor != null)
                 {
-                    openingSequence.Join(elevatorLeftDoor.DOLocalMoveX(
+                    openingSequence.Append(elevatorLeftDoor.DOLocalMoveX(
                         leftDoorClosedPosition.x - config.elevatorDoorDistance,
                         config.elevatorOpenDuration).SetEase(config.elevatorOpenEase));
+                    hasDoorMotion = true;
                 }
 
                 if (elevatorRightDoor != null)
                 {
-                    openingSequence.Join(elevatorRightDoor.DOLocalMoveX(
+                    Tween rightDoorTween = elevatorRightDoor.DOLocalMoveX(
                         rightDoorClosedPosition.x + config.elevatorDoorDistance,
-                        config.elevatorOpenDuration).SetEase(config.elevatorOpenEase));
+                        config.elevatorOpenDuration).SetEase(config.elevatorOpenEase);
+                    if (hasDoorMotion)
+                        openingSequence.Join(rightDoorTween);
+                    else
+                        openingSequence.Append(rightDoorTween);
+
+                    hasDoorMotion = true;
                 }
 
+                bool hasFade = false;
                 for (int index = 0; index < doorRenderers.Length; index++)
                 {
                     SpriteRenderer renderer = doorRenderers[index];
-                    if (renderer != null)
-                        openingSequence.Join(renderer.DOFade(0f, config.elevatorFadeDuration));
+                    if (renderer == null)
+                        continue;
+
+                    Tween fadeTween = renderer.DOFade(0f, config.elevatorFadeDuration);
+                    if (hasFade)
+                        openingSequence.Join(fadeTween);
+                    else
+                        openingSequence.Append(fadeTween);
+
+                    hasFade = true;
                 }
             }
 
@@ -171,7 +196,9 @@ namespace GravityPuzzle.Presentation.Views
                 size,
                 new Color(.22f, .26f, .34f, 1f));
             cover.transform.SetParent(shutter, false);
-            cover.GetComponent<SpriteRenderer>().sortingOrder = config.boxSortingOrder;
+            SpriteRenderer coverRenderer = cover.GetComponent<SpriteRenderer>();
+            SetVisualBlockSpriteToFit(coverRenderer, config.boxCoverSprite, size);
+            coverRenderer.sortingOrder = config.boxSortingOrder;
 
             int fragmentCount = BoxBurstColumns * BoxBurstRows;
             Transform[] fragments = new Transform[fragmentCount];
@@ -194,6 +221,7 @@ namespace GravityPuzzle.Presentation.Views
                     -size.y * .5f + fragmentSize.y * (y + .5f),
                     0f);
                 SpriteRenderer renderer = fragment.GetComponent<SpriteRenderer>();
+                SetVisualBlockSpriteToFit(renderer, config.boxCoverSprite, fragmentSize);
                 renderer.sortingOrder = config.boxSortingOrder + 1;
                 fragment.SetActive(false);
                 fragments[fragmentIndex] = fragment.transform;
@@ -221,6 +249,7 @@ namespace GravityPuzzle.Presentation.Views
                 null,
                 Array.Empty<SpriteRenderer>(),
                 cover,
+                coverRenderer,
                 fragments,
                 fragmentRenderers,
                 counter);
@@ -229,13 +258,58 @@ namespace GravityPuzzle.Presentation.Views
         private static RuntimeRevealAreaPresentation CreateElevator(
             GameObject root,
             Vector2 size,
+            Color boardColor,
             RevealPresentationConfig config)
         {
-            Vector2 doorSize = new Vector2(size.x * .5f, size.y);
-            GameObject leftDoor = CreateDoor("Left Door", -size.x * .25f, doorSize, config.elevatorSortingOrder);
+            GameObject frame = PrototypeBootstrap.CreateVisualBlock(
+                "Elevator Frame",
+                Vector2.zero,
+                size,
+                Color.white);
+            frame.transform.SetParent(root.transform, false);
+            SpriteRenderer frameRenderer = frame.GetComponent<SpriteRenderer>();
+            SetVisualBlockSpriteToFit(frameRenderer,
+                config.elevatorFrameSprite != null ? config.elevatorFrameSprite : config.elevatorDoorSprite,
+                size);
+            frameRenderer.sortingOrder = config.elevatorSortingOrder;
+
+            Vector2 doorSize = new Vector2(
+                size.x * config.elevatorDoorWidthRatio * .5f,
+                size.y * config.elevatorDoorHeightRatio);
+            float doorCentreY = size.y * config.elevatorDoorCenterYOffset;
+            GameObject opening = PrototypeBootstrap.CreateVisualBlock(
+                "Elevator Opening",
+                Vector2.zero,
+                new Vector2(doorSize.x * 2f, doorSize.y),
+                config.elevatorOpeningColor.a > 0f ? config.elevatorOpeningColor : boardColor);
+            opening.transform.SetParent(root.transform, false);
+            opening.transform.localPosition = new Vector3(0f, doorCentreY, 0f);
+            SpriteRenderer openingRenderer = opening.GetComponent<SpriteRenderer>();
+            SetVisualBlockSize(openingRenderer, new Vector2(doorSize.x * 2f, doorSize.y));
+            openingRenderer.sortingOrder = config.elevatorSortingOrder + 1;
+
+            Sprite leftDoorSprite = config.elevatorLeftDoorSprite != null
+                ? config.elevatorLeftDoorSprite
+                : config.elevatorFrameSprite != null ? config.elevatorFrameSprite : config.elevatorDoorSprite;
+            Sprite rightDoorSprite = config.elevatorRightDoorSprite != null
+                ? config.elevatorRightDoorSprite
+                : config.elevatorFrameSprite != null ? config.elevatorFrameSprite : config.elevatorDoorSprite;
+            GameObject leftDoor = CreateDoor(
+                "Left Door",
+                -doorSize.x * .5f,
+                doorSize,
+                config.elevatorSortingOrder + 2,
+                leftDoorSprite);
             leftDoor.transform.SetParent(root.transform, false);
-            GameObject rightDoor = CreateDoor("Right Door", size.x * .25f, doorSize, config.elevatorSortingOrder + 1);
+            leftDoor.transform.localPosition += Vector3.up * doorCentreY;
+            GameObject rightDoor = CreateDoor(
+                "Right Door",
+                doorSize.x * .5f,
+                doorSize,
+                config.elevatorSortingOrder + 3,
+                rightDoorSprite);
             rightDoor.transform.SetParent(root.transform, false);
+            rightDoor.transform.localPosition += Vector3.up * doorCentreY;
             SpriteRenderer[] renderers =
             {
                 leftDoor.GetComponent<SpriteRenderer>(),
@@ -251,12 +325,18 @@ namespace GravityPuzzle.Presentation.Views
                 rightDoor.transform,
                 renderers,
                 null,
+                null,
                 Array.Empty<Transform>(),
                 Array.Empty<SpriteRenderer>(),
                 null);
         }
 
-        private static GameObject CreateDoor(string name, float localX, Vector2 size, int sortingOrder)
+        private static GameObject CreateDoor(
+            string name,
+            float localX,
+            Vector2 size,
+            int sortingOrder,
+            Sprite doorSprite)
         {
             GameObject door = PrototypeBootstrap.CreateVisualBlock(
                 name,
@@ -264,7 +344,9 @@ namespace GravityPuzzle.Presentation.Views
                 size,
                 new Color(.18f, .34f, .46f, 1f));
             door.transform.localPosition = new Vector3(localX, 0f, 0f);
-            door.GetComponent<SpriteRenderer>().sortingOrder = sortingOrder;
+            SpriteRenderer renderer = door.GetComponent<SpriteRenderer>();
+            SetVisualBlockSpriteToFit(renderer, doorSprite, size);
+            renderer.sortingOrder = sortingOrder;
             return door;
         }
 
@@ -319,7 +401,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private void PrepareBoxBurstFragments(Vector3 burstOrigin, float residualHeight)
         {
-            float coverWidth = boxCover != null ? boxCover.transform.localScale.x : 0f;
+            float coverWidth = GetVisualBlockSize(boxCoverRenderer).x;
             for (int index = 0; index < boxBurstFragments.Length; index++)
             {
                 Transform fragment = boxBurstFragments[index];
@@ -333,11 +415,50 @@ namespace GravityPuzzle.Presentation.Views
                     -coverWidth * .5f + coverWidth / BoxBurstColumns * (column + .5f),
                     residualHeight * .5f - fragmentHeight * (row + .5f),
                     0f);
-                fragment.localScale = new Vector3(
-                    coverWidth / BoxBurstColumns,
-                    fragmentHeight,
-                    1f);
+                SetVisualBlockSize(
+                    boxBurstRenderers[index],
+                    new Vector2(coverWidth / BoxBurstColumns, fragmentHeight));
             }
+        }
+
+        /// <summary>
+        /// Uses a SpriteRenderer's nine-slice size instead of transform scale.
+        /// The area therefore remains inside its authored grid bounds while the
+        /// imported frame corners retain their intended proportions.
+        /// </summary>
+        private static void SetVisualBlockSpriteToFit(
+            SpriteRenderer renderer,
+            Sprite sprite,
+            Vector2 targetSize)
+        {
+            if (renderer == null)
+                return;
+
+            if (sprite != null)
+                renderer.sprite = sprite;
+
+            renderer.color = Color.white;
+            renderer.drawMode = SpriteDrawMode.Sliced;
+            SetVisualBlockSize(renderer, targetSize);
+        }
+
+        private static void SetVisualBlockSize(SpriteRenderer renderer, Vector2 targetSize)
+        {
+            if (renderer == null || renderer.sprite == null)
+                return;
+
+            renderer.transform.localScale = Vector3.one;
+            renderer.size = targetSize;
+        }
+
+        private static Vector2 GetVisualBlockSize(SpriteRenderer renderer)
+        {
+            if (renderer == null || renderer.sprite == null)
+                return Vector2.zero;
+
+            return renderer.drawMode == SpriteDrawMode.Simple
+                ? renderer.sprite.bounds.size
+                : renderer.size;
         }
 
         private static float GetFragmentUnitValue(int index, int salt)

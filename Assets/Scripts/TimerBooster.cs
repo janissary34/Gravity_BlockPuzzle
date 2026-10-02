@@ -2,6 +2,7 @@ using System.Collections;
 using DG.Tweening;
 using TMPro;
 using GravityPuzzle.Config;
+using GravityPuzzle.Gameplay.Tutorial;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -508,6 +509,10 @@ namespace GravityPuzzle
         /// </summary>
         public void PlayTimerBoosterSequence()
         {
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
+            if (tutorialGate != null && !tutorialGate.AllowsBoosterActivation(BoosterRewardType.FreezeTimer))
+                return;
+
             PrototypeBoard activeBoard = PrototypeBoard.Active;
             if (activeBoard == null || !activeBoard.IsTimerActive || !activeBoard.IsTimerStarted || activeBoard.TimeRemaining <= 0f || LevelTimerUI.IsGameOver)
             {
@@ -531,6 +536,7 @@ namespace GravityPuzzle
             }
 
             sequencePausedBoard = activeBoard;
+            tutorialGate?.NotifyBoosterActivated(BoosterRewardType.FreezeTimer);
             SetSelectionGlowVisible(true);
 
             if (activeSequence != null && activeSequence.IsActive())
@@ -800,7 +806,12 @@ namespace GravityPuzzle
 
         private void OnSequenceCompleted()
         {
-            GetTimerBoosterButton()?.TryConsumeUse();
+            BoosterButton timerButton = GetTimerBoosterButton();
+            if (timerButton == null || !timerButton.TryConsumeUse())
+            {
+                ReleaseSequenceTimerPause();
+                return;
+            }
 
             float effectiveDuration = GetEffectiveFreezeDuration();
 
@@ -820,6 +831,7 @@ namespace GravityPuzzle
                     // pause has actually started, so both windows share the
                     // same first frame and duration.
                     StartFreezeSlider();
+                    BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.FreezeTimer);
                 }
                 else
                 {
@@ -835,6 +847,7 @@ namespace GravityPuzzle
                     if (freezeRoutine != null) StopCoroutine(freezeRoutine);
                     freezeRoutine = StartCoroutine(FreezeTimerRoutine(activeBoard, effectiveDuration));
                     StartFreezeSlider();
+                    BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.FreezeTimer);
                 }
             }
         }

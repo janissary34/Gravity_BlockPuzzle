@@ -407,7 +407,7 @@ namespace GravityPuzzle.Editor
             Undo.RecordObject(level, "Toggle elevator editor lock");
             int capturedPieceCount = locking
                 ? CaptureElevatorInteriorPieces(elevator)
-                : 0;
+                : RestoreElevatorInteriorPieces(elevator);
             elevator.editorLocked = locking;
             ClearSelection();
             selectedElevator = elevatorIndex;
@@ -417,6 +417,11 @@ namespace GravityPuzzle.Editor
             {
                 ShowNotification(new GUIContent(
                     $"{capturedPieceCount} piece(s) captured as fixed Elevator interior."));
+            }
+            else if (!locking && capturedPieceCount > 0)
+            {
+                ShowNotification(new GUIContent(
+                    $"{capturedPieceCount} piece(s) restored to the board for editing."));
             }
         }
 
@@ -439,6 +444,26 @@ namespace GravityPuzzle.Editor
             if (capturedPieces.Count > 0)
                 elevator.hiddenPieces.AddRange(capturedPieces);
             return capturedPieces.Count;
+        }
+
+        private int RestoreElevatorInteriorPieces(ElevatorRevealDefinition elevator)
+        {
+            if (elevator.hiddenPieces == null || elevator.hiddenPieces.Count == 0)
+                return 0;
+
+            int restoredCount = 0;
+            for (int index = 0; index < elevator.hiddenPieces.Count; index++)
+            {
+                PieceDefinition piece = elevator.hiddenPieces[index];
+                if (piece == null)
+                    continue;
+
+                level.pieces.Add(piece);
+                restoredCount++;
+            }
+
+            elevator.hiddenPieces.Clear();
+            return restoredCount;
         }
 
         private static bool PieceIsFullyInsideRevealArea(

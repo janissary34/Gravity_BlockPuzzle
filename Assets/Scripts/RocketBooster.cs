@@ -7,7 +7,9 @@ using UnityEngine.UI;
 using GravityPuzzle.Config;
 using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Gameplay.Input;
+using GravityPuzzle.Gameplay.Tutorial;
 using GravityPuzzle.Infrastructure.Pooling;
+using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
 
 namespace GravityPuzzle
@@ -60,10 +62,13 @@ namespace GravityPuzzle
         private PrototypeBoard boundBoard;
         private bool launchInProgress;
         private int remainingCount = 3;
+        private int lastActivationFrame = -1;
         private BoosterVisualView rocketVisualPrefabView;
         private GameObjectPool<BoosterVisualView> rocketVisualPool;
 
-        public int RemainingCount => boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+        public int RemainingCount => boosterButtonRef != null
+            ? boosterButtonRef.RemainingCount
+            : BoosterInventoryRuntime.Current.GetCount(BoosterRewardType.Rocket);
 
         private void Awake()
         {
@@ -134,19 +139,27 @@ namespace GravityPuzzle
 
         public void ActivateRocketBooster()
         {
+            // A BoosterButton and a legacy direct Button listener can both
+            // dispatch one UI press. Collapse that compatibility duplicate so
+            // only a later physical press toggles targeting off.
+            if (lastActivationFrame == Time.frameCount)
+                return;
+
+            lastActivationFrame = Time.frameCount;
             SynchronizeLevel();
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
+            if (tutorialGate != null && !tutorialGate.AllowsBoosterActivation(BoosterRewardType.Rocket))
+                return;
             // Only one board-targeting tool may own the next board tap.
             HammerBooster.CancelActiveSelection();
 
             if (activeBooster == this)
             {
-                // The BoosterButton event can be delivered after this
-                // component's direct Button listener for the same UI press.
-                // Keep the selection armed instead of toggling it off.
+                CancelRocketSelection();
                 return;
             }
 
-            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+            int currentUses = RemainingCount;
             if (currentUses <= 0 ||
                 boundBoard == null ||
                 !boundBoard.IsLevelRunning ||
@@ -159,6 +172,7 @@ namespace GravityPuzzle
 
             activeBooster = this;
             BoosterTargetingPresentation.Show(BoosterTargetingPresentation.Mode.Rocket);
+            tutorialGate?.NotifyBoosterActivated(BoosterRewardType.Rocket);
             Debug.Log($"[RocketBooster] Targeting enabled. remainingUses={currentUses}.", this);
             RefreshButtonState();
         }
@@ -185,7 +199,7 @@ namespace GravityPuzzle
 
         private void ProcessTargetInput()
         {
-            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+            int currentUses = RemainingCount;
             if (boundBoard == null ||
                 !boundBoard.IsLevelRunning ||
                 LevelTimerUI.IsGameOver ||
@@ -222,13 +236,15 @@ namespace GravityPuzzle
 
             Debug.Log($"[RocketBooster] Target click received at screen={screenPosition}, world={worldPosition}.", this);
 
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
             if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target))
             {
                 Debug.Log(
                     $"[RocketBooster] Target resolved: piece='{target.Piece.name}', sourceId={target.Piece.SourcePieceId}, cell={target.Cell}, world={target.WorldPosition}.",
                     target.Piece);
 
-                if (TryStartRocketImpact(target.Piece))
+                if ((tutorialGate == null || tutorialGate.AllowsTarget(BoosterRewardType.Rocket, target)) &&
+                    TryStartRocketImpact(target.Piece))
                 {
                     Debug.Log($"[RocketBooster] Target tap accepted: {target.Piece.name}");
                     boundBoard.StartTimer();
@@ -238,6 +254,9 @@ namespace GravityPuzzle
                     RefreshButtonState();
                     return;
                 }
+
+                if (tutorialGate != null && tutorialGate.BlocksBoardDrag)
+                    return;
 
                 Debug.LogWarning(
                     $"[RocketBooster] Target was resolved but rejected before launch: '{target.Piece.name}'.",
@@ -251,7 +270,7 @@ namespace GravityPuzzle
 
         private bool TryStartRocketImpact(PuzzlePiece piece)
         {
-            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+            int currentUses = RemainingCount;
             if (piece == null || piece.IsBeingShredded || launchInProgress || currentUses <= 0)
                 return false;
 
@@ -388,16 +407,9 @@ namespace GravityPuzzle
         {
             Color pieceColor = piece != null ? piece.VisualColor : Color.white;
             BoosterButton targetButton = GetRocketBoosterButton();
-            if (targetButton != null)
-            {
-                targetButton.TryConsumeUse();
-            }
-            else
-            {
-                remainingCount--;
-                if (remainingCount < 0) remainingCount = 0;
-                UpdateCountUI();
-            }
+            bool consumed = targetButton != null
+                ? targetButton.TryConsumeUse()
+                : BoosterInventoryRuntime.Current.TryConsume(BoosterRewardType.Rocket);
 
             // 7. Award progress & despawn
             if (LevelProgressManager.Instance != null && piece != null)
@@ -417,6 +429,9 @@ namespace GravityPuzzle
                 piece.ReportDestroyed();
                 piece.ReleaseInstance();
             }
+
+            if (consumed)
+                BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.Rocket);
 
             activeBooster = null;
             launchInProgress = false;
@@ -535,7 +550,7 @@ namespace GravityPuzzle
                 return;
             }
 
-            string countStr = remainingCount.ToString();
+            string countStr = RemainingCount.ToString();
             if (countTmpText != null)
             {
                 countTmpText.text = countStr;
@@ -588,7 +603,7 @@ namespace GravityPuzzle
             if (boosterButton == null)
                 return;
 
-            int currentUses = boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+            int currentUses = RemainingCount;
             bool hasUses = currentUses > 0;
             if (buttonCanvasGroup != null)
             {

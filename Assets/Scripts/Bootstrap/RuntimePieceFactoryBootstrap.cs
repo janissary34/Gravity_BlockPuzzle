@@ -4,6 +4,7 @@ using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Presentation.Views;
 using GravityPuzzle.Presentation.VFX;
+using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle;
 using TMPro;
 using UnityEngine;
@@ -76,6 +77,10 @@ namespace GravityPuzzle.Bootstrap
 
         private void Awake()
         {
+            // Inventory is configured before level/UI setup so every booster
+            // adapter reads one persistent authority from its first refresh.
+            BoosterInventoryRuntime.Configure(new PlayerPrefsBoosterInventory());
+
             if (gameplayCamera == null)
             {
                 Debug.LogError("[Bootstrap] RuntimePieceFactoryBootstrap is missing its Gameplay Camera reference.", this);

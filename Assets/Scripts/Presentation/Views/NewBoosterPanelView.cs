@@ -28,6 +28,7 @@ namespace GravityPuzzle.Presentation.Views
 
         public event Action Continued;
         public event Action Dismissed;
+        public event Action<BoosterRewardConfig> Claimed;
 
         private void Awake()
         {
@@ -94,6 +95,12 @@ namespace GravityPuzzle.Presentation.Views
             if (!IsOverlayVisible)
                 return;
 
+            if (selectedRewardConfig != null)
+            {
+                Debug.LogWarning("[New Booster Panel] A reward popup may only close through Claim.", this);
+                return;
+            }
+
             HideRewardContents();
             SetOverlayVisible(false);
             Dismissed?.Invoke();
@@ -101,8 +108,17 @@ namespace GravityPuzzle.Presentation.Views
 
         public void Continue()
         {
+            if (selectedRewardConfig == null)
+            {
+                Debug.LogWarning("[New Booster Panel] Claim requires a selected reward.", this);
+                return;
+            }
+
+            BoosterRewardConfig claimedReward = selectedRewardConfig;
+            Claimed?.Invoke(claimedReward);
             Continued?.Invoke();
             continueClicked?.Invoke();
+            selectedRewardConfig = null;
             Close();
         }
 

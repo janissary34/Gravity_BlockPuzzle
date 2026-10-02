@@ -1,4 +1,7 @@
 using TMPro;
+using GravityPuzzle.Config;
+using GravityPuzzle.Infrastructure.Services;
+using GravityPuzzle.Gameplay.Tutorial;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Events;
@@ -14,10 +17,6 @@ namespace GravityPuzzle
     [RequireComponent(typeof(Button))]
     public class BoosterButton : MonoBehaviour, IPointerClickHandler
     {
-        [Header("Booster Count Settings")]
-        [SerializeField, Tooltip("Starting number of booster uses per level.")]
-        private int initialCount = 3;
-
         [Header("UI Text References")]
         [SerializeField, Tooltip("Text component displaying count (TextMeshPro). Auto-found if null.")]
         private TextMeshProUGUI countTmpText;
@@ -33,12 +32,18 @@ namespace GravityPuzzle
         private RocketBooster rocketBooster;
         private HammerBooster hammerBooster;
         private TimerBooster timerBooster;
-        private int remainingCount = 3;
+        private FreezeTimerBooster freezeTimerBooster;
+        private BoosterRewardType boosterType;
+        private bool hasBoosterType;
         private int lastDispatchFrame = -1;
 
-        public int RemainingCount => remainingCount;
-        public bool HasUses => remainingCount > 0;
+        public int RemainingCount => hasBoosterType
+            ? BoosterInventoryRuntime.Current.GetCount(boosterType)
+            : 0;
+        public bool HasUses => RemainingCount > 0;
         public Button ButtonComponent => button;
+        public bool HasBoosterType => hasBoosterType;
+        public BoosterRewardType BoosterType => boosterType;
 
         private void Awake()
         {
@@ -46,7 +51,8 @@ namespace GravityPuzzle
             rocketBooster = GetComponent<RocketBooster>();
             hammerBooster = GetComponent<HammerBooster>();
             timerBooster = GetComponent<TimerBooster>();
-            remainingCount = initialCount;
+            freezeTimerBooster = GetComponent<FreezeTimerBooster>();
+            hasBoosterType = TryResolveBoosterType(out boosterType);
             FindCountTextReferences();
         }
 
@@ -63,6 +69,9 @@ namespace GravityPuzzle
                 button.onClick.AddListener(HandleButtonClick);
             }
 
+            if (hasBoosterType)
+                BoosterInventoryRuntime.Current.CountChanged += HandleInventoryCountChanged;
+            BoosterFirstUseTutorialRuntime.RegisterButton(this);
             UpdateCountUI();
             RefreshButtonState();
         }
@@ -73,30 +82,37 @@ namespace GravityPuzzle
             {
                 button.onClick.RemoveListener(HandleButtonClick);
             }
+
+            if (hasBoosterType)
+                BoosterInventoryRuntime.Current.CountChanged -= HandleInventoryCountChanged;
         }
 
         /// <summary>
-        /// Resets the booster count back to initialCount (default 3) or specified number.
+        /// Resets this booster's temporary editor-preview balance. Production
+        /// balances are intentionally changed only through the inventory.
         /// </summary>
         public void ResetCount(int count = -1)
         {
-            remainingCount = count >= 0 ? count : initialCount;
+#if UNITY_EDITOR
+            if (hasBoosterType)
+                BoosterInventoryRuntime.SetEditorPreviewCount(boosterType, Mathf.Max(0, count));
+#endif
             UpdateCountUI();
             RefreshButtonState();
         }
 
         /// <summary>
-        /// Applies the active level's explicit booster allowance. A zero
-        /// allowance leaves this booster visible but unavailable in the level UI.
+        /// Applies an editor-only level-preview count. Release builds ignore
+        /// level allowances: persistent inventory remains the sole authority.
         /// </summary>
         public void ConfigureLevelUseCount(int count)
         {
-            remainingCount = Mathf.Max(0, count);
+#if UNITY_EDITOR
+            if (hasBoosterType)
+                BoosterInventoryRuntime.SetEditorPreviewCount(boosterType, count);
+#endif
             UpdateCountUI();
             RefreshButtonState();
-            // A zero allowance means the booster has not been introduced yet.
-            // Hide the authored HUD object rather than leaving a disabled icon.
-            gameObject.SetActive(remainingCount > 0);
         }
 
         /// <summary>
@@ -105,14 +121,12 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryConsumeUse()
         {
-            if (remainingCount <= 0)
+            if (!hasBoosterType || !BoosterInventoryRuntime.Current.TryConsume(boosterType))
             {
                 RefreshButtonState();
                 return false;
             }
 
-            remainingCount--;
-            if (remainingCount < 0) remainingCount = 0;
             UpdateCountUI();
             RefreshButtonState();
             return true;
@@ -140,7 +154,7 @@ namespace GravityPuzzle
 
             lastDispatchFrame = Time.frameCount;
 
-            if (remainingCount <= 0)
+            if (!HasUses)
             {
                 RefreshButtonState();
                 return;
@@ -217,7 +231,7 @@ namespace GravityPuzzle
 
         public void UpdateCountUI()
         {
-            string str = remainingCount.ToString();
+            string str = RemainingCount.ToString();
             if (countTmpText != null)
             {
                 countTmpText.text = str;
@@ -232,8 +246,43 @@ namespace GravityPuzzle
         {
             if (button != null)
             {
-                button.interactable = remainingCount > 0;
+                button.interactable = HasUses &&
+                                      (!hasBoosterType || BoosterInventoryRuntime.Current.IsUnlocked(boosterType));
             }
+        }
+
+        private void HandleInventoryCountChanged(BoosterRewardType changedType, int count)
+        {
+            if (!hasBoosterType || changedType != boosterType)
+                return;
+
+            UpdateCountUI();
+            RefreshButtonState();
+        }
+
+        private bool TryResolveBoosterType(out BoosterRewardType resolvedType)
+        {
+            if (rocketBooster != null)
+            {
+                resolvedType = BoosterRewardType.Rocket;
+                return true;
+            }
+
+            if (hammerBooster != null)
+            {
+                resolvedType = BoosterRewardType.Hammer;
+                return true;
+            }
+
+            if (timerBooster != null || freezeTimerBooster != null)
+            {
+                resolvedType = BoosterRewardType.FreezeTimer;
+                return true;
+            }
+
+            resolvedType = default;
+            Debug.LogWarning("[BoosterButton] No supported booster component is attached to this button.", this);
+            return false;
         }
     }
 }

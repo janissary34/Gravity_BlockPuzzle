@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Core.StateMachine;
+using GravityPuzzle.Gameplay.Tutorial;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
@@ -155,6 +156,13 @@ namespace GravityPuzzle
             BindBoardEvents(PrototypeBoard.Active);
 
             if (inputLockedByGameState)
+            {
+                ClearInputSelection();
+                return;
+            }
+
+            if (BoosterFirstUseTutorialRuntime.Gate != null &&
+                BoosterFirstUseTutorialRuntime.Gate.BlocksBoardDrag)
             {
                 ClearInputSelection();
                 return;

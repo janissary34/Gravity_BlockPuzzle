@@ -15,6 +15,11 @@ namespace GravityPuzzle.Config
         [SerializeField] private Color iceOverlayTint = new Color(1f, 1f, 1f, .42f);
         [SerializeField] private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
 
+        [Header("Bomb Presentation")]
+        [Tooltip("Sprite rendered above Bomb blocks. Leave empty to keep their normal piece visual.")]
+        [SerializeField] private Sprite bombOverlaySprite;
+        [SerializeField, Range(.1f, 1f)] private float bombOverlayFill = .82f;
+
         [Header("Outline Presentation")]
         [SerializeField, Min(0.001f)] private float restingOutlineWidth = 0.05f;
         [SerializeField, Min(0.001f)] private float selectedOutlineWidth = 0.04f;
@@ -29,6 +34,8 @@ namespace GravityPuzzle.Config
         public Sprite IceOverlaySprite => iceOverlaySprite;
         public Color IceOverlayTint => iceOverlayTint;
         public Color IceFrostTint => iceFrostTint;
+        public Sprite BombOverlaySprite => bombOverlaySprite;
+        public float BombOverlayFill => bombOverlayFill;
         public float RestingOutlineWidth => restingOutlineWidth;
         public float SelectedOutlineWidth => selectedOutlineWidth;
         public Color RestingOutlineColor => restingOutlineColor;

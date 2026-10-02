@@ -3,6 +3,8 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using GravityPuzzle.Presentation.Views;
+using GravityPuzzle.Config;
+using GravityPuzzle.Infrastructure.Services;
 
 namespace GravityPuzzle
 {
@@ -26,7 +28,9 @@ namespace GravityPuzzle
 
         public bool IsFreezeActive => freezeRoutine != null;
         public bool HasBeenUsedThisLevel => usedThisLevel;
-        public bool HasUses => boosterButtonRef != null ? boosterButtonRef.HasUses : remainingCount > 0;
+        public bool HasUses => boosterButtonRef != null
+            ? boosterButtonRef.HasUses
+            : BoosterInventoryRuntime.Current.GetCount(BoosterRewardType.FreezeTimer) > 0;
         public event Action<FreezeTimerBooster> FreezeEnded;
         public event Action<FreezeTimerBooster, float> FreezeProgressChanged;
 
@@ -102,8 +106,12 @@ namespace GravityPuzzle
                 return;
 
             usedThisLevel = true;
-            if (boosterButtonRef == null)
-                remainingCount = Mathf.Max(0, remainingCount - 1);
+            if (boosterButtonRef == null &&
+                !BoosterInventoryRuntime.Current.TryConsume(BoosterRewardType.FreezeTimer))
+            {
+                boundBoard.ResumeTimer(this);
+                return;
+            }
             freezeRoutine = StartCoroutine(FreezeTimerRoutine(boundBoard));
             RefreshButtonState();
         }

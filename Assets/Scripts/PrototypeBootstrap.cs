@@ -6,6 +6,7 @@ using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Gameplay.Reveal;
+using GravityPuzzle.Gameplay.Tutorial;
 using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
 using TMPro;
@@ -577,6 +578,7 @@ namespace GravityPuzzle
         private bool sequentialLevelsEnabled = true;
         private bool awaitingBoosterRewardDismissal;
         private BoosterRewardConfig pendingBoosterRewardConfig;
+        private BoosterFirstUseTutorialCoordinator boosterFirstUseTutorial;
         private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
         private readonly Dictionary<string, IRevealAreaPresentation> revealPresentations =
             new Dictionary<string, IRevealAreaPresentation>();
@@ -695,8 +697,10 @@ namespace GravityPuzzle
 
             if (nextLevelButton != null)
                 nextLevelButton.onClick.AddListener(LoadNextLevelFromWinPanel);
+            boosterFirstUseTutorial = new BoosterFirstUseTutorialCoordinator(this);
+            BoosterFirstUseTutorialRuntime.Configure(boosterFirstUseTutorial);
             if (newBoosterPanel != null)
-                newBoosterPanel.Dismissed += CompleteQueuedBoosterReward;
+                newBoosterPanel.Claimed += ClaimQueuedBoosterReward;
         }
 
         private void OnEnable()
@@ -715,7 +719,7 @@ namespace GravityPuzzle
             if (nextLevelButton != null)
                 nextLevelButton.onClick.RemoveListener(LoadNextLevelFromWinPanel);
             if (newBoosterPanel != null)
-                newBoosterPanel.Dismissed -= CompleteQueuedBoosterReward;
+                newBoosterPanel.Claimed -= ClaimQueuedBoosterReward;
         }
 
         public void SetTimeLimit(float timeLimit)
@@ -1623,10 +1627,16 @@ namespace GravityPuzzle
                 if (config == null || config.PresentationLevel != completedLevel + 1)
                     continue;
 
-#if !UNITY_EDITOR
-                if (BoosterRewardUnlockState.HasBeenPresented(config))
+                if (BoosterFirstUseTutorialCoordinator.Supports(config.BoosterType))
+                {
+                    if (BoosterFirstUseTutorialProgress.GetState(config) !=
+                        BoosterFirstUseTutorialState.NotStarted)
+                        continue;
+                }
+                else if (BoosterRewardUnlockState.HasBeenPresented(config))
+                {
                     continue;
-#endif
+                }
 
                 GravityLevelRuntime.QueueBoosterReward(config);
                 return true;
@@ -1638,22 +1648,26 @@ namespace GravityPuzzle
         /// <summary>Shows a queued unlock after the destination level is ready.</summary>
         public void ShowQueuedBoosterReward()
         {
-            if (newBoosterPanel == null ||
-                !GravityLevelRuntime.TryTakeQueuedBoosterReward(out BoosterRewardConfig rewardConfig))
+            if (newBoosterPanel != null &&
+                GravityLevelRuntime.TryTakeQueuedBoosterReward(out BoosterRewardConfig rewardConfig))
+            {
+                awaitingBoosterRewardDismissal = true;
+                pendingBoosterRewardConfig = rewardConfig;
+                newBoosterPanel.Show(rewardConfig);
                 return;
+            }
 
-            awaitingBoosterRewardDismissal = true;
-            pendingBoosterRewardConfig = rewardConfig;
-            newBoosterPanel.Show(rewardConfig);
+            boosterFirstUseTutorial?.ResumePending(boosterRewardConfigs);
         }
 
-        private void CompleteQueuedBoosterReward()
+        private void ClaimQueuedBoosterReward(BoosterRewardConfig claimedConfig)
         {
-            if (!awaitingBoosterRewardDismissal)
+            if (!awaitingBoosterRewardDismissal || claimedConfig == null ||
+                claimedConfig != pendingBoosterRewardConfig)
                 return;
 
             awaitingBoosterRewardDismissal = false;
-            BoosterRewardUnlockState.MarkPresented(pendingBoosterRewardConfig);
+            boosterFirstUseTutorial?.BeginClaim(pendingBoosterRewardConfig);
             pendingBoosterRewardConfig = null;
         }
 

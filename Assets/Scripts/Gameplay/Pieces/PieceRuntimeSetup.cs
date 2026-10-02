@@ -15,6 +15,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             Sprite iceOverlaySprite,
             Color iceOverlayTint,
             Color iceFrostTint,
+            Sprite bombOverlaySprite,
+            float bombOverlayFill,
             int frozenMoveCount,
             float iceCounterFontSize,
             Color iceCounterTextColor,
@@ -38,6 +40,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             IceOverlaySprite = iceOverlaySprite;
             IceOverlayTint = iceOverlayTint;
             IceFrostTint = iceFrostTint;
+            BombOverlaySprite = bombOverlaySprite;
+            BombOverlayFill = bombOverlayFill;
             FrozenMoveCount = frozenMoveCount;
             IceCounterFontSize = iceCounterFontSize;
             IceCounterTextColor = iceCounterTextColor;
@@ -62,6 +66,8 @@ namespace GravityPuzzle.Gameplay.Pieces
         public Sprite IceOverlaySprite { get; }
         public Color IceOverlayTint { get; }
         public Color IceFrostTint { get; }
+        public Sprite BombOverlaySprite { get; }
+        public float BombOverlayFill { get; }
         public int FrozenMoveCount { get; }
         public float IceCounterFontSize { get; }
         public Color IceCounterTextColor { get; }

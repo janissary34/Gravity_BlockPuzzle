@@ -4,6 +4,8 @@ using DG.Tweening;
 using GravityPuzzle.Config;
 using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Gameplay.Input;
+using GravityPuzzle.Gameplay.Tutorial;
+using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Presentation.Views;
 
@@ -51,7 +53,9 @@ namespace GravityPuzzle
         private PrototypeBoard boundBoard;
         private BoosterButton boosterButtonRef;
         private bool impactInProgress;
+        private bool impactSucceeded;
         private int remainingCount;
+        private int lastActivationFrame = -1;
         private BoosterVisualView hammerVisualPrefabView;
         private GameObjectPool<BoosterVisualView> hammerVisualPool;
 
@@ -119,16 +123,23 @@ namespace GravityPuzzle
         /// </summary>
         public void ActivateHammerBooster()
         {
+            // Legacy direct Button and BoosterButton dispatches can occur in
+            // the same frame. Treat them as one press; a later press cancels.
+            if (lastActivationFrame == Time.frameCount)
+                return;
+
+            lastActivationFrame = Time.frameCount;
             SynchronizeLevel();
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
+            if (tutorialGate != null && !tutorialGate.AllowsBoosterActivation(BoosterRewardType.Hammer))
+                return;
             // A player may change their mind after arming the rocket. Selection
             // belongs to one tool at a time, so cancel the other tool first.
             RocketBooster.CancelActiveSelection();
 
             if (activeBooster == this)
             {
-                // Both the Button and BoosterButton compatibility component
-                // can forward one UI click. The second delivery must be a
-                // no-op; toggling here would immediately cancel the first.
+                CancelHammerSelection();
                 return;
             }
 
@@ -144,6 +155,7 @@ namespace GravityPuzzle
 
             activeBooster = this;
             BoosterTargetingPresentation.Show(BoosterTargetingPresentation.Mode.Hammer);
+            tutorialGate?.NotifyBoosterActivated(BoosterRewardType.Hammer);
             Debug.Log("[HammerBooster] Targeting enabled.", this);
             RefreshButtonState();
         }
@@ -197,7 +209,9 @@ namespace GravityPuzzle
                 return;
             }
 
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
             if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target) &&
+                (tutorialGate == null || tutorialGate.AllowsTarget(BoosterRewardType.Hammer, target)) &&
                 TryStartHammerImpact(target.Piece, target.WorldPosition))
             {
                 boundBoard.StartTimer();
@@ -210,6 +224,9 @@ namespace GravityPuzzle
                 RefreshButtonState();
                 return;
             }
+
+            if (tutorialGate != null && tutorialGate.BlocksBoardDrag)
+                return;
 
             // A target attempt always resolves the armed state. This lets the
             // player back out by tapping off the board or an empty board cell,
@@ -235,6 +252,7 @@ namespace GravityPuzzle
             // presentation owner before scheduling the strike.
             PuzzleDragController.CancelGridFallForTargetedAction(piece);
             impactInProgress = true;
+            impactSucceeded = false;
             PlayHammerSwing(piece, impactPosition);
             return true;
         }
@@ -342,18 +360,25 @@ namespace GravityPuzzle
 
         private int GetRemainingUseCount()
         {
-            return boosterButtonRef != null ? boosterButtonRef.RemainingCount : remainingCount;
+            return boosterButtonRef != null
+                ? boosterButtonRef.RemainingCount
+                : BoosterInventoryRuntime.Current.GetCount(BoosterRewardType.Hammer);
         }
 
         private void ConsumeHammerUse()
         {
+            bool consumed;
             if (boosterButtonRef != null)
             {
-                boosterButtonRef.TryConsumeUse();
-                return;
+                consumed = boosterButtonRef.TryConsumeUse();
+            }
+            else
+            {
+                consumed = BoosterInventoryRuntime.Current.TryConsume(BoosterRewardType.Hammer);
             }
 
-            remainingCount = Mathf.Max(0, remainingCount - 1);
+            if (consumed && impactSucceeded)
+                BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.Hammer);
         }
 
         private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)
@@ -361,6 +386,7 @@ namespace GravityPuzzle
             if (TopologyEditingEnabled &&
                 piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
+                impactSucceeded = true;
                 Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
                 LevelProgressManager manager = LevelProgressManager.Instance;
                 if (manager != null)
@@ -499,10 +525,8 @@ namespace GravityPuzzle
                 buttonCanvasGroup.blocksRaycasts = hasUses;
             }
 
-            // The selection remains armed after the first click, so keeping this
-            // button interactable is safe: a further click is intentionally a no-op.
-            // More importantly, it prevents Unity's disabled Color Tint from
-            // darkening the selected Hammer icon.
+            // Keep the selected button usable so a second press can cancel
+            // targeting without consuming a use.
             boosterButton.interactable =
                 hasUses &&
                 boundBoard != null &&

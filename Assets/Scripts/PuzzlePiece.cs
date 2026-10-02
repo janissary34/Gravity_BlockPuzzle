@@ -55,6 +55,8 @@ namespace GravityPuzzle
         }
 
         private const float RuntimeIceCounterFontScale = .32f;
+        private const float MinimumBombCounterFontScale = .18f;
+        private const float MaximumBombCounterFontScale = .32f;
         private const string IceCounterPresentationName = "Ice Counter Presentation";
         private static readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
 
@@ -133,6 +135,8 @@ namespace GravityPuzzle
         private Sprite iceOverlaySprite;
         private Color iceOverlayTint = new Color(1f, 1f, 1f, .42f);
         private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
+        private Sprite bombOverlaySprite;
+        private float bombOverlayFill = .82f;
         private IIceBlockParticleVfx iceParticleVfx;
         private IIceBlockParticleVfxHandle iceParticleVfxHandle;
         private readonly List<ShredderReservationCell> shredderReservationCells =
@@ -178,6 +182,7 @@ namespace GravityPuzzle
         private Color bombCounterOutlineColor = Color.white;
         private float bombCounterOutlineWidth = .18f;
         private Vector2 bombCounterOffset;
+        private SpriteRenderer bombOverlayRenderer;
         private int previousBombRemaining = -1;
 
         private struct ShredderReservationCell
@@ -633,6 +638,8 @@ namespace GravityPuzzle
             iceOverlaySprite = setup.IceOverlaySprite;
             iceOverlayTint = setup.IceOverlayTint;
             iceFrostTint = setup.IceFrostTint;
+            bombOverlaySprite = setup.BombOverlaySprite;
+            bombOverlayFill = setup.BombOverlayFill;
             ConfigureFreeze(
                 setup.SpecialBlockType == PieceSpecialBlockType.Bomb ? 0 : setup.FrozenMoveCount,
                 setup.IceCounterFontSize,
@@ -664,6 +671,8 @@ namespace GravityPuzzle
             iceOverlaySprite = null;
             iceOverlayTint = new Color(1f, 1f, 1f, .42f);
             iceFrostTint = new Color(1f, 1f, 1f, .18f);
+            bombOverlaySprite = null;
+            bombOverlayFill = .82f;
             shredderReservationCells.Clear();
             shredderCellsReadyToRelease.Clear();
             shredderReservationStartBodyY = 0f;
@@ -1158,7 +1167,10 @@ namespace GravityPuzzle
             previousBombRemaining = -1;
 
             if (IsBomb)
+            {
+                BuildBombVisuals();
                 RefreshBombTimer(BombTimerSeconds);
+            }
         }
 
         public void RefreshBombTimer(float secondsRemaining)
@@ -1895,6 +1907,87 @@ namespace GravityPuzzle
             }
         }
 
+        private void BuildBombVisuals()
+        {
+            if (bombOverlaySprite == null || collisionCellVisuals == null)
+                return;
+
+            Bounds combinedBounds = default;
+            SpriteRenderer sortingSource = null;
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer source = collisionCellVisuals[index];
+                if (source == null)
+                    continue;
+
+                if (sortingSource == null)
+                {
+                    sortingSource = source;
+                    combinedBounds = source.bounds;
+                }
+                else
+                {
+                    combinedBounds.Encapsulate(source.bounds);
+                }
+            }
+
+            if (sortingSource == null)
+                return;
+
+            // A bomb is a property of the complete authored piece, not of
+            // each of its cells. A 2x2 Bomb therefore gets one 2x2-sized
+            // presentation instead of four independent bomb icons.
+            CreateBombOverlay(sortingSource, combinedBounds);
+        }
+
+        private void CreateBombOverlay(
+            SpriteRenderer sortingSource,
+            Bounds combinedBounds)
+        {
+            if (iceRenderers.Count >= iceSlots.Count)
+            {
+                Debug.LogWarning("[PuzzlePiece] Ice presentation slot capacity exceeded.", this);
+                return;
+            }
+
+            SpriteRenderer renderer = iceSlots[iceRenderers.Count];
+            renderer.transform.SetParent(transform, false);
+            renderer.transform.position = new Vector3(
+                combinedBounds.center.x,
+                combinedBounds.center.y,
+                transform.position.z - .01f);
+            renderer.transform.localRotation = Quaternion.identity;
+            renderer.transform.localScale = GetOverlayScaleToFit(
+                combinedBounds.size,
+                bombOverlaySprite,
+                bombOverlayFill);
+            renderer.gameObject.name = "Bomb Overlay";
+            renderer.sprite = bombOverlaySprite;
+            renderer.color = Color.white;
+            renderer.sortingLayerID = sortingSource.sortingLayerID;
+            renderer.sortingOrder = sortingSource.sortingOrder + 5;
+            renderer.enabled = true;
+            bombOverlayRenderer = renderer;
+            iceRenderers.Add(renderer);
+        }
+
+        private static Vector3 GetOverlayScaleToFit(
+            Vector2 targetSize,
+            Sprite overlaySprite,
+            float fill)
+        {
+            if (overlaySprite == null)
+                return Vector3.one;
+
+            Vector2 overlaySize = overlaySprite.bounds.size;
+            if (targetSize.x <= 0f || targetSize.y <= 0f || overlaySize.x <= 0f || overlaySize.y <= 0f)
+                return Vector3.one;
+
+            float scale = Mathf.Min(targetSize.x / overlaySize.x, targetSize.y / overlaySize.y);
+            scale *= Mathf.Clamp(fill, .1f, 1f);
+            return new Vector3(scale, scale, 1f);
+        }
+
         private void UpdateIceCounter(int remainingCount)
         {
             if (collisionCellVisuals == null || collisionCellVisuals.Count == 0)
@@ -1949,22 +2042,30 @@ namespace GravityPuzzle
                     combinedBounds.Encapsulate(visual.bounds);
             }
 
+            Bounds counterBounds = bombOverlayRenderer != null && bombOverlayRenderer.enabled
+                ? bombOverlayRenderer.bounds
+                : combinedBounds;
+            float counterFontScale = Mathf.Clamp(
+                counterBounds.size.y * MinimumBombCounterFontScale,
+                MinimumBombCounterFontScale,
+                MaximumBombCounterFontScale);
+
             iceCounterText.color = bombCounterTextColor;
             iceCounterText.enabled = true;
             iceCounterText.enableAutoSizing = false;
-            iceCounterText.fontSize = bombCounterFontSize * RuntimeIceCounterFontScale;
+            iceCounterText.fontSize = bombCounterFontSize * counterFontScale;
             iceCounterText.outlineColor = bombCounterOutlineColor;
             iceCounterText.outlineWidth = bombCounterOutlineWidth * .1f;
             iceCounterText.renderer.sortingLayerID = collisionCellVisuals[0].sortingLayerID;
             iceCounterText.renderer.sortingOrder = 50;
             iceCounterText.text = Mathf.Max(0, remainingCount).ToString();
             iceCounterText.transform.position = new Vector3(
-                combinedBounds.center.x + bombCounterOffset.x,
-                combinedBounds.center.y + bombCounterOffset.y,
+                counterBounds.center.x + bombCounterOffset.x,
+                counterBounds.center.y + bombCounterOffset.y,
                 transform.position.z - .1f);
             iceCounterText.rectTransform.sizeDelta = new Vector2(
-                Mathf.Max(.75f, combinedBounds.size.x * .9f),
-                Mathf.Max(.75f, combinedBounds.size.y * .9f));
+                Mathf.Max(.5f, counterBounds.size.x * .55f),
+                Mathf.Max(.5f, counterBounds.size.y * .4f));
             iceCounterText.ForceMeshUpdate();
         }
 
@@ -2119,6 +2220,7 @@ namespace GravityPuzzle
             iceReleaseAnimating = false;
             previousFrozenRemaining = -1;
             previousBombRemaining = -1;
+            bombOverlayRenderer = null;
             foreach (SpriteRenderer renderer in iceRenderers)
             {
                 if (renderer == null)

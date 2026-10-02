@@ -181,6 +181,8 @@ namespace GravityPuzzle
     public sealed class PieceDefinition
     {
         public string name = "Puzzle Piece";
+        [Tooltip("Stable authoring key used only by a first-use booster tutorial. Keep unique within this level.")]
+        public string tutorialTargetId;
         [Tooltip("Optional key resolved through PieceVisualConfig. Leave empty to use this piece's legacy colour.")]
         public string visualId;
         public Color color = new Color(.2f, .65f, 1f);

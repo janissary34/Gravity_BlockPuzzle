@@ -1300,6 +1300,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -3, y: 7}
       type: 0
+  boxes: []
+  elevators: []
   pins: []
   obstacles:
   - name: Obstacle 11
