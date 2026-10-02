@@ -34,7 +34,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -45,7 +45,7 @@ TextureImporter:
   compressionQuality: 50
   spriteMode: 2
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -70,9 +70,9 @@ TextureImporter:
   - serializedVersion: 3
     buildTarget: DefaultTexturePlatform
     maxTextureSize: 2048
-    resizeAlgorithm: 0
+    resizeAlgorithm: 1
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 2
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -93,38 +93,43 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: iPhone
+    maxTextureSize: 2048
+    resizeAlgorithm: 1
+    textureFormat: 48
+    textureCompression: 0
+    compressionQuality: 100
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Icon_RewardedAd
-      rect:
-        serializedVersion: 2
-        x: 1520
-        y: 1878
-        width: 112
-        height: 146
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 14c04c6a79cbd4138b865f6bf997e2aa
-      internalID: 1410485693
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
       name: Icon_Train_Gold
       rect:
         serializedVersion: 2
-        x: 1612
-        y: 1692
-        width: 185
-        height: 204
+        x: 1639
+        y: 1714
+        width: 200
+        height: 200
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -139,13 +144,13 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_3
+      name: Rw
       rect:
         serializedVersion: 2
-        x: 1613
-        y: 1881
-        width: 13
-        height: 5
+        x: 1520
+        y: 1898
+        width: 113
+        height: 124
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -160,13 +165,13 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Icon_Train_Gray
+      name: Hammer
       rect:
         serializedVersion: 2
-        x: 1799
-        y: 1692
-        width: 201
-        height: 200
+        x: 1844
+        y: 1722
+        width: 190
+        height: 190
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -176,27 +181,6 @@ TextureImporter:
       bones: []
       spriteID: 0cf68c6edfd48491d88e0b2d9a312c60
       internalID: 965006765
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Icon_Timer_Broken
-      rect:
-        serializedVersion: 2
-        x: 1436
-        y: 1707
-        width: 143
-        height: 154
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 13, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: eb56c99cfd5704247b4e1f6ceb7db4f4
-      internalID: -1522491564
       vertices: []
       indices: 
       edges: []
@@ -227,9 +211,9 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1628
-        y: 1504
+        y: 1530
         width: 197
-        height: 212
+        height: 161
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -239,27 +223,6 @@ TextureImporter:
       bones: []
       spriteID: f5b76fd1b65c84927ae304ed78ce88a4
       internalID: 797907828
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_8
-      rect:
-        serializedVersion: 2
-        x: 1785
-        y: 1692
-        width: 31
-        height: 29
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 9a39d91379ce34ca3970606826b4ebde
-      internalID: 496005527
       vertices: []
       indices: 
       edges: []
@@ -370,69 +333,6 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_15
-      rect:
-        serializedVersion: 2
-        x: 828
-        y: 1128
-        width: 4
-        height: 4
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 18bb77a03b6364648b7b304d1a805adf
-      internalID: 848656935
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_16
-      rect:
-        serializedVersion: 2
-        x: 872
-        y: 1128
-        width: 4
-        height: 4
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: e73ddbb0846454eb0936a38019268f8c
-      internalID: -1136639585
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_17
-      rect:
-        serializedVersion: 2
-        x: 928
-        y: 1128
-        width: 4
-        height: 4
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 3b3e3c27c916b4ad497a6e9e5973190b
-      internalID: -440439094
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
       name: Button_Circle_Lavender
       rect:
         serializedVersion: 2
@@ -454,16 +354,16 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Bubble_Speech_Large
+      name: Banner
       rect:
         serializedVersion: 2
-        x: 1209
-        y: 1023
-        width: 508
-        height: 227
+        x: 1652
+        y: 1136
+        width: 79
+        height: 186
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 30, y: 20, z: 30, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
@@ -475,16 +375,16 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Bubble_Speech_Small
+      name: banner2
       rect:
         serializedVersion: 2
-        x: 1728
-        y: 1092
-        width: 244
-        height: 135
+        x: 1758
+        y: 1056
+        width: 274
+        height: 274
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 65, y: 65, z: 65, w: 65}
       outline: []
       physicsShape: []
       tessellationDetail: 0
@@ -496,13 +396,13 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Field_Red_White
+      name: SoundOn
       rect:
         serializedVersion: 2
-        x: 348
-        y: 932
-        width: 301
-        height: 152
+        x: 360
+        y: 974
+        width: 127
+        height: 108
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -601,90 +501,6 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Effect_Glow_White
-      rect:
-        serializedVersion: 2
-        x: 1711
-        y: 915
-        width: 277
-        height: 168
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 0e73e148dea5c4e1eb6dbd4bbd1e43b7
-      internalID: 813511280
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_27
-      rect:
-        serializedVersion: 2
-        x: 644
-        y: 924
-        width: 4
-        height: 4
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: ebf22908c236a49279e58eb38e03c463
-      internalID: 577381881
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Field_Blue_White
-      rect:
-        serializedVersion: 2
-        x: 349
-        y: 769
-        width: 300
-        height: 151
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: b12ab4c4805404d4c92dda9f7183aa24
-      internalID: -95687652
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_29
-      rect:
-        serializedVersion: 2
-        x: 1076
-        y: 892
-        width: 4
-        height: 4
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: da79b3cc379cf433a9b4d8731e4ea6c4
-      internalID: -930586199
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
       name: Button_Lime_Pill
       rect:
         serializedVersion: 2
@@ -694,34 +510,13 @@ TextureImporter:
         height: 60
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 36, y: 16, z: 36, w: 16}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
       spriteID: 7843e415063fc4daaa35e2d4211c46cb
       internalID: 320847171
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_31
-      rect:
-        serializedVersion: 2
-        x: 1078
-        y: 883
-        width: 6
-        height: 6
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 6c3ca911d73c140349aa0aeab105ae17
-      internalID: 2138732412
       vertices: []
       indices: 
       edges: []
@@ -736,7 +531,7 @@ TextureImporter:
         height: 63
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 36, y: 16, z: 36, w: 16}
       outline: []
       physicsShape: []
       tessellationDetail: 0
@@ -785,48 +580,6 @@ TextureImporter:
       bones: []
       spriteID: dbfc82cb788944f188907a6d4c473a6e
       internalID: -722621198
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_35
-      rect:
-        serializedVersion: 2
-        x: 216
-        y: 640
-        width: 4
-        height: 4
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 932576bc373d946bca2950f9d6cde048
-      internalID: 1215103335
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_37
-      rect:
-        serializedVersion: 2
-        x: 352
-        y: 632
-        width: 12
-        height: 9
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 66f414ab5e06c47b79dbcd52e053eaee
-      internalID: 973131638
       vertices: []
       indices: 
       edges: []
@@ -982,10 +735,10 @@ TextureImporter:
       name: Icon_Timer_Short
       rect:
         serializedVersion: 2
-        x: 1283
-        y: 1711
-        width: 127
-        height: 145
+        x: 1275
+        y: 1682
+        width: 177
+        height: 205
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -1027,7 +780,7 @@ TextureImporter:
         x: 1258
         y: 1533
         width: 175
-        height: 158
+        height: 147
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 15, y: 0, z: 0, w: 0}
@@ -1273,13 +1026,13 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Button_Red_Outlined
+      name: Rainbow
       rect:
         serializedVersion: 2
-        x: 344
-        y: 375
-        width: 315
-        height: 124
+        x: 363
+        y: 295
+        width: 294
+        height: 329
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -1289,27 +1042,6 @@ TextureImporter:
       bones: []
       spriteID: 226949fc8ed1b48cd82b34fe7421e498
       internalID: 1173381308
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Button_Indigo_Outlined
-      rect:
-        serializedVersion: 2
-        x: 344
-        y: 512
-        width: 315
-        height: 124
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 0c4d4d7415cec41e68d28bcfb9835747
-      internalID: 949745028
       vertices: []
       indices: 
       edges: []
@@ -1356,6 +1088,531 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: BoosterBG
+      rect:
+        serializedVersion: 2
+        x: 704
+        y: 371
+        width: 174
+        height: 174
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 23b1e6398a02046bc925e937c1813792
+      internalID: 68603122
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Booster
+      rect:
+        serializedVersion: 2
+        x: 881
+        y: 371
+        width: 174
+        height: 174
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c8f54ad221efc4d25bad23f7e71625b4
+      internalID: 1150928089
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_2
+      rect:
+        serializedVersion: 2
+        x: 704
+        y: 189
+        width: 174
+        height: 174
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e83808f09cad9422bbd68ab615299ba4
+      internalID: 511417721
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CommonAssets_UI_LionPack (1)_4
+      rect:
+        serializedVersion: 2
+        x: 884
+        y: 189
+        width: 174
+        height: 174
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 704943bd76303488d892bed955921429
+      internalID: 329255896
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Rocket
+      rect:
+        serializedVersion: 2
+        x: 1832
+        y: 1344
+        width: 180
+        height: 180
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 139522e5b2e5047309aea4305ac48e68
+      internalID: -384717997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: redButton
+      rect:
+        serializedVersion: 2
+        x: 1484
+        y: 687
+        width: 120
+        height: 120
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8f0b72d7b22544afe954c8a3f78a8275
+      internalID: -1020483702
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: settingsBG
+      rect:
+        serializedVersion: 2
+        x: 1060
+        y: 350
+        width: 196
+        height: 196
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 72, y: 72, z: 72, w: 72}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d092c55c699ca4e188e9047898ab1dbe
+      internalID: 2118190454
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SettingsButon
+      rect:
+        serializedVersion: 2
+        x: 1060
+        y: 151
+        width: 196
+        height: 196
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 72, y: 72, z: 72, w: 72}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6790c5ace32e84ede88292dc4ecf91f2
+      internalID: 1758562834
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SettingsIcon
+      rect:
+        serializedVersion: 2
+        x: 1260
+        y: 444
+        width: 102
+        height: 100
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 71037da3a089448f086874b435c07128
+      internalID: 1892906906
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Restart
+      rect:
+        serializedVersion: 2
+        x: 1264
+        y: 315
+        width: 102
+        height: 108
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 24ce95b2fb1e54a56b5b1be95fdae6c3
+      internalID: -1047580450
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: levelBG
+      rect:
+        serializedVersion: 2
+        x: 16
+        y: 152
+        width: 304
+        height: 122
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 45, y: 45, z: 45, w: 45}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 98e91e6fdc5b34d108e995d2d004eb92
+      internalID: 1321129205
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Slider
+      rect:
+        serializedVersion: 2
+        x: 691
+        y: 6
+        width: 353
+        height: 168
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 64, y: 64, z: 64, w: 64}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 984574edaa301453b8b42c3de92bb663
+      internalID: 953511398
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Good
+      rect:
+        serializedVersion: 2
+        x: 1232
+        y: 3
+        width: 812
+        height: 179
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 04c2618ea8e074d56a271501747b210d
+      internalID: 2106901203
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Coin
+      rect:
+        serializedVersion: 2
+        x: 1759
+        y: 612
+        width: 270
+        height: 270
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3fe013eaa66af42679da4063f6b0e92f
+      internalID: 1302198105
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BGBanner
+      rect:
+        serializedVersion: 2
+        x: 1379
+        y: 278
+        width: 200
+        height: 252
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 31, z: 0, w: 23}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ceae39bdb933e4cc1af1c1cf6d094d63
+      internalID: -463528828
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Timer
+      rect:
+        serializedVersion: 2
+        x: 1086
+        y: 550
+        width: 230
+        height: 265
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 34b6144a23ac641cdb40ee1851e5865d
+      internalID: -822564375
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ButtonHeader
+      rect:
+        serializedVersion: 2
+        x: 16
+        y: 2
+        width: 311
+        height: 140
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 54, y: 54, z: 54, w: 54}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 68c9b31f22e524632ae6deb35a0362b1
+      internalID: 1256178019
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ButtonHeader2
+      rect:
+        serializedVersion: 2
+        x: 344
+        y: 1
+        width: 311
+        height: 140
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 54, y: 54, z: 54, w: 54}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dee13c0ea55ce487b859c9e0c0b045b4
+      internalID: -1973627264
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ButtonHeader3
+      rect:
+        serializedVersion: 2
+        x: 1360
+        y: 536
+        width: 311
+        height: 140
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 54, y: 54, z: 54, w: 54}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c87d1274c186d407da6f96bd37dd2492
+      internalID: -93613254
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bg
+      rect:
+        serializedVersion: 2
+        x: 331
+        y: 153
+        width: 302
+        height: 120
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 35, y: 35, z: 35, w: 35}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7c3b8061945da407da77de633598f5bc
+      internalID: -1391059064
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BGCream
+      rect:
+        serializedVersion: 2
+        x: 1598
+        y: 282
+        width: 431
+        height: 243
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 10, z: 0, w: 7}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6ef8393534fc746fea755de7dbb28fa8
+      internalID: 2138322886
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BannerBG
+      rect:
+        serializedVersion: 2
+        x: 1385
+        y: 1061
+        width: 254
+        height: 254
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 80, y: 80, z: 80, w: 80}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f2e0c2860bd4742f4a10b527dd97909f
+      internalID: 306987690
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SoundOff
+      rect:
+        serializedVersion: 2
+        x: 360
+        y: 857
+        width: 127
+        height: 108
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a8836291e09f54d4eb4085e179b649fa
+      internalID: 1264333357
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HapticOn
+      rect:
+        serializedVersion: 2
+        x: 502
+        y: 972
+        width: 132
+        height: 110
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cce9dc51c04744e21b8b83f0b399588c
+      internalID: 1255934614
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HapticOff
+      rect:
+        serializedVersion: 2
+        x: 502
+        y: 856
+        width: 132
+        height: 110
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4bd97dc1f8d9441da8574be22e3ad792
+      internalID: 148027651
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -1367,8 +1624,16 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Bubble_Speech_Large: -832982349
-      Bubble_Speech_Small: 890847462
+      BGBanner: -463528828
+      BGCream: 2138322886
+      Banner: -832982349
+      BannerBG: 306987690
+      Bg: -1391059064
+      Booster: 1150928089
+      BoosterBG: 68603122
+      ButtonHeader: 1256178019
+      ButtonHeader2: -1973627264
+      ButtonHeader3: -93613254
       Button_Blue_Glossy: -1200275381
       Button_Blue_Metallic: -1374965542
       Button_Blue_Pill: -1608581275
@@ -1380,26 +1645,30 @@ TextureImporter:
       Button_Green_Outlined: -1573868798
       Button_Indigo_Outlined: 949745028
       Button_Lime_Pill: 320847171
-      Button_Red_Outlined: 1173381308
+      Coin: 1302198105
       CommonAssets_UI_LionPack (1)_11: 149986834
       CommonAssets_UI_LionPack (1)_13: -6349577
       CommonAssets_UI_LionPack (1)_15: 848656935
       CommonAssets_UI_LionPack (1)_16: -1136639585
       CommonAssets_UI_LionPack (1)_17: -440439094
+      CommonAssets_UI_LionPack (1)_2: 511417721
       CommonAssets_UI_LionPack (1)_25: -1297332372
       CommonAssets_UI_LionPack (1)_27: 577381881
       CommonAssets_UI_LionPack (1)_29: -930586199
-      CommonAssets_UI_LionPack (1)_3: 1144794793
       CommonAssets_UI_LionPack (1)_31: 2138732412
       CommonAssets_UI_LionPack (1)_35: 1215103335
       CommonAssets_UI_LionPack (1)_37: 973131638
+      CommonAssets_UI_LionPack (1)_4: 329255896
       CommonAssets_UI_LionPack (1)_6: -763147038
       CommonAssets_UI_LionPack (1)_8: 496005527
       CommonAssets_UI_LionPack (1)_9: -774148210
       Effect_Glow_White: 813511280
       Field_Blue_White: -95687652
       Field_Purple_White_Large: 883737079
-      Field_Red_White: 222430232
+      Good: 2106901203
+      Hammer: 965006765
+      HapticOff: 148027651
+      HapticOn: 1255934614
       Header_Yellow: 559792640
       Icon_Add_Green: -23533234
       Icon_Arrow_Down: 1322489402
@@ -1418,16 +1687,30 @@ TextureImporter:
       Icon_Timer_Gray: 797907828
       Icon_Timer_Short: -388365328
       Icon_Train_Gold: 1959921019
-      Icon_Train_Gray: 965006765
       Icon_Vibration: -973268096
+      Level: -2144175335
       Panel_Blue_Large: -1433657032
       Panel_Blue_Square: -1769951838
       Panel_Blue_Tall: 1568358945
       Panel_Red_Base: 483412611
       Pill_White_Large: 1986154679
       Pill_White_Small: 1108933010
+      Rainbow: 1173381308
+      Restart: -1047580450
+      Rocket: -384717997
+      Rw: 1144794793
+      SettingsButon: 1758562834
+      SettingsIcon: 1892906906
+      Slider: 953511398
+      SoundOff: 1264333357
+      SoundOn: 222430232
+      Timer: -822564375
       Toggle_Green: 399107936
       Toggle_Purple: -722621198
+      banner2: 890847462
+      levelBG: 1321129205
+      redButton: -1020483702
+      settingsBG: 2118190454
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
