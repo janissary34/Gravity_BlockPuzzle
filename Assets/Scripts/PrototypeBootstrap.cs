@@ -1112,12 +1112,14 @@ namespace GravityPuzzle
                     continue;
 
                 int pieceId = BoardSnapshot.NextPieceId;
+                PieceModel authoredModel = LevelBoardSnapshotBuilder.CreatePieceModel(pieceId, definition);
                 PuzzlePiece piece = RuntimePieceFactory.Create(level, definition, pieceId);
                 if (piece == null)
                     continue;
 
                 Physics2D.SyncTransforms();
                 if (!piece.TryCreateGridModel(level, pieceId, out PieceModel model) ||
+                    !HasMatchingGeometry(authoredModel, model) ||
                     !BoardSnapshot.Grid.TryPlace(model) ||
                     !BoardSnapshot.TryRegisterPlacedPiece(model))
                 {
@@ -1161,13 +1163,23 @@ namespace GravityPuzzle
                 authored.LocalCells.Count != runtime.LocalCells.Count)
                 return false;
 
-            for (int index = 0; index < authored.LocalCells.Count; index++)
+            // Runtime factory may compact a complete module to a single
+            // collider and expand it back to fine cells when rebuilding the
+            // model. That is the same footprint, but it does not guarantee
+            // the authored serialization order. Compare the coordinate set so
+            // a valid compacted module is accepted while any missing or extra
+            // collider cell still rejects the reveal transaction.
+            HashSet<GridCoordinate> authoredCells = new HashSet<GridCoordinate>(authored.LocalCells);
+            if (authoredCells.Count != authored.LocalCells.Count)
+                return false;
+
+            for (int index = 0; index < runtime.LocalCells.Count; index++)
             {
-                if (!authored.LocalCells[index].Equals(runtime.LocalCells[index]))
+                if (!authoredCells.Remove(runtime.LocalCells[index]))
                     return false;
             }
 
-            return true;
+            return authoredCells.Count == 0;
         }
 
         public bool TryMovePieceOnGrid(

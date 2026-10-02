@@ -108,7 +108,7 @@ namespace GravityPuzzle
         public void ConfigureLevelUseCount(int count)
         {
 #if UNITY_EDITOR
-            if (hasBoosterType)
+            if (hasBoosterType && GravityLevelRuntime.IsEditorLevelPreview)
                 BoosterInventoryRuntime.SetEditorPreviewCount(boosterType, count);
 #endif
             UpdateCountUI();

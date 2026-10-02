@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 249d4de47753c47098132d335f8cf7b4, type: 3}
   m_Name: RevealPresentationConfig
   m_EditorClassIdentifier: 
-  boxCoverSprite: {fileID: 21300000, guid: bd031e8709ce0492284f62bdc09d4fc9, type: 3}
-  elevatorLeftDoorSprite: {fileID: 7462321767153245720, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
-  elevatorRightDoorSprite: {fileID: -8075455797655948447, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
-  elevatorDoorSprite: {fileID: 21300000, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
+  boxCoverSprite: {fileID: 309096670807263953, guid: af75f1bfe711d41508ed9e42069950ae, type: 3}
+  elevatorFrameSprite: {fileID: 7462321767153245720, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
+  elevatorLeftDoorSprite: {fileID: -8075455797655948447, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
+  elevatorRightDoorSprite: {fileID: 617964189990335555, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
+  elevatorDoorSprite: {fileID: 7462321767153245720, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
   boxOpenDuration: 0.45
   boxOpenDistance: 0.08
   boxOpenEase: 9
@@ -29,5 +30,10 @@ MonoBehaviour:
   elevatorDoorDistance: 1.2
   elevatorOpenEase: 6
   elevatorFadeDuration: 0.2
+  elevatorDoorWidthRatio: 0.44
+  elevatorDoorHeightRatio: 0.62
+  elevatorDoorCenterYOffset: -0.04
+  elevatorVisualWidthScale: 1.15
+  elevatorOpeningColor: {r: 0.04, g: 0.08, b: 0.14, a: 1}
   elevatorSortingOrder: 2
   boxSortingOrder: 200

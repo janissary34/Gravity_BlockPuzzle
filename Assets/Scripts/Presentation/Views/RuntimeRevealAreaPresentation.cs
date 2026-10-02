@@ -31,6 +31,7 @@ namespace GravityPuzzle.Presentation.Views
         private readonly Vector3 shutterClosedPosition;
         private readonly Vector3 leftDoorClosedPosition;
         private readonly Vector3 rightDoorClosedPosition;
+        private readonly float elevatorDoorOpenDistance;
         private Sequence openingSequence;
         private Action completion;
         private bool isComplete;
@@ -47,7 +48,8 @@ namespace GravityPuzzle.Presentation.Views
             SpriteRenderer boxCoverRenderer,
             Transform[] boxBurstFragments,
             SpriteRenderer[] boxBurstRenderers,
-            TextMesh boxCounter)
+            TextMesh boxCounter,
+            float elevatorDoorOpenDistance = 0f)
         {
             this.root = root;
             this.kind = kind;
@@ -61,6 +63,7 @@ namespace GravityPuzzle.Presentation.Views
             this.boxBurstFragments = boxBurstFragments;
             this.boxBurstRenderers = boxBurstRenderers;
             this.boxCounter = boxCounter;
+            this.elevatorDoorOpenDistance = elevatorDoorOpenDistance;
             shutterClosedPosition = boxShutter != null ? boxShutter.localPosition : Vector3.zero;
             leftDoorClosedPosition = elevatorLeftDoor != null ? elevatorLeftDoor.localPosition : Vector3.zero;
             rightDoorClosedPosition = elevatorRightDoor != null ? elevatorRightDoor.localPosition : Vector3.zero;
@@ -145,7 +148,7 @@ namespace GravityPuzzle.Presentation.Views
                 if (elevatorLeftDoor != null)
                 {
                     openingSequence.Append(elevatorLeftDoor.DOLocalMoveX(
-                        leftDoorClosedPosition.x - config.elevatorDoorDistance,
+                        leftDoorClosedPosition.x - elevatorDoorOpenDistance,
                         config.elevatorOpenDuration).SetEase(config.elevatorOpenEase));
                     hasDoorMotion = true;
                 }
@@ -153,7 +156,7 @@ namespace GravityPuzzle.Presentation.Views
                 if (elevatorRightDoor != null)
                 {
                     Tween rightDoorTween = elevatorRightDoor.DOLocalMoveX(
-                        rightDoorClosedPosition.x + config.elevatorDoorDistance,
+                        rightDoorClosedPosition.x + elevatorDoorOpenDistance,
                         config.elevatorOpenDuration).SetEase(config.elevatorOpenEase);
                     if (hasDoorMotion)
                         openingSequence.Join(rightDoorTween);
@@ -268,15 +271,38 @@ namespace GravityPuzzle.Presentation.Views
                 Color.white);
             frame.transform.SetParent(root.transform, false);
             SpriteRenderer frameRenderer = frame.GetComponent<SpriteRenderer>();
-            SetVisualBlockSpriteToFit(frameRenderer,
-                config.elevatorFrameSprite != null ? config.elevatorFrameSprite : config.elevatorDoorSprite,
-                size);
+            Sprite frameSprite = config.elevatorFrameSprite != null
+                ? config.elevatorFrameSprite
+                : config.elevatorDoorSprite;
+            frameRenderer.enabled = frameSprite != null;
+            Vector2 frameSize = SetVisualBlockSpriteToAspectFit(frameRenderer, frameSprite, size);
+            float horizontalScale = Mathf.Clamp(config.elevatorVisualWidthScale, .8f, 1.4f);
+            frameRenderer.transform.localScale = new Vector3(
+                frameRenderer.transform.localScale.x * horizontalScale,
+                frameRenderer.transform.localScale.y,
+                1f);
+            frameSize.x *= horizontalScale;
             frameRenderer.sortingOrder = config.elevatorSortingOrder;
 
-            Vector2 doorSize = new Vector2(
-                size.x * config.elevatorDoorWidthRatio * .5f,
-                size.y * config.elevatorDoorHeightRatio);
-            float doorCentreY = size.y * config.elevatorDoorCenterYOffset;
+            Sprite leftDoorSprite = config.elevatorLeftDoorSprite != null
+                ? config.elevatorLeftDoorSprite
+                : frameSprite;
+            Sprite rightDoorSprite = config.elevatorRightDoorSprite != null
+                ? config.elevatorRightDoorSprite
+                : frameSprite;
+            Vector2 doorSpriteSize = GetSpriteSize(leftDoorSprite);
+            Vector2 frameScale = new Vector2(
+                frameRenderer.transform.localScale.x,
+                frameRenderer.transform.localScale.y);
+            Vector2 doorSize = Vector2.Scale(doorSpriteSize, frameScale);
+            if (doorSize.x <= 0f || doorSize.y <= 0f)
+            {
+                doorSize = new Vector2(
+                    frameSize.x * config.elevatorDoorWidthRatio * .5f,
+                    frameSize.y * config.elevatorDoorHeightRatio);
+            }
+
+            float doorCentreY = frameSize.y * config.elevatorDoorCenterYOffset;
             GameObject opening = PrototypeBootstrap.CreateVisualBlock(
                 "Elevator Opening",
                 Vector2.zero,
@@ -285,15 +311,10 @@ namespace GravityPuzzle.Presentation.Views
             opening.transform.SetParent(root.transform, false);
             opening.transform.localPosition = new Vector3(0f, doorCentreY, 0f);
             SpriteRenderer openingRenderer = opening.GetComponent<SpriteRenderer>();
+            openingRenderer.drawMode = SpriteDrawMode.Sliced;
             SetVisualBlockSize(openingRenderer, new Vector2(doorSize.x * 2f, doorSize.y));
             openingRenderer.sortingOrder = config.elevatorSortingOrder + 1;
 
-            Sprite leftDoorSprite = config.elevatorLeftDoorSprite != null
-                ? config.elevatorLeftDoorSprite
-                : config.elevatorFrameSprite != null ? config.elevatorFrameSprite : config.elevatorDoorSprite;
-            Sprite rightDoorSprite = config.elevatorRightDoorSprite != null
-                ? config.elevatorRightDoorSprite
-                : config.elevatorFrameSprite != null ? config.elevatorFrameSprite : config.elevatorDoorSprite;
             GameObject leftDoor = CreateDoor(
                 "Left Door",
                 -doorSize.x * .5f,
@@ -315,6 +336,8 @@ namespace GravityPuzzle.Presentation.Views
                 leftDoor.GetComponent<SpriteRenderer>(),
                 rightDoor.GetComponent<SpriteRenderer>()
             };
+            float maximumDoorTravel = Mathf.Max(0f, frameSize.x * .5f - doorSize.x);
+            float doorOpenDistance = Mathf.Min(config.elevatorDoorDistance, maximumDoorTravel);
 
             return new RuntimeRevealAreaPresentation(
                 root,
@@ -328,7 +351,8 @@ namespace GravityPuzzle.Presentation.Views
                 null,
                 Array.Empty<Transform>(),
                 Array.Empty<SpriteRenderer>(),
-                null);
+                null,
+                doorOpenDistance);
         }
 
         private static GameObject CreateDoor(
@@ -345,7 +369,8 @@ namespace GravityPuzzle.Presentation.Views
                 new Color(.18f, .34f, .46f, 1f));
             door.transform.localPosition = new Vector3(localX, 0f, 0f);
             SpriteRenderer renderer = door.GetComponent<SpriteRenderer>();
-            SetVisualBlockSpriteToFit(renderer, doorSprite, size);
+            renderer.enabled = doorSprite != null;
+            SetVisualBlockSpriteToExactSize(renderer, doorSprite, size);
             renderer.sortingOrder = sortingOrder;
             return door;
         }
@@ -440,6 +465,61 @@ namespace GravityPuzzle.Presentation.Views
             renderer.color = Color.white;
             renderer.drawMode = SpriteDrawMode.Sliced;
             SetVisualBlockSize(renderer, targetSize);
+        }
+
+        /// <summary>
+        /// Elevator art has detailed non-uniform highlights and cannot be
+        /// nine-sliced through its centre. Fit it uniformly inside the authored
+        /// reveal area so its frame and doors keep their original proportions.
+        /// </summary>
+        private static Vector2 SetVisualBlockSpriteToAspectFit(
+            SpriteRenderer renderer,
+            Sprite sprite,
+            Vector2 maximumSize)
+        {
+            if (renderer == null || sprite == null)
+                return Vector2.zero;
+
+            renderer.sprite = sprite;
+            renderer.color = Color.white;
+            renderer.drawMode = SpriteDrawMode.Simple;
+            renderer.transform.localScale = Vector3.one;
+
+            Vector2 spriteSize = GetSpriteSize(sprite);
+            if (spriteSize.x <= 0f || spriteSize.y <= 0f)
+                return Vector2.zero;
+
+            float scale = Mathf.Min(maximumSize.x / spriteSize.x, maximumSize.y / spriteSize.y);
+            scale = Mathf.Max(0f, scale);
+            renderer.transform.localScale = new Vector3(scale, scale, 1f);
+            return spriteSize * scale;
+        }
+
+        private static void SetVisualBlockSpriteToExactSize(
+            SpriteRenderer renderer,
+            Sprite sprite,
+            Vector2 targetSize)
+        {
+            if (renderer == null || sprite == null)
+                return;
+
+            renderer.sprite = sprite;
+            renderer.color = Color.white;
+            renderer.drawMode = SpriteDrawMode.Simple;
+
+            Vector2 spriteSize = GetSpriteSize(sprite);
+            if (spriteSize.x <= 0f || spriteSize.y <= 0f)
+                return;
+
+            renderer.transform.localScale = new Vector3(
+                targetSize.x / spriteSize.x,
+                targetSize.y / spriteSize.y,
+                1f);
+        }
+
+        private static Vector2 GetSpriteSize(Sprite sprite)
+        {
+            return sprite != null ? sprite.bounds.size : Vector2.zero;
         }
 
         private static void SetVisualBlockSize(SpriteRenderer renderer, Vector2 targetSize)

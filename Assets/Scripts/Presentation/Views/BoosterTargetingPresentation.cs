@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using GravityPuzzle.Config;
+using GravityPuzzle.Infrastructure.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -52,6 +53,11 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private CanvasGroup rocketBoosterButtonGroup;
         [SerializeField] private CanvasGroup hammerBoosterButtonGroup;
         [SerializeField] private CanvasGroup timerBoosterButtonGroup;
+        [Tooltip("Optional world dimmer renderer. Its order is raised above board pieces during a tutorial focus.")]
+        [SerializeField] private SpriteRenderer boardDimRenderer;
+        [SerializeField, Min(1)] private int tutorialDimSortingOrder = 100;
+        [Tooltip("Scene-authored bright target and crosshair rendered over the tutorial dimmer.")]
+        [SerializeField] private TutorialTargetIndicatorView tutorialTargetIndicator;
 
         [Header("Hammer Cell Outlines")]
         [SerializeField] private HammerTargetCellOutlineView hammerCellOutlinePrefab;
@@ -92,8 +98,24 @@ namespace GravityPuzzle.Presentation.Views
         private void Awake()
         {
             Active = this;
+            if (boardDimRenderer == null && boardDimBackdrop != null)
+                boardDimRenderer = boardDimBackdrop.GetComponent<SpriteRenderer>();
+            if (boardDimRenderer != null)
+                boardDimRenderer.sortingOrder = tutorialDimSortingOrder;
             PrewarmHammerOutlines();
             SetVisible(false);
+            RefreshBoosterAvailability();
+        }
+
+        private void OnEnable()
+        {
+            BoosterInventoryRuntime.Current.CountChanged += HandleInventoryCountChanged;
+            RefreshBoosterAvailability();
+        }
+
+        private void OnDisable()
+        {
+            BoosterInventoryRuntime.Current.CountChanged -= HandleInventoryCountChanged;
         }
 
         private void OnDestroy()
@@ -103,6 +125,33 @@ namespace GravityPuzzle.Presentation.Views
             RestoreInactiveBoosterButtons();
             if (Active == this)
                 Active = null;
+        }
+
+        private void HandleInventoryCountChanged(BoosterRewardType boosterType, int count)
+        {
+            RefreshBoosterAvailability();
+        }
+
+        /// <summary>Inventory authority decides whether a booster exists in the HUD at all.</summary>
+        private void RefreshBoosterAvailability()
+        {
+            if (hiddenBoosterButtonStates.Count > 0)
+                return;
+
+            SetBoosterAvailability(rocketBoosterButtonGroup, BoosterRewardType.Rocket);
+            SetBoosterAvailability(hammerBoosterButtonGroup, BoosterRewardType.Hammer);
+            SetBoosterAvailability(timerBoosterButtonGroup, BoosterRewardType.FreezeTimer);
+        }
+
+        private static void SetBoosterAvailability(CanvasGroup group, BoosterRewardType boosterType)
+        {
+            if (group == null)
+                return;
+
+            bool unlocked = BoosterInventoryRuntime.Current.IsUnlocked(boosterType);
+            group.alpha = unlocked ? 1f : 0f;
+            group.interactable = unlocked;
+            group.blocksRaycasts = unlocked;
         }
 
         public static void Show(Mode mode)
@@ -138,6 +187,24 @@ namespace GravityPuzzle.Presentation.Views
             return Active != null &&
                    buttonGroup != null &&
                    Active.ContainsHiddenBoosterButton(buttonGroup);
+        }
+
+        /// <summary>
+        /// Replaces normal all-target feedback with one explicit tutorial
+        /// target. The dimmer stays up; only this visual marker renders above it.
+        /// </summary>
+        public static void ShowFirstUseBoardTarget(
+            BoosterRewardType boosterType,
+            PuzzlePiece expectedPiece,
+            Vector2 hammerCellCenter,
+            Vector2 hammerCellSize)
+        {
+            if (Active != null)
+                Active.ShowFirstUseBoardTargetInternal(
+                    boosterType,
+                    expectedPiece,
+                    hammerCellCenter,
+                    hammerCellSize);
         }
 
         private void ShowInternal(Mode mode)
@@ -183,6 +250,27 @@ namespace GravityPuzzle.Presentation.Views
                 PlaySelectionSparkles(rocketFocus.Value);
         }
 
+        private void ShowFirstUseBoardTargetInternal(
+            BoosterRewardType boosterType,
+            PuzzlePiece expectedPiece,
+            Vector2 hammerCellCenter,
+            Vector2 hammerCellSize)
+        {
+            ClearPieceHighlights();
+            ReturnHammerCellOutlines();
+
+            if (boosterType == BoosterRewardType.Rocket && expectedPiece != null)
+            {
+                expectedPiece.SetBoosterTargeted(true);
+                if (TryGetPieceBounds(expectedPiece, out Vector2 center, out Vector2 size))
+                    tutorialTargetIndicator?.Show(center, size, tutorialDimSortingOrder + 1);
+                return;
+            }
+
+            if (boosterType == BoosterRewardType.Hammer)
+                tutorialTargetIndicator?.Show(hammerCellCenter, hammerCellSize, tutorialDimSortingOrder + 1);
+        }
+
         private void SetVisible(bool visible)
         {
             if (boardDimBackdrop != null)
@@ -192,6 +280,7 @@ namespace GravityPuzzle.Presentation.Views
 
             if (!visible)
             {
+                tutorialTargetIndicator?.Hide();
                 SetSelectionGlow(null);
                 StopSelectionSparkles();
                 ClearPieceHighlights();
@@ -373,6 +462,33 @@ namespace GravityPuzzle.Presentation.Views
                 bool isValidTarget = !piece.IsBeingShredded;
                 piece.SetBoosterTargeted(isValidTarget);
             }
+        }
+
+        private bool TryGetPieceBounds(PuzzlePiece piece, out Vector2 center, out Vector2 size)
+        {
+            center = default;
+            size = default;
+            if (piece == null)
+                return false;
+
+            targetableCellBuffer.Clear();
+            piece.CollectTargetableCells(targetableCellBuffer);
+            if (targetableCellBuffer.Count == 0)
+                return false;
+
+            Vector2 minimum = new Vector2(float.MaxValue, float.MaxValue);
+            Vector2 maximum = new Vector2(float.MinValue, float.MinValue);
+            for (int index = 0; index < targetableCellBuffer.Count; index++)
+            {
+                PuzzlePiece.TargetableCell cell = targetableCellBuffer[index];
+                Vector2 halfSize = cell.Size * .5f;
+                minimum = Vector2.Min(minimum, cell.Center - halfSize);
+                maximum = Vector2.Max(maximum, cell.Center + halfSize);
+            }
+
+            center = (minimum + maximum) * .5f;
+            size = maximum - minimum;
+            return true;
         }
 
         private void PrewarmHammerOutlines()

@@ -16,3 +16,6 @@ MonoBehaviour:
   visualPrefab: {fileID: 3906762110601829613, guid: a9dfb170612114845a0360f84792de6f, type: 3}
   presentationLevel: 6
   usesPerLevel: 3
+  tutorialId: hammer_first_use
+  tutorialTargetPieceId: hammer_intro_target
+  tutorialTargetFineCell: {x: 4, y: 16}

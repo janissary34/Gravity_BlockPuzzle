@@ -27,6 +27,13 @@ namespace GravityPuzzle
         private static BoosterRewardConfig queuedBoosterReward;
         private static bool levelSequenceInitialized;
         private static bool previewLaunchRequested;
+        private static bool isEditorLevelPreview;
+
+        /// <summary>
+        /// True only for the level-editor's explicit Play Preview command.
+        /// Normal Play Mode uses persistent player inventory, even in the editor.
+        /// </summary>
+        public static bool IsEditorLevelPreview => isEditorLevelPreview;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetLevelSequence()
@@ -41,6 +48,7 @@ namespace GravityPuzzle
             queuedBoosterReward = null;
             levelSequenceInitialized = false;
             previewLaunchRequested = false;
+            isEditorLevelPreview = false;
         }
 
         /// <summary>
@@ -108,6 +116,7 @@ namespace GravityPuzzle
                 if (preview != null)
                 {
                     previewLaunchRequested = true;
+                    isEditorLevelPreview = true;
                     int previewIndex = Array.IndexOf(levels, preview);
                     if (previewIndex >= 0)
                     {

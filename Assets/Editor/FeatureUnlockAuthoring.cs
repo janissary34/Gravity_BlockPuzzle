@@ -179,8 +179,8 @@ namespace GravityPuzzle.Editor
             {
                 CreateSpriteMetaData(
                     BoxCoverSpriteName,
-                    new Rect(94f, 170f, texture.width - 188f, texture.height - 340f),
-                    new Vector4(118f, 120f, 118f, 120f))
+                    new Rect(94f, 475f, texture.width - 188f, 226f),
+                    new Vector4(45f, 40f, 45f, 40f))
             };
 #pragma warning restore CS0618
             importer.SaveAndReimport();

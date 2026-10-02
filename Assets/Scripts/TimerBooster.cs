@@ -480,6 +480,10 @@ namespace GravityPuzzle
         private void Update()
         {
             RefreshButtonInteractable();
+
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
+            if (tutorialGate != null && tutorialGate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer))
+                SetSelectionGlowVisible(true);
         }
 
         private void RefreshButtonInteractable()

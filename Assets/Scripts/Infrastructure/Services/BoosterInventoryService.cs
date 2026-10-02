@@ -40,8 +40,10 @@ namespace GravityPuzzle.Infrastructure.Services
 
         public bool IsUnlocked(BoosterRewardType boosterType)
         {
-            return previewCounts.ContainsKey(boosterType) ||
-                   PlayerPrefs.GetInt(GetUnlockedKey(boosterType), 0) == 1;
+            // A level-editor quantity is balance/test data, not an unlock.
+            // Otherwise a level that merely supplies a preview count would
+            // reveal every booster in the player-facing HUD.
+            return PlayerPrefs.GetInt(GetUnlockedKey(boosterType), 0) == 1;
         }
 
         public void Grant(BoosterRewardType boosterType, int amount)

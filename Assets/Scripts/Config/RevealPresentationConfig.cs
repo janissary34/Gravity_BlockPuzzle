@@ -44,6 +44,8 @@ namespace GravityPuzzle.Config
         [Range(.1f, .9f)] public float elevatorDoorHeightRatio = .62f;
         [Tooltip("Vertical position of the two door panels within the authored Elevator area.")]
         [Range(-.4f, .4f)] public float elevatorDoorCenterYOffset = -.04f;
+        [Tooltip("Small horizontal correction for the tall source artwork when it is shown inside a wide authored Elevator area.")]
+        [Range(.8f, 1.4f)] public float elevatorVisualWidthScale = 1.15f;
         [Tooltip("Colour shown in the doorway while the fixed interior content is being activated.")]
         public Color elevatorOpeningColor = new Color(.04f, .08f, .14f, 1f);
         [Tooltip("Elevator doors must stay behind normal piece visuals (which render at order 5).")]

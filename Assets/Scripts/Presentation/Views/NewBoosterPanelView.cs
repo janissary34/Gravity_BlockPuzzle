@@ -115,11 +115,14 @@ namespace GravityPuzzle.Presentation.Views
             }
 
             BoosterRewardConfig claimedReward = selectedRewardConfig;
+            selectedRewardConfig = null;
+            Close();
+
+            // The popup must restore its own HUD state before the tutorial
+            // focus applies its dimmer and input restrictions.
             Claimed?.Invoke(claimedReward);
             Continued?.Invoke();
             continueClicked?.Invoke();
-            selectedRewardConfig = null;
-            Close();
         }
 
         private void ApplySelectedReward()
@@ -188,7 +191,7 @@ namespace GravityPuzzle.Presentation.Views
             if (visible)
                 target.transform.SetAsLastSibling();
 
-            if (!visible && target.activeSelf)
+            if (!visible)
                 RestoreHud();
         }
 

@@ -16,3 +16,6 @@ MonoBehaviour:
   visualPrefab: {fileID: 4589897246359763626, guid: 12d907748e4f84b8585c8cc374be6014, type: 3}
   presentationLevel: 10
   usesPerLevel: 3
+  tutorialId: rocket_first_use
+  tutorialTargetPieceId: rocket_intro_target
+  tutorialTargetFineCell: {x: 0, y: 0}

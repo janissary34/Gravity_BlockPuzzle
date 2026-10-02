@@ -22,6 +22,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
     public interface IBoosterFirstUseTutorialGate
     {
         bool BlocksBoardDrag { get; }
+        bool IsBoosterHighlighted(BoosterRewardType boosterType);
         bool AllowsBoosterActivation(BoosterRewardType boosterType);
         bool AllowsTarget(BoosterRewardType boosterType, BoardTargetResolver.Target target);
         void NotifyBoosterActivated(BoosterRewardType boosterType);
@@ -50,6 +51,16 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 return;
 
             PlayerPrefs.SetInt(GetKey(config), (int)state);
+            PlayerPrefs.Save();
+        }
+
+        /// <summary>Editor tooling uses this to replay a first-use lesson.</summary>
+        public static void ClearState(BoosterRewardConfig config)
+        {
+            if (config == null)
+                return;
+
+            PlayerPrefs.DeleteKey(GetKey(config));
             PlayerPrefs.Save();
         }
 
@@ -84,6 +95,12 @@ namespace GravityPuzzle.Gameplay.Tutorial
         public bool BlocksBoardDrag => state == BoosterFirstUseTutorialState.AwaitingBoosterTap ||
                                        state == BoosterFirstUseTutorialState.AwaitingExactTarget ||
                                        state == BoosterFirstUseTutorialState.ResolvingEffect;
+
+        public bool IsBoosterHighlighted(BoosterRewardType boosterType)
+        {
+            return state == BoosterFirstUseTutorialState.AwaitingBoosterTap &&
+                   activeConfig != null && activeConfig.BoosterType == boosterType;
+        }
 
         public static bool Supports(BoosterRewardType boosterType)
         {
@@ -169,6 +186,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
             if (state == BoosterFirstUseTutorialState.AwaitingExactTarget &&
                 TryGetExpectedWorldPosition(out Vector2 position))
             {
+                ShowRequiredBoardTarget(position);
                 TutorialHandView.ShowForBoardTarget(position, PrototypeBootstrap.SceneCamera);
             }
         }
@@ -198,7 +216,8 @@ namespace GravityPuzzle.Gameplay.Tutorial
             state = BoosterFirstUseTutorialState.Completed;
             BoosterFirstUseTutorialProgress.SetState(activeConfig, state);
             TutorialHandView.Hide();
-            board?.ResumeTimer(this);
+            if (boosterType != BoosterRewardType.FreezeTimer)
+                board?.ResumeTimer(this);
             activeConfig = null;
         }
 
@@ -218,11 +237,12 @@ namespace GravityPuzzle.Gameplay.Tutorial
             activeConfig = config;
             state = BoosterFirstUseTutorialState.AwaitingBoosterTap;
 
-            // Timer booster normally requires a running clock. Starting and
-            // immediately owner-pausing it keeps the first-use lesson fair.
+            // Freeze must be used against a genuinely ticking level timer.
+            // Rocket and Hammer are safe to present with the level paused.
             if (config.BoosterType == BoosterRewardType.FreezeTimer)
                 board?.StartTimer();
-            board?.TryPauseTimer(this);
+            else
+                board?.TryPauseTimer(this);
             BoosterTargetingPresentation.ShowFirstUseBoosterFocus(config.BoosterType);
 
             if (buttons.TryGetValue(config.BoosterType, out BoosterButton button))
@@ -298,6 +318,50 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 position = GravityLevelGridCoordinates.FineCellToWorld(
                     level,
                     new GridCoordinate(targetCell.x, targetCell.y));
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ShowRequiredBoardTarget(Vector2 worldPosition)
+        {
+            if (activeConfig == null || !TryGetExpectedPiece(out PuzzlePiece expectedPiece))
+                return;
+
+            if (activeConfig.BoosterType == BoosterRewardType.Hammer)
+            {
+                GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+                if (level == null)
+                    return;
+
+                float fineCellSize = 1f / level.subdivisions;
+                BoosterTargetingPresentation.ShowFirstUseBoardTarget(
+                    activeConfig.BoosterType,
+                    expectedPiece,
+                    worldPosition,
+                    Vector2.one * fineCellSize);
+                return;
+            }
+
+            BoosterTargetingPresentation.ShowFirstUseBoardTarget(
+                activeConfig.BoosterType,
+                expectedPiece,
+                worldPosition,
+                Vector2.zero);
+        }
+
+        private bool TryGetExpectedPiece(out PuzzlePiece expectedPiece)
+        {
+            expectedPiece = null;
+            IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                PuzzlePiece piece = pieces[index];
+                if (!IsExpectedPiece(piece))
+                    continue;
+
+                expectedPiece = piece;
                 return true;
             }
 

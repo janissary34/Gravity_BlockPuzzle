@@ -21,7 +21,7 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private AudioClip tapClip;
 
         [Header("Loop Tuning")]
-        [SerializeField] private Vector2 approachOffset = new Vector2(42f, -58f);
+        [SerializeField] private Vector2 approachOffset = new Vector2(0f, -72f);
         [SerializeField, Min(.01f)] private float approachDuration = .32f;
         [SerializeField, Min(.01f)] private float pressDuration = .1f;
         [SerializeField, Min(.01f)] private float releaseDuration = .16f;

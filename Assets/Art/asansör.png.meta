@@ -110,16 +110,16 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: ElevatorDoorLeft
+      name: ElevatorFrame
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 627
-        height: 1254
+        x: 145
+        y: 65
+        width: 964
+        height: 1124
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 145, y: 125, z: 145, w: 190}
       outline: []
       physicsShape: []
       tessellationDetail: -1
@@ -131,22 +131,43 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: ElevatorDoorRight
+      name: ElevatorDoorLeft
       rect:
         serializedVersion: 2
-        x: 627
-        y: 0
-        width: 627
-        height: 1254
+        x: 368
+        y: 205
+        width: 258
+        height: 745
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 20, y: 20, z: 20, w: 20}
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
       spriteID: 1633955dcb73eef80800000000000000
       internalID: -8075455797655948447
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ElevatorDoorRight
+      rect:
+        serializedVersion: 2
+        x: 628
+        y: 205
+        width: 258
+        height: 745
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 20, y: 20, z: 20, w: 20}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4b0d78c4e13a5c900800000000000000
+      internalID: 617964189990335555
       vertices: []
       indices: 
       edges: []
@@ -162,8 +183,9 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      ElevatorDoorLeft: 7462321767153245720
-      ElevatorDoorRight: -8075455797655948447
+      ElevatorFrame: 7462321767153245720
+      ElevatorDoorLeft: -8075455797655948447
+      ElevatorDoorRight: 617964189990335555
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

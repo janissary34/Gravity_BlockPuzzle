@@ -36,6 +36,7 @@ MonoBehaviour:
   shredderRotationSpeed: 220
   pieces:
   - name: Piece 1
+    tutorialTargetId: hammer_intro_target
     visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 14}

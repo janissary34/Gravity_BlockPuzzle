@@ -36,6 +36,7 @@ MonoBehaviour:
   shredderRotationSpeed: 220
   pieces:
   - name: Piece 1
+    tutorialTargetId: 
     visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 18}
@@ -183,6 +184,7 @@ MonoBehaviour:
     - localCell: {x: 13, y: 5}
       type: 0
   - name: Piece 2
+    tutorialTargetId: 
     visualId: 
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 12, y: 14}
@@ -330,6 +332,7 @@ MonoBehaviour:
     - localCell: {x: -9, y: -7}
       type: 0
   - name: Piece 3
+    tutorialTargetId: 
     visualId: 
     color: {r: 0.38364378, g: 0.08899963, b: 0.754717, a: 1}
     origin: {x: 12, y: 14}
@@ -445,6 +448,7 @@ MonoBehaviour:
     - localCell: {x: -5, y: 1}
       type: 0
   - name: Piece 4
+    tutorialTargetId: 
     visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 12, y: 14}
@@ -559,6 +563,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -1, y: 5}
       type: 0
+  boxes: []
+  elevators: []
   pins: []
   obstacles:
   - name: Obstacle 1

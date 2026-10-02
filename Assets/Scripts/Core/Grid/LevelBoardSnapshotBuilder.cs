@@ -50,7 +50,13 @@ namespace GravityPuzzle.Core.Grid
             return false;
         }
 
-        private static PieceModel CreatePieceModel(int pieceId, PieceDefinition definition)
+        /// <summary>
+        /// Creates the grid footprint represented by a serialized piece definition.
+        /// Runtime setup uses this as the integrity baseline before registering a
+        /// pooled piece, so visual/collider geometry cannot silently reserve a
+        /// different board area than the authored level.
+        /// </summary>
+        public static PieceModel CreatePieceModel(int pieceId, PieceDefinition definition)
         {
             List<Vector2Int> rotatedCells = new List<Vector2Int>(definition.cells.Count);
             Vector2Int minimum = Vector2Int.zero;
