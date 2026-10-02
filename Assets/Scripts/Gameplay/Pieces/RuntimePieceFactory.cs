@@ -702,12 +702,18 @@ namespace GravityPuzzle.Gameplay.Pieces
         {
             if (piece == null || pieceVisualConfig == null ||
                 !TryGetAtlasShapeKey(level, definition, out string shapeKey) ||
-                !pieceVisualConfig.TryGetShape(shapeKey, out PieceShapeVisualDefinition visual))
+                !pieceVisualConfig.TryGetShapePresentation(
+                    shapeKey,
+                    out PieceShapeVisualDefinition visual,
+                    out PieceShapeVisualTransform transform))
                 return;
 
             // A normal sprite is retained underneath the ice art so the ice
             // release returns to the same authored silhouette.
-            piece.ConfigureWholePiecePresentation(visual.NormalSprite, visual.IceSprite);
+            piece.ConfigureWholePiecePresentation(
+                visual.NormalSprite,
+                visual.IceSprite,
+                transform);
         }
 
         /// <summary>
@@ -775,7 +781,10 @@ namespace GravityPuzzle.Gameplay.Pieces
                         out string candidateKey))
                     continue;
 
-                if (pieceVisualConfig.TryGetShape(candidateKey, out _))
+                if (pieceVisualConfig.TryGetShapePresentation(
+                        candidateKey,
+                        out _,
+                        out _))
                 {
                     shapeKey = candidateKey;
                     return true;

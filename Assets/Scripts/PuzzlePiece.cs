@@ -128,6 +128,7 @@ namespace GravityPuzzle
         private SpriteRenderer wholePieceRenderer;
         private Sprite wholePieceNormalSprite;
         private Sprite wholePieceIceSprite;
+        private PieceShapeVisualTransform wholePieceTransform = PieceShapeVisualTransform.Identity;
         private Transform iceSlotsRoot;
         private readonly List<PiecePartSlot> partSlots = new List<PiecePartSlot>();
         private CompositeCollider2D compositeCollider;
@@ -384,11 +385,15 @@ namespace GravityPuzzle
         /// shape. Colliders and cell visuals remain the gameplay authority.
         /// Hammer edits explicitly return to the modular presentation.
         /// </summary>
-        public void ConfigureWholePiecePresentation(Sprite normalSprite, Sprite iceSprite)
+        public void ConfigureWholePiecePresentation(
+            Sprite normalSprite,
+            Sprite iceSprite,
+            PieceShapeVisualTransform transform)
         {
             ClearIceVisuals();
             wholePieceNormalSprite = normalSprite;
             wholePieceIceSprite = iceSprite;
+            wholePieceTransform = transform;
             RefreshWholePiecePresentation();
             PrototypeBoard board = PrototypeBoard.Active;
             RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
@@ -398,8 +403,12 @@ namespace GravityPuzzle
         {
             wholePieceNormalSprite = null;
             wholePieceIceSprite = null;
+            wholePieceTransform = PieceShapeVisualTransform.Identity;
             if (wholePieceRenderer != null)
+            {
                 wholePieceRenderer.enabled = false;
+                wholePieceRenderer.flipX = false;
+            }
 
             SetModularCellPresentationVisible(true);
         }
@@ -2134,13 +2143,12 @@ namespace GravityPuzzle
             int sortingOrder,
             Sprite overlaySprite)
         {
-            if (iceRenderers.Count >= iceSlots.Count)
+            if (!TryGetAvailableIceSlot(out SpriteRenderer renderer))
             {
                 Debug.LogWarning("[PuzzlePiece] Ice presentation slot capacity exceeded.", this);
                 return;
             }
 
-            SpriteRenderer renderer = iceSlots[iceRenderers.Count];
             renderer.transform.SetParent(source.transform, false);
             renderer.transform.localPosition = Vector3.zero;
             renderer.transform.localRotation = Quaternion.identity;
@@ -2152,6 +2160,28 @@ namespace GravityPuzzle
             renderer.sortingOrder = sortingOrder;
             renderer.enabled = true;
             iceRenderers.Add(renderer);
+        }
+
+        /// <summary>
+        /// The first ice slot is reserved as the intact whole-piece renderer.
+        /// Generic ice overlays must never borrow it: their release tween
+        /// would otherwise fade the brick sprite itself to transparent.
+        /// </summary>
+        private bool TryGetAvailableIceSlot(out SpriteRenderer renderer)
+        {
+            for (int index = 0; index < iceSlots.Count; index++)
+            {
+                SpriteRenderer candidate = iceSlots[index];
+                if (candidate == null || candidate == wholePieceRenderer ||
+                    iceRenderers.Contains(candidate))
+                    continue;
+
+                renderer = candidate;
+                return true;
+            }
+
+            renderer = null;
+            return false;
         }
 
         private void PlayIceCrackFeedback()
@@ -2317,12 +2347,17 @@ namespace GravityPuzzle
 
             wholePieceRenderer.transform.SetParent(transform, false);
             wholePieceRenderer.transform.localPosition = center;
-            wholePieceRenderer.transform.localRotation = Quaternion.identity;
+            bool swapsDimensions = wholePieceTransform.QuarterTurns % 2 != 0;
+            wholePieceRenderer.transform.localRotation = Quaternion.Euler(
+                0f,
+                0f,
+                wholePieceTransform.QuarterTurns * 90f);
             wholePieceRenderer.transform.localScale = new Vector3(
-                size.x / sprite.bounds.size.x,
-                size.y / sprite.bounds.size.y,
+                (swapsDimensions ? size.y : size.x) / sprite.bounds.size.x,
+                (swapsDimensions ? size.x : size.y) / sprite.bounds.size.y,
                 1f);
             wholePieceRenderer.sprite = sprite;
+            wholePieceRenderer.flipX = wholePieceTransform.FlipX;
             // The brick atlas is neutral by design; retain the level-authored
             // colour for normal pieces. Ice artwork owns its blue/white palette.
             wholePieceRenderer.color = IsFrozen ? Color.white : VisualColor;

@@ -36,6 +36,7 @@ MonoBehaviour:
   shredderRotationSpeed: 220
   pieces:
   - name: Piece 1
+    tutorialTargetId: 
     visualId: 
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 14}
@@ -279,6 +280,7 @@ MonoBehaviour:
     - localCell: {x: 9, y: 5}
       type: 0
   - name: Piece 4
+    tutorialTargetId: 
     visualId: 
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 12, y: 14}
@@ -426,6 +428,7 @@ MonoBehaviour:
     - localCell: {x: -9, y: 5}
       type: 0
   - name: Piece 3
+    tutorialTargetId: 
     visualId: 
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 12, y: 14}
@@ -541,6 +544,7 @@ MonoBehaviour:
     - localCell: {x: 3, y: 9}
       type: 0
   - name: Piece 4
+    tutorialTargetId: 
     visualId: 
     color: {r: 1, g: 0.6103293, b: 0.2980392, a: 1}
     origin: {x: 12, y: 14}
@@ -624,6 +628,7 @@ MonoBehaviour:
     - localCell: {x: 11, y: 9}
       type: 0
   - name: Piece 5
+    tutorialTargetId: 
     visualId: 
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 14, y: 14}
@@ -739,6 +744,7 @@ MonoBehaviour:
     - localCell: {x: 13, y: 1}
       type: 0
   - name: Piece 6
+    tutorialTargetId: 
     visualId: 
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
     origin: {x: 14, y: 14}

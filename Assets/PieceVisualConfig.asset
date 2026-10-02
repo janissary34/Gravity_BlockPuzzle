@@ -19,6 +19,9 @@ MonoBehaviour:
   normalFallbackSprite: {fileID: -1313627307, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
   iceFallbackSprite: {fileID: 0}
   shapeDefinitions:
+  - shapeKey: 0,0
+    normalSprite: {fileID: -1313627307, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 0}
   - shapeKey: 0,0;0,1
     normalSprite: {fileID: -632471582, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: 453979135, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
@@ -85,6 +88,9 @@ MonoBehaviour:
   - shapeKey: 0,0;1,0;1,1;2,1
     normalSprite: {fileID: -600561072, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: 1944917103, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 1,0;2,0;0,1;1,1
+    normalSprite: {fileID: 1559637794, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    iceSprite: {fileID: 0}
   - shapeKey: 1,0;0,1;1,1;0,2
     normalSprite: {fileID: 693656138, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: 1230471221, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}

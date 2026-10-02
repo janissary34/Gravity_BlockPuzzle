@@ -35,14 +35,18 @@ namespace GravityPuzzle.Editor
             normalFallback.objectReferenceValue = FindSprite(BrickAtlasPath, "BB_1X1");
             // The ice atlas currently has no independently sliced 1x1 sprite.
             // Leave this empty rather than stretching an unrelated silhouette.
+            // A missing ice sprite is valid: frozen pieces retain the normal
+            // silhouette and receive the configured ice overlay instead.
             serializedConfig.FindProperty("iceFallbackSprite").objectReferenceValue = null;
 
             SerializedProperty definitions = serializedConfig.FindProperty("shapeDefinitions");
             definitions.ClearArray();
+            int iceMatchedShapeCount = 0;
             foreach (KeyValuePair<string, Sprite> pair in normalSprites)
             {
-                if (!iceSprites.TryGetValue(pair.Key, out Sprite iceSprite))
-                    continue;
+                iceSprites.TryGetValue(pair.Key, out Sprite iceSprite);
+                if (iceSprite != null)
+                    iceMatchedShapeCount++;
 
                 int index = definitions.arraySize;
                 definitions.InsertArrayElementAtIndex(index);
@@ -55,7 +59,9 @@ namespace GravityPuzzle.Editor
             serializedConfig.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
-            Debug.Log($"[PieceShapeVisualConfig] Configured {definitions.arraySize} matched artist silhouettes and the BB_1X1 fragment fallback.");
+            Debug.Log(
+                $"[PieceShapeVisualConfig] Configured {definitions.arraySize} normal artist silhouettes " +
+                $"({iceMatchedShapeCount} with dedicated ice art). Missing ice art uses the configured ice overlay.");
         }
 
         private static Dictionary<string, Sprite> ReadSpritesByShape(string path)
