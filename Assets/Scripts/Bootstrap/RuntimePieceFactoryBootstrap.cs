@@ -48,6 +48,10 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Optional animation and sorting tuning for generated reveal-area covers.")]
         [SerializeField] private RevealPresentationConfig revealPresentationConfig;
 
+        [Header("Board Presentation")]
+        [Tooltip("Shared Scene_Tuna board skin used by every authored level in this scene.")]
+        [SerializeField] private BoardPresentationConfig boardPresentationConfig;
+
         [Header("Gameplay HUD")]
         [Tooltip("Text that displays the active campaign level number.")]
         [SerializeField] private TMP_Text levelDisplayText;
@@ -93,6 +97,7 @@ namespace GravityPuzzle.Bootstrap
                 prototypeBoard,
                 puzzleDragController);
             GravityLevelRuntime.ConfigureRevealPresentationConfig(revealPresentationConfig);
+            GravityLevelRuntime.ConfigureBoardPresentationConfig(boardPresentationConfig);
             RegisterRevealPresentations();
             GravityLevelDefinition selectedLevel = GravityLevelRuntime.FindLevelToPlay();
             if (selectedLevel == null)

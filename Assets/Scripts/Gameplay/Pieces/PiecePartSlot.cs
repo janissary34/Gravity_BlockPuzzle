@@ -35,14 +35,25 @@ namespace GravityPuzzle.Gameplay.Pieces
         public void ResetSlot()
         {
             if (visual != null)
+            {
                 visual.enabled = false;
+                visual.sprite = null;
+                visual.color = Color.white;
+                visual.flipX = false;
+                visual.flipY = false;
+                visual.transform.localPosition = Vector3.zero;
+                visual.transform.localRotation = Quaternion.identity;
+                visual.transform.localScale = Vector3.one;
+            }
             if (collision != null)
                 collision.enabled = false;
             transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
             transform.localScale = Vector3.one;
             if (collision != null)
             {
                 collision.transform.localPosition = Vector3.zero;
+                collision.transform.localRotation = Quaternion.identity;
                 collision.transform.localScale = Vector3.one;
             }
         }

@@ -14,7 +14,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite normalFallbackSprite;
         [Tooltip("Artist-authored 1x1 ice block used when a frozen piece has no matching silhouette.")]
         [SerializeField] private Sprite iceFallbackSprite;
-        [Tooltip("Whole-piece atlas sprites keyed by a normalized silhouette. Normal art is required; ice art is optional and falls back to the ice overlay.")]
+        [Tooltip("Whole-piece atlas sprites keyed by a normalized silhouette. Frozen shapes without a matching ice sprite use the modular brick-and-frost fallback.")]
         [SerializeField] private List<PieceShapeVisualDefinition> shapeDefinitions = new List<PieceShapeVisualDefinition>();
 
         [Header("Ice Presentation")]
@@ -88,9 +88,11 @@ namespace GravityPuzzle.Config
         }
 
         /// <summary>
-        /// Finds an artist silhouette that can represent the requested shape.
-        /// The atlas need not duplicate every rotation or mirrored version:
-        /// the returned presentation transform is applied only to the renderer.
+        /// Finds an artist silhouette for the requested shape without rotating
+        /// or mirroring its renderer. Brick lighting is baked into the atlas,
+        /// therefore a geometric transform would invert the shadow direction.
+        /// Shapes missing an exact authored orientation deliberately use the
+        /// modular brick fallback instead.
         /// </summary>
         public bool TryGetShapePresentation(
             string shapeKey,
@@ -103,88 +105,9 @@ namespace GravityPuzzle.Config
                 return true;
             }
 
-            for (int definitionIndex = 0; definitionIndex < shapeDefinitions.Count; definitionIndex++)
-            {
-                PieceShapeVisualDefinition candidate = shapeDefinitions[definitionIndex];
-                // Include zero turns as well: legacy authoring writes cells
-                // row-first while runtime normalizes them ordinally, so an
-                // identical silhouette can have a differently ordered key.
-                for (int quarterTurns = 0; quarterTurns < 4; quarterTurns++)
-                {
-                    if (ShapeKeyMatches(candidate.ShapeKey, shapeKey, quarterTurns, false))
-                    {
-                        definition = candidate;
-                        transform = new PieceShapeVisualTransform(quarterTurns, false);
-                        return true;
-                    }
-                }
-
-                for (int quarterTurns = 0; quarterTurns < 4; quarterTurns++)
-                {
-                    if (ShapeKeyMatches(candidate.ShapeKey, shapeKey, quarterTurns, true))
-                    {
-                        definition = candidate;
-                        transform = new PieceShapeVisualTransform(quarterTurns, true);
-                        return true;
-                    }
-                }
-            }
-
             definition = default;
             transform = PieceShapeVisualTransform.Identity;
             return false;
-        }
-
-        private static bool ShapeKeyMatches(
-            string sourceShapeKey,
-            string targetShapeKey,
-            int quarterTurns,
-            bool flipX)
-        {
-            if (string.IsNullOrEmpty(sourceShapeKey) || string.IsNullOrEmpty(targetShapeKey))
-                return false;
-
-            string[] cells = sourceShapeKey.Split(';');
-            List<Vector2Int> transformedCells = new List<Vector2Int>(cells.Length);
-            int minimumX = int.MaxValue;
-            int minimumY = int.MaxValue;
-            for (int index = 0; index < cells.Length; index++)
-            {
-                string[] coordinates = cells[index].Split(',');
-                if (coordinates.Length != 2 ||
-                    !int.TryParse(coordinates[0], out int x) ||
-                    !int.TryParse(coordinates[1], out int y))
-                    return false;
-
-                if (flipX)
-                    x = -x;
-
-                Vector2Int transformed = Rotate(new Vector2Int(x, y), quarterTurns);
-                transformedCells.Add(transformed);
-                minimumX = Mathf.Min(minimumX, transformed.x);
-                minimumY = Mathf.Min(minimumY, transformed.y);
-            }
-
-            List<string> normalizedCells = new List<string>(transformedCells.Count);
-            for (int index = 0; index < transformedCells.Count; index++)
-            {
-                Vector2Int cell = transformedCells[index];
-                normalizedCells.Add((cell.x - minimumX) + "," + (cell.y - minimumY));
-            }
-
-            normalizedCells.Sort(StringComparer.Ordinal);
-            return string.Join(";", normalizedCells) == targetShapeKey;
-        }
-
-        private static Vector2Int Rotate(Vector2Int point, int quarterTurns)
-        {
-            switch ((quarterTurns % 4 + 4) % 4)
-            {
-                case 1: return new Vector2Int(-point.y, point.x);
-                case 2: return new Vector2Int(-point.x, -point.y);
-                case 3: return new Vector2Int(point.y, -point.x);
-                default: return point;
-            }
         }
     }
 
@@ -210,7 +133,7 @@ namespace GravityPuzzle.Config
     {
         [SerializeField] private string shapeKey;
         [SerializeField] private Sprite normalSprite;
-        [Tooltip("Optional. When missing, the normal silhouette remains visible beneath the configured ice overlay.")]
+        [Tooltip("Optional. When missing, frozen pieces use the modular brick-and-frost fallback rather than this normal silhouette.")]
         [SerializeField] private Sprite iceSprite;
 
         public string ShapeKey => shapeKey;
@@ -219,8 +142,9 @@ namespace GravityPuzzle.Config
     }
 
     /// <summary>
-    /// Renderer-only transform used when an atlas contains one orientation of
-    /// a silhouette but a level requests a rotated or mirrored counterpart.
+    /// Renderer-only transform retained for serialized compatibility. Atlas
+    /// matching now returns identity because baked brick lighting must not be
+    /// rotated or mirrored at runtime.
     /// </summary>
     public struct PieceShapeVisualTransform
     {

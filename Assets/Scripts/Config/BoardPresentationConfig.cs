@@ -1,0 +1,78 @@
+using UnityEngine;
+
+namespace GravityPuzzle.Config
+{
+    /// <summary>
+    /// Shared art direction for every runtime board. Level assets own their
+    /// topology and gameplay values; this asset owns the reusable board skin.
+    /// </summary>
+    [CreateAssetMenu(fileName = "BoardPresentation", menuName = "Gravity Puzzle/Presentation/Board")]
+    public sealed class BoardPresentationConfig : ScriptableObject
+    {
+        [Header("Palette")]
+        [Tooltip("When enabled, every level uses this common board palette instead of an authored per-level background colour.")]
+        [SerializeField] private bool overrideLevelBackground = true;
+        [SerializeField] private Color backgroundColor = new Color(.035f, .055f, .13f, 1f);
+        [SerializeField] private Color alternateBackgroundColor = new Color(.085f, .115f, .22f, 1f);
+
+        [Header("Camera Framing")]
+        [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
+        [SerializeField, Min(1f)] private float cameraSizeMultiplier = 1.1f;
+
+        [Header("Scene Tuna Frame Atlas")]
+        [SerializeField] private Sprite topEdge;
+        [SerializeField] private Sprite bottomEdge;
+        [SerializeField] private Sprite leftEdge;
+        [SerializeField] private Sprite rightEdge;
+        [SerializeField] private Sprite topLeftCorner;
+        [SerializeField] private Sprite topRightCorner;
+        [SerializeField] private Sprite bottomLeftCorner;
+        [SerializeField] private Sprite bottomRightCorner;
+        [SerializeField] private Material frameMaterial;
+        [SerializeField] private Color frameTint = Color.white;
+
+        public bool OverrideLevelBackground => overrideLevelBackground;
+        public Color BackgroundColor => backgroundColor;
+        public Color AlternateBackgroundColor => alternateBackgroundColor;
+        public float CameraSizeMultiplier => Mathf.Max(1f, cameraSizeMultiplier);
+        public Material FrameMaterial => frameMaterial;
+        public Color FrameTint => frameTint;
+
+        public Sprite GetEdgeSprite(BoardFrameEdge edge)
+        {
+            switch (edge)
+            {
+                case BoardFrameEdge.Top:
+                    return topEdge;
+                case BoardFrameEdge.Bottom:
+                    return bottomEdge;
+                case BoardFrameEdge.Left:
+                    return leftEdge;
+                case BoardFrameEdge.Right:
+                    return rightEdge;
+                case BoardFrameEdge.TopLeftCorner:
+                    return topLeftCorner;
+                case BoardFrameEdge.TopRightCorner:
+                    return topRightCorner;
+                case BoardFrameEdge.BottomLeftCorner:
+                    return bottomLeftCorner;
+                case BoardFrameEdge.BottomRightCorner:
+                    return bottomRightCorner;
+                default:
+                    return null;
+            }
+        }
+    }
+
+    public enum BoardFrameEdge
+    {
+        Top,
+        Bottom,
+        Left,
+        Right,
+        TopLeftCorner,
+        TopRightCorner,
+        BottomLeftCorner,
+        BottomRightCorner
+    }
+}

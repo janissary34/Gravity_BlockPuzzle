@@ -97,7 +97,7 @@ MonoBehaviour:
   - shapeKey: 0,0;0,1;1,1;1,2
     normalSprite: {fileID: 642778117, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: -1322214796, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
-  iceOverlaySprite: {fileID: 21300000, guid: f2196e962baaa4e22a0b38fb055b6660, type: 3}
+  iceOverlaySprite: {fileID: 0}
   iceOverlayTint: {r: 0.72, g: 0.92, b: 1, a: 1}
   iceFrostTint: {r: 0.9, g: 0.98, b: 1, a: 0.32}
   bombOverlaySprite: {fileID: 21300000, guid: 0055f32440cd446adb05ef4e4b9aafd7, type: 3}

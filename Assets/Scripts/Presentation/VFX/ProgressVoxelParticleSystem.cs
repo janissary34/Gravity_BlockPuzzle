@@ -66,9 +66,11 @@ namespace GravityPuzzle.Presentation.VFX
         private int nextFlightGroupId = 1;
 
         private Vector3 targetWorldPosition = Vector3.up * 4f;
-        private bool hasTargetPosition;
 
         public ParticleSystem ParticleSystemComponent => particleSys;
+        public bool CanRenderFlights => enabled && gameObject.activeInHierarchy &&
+                                        particleSys != null && particleSys.gameObject.activeInHierarchy &&
+                                        particleRenderer != null && particleRenderer.enabled;
 
         /// <summary>
         /// Returns the latest possible arrival time for a requested flight.
@@ -150,7 +152,6 @@ namespace GravityPuzzle.Presentation.VFX
         public void SetTargetPosition(Vector3 worldTarget)
         {
             targetWorldPosition = worldTarget;
-            hasTargetPosition = true;
 
             for (int index = 0; index < activeCount; index++)
             {
@@ -164,6 +165,9 @@ namespace GravityPuzzle.Presentation.VFX
         /// </summary>
         public int EmitVoxel(Vector3 contactWorldPos, Color color, float flightDuration = 0.55f, int count = 1)
         {
+            if (!CanRenderFlights)
+                return 0;
+
             if (particleSys != null && !particleSys.isPlaying)
                 particleSys.Play();
 

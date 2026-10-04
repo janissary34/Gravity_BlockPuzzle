@@ -315,9 +315,17 @@ namespace GravityPuzzle.Gameplay.Pieces
             piece.ConfigureProgressUnits(Mathf.Max(1, Mathf.CeilToInt(remainingProgress)));
             piece.ConfigureVisualColor(color);
             piece.ConfigureCollisionGeometry(composite, collisionCells, cellVisuals);
-            piece.ConfigureVoxelPresentation(voxelShards);
+            if (voxelShards.Count > 0)
+                piece.ConfigureVoxelPresentation(voxelShards);
+            else
+                piece.ConfigureSolidCellPresentation(cellVisuals);
             piece.ConfigureRemainingProgress(remainingProgress);
             ConfigureOutlinePresentation(piece);
+            // A hammer split can create an arbitrary partial topology. Even
+            // when that topology happens to resemble an atlas silhouette, the
+            // original art's baked shadow/pivot no longer belongs to the
+            // retained cells. Keep every fragment on the modular artist-brick
+            // path; this makes its geometry, outline and shading deterministic.
         }
 
         private static void ConfigureComposite(CompositeCollider2D pieceComposite)
@@ -408,14 +416,19 @@ namespace GravityPuzzle.Gameplay.Pieces
                 progressUnits,
                 collisionCells,
                 collisionCellVisuals,
-                voxelShards,
-                GetCompleteModuleShapeKey(parts));
+                voxelShards);
         }
 
         private static void ClearGeneratedContent(PuzzlePiece piece)
         {
             if (piece == null)
                 return;
+
+            // A pooled root can previously have carried a complete atlas
+            // silhouette. Clear it before restoring modular part slots so a
+            // hammer fragment or a new level piece never inherits a stale
+            // whole-piece renderer from its former owner.
+            piece.ClearWholePiecePresentation();
 
             IReadOnlyList<PiecePartSlot> partSlots = piece.PartSlots;
             for (int index = 0; index < partSlots.Count; index++)
@@ -608,20 +621,58 @@ namespace GravityPuzzle.Gameplay.Pieces
             List<VoxelShard> voxelShards = null)
         {
             cellVisual = slot.Visual;
+            bool visualUsesSlotTransform = cellVisual.transform == slot.transform;
             slot.transform.localPosition = part.LocalPosition;
+            slot.transform.localRotation = Quaternion.identity;
             slot.transform.localScale = Vector3.one;
-            cellVisual.sprite = voxelSprite != null ? voxelSprite : PrototypeBootstrap.GetSquareSprite();
-            cellVisual.color = color;
-            cellVisual.sortingOrder = 5;
-            cellVisual.transform.localScale = new Vector3(part.Size.x, part.Size.y, 1f);
-
-            if (useVoxelShardGrid)
+            if (!visualUsesSlotTransform)
             {
+                cellVisual.transform.localPosition = Vector3.zero;
+                cellVisual.transform.localRotation = Quaternion.identity;
+            }
+
+            Sprite presentationSprite = voxelSprite != null
+                ? voxelSprite
+                : PrototypeBootstrap.GetSquareSprite();
+            cellVisual.sprite = presentationSprite;
+            cellVisual.color = color;
+            cellVisual.flipX = false;
+            cellVisual.flipY = false;
+            cellVisual.sortingOrder = 5;
+
+            // VoxelShard rendering is retained only for legacy content that
+            // has no artist-authored fallback sprite. Rendering a brick atlas
+            // through an 8x8 voxel grid produces the old tiny/default voxel
+            // appearance. Solid slots are already pooled on BlockPiece and
+            // remain the authoritative presentation for all new art.
+            bool useLegacyVoxelFallback = useVoxelShardGrid && voxelSprite == null;
+            if (useLegacyVoxelFallback)
+            {
+                // The slot is the VoxelShard parent. Keep it unscaled so
+                // each shard's part-size geometry remains in board space.
+                if (!visualUsesSlotTransform)
+                    cellVisual.transform.localScale = Vector3.one;
                 cellVisual.enabled = false;
                 VoxelBlockBuilder.BuildVoxelGrid(slot.transform, part.Name, part.Size, color, voxelSprite, voxelShards, slot);
             }
             else
             {
+                // Scene_Tuna sprites are authored at their own pixels-per-unit.
+                // Scale the presentation to the physical cell's bounds rather
+                // than assuming a one-unit sprite. This keeps visual and
+                // collider geometry aligned for standard, fragment and ice
+                // fallback paths.
+                Vector2 spriteBounds = presentationSprite != null
+                    ? presentationSprite.bounds.size
+                    : Vector2.one;
+                Vector3 presentationScale = new Vector3(
+                    spriteBounds.x > 0f ? part.Size.x / spriteBounds.x : part.Size.x,
+                    spriteBounds.y > 0f ? part.Size.y / spriteBounds.y : part.Size.y,
+                    1f);
+                if (visualUsesSlotTransform)
+                    slot.transform.localScale = presentationScale;
+                else
+                    cellVisual.transform.localScale = presentationScale;
                 cellVisual.enabled = true;
             }
 
@@ -653,9 +704,10 @@ namespace GravityPuzzle.Gameplay.Pieces
             out Color color,
             out Sprite voxelSprite)
         {
+            bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
+                               definition.frozenMoveCount > 0;
             color = definition.color;
-            voxelSprite = GetFallbackSprite(
-                definition.specialBlockType == PieceSpecialBlockType.Ice && definition.frozenMoveCount > 0);
+            voxelSprite = GetFallbackSprite(isFrozenIce);
             if (string.IsNullOrWhiteSpace(definition.visualId))
                 return;
 
@@ -667,7 +719,12 @@ namespace GravityPuzzle.Gameplay.Pieces
             }
 
             color = visual.Tint;
-            voxelSprite = visual.Sprite;
+            // ice_block was authored for the retired ice presentation. The
+            // new atlas is only valid for an exact shape; all other frozen
+            // shapes use the current 1x1 brick plus the generic frost layer.
+            // Never reintroduce the old sprite in that fallback path.
+            if (!isFrozenIce)
+                voxelSprite = visual.Sprite;
         }
 
         private static Sprite GetFallbackSprite(bool isIce)
@@ -675,24 +732,28 @@ namespace GravityPuzzle.Gameplay.Pieces
             if (pieceVisualConfig == null)
                 return null;
 
-            return isIce
+            if (!isIce)
+                return pieceVisualConfig.NormalFallbackSprite;
+
+            // The artist supplied atlas silhouettes for the supported ice
+            // shapes, not a standalone 1x1 ice brick. Unsupported ice
+            // fragments still need to stay on the new modular presentation;
+            // their normal brick is covered by the pooled ice overlay later
+            // in the piece setup. Falling back to null here would reactivate
+            // the legacy 8x8 voxel path.
+            return pieceVisualConfig.IceFallbackSprite != null
                 ? pieceVisualConfig.IceFallbackSprite
                 : pieceVisualConfig.NormalFallbackSprite;
         }
 
         private static Sprite GetCellPresentationSprite(Sprite fallbackSprite, Vector2 partSize)
         {
-            // VoxelBlockBuilder subdivides this sprite again. An authored
-            // brick applied there becomes a grid of tiny bricks, so intact
-            // fallback voxels deliberately use its neutral square sprite.
-            // Full blocks still use the configured brick fallback when the
-            // project is using the non-voxel presentation mode.
-            if (useVoxelShardGrid)
-                return null;
-
-            return Mathf.Approximately(partSize.x, 1f) && Mathf.Approximately(partSize.y, 1f)
-                ? fallbackSprite
-                : null;
+            // A partial, broken or newly authored shape has no whole-piece
+            // silhouette. Every pooled slot therefore renders the artist's
+            // 1x1 brick at its own board-cell size. This keeps the fallback
+            // visually consistent without letting VoxelShard subdivide the
+            // brick image again.
+            return fallbackSprite;
         }
 
         private static void ConfigureWholePiecePresentation(
@@ -706,6 +767,15 @@ namespace GravityPuzzle.Gameplay.Pieces
                     shapeKey,
                     out PieceShapeVisualDefinition visual,
                     out PieceShapeVisualTransform transform))
+                return;
+
+            bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
+                               definition.frozenMoveCount > 0;
+            // An atlas normal sprite is not an ice fallback. If the artist has
+            // not supplied this exact ice silhouette, preserve its geometry by
+            // keeping the modular brick presentation and applying the generic
+            // frost layer instead of exposing normal or legacy ice art.
+            if (isFrozenIce && visual.IceSprite == null)
                 return;
 
             // A normal sprite is retained underneath the ice art so the ice
@@ -837,31 +907,6 @@ namespace GravityPuzzle.Gameplay.Pieces
             return !string.IsNullOrEmpty(shapeKey);
         }
 
-        private static string GetCompleteModuleShapeKey(List<PiecePartGeometry> parts)
-        {
-            if (parts == null || parts.Count == 0)
-                return null;
-
-            float minimumX = float.PositiveInfinity;
-            float minimumY = float.PositiveInfinity;
-            for (int index = 0; index < parts.Count; index++)
-            {
-                PiecePartGeometry part = parts[index];
-                if (part.Name != GridBlockName || part.Size != Vector2.one)
-                    return null;
-
-                minimumX = Mathf.Min(minimumX, part.LocalPosition.x);
-                minimumY = Mathf.Min(minimumY, part.LocalPosition.y);
-            }
-
-            string[] cells = new string[parts.Count];
-            for (int index = 0; index < parts.Count; index++)
-                cells[index] = Mathf.RoundToInt(parts[index].LocalPosition.x - minimumX) + "," +
-                               Mathf.RoundToInt(parts[index].LocalPosition.y - minimumY);
-            System.Array.Sort(cells, System.StringComparer.Ordinal);
-            return string.Join(";", cells);
-        }
-
         private static void WarnMissingVisualDefinition(string visualId)
         {
             if (!warnedMissingVisualIds.Add(visualId))
@@ -932,21 +977,18 @@ namespace GravityPuzzle.Gameplay.Pieces
                 int progressUnits,
                 List<BoxCollider2D> collisionCells,
                 List<SpriteRenderer> collisionCellVisuals,
-                List<VoxelShard> voxelShards,
-                string shapeKey)
+                List<VoxelShard> voxelShards)
             {
                 ProgressUnits = progressUnits;
                 CollisionCells = collisionCells;
                 CollisionCellVisuals = collisionCellVisuals;
                 VoxelShards = voxelShards;
-                ShapeKey = shapeKey;
             }
 
             public int ProgressUnits { get; }
             public List<BoxCollider2D> CollisionCells { get; }
             public List<SpriteRenderer> CollisionCellVisuals { get; }
             public List<VoxelShard> VoxelShards { get; }
-            public string ShapeKey { get; }
         }
     }
 }

@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74afe51e0cac9462da47ba6802d92986, type: 3}
+  m_Name: BoardPresentation_Navy
+  m_EditorClassIdentifier: 
+  overrideLevelBackground: 1
+  backgroundColor: {r: 0.035, g: 0.055, b: 0.13, a: 1}
+  alternateBackgroundColor: {r: 0.085, g: 0.115, b: 0.22, a: 1}
+  cameraSizeMultiplier: 1.1
+  topEdge: {fileID: 1112318756, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  bottomEdge: {fileID: -448638201, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  leftEdge: {fileID: -188560374, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  rightEdge: {fileID: 1536040797, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  topLeftCorner: {fileID: 1180291467, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  topRightCorner: {fileID: 1628857650, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  bottomLeftCorner: {fileID: 907948875, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  bottomRightCorner: {fileID: -2049558506, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  frameMaterial: {fileID: 2100000, guid: 7b3b6baf661764b3aabbd9f07c70acc9, type: 2}
+  frameTint: {r: 1, g: 1, b: 1, a: 1}

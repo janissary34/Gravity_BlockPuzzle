@@ -209,7 +209,11 @@ namespace GravityPuzzle.Presentation.Views
 
         private void ShowInternal(Mode mode)
         {
-            HideGameplayHud();
+            // Normal targeting is an optional board action, not a modal
+            // tutorial. Keep the Scene_Tuna HUD visible so the armed button
+            // remains available for a second-press cancellation and the player
+            // retains timer, settings and inventory context. First-use lessons
+            // deliberately continue to use HideGameplayHud below.
             HideInactiveBoosterButtons(mode);
             SetVisible(true);
 

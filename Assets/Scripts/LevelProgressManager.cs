@@ -38,6 +38,9 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Drag and drop your UI Slider component here.")]
         private Slider progressSlider;
 
+        [SerializeField, Tooltip("The active HUD canvas that owns the progress slider. Used only when a legacy scene reference points at a disabled HUD.")]
+        private Canvas activeHudCanvas;
+
         [SerializeField, Tooltip("Owns the timing and easing of progress presentation tweens.")]
         private TweenConfig tweenConfig;
 
@@ -88,6 +91,15 @@ namespace GravityPuzzle
         private GameObjectPool<FlyingProgressVoxelView> flyingProgressVoxelPool;
         private int pendingVfxProgressArrivalCount;
 
+        // World-space ParticleSystem effects cannot be composited reliably over
+        // an overlay canvas. The prewarmed UI view is the deterministic flight
+        // presenter for Scene_Tuna's Screen Space - Overlay HUD; the particle
+        // system remains available for authored world-space HUDs.
+        private bool CanUseWorldParticleVfx => progressVoxelVfx != null &&
+                                                progressVoxelVfx.CanRenderFlights &&
+                                                progressCanvas != null &&
+                                                progressCanvas.renderMode != RenderMode.ScreenSpaceOverlay;
+
         private float SliderFillDuration => tweenConfig.ProgressSliderFillDuration;
         private Ease SliderFillEase => tweenConfig.ProgressSliderFillEase;
         private float VoxelFlightDuration => tweenConfig.ProgressVoxelFlightDuration;
@@ -106,6 +118,27 @@ namespace GravityPuzzle
                                                       pendingVfxProgressArrivalCount > 0 ||
                                                       (sliderFillTween != null && sliderFillTween.IsActive());
 
+        /// <summary>
+        /// Commits the final authoritative progress when the board has no
+        /// remaining runtime pieces. Flight views are presentation only: a
+        /// killed tween, exhausted pool, or hidden HUD must never leave a
+        /// cleared board unable to enter its result state.
+        /// </summary>
+        public void CompleteForBoardClear()
+        {
+            if (totalBlockUnitsInLevel <= 0 || IsLevelComplete)
+                return;
+
+            float missingUnits = totalBlockUnitsInLevel - currentShreddedUnits;
+            if (missingUnits <= .0001f)
+                return;
+
+            Debug.LogWarning(
+                $"[LevelProgress] Board cleared with {missingUnits:0.###} progress units still awaiting presentation; committing the authoritative remainder.",
+                this);
+            AddProgress(missingUnits);
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -119,9 +152,15 @@ namespace GravityPuzzle
             hasTweenConfig = tweenConfig != null;
             if (!hasTweenConfig)
                 Debug.LogWarning("[LevelProgress] TweenConfig is missing; progress will update without tween presentation.", this);
+            ResolveActiveHudSlider();
             EnsureSliderReference();
             InitializeParticleVfxReference();
             CachePresentationReferences();
+            // The migrated HUD's prefab can retain an authored preview value.
+            // Clear that presentation value before the first rendered frame;
+            // the level runtime supplies the real denominator immediately
+            // afterwards in InitializeLevelProgress.
+            ResetProgress();
             ConfigureFlyingProgressVoxelPool();
         }
 
@@ -131,8 +170,49 @@ namespace GravityPuzzle
             {
                 progressVoxelVfx = progressParticleSystem.GetComponent<ProgressVoxelParticleSystem>();
                 if (progressVoxelVfx == null)
-                    progressVoxelVfx = progressParticleSystem.gameObject.AddComponent<ProgressVoxelParticleSystem>();
+                    Debug.LogWarning("[LevelProgress] The assigned particle system has no ProgressVoxelParticleSystem. UI flight fallback will be used.", this);
             }
+        }
+
+        private void ResolveActiveHudSlider()
+        {
+            if (IsActiveHudProgressSlider(progressSlider))
+                return;
+
+            if (activeHudCanvas == null || !activeHudCanvas.isActiveAndEnabled)
+                return;
+
+            // Scene1 formerly pointed to the disabled Timer_Canvas slider. The
+            // active HUD is an explicit composition-root reference; this small
+            // Awake-only lookup merely resolves its authored progress control.
+            Slider[] sliders = activeHudCanvas.GetComponentsInChildren<Slider>(true);
+            for (int index = 0; index < sliders.Length; index++)
+            {
+                Slider candidate = sliders[index];
+                if (candidate != null && candidate.isActiveAndEnabled &&
+                    candidate.gameObject.name == "UI_Progress_Slider")
+                {
+                    progressSlider = candidate;
+                    return;
+                }
+            }
+
+            // Do not retain a valid-but-wrong legacy slider reference. Its
+            // handle belongs to a different canvas, so progress flights would
+            // visibly land away from the active HUD even when the bar itself
+            // was updating correctly.
+            progressSlider = null;
+            Debug.LogError("[LevelProgress] Active HUD Canvas has no enabled UI_Progress_Slider.", activeHudCanvas);
+        }
+
+        private bool IsActiveHudProgressSlider(Slider slider)
+        {
+            return slider != null &&
+                   activeHudCanvas != null &&
+                   activeHudCanvas.isActiveAndEnabled &&
+                   slider.isActiveAndEnabled &&
+                   slider.gameObject.name == "UI_Progress_Slider" &&
+                   slider.transform.IsChildOf(activeHudCanvas.transform);
         }
 
         private void Start()
@@ -193,10 +273,11 @@ namespace GravityPuzzle
             if (progressSlider == null)
                 return;
 
-            // Timer_Canvas starts disabled and is activated by the gameplay
-            // bootstrap. It is still the authored owner of this Slider, so it
-            // must be considered while caching presentation dependencies.
-            progressCanvas = progressSlider.GetComponentInParent<Canvas>(true);
+            // Prefer the composition-root HUD reference. The slider reference
+            // may still be the legacy disabled Timer_Canvas during migration.
+            progressCanvas = activeHudCanvas != null && activeHudCanvas.isActiveAndEnabled
+                ? activeHudCanvas
+                : progressSlider.GetComponentInParent<Canvas>(true);
             progressCanvasRect = progressCanvas != null ? progressCanvas.transform as RectTransform : null;
             progressTargetRect = progressSlider.handleRect != null
                 ? progressSlider.handleRect
@@ -276,15 +357,17 @@ namespace GravityPuzzle
                 return;
             }
 
-            if (flyingProgressVoxelPool == null && progressVoxelVfx == null)
+            if (flyingProgressVoxelPool == null && !CanUseWorldParticleVfx)
             {
-                // physical voxel without advancing the slider.
+                // There is no authored presenter available. Preserve the
+                // authoritative level state instead of allowing a cosmetic
+                // failure to make the level impossible to complete.
                 AddProgress(progressAmount);
                 onArrival?.Invoke();
                 return;
             }
 
-            if (progressVoxelVfx != null)
+            if (CanUseWorldParticleVfx)
             {
                 progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
                 int flightGroupId = progressVoxelVfx.EmitVoxel(
@@ -292,13 +375,30 @@ namespace GravityPuzzle
                     Opaque(voxelColor),
                     VoxelFlightDuration,
                     Mathf.Max(1, particleCount));
-                StartCoroutine(ApplyProgressWhenVfxArrives(progressAmount, onArrival, flightGroupId));
-                return;
+                if (progressVoxelVfx.IsFlightGroupActive(flightGroupId))
+                {
+                    StartCoroutine(ApplyProgressWhenVfxArrives(progressAmount, onArrival, flightGroupId));
+                    return;
+                }
             }
 
             // The handle is the visible leading edge of the fill. Landing there
             // makes each voxel read as material entering the progress bar rather
             // than merely flying toward its static background.
+            // Scene bootstrap owns the gameplay-camera reference. Retrieve that
+            // cached dependency again at the handoff boundary in case a manager
+            // was enabled before the bootstrap's Start pass.
+            if (mainCamera == null)
+                mainCamera = PrototypeBootstrap.SceneCamera;
+
+            if (progressCanvas == null || progressCanvasRect == null || progressTargetRect == null || mainCamera == null)
+            {
+                Debug.LogWarning("[LevelProgress] UI flight references are unavailable; applying progress without a flight.", this);
+                AddProgress(progressAmount);
+                onArrival?.Invoke();
+                return;
+            }
+
             Camera uiCamera = progressCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : progressCanvas.worldCamera;
             Vector2 start = ScreenToCanvasPoint(progressCanvasRect, mainCamera.WorldToScreenPoint(startWorldPos), uiCamera);
             Vector2 target = ScreenToCanvasPoint(
@@ -318,6 +418,10 @@ namespace GravityPuzzle
             }
 
             flyingVoxel.transform.SetParent(progressCanvas.transform, false);
+            // The flight is a HUD presentation, not board art. Keep pooled
+            // views above authored HUD siblings so they stay visible during the
+            // entire route to the slider handle.
+            flyingVoxel.transform.SetAsLastSibling();
             RectTransform voxelRect = flyingVoxel.RectTransform;
             flyingVoxel.Configure(
                 start,
@@ -342,8 +446,13 @@ namespace GravityPuzzle
             flightSequence.Append(DOVirtual.Float(0f, 1f, flightDuration, progress =>
                 voxelRect.anchoredPosition = QuadraticBezier(start, control, target, progress)).SetEase(VoxelFlightEase));
             flightSequence.Join(voxelRect.DORotate(new Vector3(0f, 0f, UnityEngine.Random.Range(-VoxelRotationRange, VoxelRotationRange)), flightDuration, RotateMode.FastBeyond360));
-            flightSequence.OnComplete(() =>
+            bool flightResolved = false;
+            void ResolveFlight()
             {
+                if (flightResolved)
+                    return;
+
+                flightResolved = true;
                 // Trigger UI Slider Punch Scale feedback on each voxel arrival.
                 if (progressSlider != null && Time.unscaledTime >= nextSliderPulseTime)
                 {
@@ -366,7 +475,13 @@ namespace GravityPuzzle
                 activeFlyingVoxelCount = Mathf.Max(0, activeFlyingVoxelCount - 1);
                 AddProgress(progressAmount);
                 onArrival?.Invoke();
-            });
+            }
+
+            // A linked tween can be killed when an authored UI object is
+            // disabled. That is a presentation interruption, never a reason
+            // to leave board completion waiting for a cosmetic arrival.
+            flightSequence.OnComplete(ResolveFlight);
+            flightSequence.OnKill(ResolveFlight);
         }
 
         /// <summary>
@@ -377,7 +492,7 @@ namespace GravityPuzzle
         {
             if (levelCompletedTriggered) return;
 
-            if (progressVoxelVfx != null)
+            if (CanUseWorldParticleVfx)
             {
                 progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
                 int flightGroupId = progressVoxelVfx.EmitVoxelBurst(
@@ -385,8 +500,11 @@ namespace GravityPuzzle
                     Opaque(voxelColor),
                     flightCount,
                     VoxelFlightDuration);
-                StartCoroutine(ApplyProgressWhenVfxArrives(totalProgressAmount, null, flightGroupId));
-                return;
+                if (progressVoxelVfx.IsFlightGroupActive(flightGroupId))
+                {
+                    StartCoroutine(ApplyProgressWhenVfxArrives(totalProgressAmount, null, flightGroupId));
+                    return;
+                }
             }
 
             int count = Mathf.Max(1, flightCount);
@@ -398,8 +516,22 @@ namespace GravityPuzzle
         private IEnumerator ApplyProgressWhenVfxArrives(float progressAmount, Action onArrival, int flightGroupId)
         {
             pendingVfxProgressArrivalCount++;
+            float elapsed = 0f;
+            float maximumWait = progressVoxelVfx != null
+                ? progressVoxelVfx.MaximumFlightDuration(VoxelFlightDuration) + .25f
+                : 0f;
+
             while (progressVoxelVfx != null && progressVoxelVfx.IsFlightGroupActive(flightGroupId))
+            {
+                elapsed += Time.deltaTime;
+                if (elapsed >= maximumWait)
+                {
+                    Debug.LogWarning("[LevelProgress] A progress VFX flight exceeded its visual timeout; advancing level progress.", this);
+                    break;
+                }
+
                 yield return null;
+            }
 
             // The group has rendered its last target frame. Advance the pin
             // only after the frame is complete, never from a duration estimate.

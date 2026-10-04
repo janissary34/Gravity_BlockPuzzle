@@ -22,6 +22,7 @@ namespace GravityPuzzle
         private static PrototypeBoard configuredBoard;
         private static PuzzleDragController configuredDragController;
         private static RevealPresentationConfig configuredRevealPresentationConfig;
+        private static BoardPresentationConfig configuredBoardPresentationConfig;
         private static RevealPresentationConfig fallbackRevealPresentationConfig;
         private static int currentLevelIndex = -1;
         private static BoosterRewardConfig queuedBoosterReward;
@@ -43,6 +44,7 @@ namespace GravityPuzzle
             configuredBoard = null;
             configuredDragController = null;
             configuredRevealPresentationConfig = null;
+            configuredBoardPresentationConfig = null;
             fallbackRevealPresentationConfig = null;
             currentLevelIndex = -1;
             queuedBoosterReward = null;
@@ -96,6 +98,16 @@ namespace GravityPuzzle
         public static void ConfigureRevealPresentationConfig(RevealPresentationConfig config)
         {
             configuredRevealPresentationConfig = config;
+        }
+
+        /// <summary>
+        /// Supplies the shared board skin. Gameplay level assets retain only
+        /// topology and tuning, so future themes can swap the presentation
+        /// without duplicating every level definition.
+        /// </summary>
+        public static void ConfigureBoardPresentationConfig(BoardPresentationConfig config)
+        {
+            configuredBoardPresentationConfig = config;
         }
 
         public static GravityLevelDefinition FindLevelToPlay()
@@ -237,7 +249,7 @@ namespace GravityPuzzle
 
             float halfHeight = level.boardRows * .5f;
             float cameraSize = ResolveCameraSize(level);
-            PrototypeBootstrap.ConfigureCamera(cameraSize, level.backgroundColor);
+            PrototypeBootstrap.ConfigureCamera(cameraSize, ResolveBoardBackgroundColor(level));
 
             PrototypeBoard boardState = configuredBoard;
             boardState.SetRemovalHeight(-halfHeight - 15f);
@@ -293,24 +305,32 @@ namespace GravityPuzzle
 
         private static float ResolveCameraSize(GravityLevelDefinition level)
         {
+            float levelCameraSize;
             if (!level.useAutomaticCameraFit)
-                return level.fixedCameraSize;
+                levelCameraSize = level.fixedCameraSize;
+            else
+            {
+                float safeWidthFraction = level.useRuntimeSafeAreaForCameraFit
+                    ? SafeAreaWidthFraction()
+                    : 1f;
+                float safeHeightFraction = level.useRuntimeSafeAreaForCameraFit
+                    ? SafeAreaHeightFraction()
+                    : 1f;
 
-            float safeWidthFraction = level.useRuntimeSafeAreaForCameraFit
-                ? SafeAreaWidthFraction()
-                : 1f;
-            float safeHeightFraction = level.useRuntimeSafeAreaForCameraFit
-                ? SafeAreaHeightFraction()
-                : 1f;
+                levelCameraSize = GravityGridMetrics.CameraSize(
+                    level.boardColumns,
+                    level.boardRows,
+                    CameraAspect(),
+                    safeWidthFraction,
+                    safeHeightFraction,
+                    level.cameraViewportWidth,
+                    level.cameraViewportHeight);
+            }
 
-            return GravityGridMetrics.CameraSize(
-                level.boardColumns,
-                level.boardRows,
-                CameraAspect(),
-                safeWidthFraction,
-                safeHeightFraction,
-                level.cameraViewportWidth,
-                level.cameraViewportHeight);
+            float presentationMargin = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.CameraSizeMultiplier
+                : 1f;
+            return levelCameraSize * presentationMargin;
         }
 
         private static void ValidateLevelSnapshotRuntimeState(
@@ -386,9 +406,12 @@ namespace GravityPuzzle
             // transparent cell would reveal the camera and make the authored
             // chequered palette look like the fallback blue. Always render
             // the selected RGB value as an opaque board cell.
-            Color baseColor = level.backgroundColor;
+            Color baseColor = ResolveBoardBackgroundColor(level);
             baseColor.a = 1f;
-            Color alternate = Color.Lerp(baseColor, Color.white, .08f);
+            Color alternate = configuredBoardPresentationConfig != null &&
+                              configuredBoardPresentationConfig.OverrideLevelBackground
+                ? configuredBoardPresentationConfig.AlternateBackgroundColor
+                : Color.Lerp(baseColor, Color.white, .08f);
             float fineCellSize = 1f / level.subdivisions;
 
             for (int boardY = 0; boardY < level.boardRows; boardY++)
@@ -483,9 +506,34 @@ namespace GravityPuzzle
                 }
             }
 
-            CreateHorizontalFrameRuns(frameRoot.transform, level, outerTopEdges, fineCellSize, thickness, 1f, ref edgeIndex);
-            CreateVerticalFrameRuns(frameRoot.transform, level, outerLeftEdges, fineCellSize, thickness, -1f, ref edgeIndex);
-            CreateVerticalFrameRuns(frameRoot.transform, level, outerRightEdges, fineCellSize, thickness, 1f, ref edgeIndex);
+            CreateHorizontalFrameRuns(
+                frameRoot.transform,
+                level,
+                outerTopEdges,
+                fineCellSize,
+                thickness,
+                1f,
+                BoardFrameEdge.Top,
+                ref edgeIndex);
+            CreateVerticalFrameRuns(
+                frameRoot.transform,
+                level,
+                outerLeftEdges,
+                fineCellSize,
+                thickness,
+                -1f,
+                BoardFrameEdge.Left,
+                ref edgeIndex);
+            CreateVerticalFrameRuns(
+                frameRoot.transform,
+                level,
+                outerRightEdges,
+                fineCellSize,
+                thickness,
+                1f,
+                BoardFrameEdge.Right,
+                ref edgeIndex);
+            CreateOuterFrameCorners(frameRoot.transform, level, fineCellSize, thickness, ref edgeIndex);
 
             CreateMapCollisionBlocks(level, exitWidth, fineCellSize);
         }
@@ -497,6 +545,7 @@ namespace GravityPuzzle
             float fineCellSize,
             float thickness,
             float verticalDirection,
+            BoardFrameEdge frameEdge,
             ref int edgeIndex)
         {
             for (int y = 0; y < level.FineRows; y++)
@@ -528,7 +577,8 @@ namespace GravityPuzzle
                         $"Frame Edge {++edgeIndex}",
                         position,
                         new Vector2(length * fineCellSize + thickness, thickness),
-                        level.frameColor);
+                        level.frameColor,
+                        frameEdge);
                 }
             }
         }
@@ -540,6 +590,7 @@ namespace GravityPuzzle
             float fineCellSize,
             float thickness,
             float horizontalDirection,
+            BoardFrameEdge frameEdge,
             ref int edgeIndex)
         {
             for (int x = 0; x < level.FineColumns; x++)
@@ -571,7 +622,8 @@ namespace GravityPuzzle
                         $"Frame Edge {++edgeIndex}",
                         position,
                         new Vector2(thickness, length * fineCellSize + thickness),
-                        level.frameColor);
+                        level.frameColor,
+                        frameEdge);
                 }
             }
         }
@@ -673,7 +725,13 @@ namespace GravityPuzzle
             if (leftLength > .001f)
             {
                 float centreX = cellLeft + leftLength * .5f;
-                CreateFrameEdge(frameRoot, $"Frame Edge {++edgeIndex}", new Vector2(centreX, y), new Vector2(leftLength, thickness), level.frameColor);
+                CreateFrameEdge(
+                    frameRoot,
+                    $"Frame Edge {++edgeIndex}",
+                    new Vector2(centreX, y),
+                    new Vector2(leftLength, thickness),
+                    level.frameColor,
+                    BoardFrameEdge.Bottom);
             }
 
             float rightStart = Mathf.Max(cellLeft, exitRight);
@@ -681,14 +739,133 @@ namespace GravityPuzzle
             if (rightLength > .001f)
             {
                 float centreX = rightStart + rightLength * .5f;
-                CreateFrameEdge(frameRoot, $"Frame Edge {++edgeIndex}", new Vector2(centreX, y), new Vector2(rightLength, thickness), level.frameColor);
+                CreateFrameEdge(
+                    frameRoot,
+                    $"Frame Edge {++edgeIndex}",
+                    new Vector2(centreX, y),
+                    new Vector2(rightLength, thickness),
+                    level.frameColor,
+                    BoardFrameEdge.Bottom);
             }
         }
 
-        private static void CreateFrameEdge(Transform frameRoot, string name, Vector2 position, Vector2 size, Color color)
+        private static void CreateFrameEdge(
+            Transform frameRoot,
+            string name,
+            Vector2 position,
+            Vector2 size,
+            Color color,
+            BoardFrameEdge frameEdge)
         {
-            GameObject edge = PrototypeBootstrap.CreateVisualBlock(name, position, size, color);
-            edge.transform.SetParent(frameRoot, true);
+            GameObject frameObject = PrototypeBootstrap.CreateVisualBlock(name, position, size, color);
+            frameObject.transform.SetParent(frameRoot, true);
+
+            ApplyFramePresentation(frameObject.GetComponent<SpriteRenderer>(), size, frameEdge);
+        }
+
+        private static void CreateOuterFrameCorners(
+            Transform frameRoot,
+            GravityLevelDefinition level,
+            float fineCellSize,
+            float thickness,
+            ref int edgeIndex)
+        {
+            if (configuredBoardPresentationConfig == null)
+                return;
+
+            float halfWidth = level.boardColumns * .5f;
+            float halfHeight = level.boardRows * .5f;
+            float cornerSize = Mathf.Max(fineCellSize + thickness, thickness * 2f);
+            CreateFrameCorner(
+                frameRoot,
+                level,
+                new Vector2Int(0, level.FineRows - 1),
+                new Vector2(-halfWidth - thickness * .5f, halfHeight + thickness * .5f),
+                cornerSize,
+                BoardFrameEdge.TopLeftCorner,
+                ref edgeIndex);
+            CreateFrameCorner(
+                frameRoot,
+                level,
+                new Vector2Int(level.FineColumns - 1, level.FineRows - 1),
+                new Vector2(halfWidth + thickness * .5f, halfHeight + thickness * .5f),
+                cornerSize,
+                BoardFrameEdge.TopRightCorner,
+                ref edgeIndex);
+            CreateFrameCorner(
+                frameRoot,
+                level,
+                Vector2Int.zero,
+                new Vector2(-halfWidth - thickness * .5f, -halfHeight - thickness * .5f),
+                cornerSize,
+                BoardFrameEdge.BottomLeftCorner,
+                ref edgeIndex);
+            CreateFrameCorner(
+                frameRoot,
+                level,
+                new Vector2Int(level.FineColumns - 1, 0),
+                new Vector2(halfWidth + thickness * .5f, -halfHeight - thickness * .5f),
+                cornerSize,
+                BoardFrameEdge.BottomRightCorner,
+                ref edgeIndex);
+        }
+
+        private static void CreateFrameCorner(
+            Transform frameRoot,
+            GravityLevelDefinition level,
+            Vector2Int requiredCell,
+            Vector2 position,
+            float size,
+            BoardFrameEdge corner,
+            ref int edgeIndex)
+        {
+            if (!IsFineCellActive(level, requiredCell) ||
+                configuredBoardPresentationConfig.GetEdgeSprite(corner) == null)
+                return;
+
+            CreateFrameEdge(
+                frameRoot,
+                $"Frame Corner {++edgeIndex}",
+                position,
+                Vector2.one * size,
+                level.frameColor,
+                corner);
+        }
+
+        private static void ApplyFramePresentation(
+            SpriteRenderer renderer,
+            Vector2 size,
+            BoardFrameEdge edge)
+        {
+            if (renderer == null || configuredBoardPresentationConfig == null)
+                return;
+
+            Sprite sprite = configuredBoardPresentationConfig.GetEdgeSprite(edge);
+            if (sprite == null)
+                return;
+
+            renderer.sprite = sprite;
+            renderer.sharedMaterial = configuredBoardPresentationConfig.FrameMaterial;
+            renderer.color = configuredBoardPresentationConfig.FrameTint;
+            renderer.sortingOrder = -8;
+
+            Vector2 spriteSize = sprite.bounds.size;
+            if (spriteSize.x <= 0f || spriteSize.y <= 0f)
+                return;
+
+            renderer.transform.localScale = new Vector3(
+                size.x / spriteSize.x,
+                size.y / spriteSize.y,
+                1f);
+        }
+
+        private static Color ResolveBoardBackgroundColor(GravityLevelDefinition level)
+        {
+            if (configuredBoardPresentationConfig != null &&
+                configuredBoardPresentationConfig.OverrideLevelBackground)
+                return configuredBoardPresentationConfig.BackgroundColor;
+
+            return level != null ? level.backgroundColor : Color.black;
         }
 
         private static bool IsFineCellActive(GravityLevelDefinition level, Vector2Int cell)

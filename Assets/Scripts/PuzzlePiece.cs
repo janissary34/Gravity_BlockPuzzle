@@ -407,7 +407,13 @@ namespace GravityPuzzle
             if (wholePieceRenderer != null)
             {
                 wholePieceRenderer.enabled = false;
+                wholePieceRenderer.sprite = null;
+                wholePieceRenderer.color = Color.white;
                 wholePieceRenderer.flipX = false;
+                wholePieceRenderer.flipY = false;
+                wholePieceRenderer.transform.localPosition = Vector3.zero;
+                wholePieceRenderer.transform.localRotation = Quaternion.identity;
+                wholePieceRenderer.transform.localScale = Vector3.one;
             }
 
             SetModularCellPresentationVisible(true);
@@ -1257,6 +1263,10 @@ namespace GravityPuzzle
                 destroyedPieceCount < frozenUntilDestroyedCount &&
                 !beingShredded;
 
+            bool wasFrozen = IsFrozen;
+            if (wasFrozen && !shouldBeFrozen)
+                CaptureWholePieceIceReleaseLayer();
+
             IsFrozen = shouldBeFrozen;
             RefreshWholePiecePresentation();
             if (shouldBeFrozen)
@@ -1275,7 +1285,7 @@ namespace GravityPuzzle
             else
             {
                 previousFrozenRemaining = -1;
-                if (iceRenderers.Count > 0 && !iceReleaseAnimating)
+                if ((wasFrozen || iceRenderers.Count > 0) && !iceReleaseAnimating)
                     PlayIceReleaseAnimation();
                 else if (!iceReleaseAnimating)
                     ClearIceVisuals();
@@ -1298,8 +1308,10 @@ namespace GravityPuzzle
             if (!IsFrozen)
                 return;
 
+            CaptureWholePieceIceReleaseLayer();
             IsFrozen = false;
             previousFrozenRemaining = -1;
+            RefreshWholePiecePresentation();
             PlayIceReleaseAnimation(effectSortingLayerId, effectSortingOrder);
         }
 
@@ -1631,6 +1643,22 @@ namespace GravityPuzzle
 
                 if (components.Count <= 1)
                 {
+                    // A hammer can leave the piece connected while changing
+                    // its silhouette. Rebuild its pooled slots from the same
+                    // factory path as split fragments so no prior atlas
+                    // transform, ice layer or voxel state survives the hit.
+                    GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+                    if (level != null)
+                    {
+                        RuntimePieceFactory.RebuildFragment(
+                            this,
+                            level,
+                            BuildFragmentCells(components[0]),
+                            VisualColor,
+                            RemainingProgressUnits);
+                        Physics2D.SyncTransforms();
+                    }
+
                     ApplyCollisionProfile();
                     PrototypeBoard board = PrototypeBoard.Active;
                     RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
@@ -1951,6 +1979,14 @@ namespace GravityPuzzle
             if (collisionCellVisuals == null)
                 return;
 
+            // Scene_Tuna's new ice atlas intentionally has no generic 1x1
+            // sprite. A neutral square preserves the current brick's lighting
+            // beneath a frost layer without duplicating the brick image (which
+            // used to produce doubled outlines on fragment shapes).
+            Sprite frostOverlay = iceOverlaySprite != null
+                ? iceOverlaySprite
+                : PrototypeBootstrap.GetSquareSprite();
+
             foreach (SpriteRenderer source in collisionCellVisuals)
             {
                 if (source == null)
@@ -1962,14 +1998,14 @@ namespace GravityPuzzle
                     Vector3.one,
                     iceOverlayTint,
                     source.sortingOrder + 5,
-                    iceOverlaySprite);
+                    frostOverlay);
                 CreateIceLayer(
                     source,
                     "Ice Frost",
                     new Vector3(.72f, .72f, 1f),
                     iceFrostTint,
                     source.sortingOrder + 6,
-                    iceOverlaySprite);
+                    frostOverlay);
             }
         }
 
@@ -2260,10 +2296,44 @@ namespace GravityPuzzle
                 .SetAutoKill(true);
         }
 
+        /// <summary>
+        /// Dedicated ice atlas art uses the reserved whole-piece renderer,
+        /// while generic ice uses temporary overlay slots. Before switching a
+        /// frozen piece back to its normal brick sprite, copy that dedicated
+        /// art into an available pooled overlay slot so it can fade and emit
+        /// the same break particle feedback as every other ice block.
+        /// </summary>
+        private void CaptureWholePieceIceReleaseLayer()
+        {
+            if (wholePieceRenderer == null || wholePieceIceSprite == null ||
+                !wholePieceRenderer.enabled || wholePieceRenderer.sprite != wholePieceIceSprite ||
+                !TryGetAvailableIceSlot(out SpriteRenderer releaseRenderer))
+                return;
+
+            releaseRenderer.transform.SetParent(transform, false);
+            releaseRenderer.transform.localPosition = wholePieceRenderer.transform.localPosition;
+            releaseRenderer.transform.localRotation = wholePieceRenderer.transform.localRotation;
+            releaseRenderer.transform.localScale = wholePieceRenderer.transform.localScale;
+            releaseRenderer.sprite = wholePieceRenderer.sprite;
+            releaseRenderer.color = wholePieceRenderer.color;
+            releaseRenderer.flipX = wholePieceRenderer.flipX;
+            releaseRenderer.sortingLayerID = wholePieceRenderer.sortingLayerID;
+            releaseRenderer.sortingOrder = wholePieceRenderer.sortingOrder + 1;
+            releaseRenderer.gameObject.name = "Ice Atlas Release";
+            releaseRenderer.enabled = true;
+            iceRenderers.Add(releaseRenderer);
+        }
+
         private Vector3 GetIceEffectPosition()
         {
             Bounds combinedBounds = default;
-            bool hasIceVisual = false;
+            bool hasIceVisual = wholePieceRenderer != null &&
+                                wholePieceIceSprite != null &&
+                                wholePieceRenderer.enabled &&
+                                wholePieceRenderer.sprite == wholePieceIceSprite;
+            if (hasIceVisual)
+                combinedBounds = wholePieceRenderer.bounds;
+
             for (int index = 0; index < iceRenderers.Count; index++)
             {
                 SpriteRenderer visual = iceRenderers[index];
@@ -2290,6 +2360,13 @@ namespace GravityPuzzle
             position = GetIceEffectPosition();
             sortingLayerId = 0;
             sortingOrder = 1;
+
+            if (wholePieceRenderer != null && wholePieceIceSprite != null &&
+                wholePieceRenderer.enabled && wholePieceRenderer.sprite == wholePieceIceSprite)
+            {
+                sortingLayerId = wholePieceRenderer.sortingLayerID;
+                sortingOrder = wholePieceRenderer.sortingOrder + 1;
+            }
 
             for (int index = 0; index < iceRenderers.Count; index++)
             {
@@ -2358,6 +2435,7 @@ namespace GravityPuzzle
                 1f);
             wholePieceRenderer.sprite = sprite;
             wholePieceRenderer.flipX = wholePieceTransform.FlipX;
+            wholePieceRenderer.flipY = false;
             // The brick atlas is neutral by design; retain the level-authored
             // colour for normal pieces. Ice artwork owns its blue/white palette.
             wholePieceRenderer.color = IsFrozen ? Color.white : VisualColor;

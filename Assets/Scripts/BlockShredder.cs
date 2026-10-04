@@ -163,6 +163,11 @@ namespace GravityPuzzle
                 : null);
             Rigidbody2D rb = piece.Body;
 
+            // Artist-atlas pieces do not contain the legacy per-voxel objects
+            // that used to trigger this sound. The feed itself is the common
+            // logical shred event, so always provide its first audible beat.
+            PlayParticleShredSound();
+
             // 2. Capture the current presentation before the feed mask begins
             // clipping the piece beneath the cutter.
             SpriteRenderer[] pieceRenderers = piece.ConfiguredShredderRenderers ?? EmptyRenderers;
@@ -193,8 +198,10 @@ namespace GravityPuzzle
             }
             shardList.Sort((a, b) => a.transform.position.y.CompareTo(b.transform.position.y));
 
-            // Emit directly beneath the rotating shredder wheels. The grains then
-            // emerge naturally from underneath the mechanism into the open space.
+            // Emit directly beneath the rotating shredder wheels. Starting a
+            // flight on the cutter line puts it inside the feed mask and behind
+            // the wheel art for its first frames, making the shred reward look
+            // as if it never spawned.
             float offsetBelow = shredderConfig != null ? shredderConfig.ExitSeamOffsetBelowShredder : 0.65f;
             float grinderExitSeamY = shredderY - offsetBelow;
 
@@ -268,18 +275,21 @@ namespace GravityPuzzle
                         Vector2 contactWorldPos = new Vector2(
                             shard.transform.position.x,
                             shredderY);
+                        Vector2 emissionWorldPos = new Vector2(
+                            contactWorldPos.x,
+                            grinderExitSeamY);
                         Color shardColor = tileColor;
 
                         float shardProgress = progressPerGrain * LevelProgressManager.SandGrainsPerRenderedVoxel;
                         scheduledProgress += shardProgress;
                         bufferedParticleProgress += shardProgress;
-                        bufferedParticlePosition = contactWorldPos;
+                        bufferedParticlePosition = emissionWorldPos;
 
                         bool shouldEmitParticle = (processedShards.Count % emissionStride == 0);
                         if (shouldEmitParticle)
                         {
                             shard.BeginProgressHandoff(
-                                contactWorldPos,
+                                emissionWorldPos,
                                 shardColor,
                                 bufferedParticleProgress,
                                 1);
@@ -315,9 +325,17 @@ namespace GravityPuzzle
                         Vector2 contactWorldPos = new Vector2(
                             r.transform.position.x,
                             shredderY);
+                        Vector2 emissionWorldPos = new Vector2(
+                            contactWorldPos.x,
+                            grinderExitSeamY);
 
                         if (shardList.Count == 0)
                         {
+                            // Whole-piece atlas art and the modular brick fallback
+                            // intentionally have no voxel objects to cross the
+                            // cutter. Keep their audible feedback on the same
+                            // rate-limited sound path as legacy voxel pieces.
+                            PlayParticleShredSound();
                             LevelProgressManager progressManager = LevelProgressManager.Instance;
                             if (progressManager != null)
                             {
@@ -325,7 +343,7 @@ namespace GravityPuzzle
                                 scheduledProgress += cellProgress;
                                 int burstCount = shredderConfig != null ? shredderConfig.ParticlesPerShreddedCell : 24;
                                 progressManager.SpawnFlyingVoxelBurst(
-                                    contactWorldPos,
+                                    emissionWorldPos,
                                     Opaque(tileColor),
                                     cellProgress,
                                     burstCount);

@@ -238,11 +238,11 @@ namespace GravityPuzzle.Gameplay.Tutorial
             activeConfig = config;
             state = BoosterFirstUseTutorialState.AwaitingBoosterTap;
 
-            // Freeze must be used against a genuinely ticking level timer.
-            // Rocket and Hammer are safe to present with the level paused.
-            if (config.BoosterType == BoosterRewardType.FreezeTimer)
-                board?.StartTimer();
-            else
+            // Countdown ownership stays with the first accepted piece action.
+            // A tutorial may highlight a booster before that first action, but
+            // it must not silently start the level while the player is still
+            // reading the board.
+            if (config.BoosterType != BoosterRewardType.FreezeTimer)
                 board?.TryPauseTimer(this);
             BoosterTargetingPresentation.ShowFirstUseBoosterFocus(config.BoosterType);
 

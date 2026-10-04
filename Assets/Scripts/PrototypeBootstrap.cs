@@ -611,10 +611,14 @@ namespace GravityPuzzle
         [Tooltip("Win Panel içindeki, tamamlanan levelin coin ödülünü gösteren TMP metni.")]
         [SerializeField] private TMP_Text winPanelCoinAmountText;
 
+        [Tooltip("Win Panel içindeki, tamamlanan campaign levelini gösteren TMP metni.")]
+        [SerializeField] private TMP_Text completedLevelText;
+
         [Header("Booster Reward Unlock UI")]
         [SerializeField] private NewBoosterPanelView newBoosterPanel;
         [SerializeField] private BoosterRewardConfig[] boosterRewardConfigs;
         [SerializeField] private GameObject winVfx;
+        private ParticleSystem[] winVfxParticleSystems;
 
         [Header("Level Clear Effects")]
         [Tooltip("Scene instance of the first one-shot particle effect to play when the level is cleared.")]
@@ -694,6 +698,16 @@ namespace GravityPuzzle
         {
             if (winPanel != null)
                 winPanel.SetActive(false);
+
+            // Win VFX lives below the artist-authored result UI. Cache it at
+            // composition time and explicitly stop it so Play On Awake cannot
+            // consume its one-shot before the level is actually complete.
+            if (winVfx != null)
+            {
+                winVfxParticleSystems = winVfx.GetComponentsInChildren<ParticleSystem>(true);
+                StopParticleEffects(winVfxParticleSystems);
+                winVfx.SetActive(false);
+            }
 
             if (nextLevelButton != null)
                 nextLevelButton.onClick.AddListener(LoadNextLevelFromWinPanel);
@@ -1456,14 +1470,12 @@ namespace GravityPuzzle
                     return;
             }
 
-            int livePieceCount = 0;
             for (int i = 0; i < pieces.Count; i++)
             {
                 PuzzlePiece piece = pieces[i];
                 if (piece == null)
                     continue;
 
-                livePieceCount++;
                 // A shredder feed owns its own completion and pooled release.
                 // The generic off-board cleanup must not race that coroutine.
                 if (piece.IsBeingShredded)
@@ -1479,17 +1491,19 @@ namespace GravityPuzzle
             if (!boardCleared && !boardFailed)
             {
                 LevelProgressManager progress = LevelProgressManager.Instance;
-                bool requiresProgress = progress != null && progress.TotalBlockUnits > 0;
-                bool progressReady = !requiresProgress ||
-                                     (progress.IsLevelComplete && !progress.HasPendingProgressPresentation);
                 bool revealReady = revealAreaCoordinator == null ||
                                    !revealAreaCoordinator.HasPendingRevealContent;
-                if (livePieceCount == 0 && progressReady && revealReady)
+                if (!HasRemainingBoardPieces() && revealReady)
                 {
+                    // The board model owns completion. A piece that entered
+                    // shredding has already left the authoritative grid, so
+                    // its pooled root and presentation tail must not keep a
+                    // cleared level alive.
+                    progress?.CompleteForBoardClear();
                     boardCleared = true;
                     TryTransitionGameState(GameState.LevelComplete);
-                    PlayLevelClearParticleEffects();
                     ShowWinPanel();
+                    PlayLevelClearParticleEffects();
                     Debug.Log("LEVEL CLEARED!");
 
                     OnLevelCleared?.Invoke();
@@ -1543,6 +1557,25 @@ namespace GravityPuzzle
                     }
                 }
             }
+        }
+
+        private bool HasRemainingBoardPieces()
+        {
+            if (BoardSnapshot == null)
+                return true;
+
+            IReadOnlyList<PieceModel> models = BoardSnapshot.Pieces;
+            for (int index = 0; index < models.Count; index++)
+            {
+                PieceModel model = models[index];
+                if (model == null)
+                    continue;
+
+                if (model.State != PieceState.Shredding && model.State != PieceState.Despawned)
+                    return true;
+            }
+
+            return false;
         }
 
         private bool UpdateBombTimers(IReadOnlyList<PuzzlePiece> pieces)
@@ -1608,7 +1641,11 @@ namespace GravityPuzzle
             if (winPanelCoinAmountText != null)
                 winPanelCoinAmountText.text = GravityLevelRuntime.CurrentLevelCoinAmount.ToString();
 
+            if (completedLevelText != null)
+                completedLevelText.SetText("Level {0} Completed!", GravityLevelRuntime.CurrentLevelNumber);
+
             winPanel.SetActive(true);
+            RestartWinParticleEffects();
         }
 
         private void LoadNextLevelFromWinPanel()
@@ -1706,6 +1743,32 @@ namespace GravityPuzzle
             particleEffect.gameObject.SetActive(true);
             particleEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             particleEffect.Play(true);
+        }
+
+        private void RestartWinParticleEffects()
+        {
+            if (winVfx == null)
+                return;
+
+            winVfx.SetActive(true);
+            if (winVfxParticleSystems == null)
+                return;
+
+            for (int index = 0; index < winVfxParticleSystems.Length; index++)
+                PlayParticleEffect(winVfxParticleSystems[index]);
+        }
+
+        private static void StopParticleEffects(ParticleSystem[] particleEffects)
+        {
+            if (particleEffects == null)
+                return;
+
+            for (int index = 0; index < particleEffects.Length; index++)
+            {
+                ParticleSystem particleEffect = particleEffects[index];
+                if (particleEffect != null)
+                    particleEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
         }
 
         private IEnumerator LoadWinScene(string sceneName)
