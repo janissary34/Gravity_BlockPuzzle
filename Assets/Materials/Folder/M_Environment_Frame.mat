@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: M_BlueEnvironment_Frame
+  m_Name: M_Environment_Frame
   m_Shader: {fileID: -6465566751694194690, guid: 0a11ac59cbd3c4792a0b36b1046ed195, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0

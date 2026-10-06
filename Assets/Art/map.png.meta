@@ -126,7 +126,7 @@ TextureImporter:
       name: Corner_Bottom_Left
       rect:
         serializedVersion: 2
-        x: 117
+        x: 114
         y: 433
         width: 197
         height: 197
@@ -189,8 +189,8 @@ TextureImporter:
       name: Corner_Top_Left
       rect:
         serializedVersion: 2
-        x: 117
-        y: 91
+        x: 115
+        y: 90
         width: 197
         height: 197
       alignment: 0
@@ -210,7 +210,7 @@ TextureImporter:
       name: Corner_Bottom_Right
       rect:
         serializedVersion: 2
-        x: 452
+        x: 453
         y: 110
         width: 197
         height: 197
@@ -231,8 +231,8 @@ TextureImporter:
       name: Edge_Right
       rect:
         serializedVersion: 2
-        x: 281
-        y: 945
+        x: 51
+        y: 1289
         width: 98
         height: 200
       alignment: 0
@@ -252,8 +252,8 @@ TextureImporter:
       name: Edge_Left
       rect:
         serializedVersion: 2
-        x: 381
-        y: 1172
+        x: 165
+        y: 1289
         width: 97
         height: 200
       alignment: 0
@@ -710,6 +710,27 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Elevator
+      rect:
+        serializedVersion: 2
+        x: 307
+        y: 877
+        width: 610
+        height: 610
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: aa342f82e3858408aba43d0d74abab3b
+      internalID: 429497369
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -732,6 +753,7 @@ TextureImporter:
       Edge_Left: -188560374
       Edge_Right: 1536040797
       Edge_Top: 1112318756
+      Elevator: 429497369
       Grid: 494014031
       M_1x1: 331641077
       M_1x2: 1655970616
