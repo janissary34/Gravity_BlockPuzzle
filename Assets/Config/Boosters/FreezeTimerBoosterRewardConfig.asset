@@ -15,4 +15,4 @@ MonoBehaviour:
   boosterType: 0
   visualPrefab: {fileID: 3077085159410347079, guid: c0ea24ebf7a4648319614f6060514ab3, type: 3}
   presentationLevel: 4
-  usesPerLevel: 3
+  usesPerLevel: 1

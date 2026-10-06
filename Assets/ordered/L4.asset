@@ -24,7 +24,7 @@ MonoBehaviour:
   coinAmount: 20
   rocketBoosterCount: 0
   hammerBoosterCount: 0
-  timerBoosterCount: 3
+  timerBoosterCount: 1
   useAutomaticCameraFit: 1
   fixedCameraSize: 9
   cameraViewportWidth: 0.88
