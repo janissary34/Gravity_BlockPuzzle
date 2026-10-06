@@ -14,6 +14,14 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool overrideLevelBackground = true;
         [SerializeField] private Color backgroundColor = new Color(.035f, .055f, .13f, 1f);
         [SerializeField] private Color alternateBackgroundColor = new Color(.085f, .115f, .22f, 1f);
+        [Tooltip("Material used behind the checker grid to give every generated board the authored environment base.")]
+        [SerializeField] private Material environmentBackdropMaterial;
+        [Tooltip("Material used by static board modules such as authored obstacles.")]
+        [SerializeField] private Material boardBlockMaterial;
+        [Tooltip("Material used by the darker checker-grid cells.")]
+        [SerializeField] private Material gridDarkMaterial;
+        [Tooltip("Material used by the lighter checker-grid cells.")]
+        [SerializeField] private Material gridLightMaterial;
 
         [Header("Camera Framing")]
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
@@ -35,8 +43,15 @@ namespace GravityPuzzle.Config
         public Color BackgroundColor => backgroundColor;
         public Color AlternateBackgroundColor => alternateBackgroundColor;
         public float CameraSizeMultiplier => Mathf.Max(1f, cameraSizeMultiplier);
+        public Material EnvironmentBackdropMaterial => environmentBackdropMaterial;
+        public Material BoardBlockMaterial => boardBlockMaterial;
         public Material FrameMaterial => frameMaterial;
         public Color FrameTint => frameTint;
+
+        public Material GetGridMaterial(bool alternateCell)
+        {
+            return alternateCell ? gridLightMaterial : gridDarkMaterial;
+        }
 
         public Sprite GetEdgeSprite(BoardFrameEdge edge)
         {

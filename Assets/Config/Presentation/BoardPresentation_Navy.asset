@@ -15,6 +15,10 @@ MonoBehaviour:
   overrideLevelBackground: 1
   backgroundColor: {r: 0.035, g: 0.055, b: 0.13, a: 1}
   alternateBackgroundColor: {r: 0.085, g: 0.115, b: 0.22, a: 1}
+  environmentBackdropMaterial: {fileID: 2100000, guid: 8393891fdbdf84e91990a0fcc91a9dd1, type: 2}
+  boardBlockMaterial: {fileID: 2100000, guid: 2665f8a87af3146a29a80009bc5536ac, type: 2}
+  gridDarkMaterial: {fileID: 2100000, guid: 7dc4f486ef1b84902a01b2c752089bc9, type: 2}
+  gridLightMaterial: {fileID: 2100000, guid: 7be1e4d4450eb48d3b039f8b4e663a98, type: 2}
   cameraSizeMultiplier: 1.1
   topEdge: {fileID: 1112318756, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bottomEdge: {fileID: -448638201, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
@@ -24,5 +28,5 @@ MonoBehaviour:
   topRightCorner: {fileID: 1628857650, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bottomLeftCorner: {fileID: 907948875, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bottomRightCorner: {fileID: -2049558506, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  frameMaterial: {fileID: 2100000, guid: 7b3b6baf661764b3aabbd9f07c70acc9, type: 2}
+  frameMaterial: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
   frameTint: {r: 1, g: 1, b: 1, a: 1}

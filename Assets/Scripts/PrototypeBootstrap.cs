@@ -184,9 +184,15 @@ namespace GravityPuzzle
             Vector2 position,
             Vector2 size,
             Color color,
-            bool roundCorners = true)
+            bool roundCorners = true,
+            Material presentationMaterial = null)
         {
-            GameObject block = CreateVisualBlock(blockName, position, size, color);
+            GameObject block = CreateVisualBlock(
+                blockName,
+                position,
+                size,
+                color,
+                presentationMaterial);
             BoxCollider2D collider = block.AddComponent<BoxCollider2D>();
             if (roundCorners)
                 RoundColliderCorners(collider, size);
@@ -217,7 +223,13 @@ namespace GravityPuzzle
                 Mathf.Min(size.x, size.y) * .25f);
         }
 
-        internal static GameObject CreateVisualBlock(string blockName, Vector2 position, Vector2 size, Color color)
+        internal static GameObject CreateVisualBlock(
+            string blockName,
+            Vector2 position,
+            Vector2 size,
+            Color color,
+            Material presentationMaterial = null,
+            int sortingOrder = 0)
         {
             GameObject block = new GameObject(blockName);
             block.transform.position = position;
@@ -226,6 +238,8 @@ namespace GravityPuzzle
             SpriteRenderer renderer = block.AddComponent<SpriteRenderer>();
             renderer.sprite = GetSquareSprite();
             renderer.color = color;
+            renderer.sharedMaterial = presentationMaterial;
+            renderer.sortingOrder = sortingOrder;
             return block;
         }
 
