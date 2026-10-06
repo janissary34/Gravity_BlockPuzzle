@@ -93,9 +93,28 @@ namespace GravityPuzzle.Gameplay.Tutorial
             this.board = board;
         }
 
-        public bool BlocksBoardDrag => state == BoosterFirstUseTutorialState.AwaitingBoosterTap ||
-                                       state == BoosterFirstUseTutorialState.AwaitingExactTarget ||
-                                       state == BoosterFirstUseTutorialState.ResolvingEffect;
+        public bool BlocksBoardDrag
+        {
+            get
+            {
+                // The countdown deliberately starts with the player's first
+                // piece interaction. A Freeze Timer lesson can be presented
+                // before that interaction, but blocking the board here would
+                // make the highlighted timer button unavailable forever:
+                // it only becomes usable after the countdown has started.
+                if (state == BoosterFirstUseTutorialState.AwaitingBoosterTap &&
+                    activeConfig != null &&
+                    activeConfig.BoosterType == BoosterRewardType.FreezeTimer &&
+                    (board == null || !board.IsTimerStarted))
+                {
+                    return false;
+                }
+
+                return state == BoosterFirstUseTutorialState.AwaitingBoosterTap ||
+                       state == BoosterFirstUseTutorialState.AwaitingExactTarget ||
+                       state == BoosterFirstUseTutorialState.ResolvingEffect;
+            }
+        }
 
         public bool IsBoosterHighlighted(BoosterRewardType boosterType)
         {

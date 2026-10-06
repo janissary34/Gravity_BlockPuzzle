@@ -39,6 +39,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 visual.enabled = false;
                 visual.sprite = null;
                 visual.color = Color.white;
+                visual.sharedMaterial = null;
                 visual.flipX = false;
                 visual.flipY = false;
                 visual.transform.localPosition = Vector3.zero;

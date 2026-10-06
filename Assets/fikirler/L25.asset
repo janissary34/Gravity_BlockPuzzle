@@ -36,7 +36,9 @@ MonoBehaviour:
   shredderRotationSpeed: 220
   pieces:
   - name: Piece 1
+    tutorialTargetId: 
     visualId: 
+    paletteId: Red
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 2}
     quarterTurns: 0
@@ -279,7 +281,9 @@ MonoBehaviour:
     - localCell: {x: 13, y: 9}
       type: 0
   - name: Piece 5
+    tutorialTargetId: 
     visualId: 
+    paletteId: Purple
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -394,7 +398,9 @@ MonoBehaviour:
     - localCell: {x: 13, y: 11}
       type: 0
   - name: Piece 6
+    tutorialTargetId: 
     visualId: 
+    paletteId: Pink
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -509,7 +515,9 @@ MonoBehaviour:
     - localCell: {x: 5, y: 15}
       type: 0
   - name: Piece 7
+    tutorialTargetId: 
     visualId: 
+    paletteId: Orange
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -624,7 +632,9 @@ MonoBehaviour:
     - localCell: {x: -7, y: 11}
       type: 0
   - name: Piece 8
+    tutorialTargetId: 
     visualId: 
+    paletteId: GreenLight
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -739,7 +749,9 @@ MonoBehaviour:
     - localCell: {x: -3, y: 19}
       type: 0
   - name: Piece 9
+    tutorialTargetId: 
     visualId: 
+    paletteId: BlueLight
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -886,7 +898,9 @@ MonoBehaviour:
     - localCell: {x: 13, y: 15}
       type: 0
   - name: Piece 10
+    tutorialTargetId: 
     visualId: 
+    paletteId: Purple
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -969,7 +983,9 @@ MonoBehaviour:
     - localCell: {x: 9, y: 23}
       type: 0
   - name: Piece 13
+    tutorialTargetId: 
     visualId: 
+    paletteId: GreenLight
     color: {r: 0.5240001, g: 1, b: 0.3, a: 1}
     origin: {x: 22, y: 12}
     quarterTurns: 0
@@ -1052,7 +1068,9 @@ MonoBehaviour:
     - localCell: {x: -15, y: 11}
       type: 0
   - name: Piece 14
+    tutorialTargetId: 
     visualId: 
+    paletteId: GreenLight
     color: {r: 0.2873594, g: 0.8490566, b: 0.06808474, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -1135,7 +1153,9 @@ MonoBehaviour:
     - localCell: {x: 17, y: 19}
       type: 0
   - name: Piece 15
+    tutorialTargetId: 
     visualId: 
+    paletteId: Purple
     color: {r: 0.3, g: 0.32800016, b: 1, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -1218,7 +1238,9 @@ MonoBehaviour:
     - localCell: {x: 17, y: 23}
       type: 0
   - name: Piece 15
+    tutorialTargetId: 
     visualId: 
+    paletteId: Purple
     color: {r: 0.3, g: 0.32800016, b: 1, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0

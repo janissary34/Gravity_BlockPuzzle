@@ -185,6 +185,8 @@ namespace GravityPuzzle
         public string tutorialTargetId;
         [Tooltip("Optional key resolved through PieceVisualConfig. Leave empty to use this piece's legacy colour.")]
         public string visualId;
+        [Tooltip("Semantic presentation palette resolved through PieceVisualConfig (for example Red, BlueLight or Purple). The assigned material owns the rendered colour.")]
+        public string paletteId;
         public Color color = new Color(.2f, .65f, 1f);
         public Vector2Int origin = new Vector2Int(8, 10);
         [Range(0, 3)] public int quarterTurns;

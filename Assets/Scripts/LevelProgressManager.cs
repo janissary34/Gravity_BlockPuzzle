@@ -90,6 +90,8 @@ namespace GravityPuzzle
         private bool hasTweenConfig;
         private GameObjectPool<FlyingProgressVoxelView> flyingProgressVoxelPool;
         private int pendingVfxProgressArrivalCount;
+        private bool boardClearCompletionRequested;
+        private bool completionPresentationFinished;
 
         // World-space ParticleSystem effects cannot be composited reliably over
         // an overlay canvas. The prewarmed UI view is the deterministic flight
@@ -117,6 +119,8 @@ namespace GravityPuzzle
         public bool HasPendingProgressPresentation => HasActiveFlyingVoxels ||
                                                       pendingVfxProgressArrivalCount > 0 ||
                                                       (sliderFillTween != null && sliderFillTween.IsActive());
+        public bool IsCompletionPresentationFinished => completionPresentationFinished;
+        private bool HasInFlightProgressPresentation => HasActiveFlyingVoxels || pendingVfxProgressArrivalCount > 0;
 
         /// <summary>
         /// Commits the final authoritative progress when the board has no
@@ -129,12 +133,22 @@ namespace GravityPuzzle
             if (totalBlockUnitsInLevel <= 0 || IsLevelComplete)
                 return;
 
+            boardClearCompletionRequested = true;
+            TryCommitBoardClearProgress();
+        }
+
+        private void TryCommitBoardClearProgress()
+        {
+            if (!boardClearCompletionRequested || HasInFlightProgressPresentation || IsLevelComplete)
+                return;
+
             float missingUnits = totalBlockUnitsInLevel - currentShreddedUnits;
             if (missingUnits <= .0001f)
                 return;
 
+            boardClearCompletionRequested = false;
             Debug.LogWarning(
-                $"[LevelProgress] Board cleared with {missingUnits:0.###} progress units still awaiting presentation; committing the authoritative remainder.",
+                $"[LevelProgress] Board cleared with {missingUnits:0.###} unscheduled progress units; committing the authoritative remainder.",
                 this);
             AddProgress(missingUnits);
         }
@@ -322,7 +336,10 @@ namespace GravityPuzzle
         {
             currentShreddedUnits = 0f;
             levelCompletedTriggered = false;
+            completionPresentationFinished = false;
+            boardClearCompletionRequested = false;
             activeFlyingVoxelCount = 0;
+            pendingVfxProgressArrivalCount = 0;
 
             if (progressSlider != null)
             {
@@ -475,6 +492,7 @@ namespace GravityPuzzle
                 activeFlyingVoxelCount = Mathf.Max(0, activeFlyingVoxelCount - 1);
                 AddProgress(progressAmount);
                 onArrival?.Invoke();
+                TryCommitBoardClearProgress();
             }
 
             // A linked tween can be killed when an authored UI object is
@@ -539,6 +557,7 @@ namespace GravityPuzzle
             pendingVfxProgressArrivalCount = Mathf.Max(0, pendingVfxProgressArrivalCount - 1);
             AddProgress(progressAmount);
             onArrival?.Invoke();
+            TryCommitBoardClearProgress();
         }
 
         public Vector3 GetTargetWorldPosition()
@@ -672,6 +691,10 @@ namespace GravityPuzzle
 
         private void TriggerLevelCompleted()
         {
+            if (completionPresentationFinished)
+                return;
+
+            completionPresentationFinished = true;
             Debug.Log($"<color=green>[LevelProgressManager] 🌟 LEVEL COMPLETED! All {totalBlockUnitsInLevel} units shredded.</color>");
             OnLevelCompleted?.Invoke();
         }

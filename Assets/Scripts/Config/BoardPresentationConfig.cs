@@ -18,10 +18,14 @@ namespace GravityPuzzle.Config
         [SerializeField] private Material environmentBackdropMaterial;
         [Tooltip("Material used by static board modules such as authored obstacles.")]
         [SerializeField] private Material boardBlockMaterial;
+        [Tooltip("Base map-atlas module for static gameplay blocks. It is scaled to the authored grid footprint until a dedicated obstacle silhouette is supplied.")]
+        [SerializeField] private Sprite staticBlockSprite;
         [Tooltip("Material used by the darker checker-grid cells.")]
         [SerializeField] private Material gridDarkMaterial;
         [Tooltip("Material used by the lighter checker-grid cells.")]
         [SerializeField] private Material gridLightMaterial;
+        [Tooltip("Artist-authored grid tile from the map atlas. When empty, the legacy generated square is used.")]
+        [SerializeField] private Sprite gridSprite;
 
         [Header("Camera Framing")]
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
@@ -38,6 +42,8 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite bottomRightCorner;
         [SerializeField] private Material frameMaterial;
         [SerializeField] private Color frameTint = Color.white;
+        [Tooltip("Moves each outer corner away from its adjoining straight frame pieces in world units. Tune this when an atlas corner's baked padding changes.")]
+        [SerializeField] private Vector2 cornerOutset = new Vector2(.25f, .25f);
 
         public bool OverrideLevelBackground => overrideLevelBackground;
         public Color BackgroundColor => backgroundColor;
@@ -45,8 +51,11 @@ namespace GravityPuzzle.Config
         public float CameraSizeMultiplier => Mathf.Max(1f, cameraSizeMultiplier);
         public Material EnvironmentBackdropMaterial => environmentBackdropMaterial;
         public Material BoardBlockMaterial => boardBlockMaterial;
+        public Sprite StaticBlockSprite => staticBlockSprite;
+        public Sprite GridSprite => gridSprite;
         public Material FrameMaterial => frameMaterial;
         public Color FrameTint => frameTint;
+        public Vector2 CornerOutset => Vector2.Max(Vector2.zero, cornerOutset);
 
         public Material GetGridMaterial(bool alternateCell)
         {

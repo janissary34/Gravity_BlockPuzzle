@@ -55,7 +55,10 @@ namespace GravityPuzzle
                 return;
 
             if (settingsPopupView != null)
+            {
                 settingsPopupView.Closed += CloseSettingsPanel;
+                settingsPopupView.SoundChanged += SetSoundEnabledFromPopup;
+            }
 
             if (settingsButton != null)
                 settingsButton.onClick.AddListener(ToggleSettingsPanel);
@@ -64,13 +67,9 @@ namespace GravityPuzzle
 
             if (soundButton != null)
                 soundButton.onClick.AddListener(ToggleSound);
-            else
-                Debug.LogWarning("[Settings] Sound button reference is missing.", this);
 
             if (musicButton != null)
                 musicButton.onClick.AddListener(ToggleMusic);
-            else
-                Debug.LogWarning("[Settings] Music button reference is missing.", this);
 
             listenersBound = true;
         }
@@ -97,7 +96,10 @@ namespace GravityPuzzle
             if (musicButton != null)
                 musicButton.onClick.RemoveListener(ToggleMusic);
             if (settingsPopupView != null)
+            {
                 settingsPopupView.Closed -= CloseSettingsPanel;
+                settingsPopupView.SoundChanged -= SetSoundEnabledFromPopup;
+            }
 
             listenersBound = false;
             ResumeTimer();
@@ -128,6 +130,16 @@ namespace GravityPuzzle
             musicEnabled = !musicEnabled;
             PlayerPrefs.SetInt(MusicPreferenceKey, musicEnabled ? 1 : 0);
             PlayerPrefs.Save();
+            ApplyAudioState();
+        }
+
+        /// <summary>
+        /// The popup owns its authored toggle state. This adapter keeps the
+        /// audio owner synchronized without re-binding or duplicating its UI.
+        /// </summary>
+        private void SetSoundEnabledFromPopup(bool enabled)
+        {
+            soundEnabled = enabled;
             ApplyAudioState();
         }
 

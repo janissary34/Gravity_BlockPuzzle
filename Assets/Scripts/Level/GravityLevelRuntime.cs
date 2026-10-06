@@ -436,7 +436,11 @@ namespace GravityPuzzle
                             Vector2.one,
                             presentationColor,
                             gridMaterial,
-                            -10);
+                            -10,
+                            configuredBoardPresentationConfig != null
+                                ? configuredBoardPresentationConfig.GridSprite
+                                : null,
+                            true);
                         square.transform.SetParent(background.transform, true);
                         continue;
                     }
@@ -455,7 +459,11 @@ namespace GravityPuzzle
                             Vector2.one * fineCellSize,
                             presentationColor,
                             gridMaterial,
-                            -10);
+                            -10,
+                            configuredBoardPresentationConfig != null
+                                ? configuredBoardPresentationConfig.GridSprite
+                                : null,
+                            true);
                         fragment.transform.SetParent(background.transform, true);
                     }
                 }
@@ -806,11 +814,14 @@ namespace GravityPuzzle
             float halfWidth = level.boardColumns * .5f;
             float halfHeight = level.boardRows * .5f;
             float cornerSize = Mathf.Max(fineCellSize + thickness, thickness * 2f);
+            Vector2 cornerOutset = configuredBoardPresentationConfig.CornerOutset;
             CreateFrameCorner(
                 frameRoot,
                 level,
                 new Vector2Int(0, level.FineRows - 1),
-                new Vector2(-halfWidth - thickness * .5f, halfHeight + thickness * .5f),
+                new Vector2(
+                    -halfWidth - thickness * .5f - cornerOutset.x,
+                    halfHeight + thickness * .5f + cornerOutset.y),
                 cornerSize,
                 BoardFrameEdge.TopLeftCorner,
                 ref edgeIndex);
@@ -818,7 +829,9 @@ namespace GravityPuzzle
                 frameRoot,
                 level,
                 new Vector2Int(level.FineColumns - 1, level.FineRows - 1),
-                new Vector2(halfWidth + thickness * .5f, halfHeight + thickness * .5f),
+                new Vector2(
+                    halfWidth + thickness * .5f + cornerOutset.x,
+                    halfHeight + thickness * .5f + cornerOutset.y),
                 cornerSize,
                 BoardFrameEdge.TopRightCorner,
                 ref edgeIndex);
@@ -826,7 +839,9 @@ namespace GravityPuzzle
                 frameRoot,
                 level,
                 Vector2Int.zero,
-                new Vector2(-halfWidth - thickness * .5f, -halfHeight - thickness * .5f),
+                new Vector2(
+                    -halfWidth - thickness * .5f - cornerOutset.x,
+                    -halfHeight - thickness * .5f - cornerOutset.y),
                 cornerSize,
                 BoardFrameEdge.BottomLeftCorner,
                 ref edgeIndex);
@@ -834,7 +849,9 @@ namespace GravityPuzzle
                 frameRoot,
                 level,
                 new Vector2Int(level.FineColumns - 1, 0),
-                new Vector2(halfWidth + thickness * .5f, -halfHeight - thickness * .5f),
+                new Vector2(
+                    halfWidth + thickness * .5f + cornerOutset.x,
+                    -halfHeight - thickness * .5f - cornerOutset.y),
                 cornerSize,
                 BoardFrameEdge.BottomRightCorner,
                 ref edgeIndex);
@@ -1065,6 +1082,9 @@ namespace GravityPuzzle
                     false,
                     configuredBoardPresentationConfig != null
                         ? configuredBoardPresentationConfig.BoardBlockMaterial
+                        : null,
+                    configuredBoardPresentationConfig != null
+                        ? configuredBoardPresentationConfig.StaticBlockSprite
                         : null);
                 return;
             }
@@ -1081,6 +1101,9 @@ namespace GravityPuzzle
                 false,
                 configuredBoardPresentationConfig != null
                     ? configuredBoardPresentationConfig.BoardBlockMaterial
+                    : null,
+                configuredBoardPresentationConfig != null
+                    ? configuredBoardPresentationConfig.StaticBlockSprite
                     : null);
         }
 

@@ -30,6 +30,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static IIceBlockParticleVfx iceParticleVfx;
         private static bool useVoxelShardGrid = false;
         private static readonly HashSet<string> warnedMissingVisualIds = new HashSet<string>();
+        private static readonly HashSet<string> warnedMissingPaletteIds = new HashSet<string>();
 
         public static void SetRootProvider(IRuntimePieceRootProvider provider)
         {
@@ -60,6 +61,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             pieceVisualConfig = null;
             iceParticleVfx = null;
             warnedMissingVisualIds.Clear();
+            warnedMissingPaletteIds.Clear();
         }
 
         public static PuzzlePiece Create(
@@ -85,7 +87,11 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             RuntimePieceRoot root = rootProvider.Create(definition.name);
             GameObject piece = root.GameObject;
-            ResolveVisual(definition, out Color visualColor, out Sprite voxelSprite);
+            ResolveVisual(
+                definition,
+                out Color visualColor,
+                out Sprite voxelSprite,
+                out Material presentationMaterial);
             PrepareRoot(root.Piece, level, definition);
             ConfigureBody(root.Body, level);
             ConfigureComposite(root.CompositeCollider);
@@ -95,7 +101,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                 level,
                 definition,
                 visualColor,
-                voxelSprite);
+                voxelSprite,
+                presentationMaterial);
 
             root.CompositeCollider.GenerateGeometry();
             ConfigureOutline(root.Outline, root.CompositeCollider);
@@ -106,6 +113,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 sourcePieceId,
                 definition,
                 visualColor,
+                presentationMaterial,
                 root.CompositeCollider,
                 content);
             ConfigureWholePiecePresentation(puzzlePiece, level, definition);
@@ -146,6 +154,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             Vector3 scale,
             IReadOnlyList<RuntimePieceFragmentCell> cells,
             Color color,
+            Material presentationMaterial,
             float remainingProgress)
         {
             if (rootProvider == null)
@@ -157,8 +166,11 @@ namespace GravityPuzzle.Gameplay.Pieces
             root.Transform.position = position;
             root.Transform.rotation = rotation;
             root.Transform.localScale = scale;
+            root.Piece.ConfigurePresentationMaterials(
+                presentationMaterial,
+                pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null);
             ConfigureFragment(root.Piece, root.Body, root.CompositeCollider, root.Outline,
-                level, cells, color, remainingProgress);
+                level, cells, color, presentationMaterial, remainingProgress);
             // A pooled Rigidbody2D can retain its previous physics pose until
             // Unity's next transform sync. Fragment grid registration happens
             // immediately below its creation, so explicitly align the physics
@@ -183,7 +195,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 return;
 
             ConfigureFragment(piece, piece.Body, piece.CompositeCollider, piece.Outline,
-                level, cells, color, remainingProgress);
+                level, cells, color, piece.PresentationMaterial, remainingProgress);
         }
 
         public static void ResetPiecePartSlot(PuzzlePiece piece, PiecePartSlot slot)
@@ -272,6 +284,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             GravityLevelDefinition level,
             IReadOnlyList<RuntimePieceFragmentCell> cells,
             Color color,
+            Material presentationMaterial,
             float remainingProgress)
         {
             if (piece == null || body == null || composite == null || outline == null ||
@@ -299,6 +312,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                     new PiecePartGeometry(BlockCellName, fragmentCell.LocalPosition, fragmentCell.Size),
                     color,
                     GetCellPresentationSprite(GetFallbackSprite(false), fragmentCell.Size),
+                    presentationMaterial,
                     out SpriteRenderer visual,
                     voxelShards);
                 collisionCells.Add(collider);
@@ -314,6 +328,9 @@ namespace GravityPuzzle.Gameplay.Pieces
             ConfigureOutline(outline, composite);
             piece.ConfigureProgressUnits(Mathf.Max(1, Mathf.CeilToInt(remainingProgress)));
             piece.ConfigureVisualColor(color);
+            piece.ConfigurePresentationMaterials(
+                presentationMaterial,
+                pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null);
             piece.ConfigureCollisionGeometry(composite, collisionCells, cellVisuals);
             if (voxelShards.Count > 0)
                 piece.ConfigureVoxelPresentation(voxelShards);
@@ -341,10 +358,14 @@ namespace GravityPuzzle.Gameplay.Pieces
             int sourcePieceId,
             PieceDefinition definition,
             Color visualColor,
+            Material presentationMaterial,
             CompositeCollider2D pieceComposite,
             PieceRuntimeContent content)
         {
             puzzlePiece.ConfigureIceParticleVfx(iceParticleVfx);
+            puzzlePiece.ConfigurePresentationMaterials(
+                presentationMaterial,
+                pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null);
             puzzlePiece.Configure(new PieceRuntimeSetup(
                 sourcePieceId,
                 Mathf.Max(1, content.ProgressUnits),
@@ -383,7 +404,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             GravityLevelDefinition level,
             PieceDefinition definition,
             Color visualColor,
-            Sprite voxelSprite)
+            Sprite voxelSprite,
+            Material presentationMaterial)
         {
             float fineCellSize = 1f / level.subdivisions;
             List<PiecePartGeometry> parts = BuildPartGeometry(level, definition, fineCellSize, out int progressUnits);
@@ -406,6 +428,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                     parts[index],
                     visualColor,
                     GetCellPresentationSprite(voxelSprite, parts[index].Size),
+                    presentationMaterial,
                     out SpriteRenderer cellVisual,
                     voxelShards);
                 collisionCells.Add(collider);
@@ -617,6 +640,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             PiecePartGeometry part,
             Color color,
             Sprite voxelSprite,
+            Material presentationMaterial,
             out SpriteRenderer cellVisual,
             List<VoxelShard> voxelShards = null)
         {
@@ -635,7 +659,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                 ? voxelSprite
                 : PrototypeBootstrap.GetSquareSprite();
             cellVisual.sprite = presentationSprite;
-            cellVisual.color = color;
+            cellVisual.color = presentationMaterial != null ? Color.white : color;
+            cellVisual.sharedMaterial = presentationMaterial;
             cellVisual.flipX = false;
             cellVisual.flipY = false;
             cellVisual.sortingOrder = 5;
@@ -702,11 +727,15 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static void ResolveVisual(
             PieceDefinition definition,
             out Color color,
-            out Sprite voxelSprite)
+            out Sprite voxelSprite,
+            out Material presentationMaterial)
         {
             bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
                                definition.frozenMoveCount > 0;
             color = definition.color;
+            presentationMaterial = ResolvePaletteMaterial(definition.paletteId);
+            if (presentationMaterial != null)
+                color = presentationMaterial.color;
             voxelSprite = GetFallbackSprite(isFrozenIce);
             if (string.IsNullOrWhiteSpace(definition.visualId))
                 return;
@@ -718,13 +747,36 @@ namespace GravityPuzzle.Gameplay.Pieces
                 return;
             }
 
-            color = visual.Tint;
+            if (presentationMaterial == null)
+                color = visual.Tint;
             // ice_block was authored for the retired ice presentation. The
             // new atlas is only valid for an exact shape; all other frozen
             // shapes use the current 1x1 brick plus the generic frost layer.
             // Never reintroduce the old sprite in that fallback path.
             if (!isFrozenIce)
                 voxelSprite = visual.Sprite;
+        }
+
+        private static Material ResolvePaletteMaterial(string paletteId)
+        {
+            if (string.IsNullOrWhiteSpace(paletteId))
+                return null;
+
+            if (pieceVisualConfig != null &&
+                pieceVisualConfig.TryGetPaletteMaterial(paletteId, out Material material))
+                return material;
+
+            if (warnedMissingPaletteIds.Add(paletteId))
+            {
+                string source = pieceVisualConfig == null
+                    ? "no PieceVisualConfig is assigned"
+                    : $"'{pieceVisualConfig.name}' has no matching palette";
+                Debug.LogWarning(
+                    $"[PieceVisualConfig] paletteId '{paletteId}' cannot be resolved because {source}. " +
+                    "The piece will use its legacy colour until the palette is fixed.");
+            }
+
+            return null;
         }
 
         private static Sprite GetFallbackSprite(bool isIce)

@@ -36,7 +36,9 @@ MonoBehaviour:
   shredderRotationSpeed: 220
   pieces:
   - name: Piece 1
+    tutorialTargetId: 
     visualId: 
+    paletteId: Red
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 6}
     quarterTurns: 0
@@ -87,7 +89,9 @@ MonoBehaviour:
     - localCell: {x: -7, y: 9}
       type: 0
   - name: Piece 2
+    tutorialTargetId: 
     visualId: 
+    paletteId: Yellow
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 14, y: 4}
     quarterTurns: 0
@@ -137,6 +141,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 13, y: 11}
       type: 0
+  boxes: []
+  elevators: []
   pins: []
   obstacles:
   - name: Obstacle 2

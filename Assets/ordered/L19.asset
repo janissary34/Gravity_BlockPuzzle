@@ -36,7 +36,9 @@ MonoBehaviour:
   shredderRotationSpeed: 220
   pieces:
   - name: Piece 9
+    tutorialTargetId: 
     visualId: 
+    paletteId: BlueLight
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -183,7 +185,9 @@ MonoBehaviour:
     - localCell: {x: -15, y: -5}
       type: 0
   - name: Piece 10
+    tutorialTargetId: 
     visualId: 
+    paletteId: Purple
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -330,7 +334,9 @@ MonoBehaviour:
     - localCell: {x: -15, y: 3}
       type: 0
   - name: Piece 11
+    tutorialTargetId: 
     visualId: 
+    paletteId: Pink
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -477,7 +483,9 @@ MonoBehaviour:
     - localCell: {x: -7, y: -1}
       type: 0
   - name: Piece 12
+    tutorialTargetId: 
     visualId: 
+    paletteId: Orange
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
     origin: {x: 26, y: 16}
     quarterTurns: 0
@@ -528,7 +536,9 @@ MonoBehaviour:
     - localCell: {x: -15, y: 15}
       type: 0
   - name: Piece 5
+    tutorialTargetId: 
     visualId: 
+    paletteId: Yellow
     color: {r: 1, g: 0.9929482, b: 0.2980392, a: 1}
     origin: {x: 18, y: 12}
     quarterTurns: 0
@@ -675,7 +685,9 @@ MonoBehaviour:
     - localCell: {x: 5, y: 11}
       type: 0
   - name: Piece 6
+    tutorialTargetId: 
     visualId: 
+    paletteId: Pink
     color: {r: 0.9528302, g: 0.022472408, b: 0.064152695, a: 1}
     origin: {x: 2, y: 12}
     quarterTurns: 0
@@ -822,7 +834,9 @@ MonoBehaviour:
     - localCell: {x: 13, y: 11}
       type: 0
   - name: Piece 7
+    tutorialTargetId: 
     visualId: 
+    paletteId: GreenLight
     color: {r: 0.19425267, g: 0.6792453, b: 0.086507656, a: 1}
     origin: {x: 10, y: 12}
     quarterTurns: 0
@@ -968,6 +982,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 13, y: 19}
       type: 0
+  boxes: []
+  elevators: []
   pins: []
   obstacles:
   - name: Obstacle 5

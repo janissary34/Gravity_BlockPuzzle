@@ -89,6 +89,8 @@ namespace GravityPuzzle
         public float RemainingProgressUnits { get; private set; } = 1f;
         /// <summary>Source colour from the authored piece definition.</summary>
         public Color VisualColor { get; private set; } = Color.white;
+        /// <summary>Shared artist material used by the normal brick presentation.</summary>
+        public Material PresentationMaterial { get; private set; }
         public Bounds CollisionBounds
         {
             get
@@ -141,6 +143,7 @@ namespace GravityPuzzle
         private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
         private Sprite bombOverlaySprite;
         private float bombOverlayFill = .82f;
+        private Material icePresentationMaterial;
         private IIceBlockParticleVfx iceParticleVfx;
         private IIceBlockParticleVfxHandle iceParticleVfxHandle;
         private readonly List<ShredderReservationCell> shredderReservationCells =
@@ -409,6 +412,7 @@ namespace GravityPuzzle
                 wholePieceRenderer.enabled = false;
                 wholePieceRenderer.sprite = null;
                 wholePieceRenderer.color = Color.white;
+                wholePieceRenderer.sharedMaterial = null;
                 wholePieceRenderer.flipX = false;
                 wholePieceRenderer.flipY = false;
                 wholePieceRenderer.transform.localPosition = Vector3.zero;
@@ -885,6 +889,16 @@ namespace GravityPuzzle
         public void ConfigureVisualColor(Color color)
         {
             VisualColor = new Color(color.r, color.g, color.b, 1f);
+        }
+
+        /// <summary>
+        /// Supplies shared materials for a pooled root. This is presentation
+        /// data only: board occupancy and collider geometry remain unchanged.
+        /// </summary>
+        public void ConfigurePresentationMaterials(Material normalMaterial, Material iceMaterial)
+        {
+            PresentationMaterial = normalMaterial;
+            icePresentationMaterial = iceMaterial;
         }
 
         public void PrepareForShredderPhysics()
@@ -1800,6 +1814,7 @@ namespace GravityPuzzle
                     transform.localScale,
                     fragmentCells[componentIndex],
                     VisualColor,
+                    PresentationMaterial,
                     componentProgress);
                 fragments.Add(fragment);
             }
@@ -2188,14 +2203,44 @@ namespace GravityPuzzle
             renderer.transform.SetParent(source.transform, false);
             renderer.transform.localPosition = Vector3.zero;
             renderer.transform.localRotation = Quaternion.identity;
-            renderer.transform.localScale = scale;
             renderer.gameObject.name = layerName;
             renderer.sprite = overlaySprite != null ? overlaySprite : source.sprite;
+            // The modular brick atlas and the ice overlay have different
+            // pixels-per-unit values.  A child renderer inherits its source
+            // cell's transform scale, but not its sprite bounds, so applying
+            // only the authored effect multiplier made fallback ice appear
+            // tiny or oversized (most visibly after a hammer split).  Fit the
+            // overlay in the source renderer's local sprite space first, then
+            // apply the intentional crack/frost multiplier.
+            renderer.transform.localScale = GetIceLayerScale(source.sprite, renderer.sprite, scale);
             renderer.color = color;
+            renderer.sharedMaterial = icePresentationMaterial != null
+                ? icePresentationMaterial
+                : source.sharedMaterial;
             renderer.sortingLayerID = source.sortingLayerID;
             renderer.sortingOrder = sortingOrder;
             renderer.enabled = true;
             iceRenderers.Add(renderer);
+        }
+
+        private static Vector3 GetIceLayerScale(
+            Sprite sourceSprite,
+            Sprite overlaySprite,
+            Vector3 presentationMultiplier)
+        {
+            if (sourceSprite == null || overlaySprite == null)
+                return presentationMultiplier;
+
+            Vector2 sourceSize = sourceSprite.bounds.size;
+            Vector2 overlaySize = overlaySprite.bounds.size;
+            if (sourceSize.x <= 0f || sourceSize.y <= 0f ||
+                overlaySize.x <= 0f || overlaySize.y <= 0f)
+                return presentationMultiplier;
+
+            return new Vector3(
+                presentationMultiplier.x * sourceSize.x / overlaySize.x,
+                presentationMultiplier.y * sourceSize.y / overlaySize.y,
+                presentationMultiplier.z);
         }
 
         /// <summary>
@@ -2316,6 +2361,7 @@ namespace GravityPuzzle
             releaseRenderer.transform.localScale = wholePieceRenderer.transform.localScale;
             releaseRenderer.sprite = wholePieceRenderer.sprite;
             releaseRenderer.color = wholePieceRenderer.color;
+            releaseRenderer.sharedMaterial = wholePieceRenderer.sharedMaterial;
             releaseRenderer.flipX = wholePieceRenderer.flipX;
             releaseRenderer.sortingLayerID = wholePieceRenderer.sortingLayerID;
             releaseRenderer.sortingOrder = wholePieceRenderer.sortingOrder + 1;
@@ -2436,9 +2482,16 @@ namespace GravityPuzzle
             wholePieceRenderer.sprite = sprite;
             wholePieceRenderer.flipX = wholePieceTransform.FlipX;
             wholePieceRenderer.flipY = false;
-            // The brick atlas is neutral by design; retain the level-authored
-            // colour for normal pieces. Ice artwork owns its blue/white palette.
-            wholePieceRenderer.color = IsFrozen ? Color.white : VisualColor;
+            wholePieceRenderer.sharedMaterial = IsFrozen && wholePieceIceSprite != null
+                ? icePresentationMaterial
+                : PresentationMaterial;
+            // Palette materials own normal-brick colour. SpriteRenderer tint
+            // remains white there so material colour is never multiplied a
+            // second time. VisualColor is still retained for voxel flights,
+            // shards, and legacy unmaterialed pieces.
+            wholePieceRenderer.color = IsFrozen || PresentationMaterial != null
+                ? Color.white
+                : VisualColor;
             wholePieceRenderer.sortingOrder = 5;
             wholePieceRenderer.enabled = true;
             SetModularCellPresentationVisible(false);

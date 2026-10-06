@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ShredderConfig
   m_EditorClassIdentifier: 
   particlesPerShreddedCell: 40
-  exitSeamOffsetBelowShredder: 2
+  exitSeamOffsetBelowShredder: 0.35
   wheelPrefab: {fileID: 6496321627930684527, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
   wheelPoolCapacity: 32
   catchZonePrefab: {fileID: 1348796746018862400, guid: 38977ea9b7627446fb5feb095e7ae1d6, type: 3}

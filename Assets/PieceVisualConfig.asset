@@ -16,6 +16,28 @@ MonoBehaviour:
   - visualId: ice_block
     sprite: {fileID: 21300000, guid: 972694c4005d54ca49411a2a5a1b2d26, type: 3}
     tint: {r: 1, g: 1, b: 1, a: 1}
+  iceMaterial: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
+  paletteDefinitions:
+  - paletteId: Red
+    material: {fileID: 2100000, guid: 7e7782389f4714b95975227a5f3e47b6, type: 2}
+  - paletteId: Yellow
+    material: {fileID: 2100000, guid: 0e72851f11ca54ea9ab86732a3abd512, type: 2}
+  - paletteId: Orange
+    material: {fileID: 2100000, guid: a33e9870790644e7c922b4d6f3ecb00e, type: 2}
+  - paletteId: GreenLight
+    material: {fileID: 2100000, guid: bf14e3c51812f475eb9ae0d50b449b4c, type: 2}
+  - paletteId: GreenDark
+    material: {fileID: 2100000, guid: 488b1af91e9f14cd58edd2f6938dab35, type: 2}
+  - paletteId: BlueLight
+    material: {fileID: 2100000, guid: 437b0983123614a1daa27b5173a5d013, type: 2}
+  - paletteId: BlueDark
+    material: {fileID: 2100000, guid: 7caee0d4719a2488cb16b51a97278a1b, type: 2}
+  - paletteId: Purple
+    material: {fileID: 2100000, guid: b918020adfcc54a429473260de1e6984, type: 2}
+  - paletteId: Pink
+    material: {fileID: 2100000, guid: 9293da730039f4274876c25ed6511983, type: 2}
+  - paletteId: Ice
+    material: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
   normalFallbackSprite: {fileID: -1313627307, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
   iceFallbackSprite: {fileID: 0}
   shapeDefinitions:

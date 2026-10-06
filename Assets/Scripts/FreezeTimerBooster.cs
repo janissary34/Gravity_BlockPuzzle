@@ -37,6 +37,11 @@ namespace GravityPuzzle
         private PrototypeBoard boundBoard;
         private Coroutine freezeRoutine;
         private CanvasGroup buttonCanvasGroup;
+        // When this component shares a HUD button with TimerBooster, it is the
+        // authoritative timed effect behind that presentation sequence. It
+        // must not subscribe to the click itself or it will freeze the clock
+        // before the visual sequence reaches the countdown.
+        private TimerBooster presentationSequenceOwner;
         private bool usedThisLevel;
         private int remainingCount = 1;
 
@@ -44,13 +49,14 @@ namespace GravityPuzzle
         {
             EnsureReferences();
             buttonCanvasGroup = boosterButton != null ? boosterButton.GetComponent<CanvasGroup>() : null;
+            presentationSequenceOwner = GetComponent<TimerBooster>();
         }
 
         private void OnEnable()
         {
             EnsureReferences();
 
-            if (boosterButton != null)
+            if (boosterButton != null && presentationSequenceOwner == null)
                 boosterButton.onClick.AddListener(ActivateFreezeBooster);
 
             SynchronizeLevel();
@@ -78,7 +84,7 @@ namespace GravityPuzzle
 
         private void OnDisable()
         {
-            if (boosterButton != null)
+            if (boosterButton != null && presentationSequenceOwner == null)
                 boosterButton.onClick.RemoveListener(ActivateFreezeBooster);
 
             CancelOwnedFreeze();

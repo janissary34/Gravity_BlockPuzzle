@@ -38,6 +38,7 @@ MonoBehaviour:
   - name: Piece 1
     tutorialTargetId: 
     visualId: 
+    paletteId: Red
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 14, y: 10}
     quarterTurns: 0
@@ -90,6 +91,7 @@ MonoBehaviour:
   - name: Piece 2
     tutorialTargetId: 
     visualId: 
+    paletteId: Yellow
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 4, y: 8}
     quarterTurns: 0

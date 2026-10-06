@@ -185,14 +185,18 @@ namespace GravityPuzzle
             Vector2 size,
             Color color,
             bool roundCorners = true,
-            Material presentationMaterial = null)
+            Material presentationMaterial = null,
+            Sprite presentationSprite = null)
         {
             GameObject block = CreateVisualBlock(
                 blockName,
                 position,
                 size,
                 color,
-                presentationMaterial);
+                presentationMaterial,
+                0,
+                presentationSprite,
+                presentationSprite != null);
             BoxCollider2D collider = block.AddComponent<BoxCollider2D>();
             if (roundCorners)
                 RoundColliderCorners(collider, size);
@@ -229,17 +233,32 @@ namespace GravityPuzzle
             Vector2 size,
             Color color,
             Material presentationMaterial = null,
-            int sortingOrder = 0)
+            int sortingOrder = 0,
+            Sprite presentationSprite = null,
+            bool fitSpriteToSize = false)
         {
             GameObject block = new GameObject(blockName);
             block.transform.position = position;
             block.transform.localScale = new Vector3(size.x, size.y, 1f);
 
             SpriteRenderer renderer = block.AddComponent<SpriteRenderer>();
-            renderer.sprite = GetSquareSprite();
+            renderer.sprite = presentationSprite != null ? presentationSprite : GetSquareSprite();
             renderer.color = color;
             renderer.sharedMaterial = presentationMaterial;
             renderer.sortingOrder = sortingOrder;
+
+            if (fitSpriteToSize && presentationSprite != null)
+            {
+                Vector2 spriteSize = presentationSprite.bounds.size;
+                if (spriteSize.x > 0f && spriteSize.y > 0f)
+                {
+                    block.transform.localScale = new Vector3(
+                        size.x / spriteSize.x,
+                        size.y / spriteSize.y,
+                        1f);
+                }
+            }
+
             return block;
         }
 
@@ -587,6 +606,7 @@ namespace GravityPuzzle
         private float removalHeight = -5.5f;
         private bool finalShredderOutcomeLocked;
         private bool boardCleared;
+        private bool boardClearCompletionPending;
         private bool boardFailed;
         private float bombElapsedSeconds;
         private bool sequentialLevelsEnabled = true;
@@ -756,6 +776,7 @@ namespace GravityPuzzle
             TimeRemaining = timeLimit;
             IsTimerStarted = false;
             DestroyedPieceCount = 0;
+            boardClearCompletionPending = false;
             timerPauseOwners.Clear();
             finalShredderOutcomeLocked = false;
             WasTimerExpiryFailure = false;
@@ -1507,13 +1528,21 @@ namespace GravityPuzzle
                 LevelProgressManager progress = LevelProgressManager.Instance;
                 bool revealReady = revealAreaCoordinator == null ||
                                    !revealAreaCoordinator.HasPendingRevealContent;
-                if (!HasRemainingBoardPieces() && revealReady)
+                if (!boardClearCompletionPending && !HasRemainingBoardPieces() && revealReady)
                 {
                     // The board model owns completion. A piece that entered
                     // shredding has already left the authoritative grid, so
-                    // its pooled root and presentation tail must not keep a
-                    // cleared level alive.
+                    // its pooled root must not keep the authoritative board
+                    // alive. Its reward flight still has to reach the HUD
+                    // before the result presentation is allowed to begin.
+                    boardClearCompletionPending = true;
                     progress?.CompleteForBoardClear();
+                }
+
+                if (boardClearCompletionPending &&
+                    (progress == null || progress.IsCompletionPresentationFinished))
+                {
+                    boardClearCompletionPending = false;
                     boardCleared = true;
                     TryTransitionGameState(GameState.LevelComplete);
                     ShowWinPanel();

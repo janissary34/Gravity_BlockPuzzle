@@ -209,22 +209,29 @@ namespace GravityPuzzle
                 return;
             }
 
-            Vector2 screenPosition;
+            Vector2 screenPosition = default;
+            bool receivedPointerDown = false;
             if (Input.touchCount > 0)
             {
                 Touch touch = Input.GetTouch(0);
-                if (touch.phase != TouchPhase.Began)
-                    return;
-
-                screenPosition = touch.position;
+                if (touch.phase == TouchPhase.Began)
+                {
+                    screenPosition = touch.position;
+                    receivedPointerDown = true;
+                }
             }
-            else
+
+            // The Device Simulator can retain a non-Began legacy touch while
+            // still reporting a new mouse press. Do not let that stale touch
+            // swallow cancellation or targeting input.
+            if (!receivedPointerDown && Input.GetMouseButtonDown(0))
             {
-                if (!Input.GetMouseButtonDown(0))
-                    return;
-
                 screenPosition = Input.mousePosition;
+                receivedPointerDown = true;
             }
+
+            if (!receivedPointerDown)
+                return;
 
             if (!PuzzleDragController.TryScreenToBoardWorld(screenPosition, out Vector2 worldPosition))
             {

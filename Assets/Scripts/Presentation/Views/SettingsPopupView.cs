@@ -25,6 +25,10 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private Image vibrationToggleImage;
         [SerializeField] private Sprite toggleOffSprite;
         [SerializeField] private Sprite toggleOnSprite;
+        [Tooltip("Artist-authored red strike shown only while sound is disabled.")]
+        [SerializeField] private GameObject soundDisabledIndicator;
+        [Tooltip("Artist-authored red strike shown only while haptics are disabled.")]
+        [SerializeField] private GameObject vibrationDisabledIndicator;
         [SerializeField] private string mainMenuSceneName = "Main_Menu";
 
         private bool soundEnabled;
@@ -33,6 +37,7 @@ namespace GravityPuzzle.Presentation.Views
         private PrototypeBoard pausedBoard;
 
         public event Action Closed;
+        public event Action<bool> SoundChanged;
 
         private void Awake()
         {
@@ -104,6 +109,7 @@ namespace GravityPuzzle.Presentation.Views
             PlayerPrefs.SetInt("GravityPuzzle.SoundEnabled", soundEnabled ? 1 : 0);
             PlayerPrefs.Save();
             RefreshToggleVisuals();
+            SoundChanged?.Invoke(soundEnabled);
         }
 
         private void ToggleMusic()
@@ -130,6 +136,11 @@ namespace GravityPuzzle.Presentation.Views
                 musicToggleImage.sprite = musicEnabled ? toggleOnSprite : toggleOffSprite;
             if (vibrationToggleImage != null)
                 vibrationToggleImage.sprite = vibrationEnabled ? toggleOnSprite : toggleOffSprite;
+
+            if (soundDisabledIndicator != null)
+                soundDisabledIndicator.SetActive(!soundEnabled);
+            if (vibrationDisabledIndicator != null)
+                vibrationDisabledIndicator.SetActive(!vibrationEnabled);
         }
 
         private void QuitToMainMenu()

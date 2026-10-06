@@ -417,7 +417,13 @@ namespace GravityPuzzle
 
         private void OnEnable()
         {
-            if (boosterButton != null)
+            // BoosterButton is the single input dispatcher for the authored
+            // HUD. Adding another Button.onClick listener here caused the same
+            // tap to enter this sequence twice: the first invocation acquired
+            // the timer pause and the second logged a false "could not be
+            // paused" error. Keep a direct listener only for legacy buttons
+            // that do not carry BoosterButton.
+            if (boosterButton != null && boosterButtonRef == null)
             {
                 if (freezeTimerBooster != null)
                 {
@@ -431,7 +437,7 @@ namespace GravityPuzzle
         private void OnDisable()
         {
             SetSelectionGlowVisible(false);
-            if (boosterButton != null)
+            if (boosterButton != null && boosterButtonRef == null)
             {
                 boosterButton.onClick.RemoveListener(PlayTimerBoosterSequence);
             }
@@ -518,6 +524,14 @@ namespace GravityPuzzle
                 return;
 
             PrototypeBoard activeBoard = PrototypeBoard.Active;
+
+            // A Button can deliver its click through both a UnityEvent and an
+            // IPointerClickHandler in the same frame. The board pause is an
+            // owner-set, so the second request is neither a new activation nor
+            // an error. The running sequence remains the sole owner.
+            if (sequencePausedBoard == activeBoard)
+                return;
+
             if (activeBoard == null || !activeBoard.IsTimerActive || !activeBoard.IsTimerStarted || activeBoard.TimeRemaining <= 0f || LevelTimerUI.IsGameOver)
             {
                 Debug.LogWarning("[TimerBooster] Cannot play sequence: timer has not started or is inactive.");

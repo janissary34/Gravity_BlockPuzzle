@@ -38,6 +38,7 @@ MonoBehaviour:
   - name: Piece 1
     tutorialTargetId: 
     visualId: 
+    paletteId: Red
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 14}
     quarterTurns: 0
@@ -90,6 +91,7 @@ MonoBehaviour:
   - name: Piece 2
     tutorialTargetId: 
     visualId: 
+    paletteId: Yellow
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 10, y: 10}
     quarterTurns: 0
@@ -142,6 +144,7 @@ MonoBehaviour:
   - name: Piece 3
     tutorialTargetId: 
     visualId: 
+    paletteId: GreenLight
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 10, y: 10}
     quarterTurns: 0
@@ -194,6 +197,7 @@ MonoBehaviour:
   - name: Piece 4
     tutorialTargetId: 
     visualId: 
+    paletteId: BlueLight
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 10, y: 10}
     quarterTurns: 0
@@ -246,6 +250,7 @@ MonoBehaviour:
   - name: Piece 5
     tutorialTargetId: 
     visualId: 
+    paletteId: Purple
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 10, y: 10}
     quarterTurns: 0
@@ -298,6 +303,7 @@ MonoBehaviour:
   - name: Piece 6
     tutorialTargetId: 
     visualId: 
+    paletteId: Pink
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
     origin: {x: 10, y: 10}
     quarterTurns: 0
@@ -350,6 +356,7 @@ MonoBehaviour:
   - name: Piece 7
     tutorialTargetId: 
     visualId: 
+    paletteId: Orange
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
     origin: {x: 10, y: 10}
     quarterTurns: 0
@@ -402,6 +409,7 @@ MonoBehaviour:
   - name: Piece 8
     tutorialTargetId: 
     visualId: 
+    paletteId: GreenLight
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
     origin: {x: 10, y: 10}
     quarterTurns: 0
@@ -454,6 +462,7 @@ MonoBehaviour:
   - name: Piece 9
     tutorialTargetId: 
     visualId: 
+    paletteId: BlueLight
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
     origin: {x: 10, y: 10}
     quarterTurns: 0
@@ -506,6 +515,7 @@ MonoBehaviour:
   - name: Piece 10
     tutorialTargetId: 
     visualId: 
+    paletteId: Purple
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
     origin: {x: 10, y: 10}
     quarterTurns: 0

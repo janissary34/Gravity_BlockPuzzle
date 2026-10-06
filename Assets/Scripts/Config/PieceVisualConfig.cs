@@ -9,6 +9,12 @@ namespace GravityPuzzle.Config
     {
         [SerializeField] private List<PieceVisualDefinition> definitions = new List<PieceVisualDefinition>();
 
+        [Header("Material Palette")]
+        [Tooltip("Shared ice material used while an ice silhouette or frost layer is visible.")]
+        [SerializeField] private Material iceMaterial;
+        [Tooltip("Named palette entries used by level piece definitions. The material owns the brick colour; level definitions do not need a renderer tint.")]
+        [SerializeField] private List<PiecePaletteDefinition> paletteDefinitions = new List<PiecePaletteDefinition>();
+
         [Header("Modular Block Presentation")]
         [Tooltip("Artist-authored 1x1 brick used when a complete piece has no matching silhouette, including hammer fragments.")]
         [SerializeField] private Sprite normalFallbackSprite;
@@ -39,6 +45,8 @@ namespace GravityPuzzle.Config
         [SerializeField, Range(0, 8)] private int outlineCapVertices = 4;
 
         public IReadOnlyList<PieceVisualDefinition> Definitions => definitions;
+        public Material IceMaterial => iceMaterial;
+        public IReadOnlyList<PiecePaletteDefinition> PaletteDefinitions => paletteDefinitions;
         public Sprite NormalFallbackSprite => normalFallbackSprite;
         public Sprite IceFallbackSprite => iceFallbackSprite;
         public Sprite IceOverlaySprite => iceOverlaySprite;
@@ -68,6 +76,25 @@ namespace GravityPuzzle.Config
             }
 
             definition = default;
+            return false;
+        }
+
+        public bool TryGetPaletteMaterial(string paletteId, out Material material)
+        {
+            if (!string.IsNullOrWhiteSpace(paletteId))
+            {
+                for (int index = 0; index < paletteDefinitions.Count; index++)
+                {
+                    PiecePaletteDefinition candidate = paletteDefinitions[index];
+                    if (candidate.PaletteId == paletteId && candidate.Material != null)
+                    {
+                        material = candidate.Material;
+                        return true;
+                    }
+                }
+            }
+
+            material = null;
             return false;
         }
 
@@ -121,6 +148,21 @@ namespace GravityPuzzle.Config
         public string VisualId => visualId;
         public Sprite Sprite => sprite;
         public Color Tint => tint;
+    }
+
+    /// <summary>
+    /// Data-only bridge between a level's semantic palette key and the
+    /// artist-authored shared material. Keeping this lookup in the visual
+    /// config avoids duplicated material references across every level asset.
+    /// </summary>
+    [Serializable]
+    public struct PiecePaletteDefinition
+    {
+        [SerializeField] private string paletteId;
+        [SerializeField] private Material material;
+
+        public string PaletteId => paletteId;
+        public Material Material => material;
     }
 
     /// <summary>
