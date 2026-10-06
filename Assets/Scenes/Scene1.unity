@@ -31335,9 +31335,7 @@ MonoBehaviour:
   m_MinValue: 0
   m_MaxValue: 1
   m_WholeNumbers: 0
-  # Legacy Timer_Canvas slider must never present a completed level before
-  # LevelProgressManager binds the active InGameUI slider.
-  m_Value: 0
+  m_Value: 1
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -49958,6 +49956,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: InGameUI
       objectReference: {fileID: 0}
+    - target: {fileID: 725002066660880083, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_RaycastTarget
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 944376419439500396, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_FillAmount
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2933958996750662730, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
@@ -49968,6 +49974,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2933958996750662730, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2933958996750662730, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_AnchorMin.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3889229612831332393, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
