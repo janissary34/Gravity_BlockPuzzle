@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: M_Blue 6
+  m_Name: M_Environment_Frame
   m_Shader: {fileID: -6465566751694194690, guid: 0a11ac59cbd3c4792a0b36b1046ed195, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -140,7 +140,7 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SampleGI: 0
-    - _ShineStrength: 2.6
+    - _ShineStrength: 5.5
     - _Shininess: 0
     - _Smoothness: 0.5
     - _SmoothnessSource: 0
@@ -154,11 +154,11 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.29803923, g: 0.25882354, b: 0.6784314, a: 1}
+    - _Color: {r: 0.046592418, g: 0.03177287, b: 0.3207547, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
-    - _ShadowColor: {r: 0.04771672, g: 0.03804734, b: 0.14150941, a: 1}
-    - _ShineColor: {r: 0.19059072, g: 0.15966536, b: 0.49056602, a: 1}
+    - _ShadowColor: {r: 0.16470589, g: 0.14901961, b: 0.47058824, a: 1}
+    - _ShineColor: {r: 0.16628097, g: 0.14907439, b: 0.4716981, a: 1}
     - _SpecColor: {r: 0.6981132, g: 0.6981132, b: 0.6981132, a: 1}
   m_BuildTextureStacks: []
