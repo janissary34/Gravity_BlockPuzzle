@@ -270,7 +270,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Edge_Bottom
+      name: Edge_Top
       rect:
         serializedVersion: 2
         x: 58
@@ -291,7 +291,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Edge_Top
+      name: Edge_Bottom
       rect:
         serializedVersion: 2
         x: 55
@@ -749,10 +749,10 @@ TextureImporter:
       Corner_Bottom_Right: -2049558506
       Corner_Top_Left: 1180291467
       Corner_Top_Right: 1628857650
-      Edge_Bottom: -448638201
+      Edge_Bottom: 1112318756
       Edge_Left: -188560374
       Edge_Right: 1536040797
-      Edge_Top: 1112318756
+      Edge_Top: -448638201
       Elevator: 429497369
       Elevator_Door: 2066327055
       Elevator_Door_Right: -61675992
