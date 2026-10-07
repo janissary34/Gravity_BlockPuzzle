@@ -243,6 +243,12 @@ namespace GravityPuzzle.Gameplay.Tutorial
 
         private void StartPending(BoosterRewardConfig config)
         {
+            // A required-use tutorial must always have one consumable use.
+            // This also repairs saves created by older builds where the
+            // tutorial state was persisted before its inventory grant.
+            if (BoosterInventoryRuntime.Current.GetCount(config.BoosterType) <= 0)
+                BoosterInventoryRuntime.Current.Grant(config.BoosterType, 1);
+
             if (config.BoosterType != BoosterRewardType.FreezeTimer &&
                 !HasResolvableTarget(config))
             {

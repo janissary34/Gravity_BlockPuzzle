@@ -246,8 +246,11 @@ namespace GravityPuzzle
         {
             if (button != null)
             {
+                bool isAvailableInCurrentContext = !hasBoosterType ||
+                                                   BoosterInventoryRuntime.Current.IsUnlocked(boosterType) ||
+                                                   GravityLevelRuntime.IsEditorLevelPreview;
                 button.interactable = HasUses &&
-                                      (!hasBoosterType || BoosterInventoryRuntime.Current.IsUnlocked(boosterType));
+                                      isAvailableInCurrentContext;
             }
         }
 

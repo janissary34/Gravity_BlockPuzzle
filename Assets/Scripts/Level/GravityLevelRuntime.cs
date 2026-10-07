@@ -272,8 +272,7 @@ namespace GravityPuzzle
                     shredderConfig.FinalPieceTimerGraceSeconds);
             CreateShredders(level, halfHeight, shredderConfig);
 
-            foreach (ObstacleDefinition obstacle in level.obstacles)
-                CreateObstacle(level, obstacle);
+            CreateObstacles(level);
 
             foreach (PinDefinition pin in level.pins)
                 CreatePin(level, pin);
@@ -1193,10 +1192,18 @@ namespace GravityPuzzle
                 shredderConfig.CaptureApproachDistance);
         }
 
-        private static void CreateObstacle(GravityLevelDefinition level, ObstacleDefinition obstacle)
+        private static void CreateObstacles(GravityLevelDefinition level)
         {
-            if (obstacle.usesGridCells)
+            Dictionary<Vector2Int, Color> visualCells = new Dictionary<Vector2Int, Color>();
+            for (int obstacleIndex = 0; obstacleIndex < level.obstacles.Count; obstacleIndex++)
             {
+                ObstacleDefinition obstacle = level.obstacles[obstacleIndex];
+                if (!obstacle.usesGridCells)
+                {
+                    CreateLegacyObstacle(level, obstacle);
+                    continue;
+                }
+
                 Vector2Int authoredSize = new Vector2Int(
                     Mathf.Max(1, obstacle.sizeInGridCells.x),
                     Mathf.Max(1, obstacle.sizeInGridCells.y));
@@ -1206,21 +1213,193 @@ namespace GravityPuzzle
                 Vector2 centre = new Vector2(
                     -level.boardColumns * .5f + obstacle.gridCell.x + rotatedSize.x * .5f,
                     -level.boardRows * .5f + obstacle.gridCell.y + rotatedSize.y * .5f);
+
+                // Keep collision ownership on the established static-block
+                // path while presentation is rendered once per connected
+                // component below. The transparent renderer is presentation-
+                // inert and avoids creating a second collider authority.
                 PrototypeBootstrap.CreateStaticBlock(
-                    obstacle.name,
+                    obstacle.name + " Collision",
                     centre,
                     rotatedSize,
-                    obstacle.color,
-                    false,
+                    Color.clear,
+                    false);
+
+                for (int y = 0; y < rotatedSize.y; y++)
+                for (int x = 0; x < rotatedSize.x; x++)
+                {
+                    Vector2Int cell = obstacle.gridCell + new Vector2Int(x, y);
+                    if (!visualCells.ContainsKey(cell))
+                        visualCells.Add(cell, obstacle.color);
+                }
+            }
+
+            CreateMergedObstacleVisuals(level, visualCells);
+        }
+
+        private static void CreateMergedObstacleVisuals(
+            GravityLevelDefinition level,
+            Dictionary<Vector2Int, Color> visualCells)
+        {
+            HashSet<Vector2Int> remaining = new HashSet<Vector2Int>(visualCells.Keys);
+            List<Vector2Int> queue = new List<Vector2Int>();
+            List<Vector2Int> component = new List<Vector2Int>();
+            while (remaining.Count > 0)
+            {
+                Vector2Int seed = default;
+                foreach (Vector2Int candidate in remaining)
+                {
+                    seed = candidate;
+                    break;
+                }
+
+                queue.Clear();
+                component.Clear();
+                queue.Add(seed);
+                remaining.Remove(seed);
+                Color componentColor = visualCells[seed];
+                for (int queueIndex = 0; queueIndex < queue.Count; queueIndex++)
+                {
+                    Vector2Int cell = queue[queueIndex];
+                    component.Add(cell);
+                    AddConnectedObstacleCell(
+                        cell + Vector2Int.left,
+                        componentColor,
+                        visualCells,
+                        remaining,
+                        queue);
+                    AddConnectedObstacleCell(
+                        cell + Vector2Int.right,
+                        componentColor,
+                        visualCells,
+                        remaining,
+                        queue);
+                    AddConnectedObstacleCell(
+                        cell + Vector2Int.up,
+                        componentColor,
+                        visualCells,
+                        remaining,
+                        queue);
+                    AddConnectedObstacleCell(
+                        cell + Vector2Int.down,
+                        componentColor,
+                        visualCells,
+                        remaining,
+                        queue);
+                }
+
+                CreateMergedObstacleVisual(level, component, componentColor);
+            }
+        }
+
+        private static void AddConnectedObstacleCell(
+            Vector2Int cell,
+            Color componentColor,
+            Dictionary<Vector2Int, Color> visualCells,
+            HashSet<Vector2Int> remaining,
+            List<Vector2Int> queue)
+        {
+            if (!remaining.Contains(cell) ||
+                !visualCells.TryGetValue(cell, out Color cellColor) ||
+                cellColor != componentColor)
+                return;
+
+            remaining.Remove(cell);
+            queue.Add(cell);
+        }
+
+        private static void CreateMergedObstacleVisual(
+            GravityLevelDefinition level,
+            List<Vector2Int> cells,
+            Color color)
+        {
+            if (cells == null || cells.Count == 0)
+                return;
+
+            Vector2Int minimum = cells[0];
+            Vector2Int maximum = cells[0];
+            for (int index = 1; index < cells.Count; index++)
+            {
+                minimum = Vector2Int.Min(minimum, cells[index]);
+                maximum = Vector2Int.Max(maximum, cells[index]);
+            }
+
+            Sprite shapeSprite = null;
+            string shapeKey = BuildNormalizedShapeKey(cells, minimum);
+            if (configuredBoardPresentationConfig != null)
+                configuredBoardPresentationConfig.TryGetStaticBlockShape(shapeKey, out shapeSprite);
+
+            Vector2Int boundsSize = maximum - minimum + Vector2Int.one;
+            bool isSolidRectangle = cells.Count == boundsSize.x * boundsSize.y;
+            if (shapeSprite != null || isSolidRectangle)
+            {
+                Sprite sprite = shapeSprite != null
+                    ? shapeSprite
+                    : configuredBoardPresentationConfig != null
+                        ? configuredBoardPresentationConfig.StaticBlockSprite
+                        : null;
+                Vector2 centre = new Vector2(
+                    -level.boardColumns * .5f + minimum.x + boundsSize.x * .5f,
+                    -level.boardRows * .5f + minimum.y + boundsSize.y * .5f);
+                PrototypeBootstrap.CreateVisualBlock(
+                    "Merged Obstacle Visual",
+                    centre,
+                    boundsSize,
+                    color,
                     configuredBoardPresentationConfig != null
                         ? configuredBoardPresentationConfig.BoardBlockMaterial
                         : null,
-                    configuredBoardPresentationConfig != null
-                        ? configuredBoardPresentationConfig.StaticBlockSprite
-                        : null);
+                    0,
+                    sprite,
+                    sprite != null);
                 return;
             }
 
+            // The map atlas does not yet cover every possible authored
+            // topology. Preserve its exact footprint until art supplies that
+            // silhouette; known shapes above remain a single renderer.
+            for (int index = 0; index < cells.Count; index++)
+            {
+                PrototypeBootstrap.CreateVisualBlock(
+                    "Obstacle Visual",
+                    GridCellWorldPosition(level, cells[index]),
+                    Vector2.one,
+                    color,
+                    configuredBoardPresentationConfig != null
+                        ? configuredBoardPresentationConfig.BoardBlockMaterial
+                        : null,
+                    0,
+                    configuredBoardPresentationConfig != null
+                        ? configuredBoardPresentationConfig.StaticBlockSprite
+                        : null,
+                    configuredBoardPresentationConfig != null &&
+                    configuredBoardPresentationConfig.StaticBlockSprite != null);
+            }
+        }
+
+        private static string BuildNormalizedShapeKey(
+            List<Vector2Int> cells,
+            Vector2Int minimum)
+        {
+            List<Vector2Int> normalizedCells = new List<Vector2Int>(cells.Count);
+            for (int index = 0; index < cells.Count; index++)
+                normalizedCells.Add(cells[index] - minimum);
+
+            normalizedCells.Sort((left, right) =>
+            {
+                int rowComparison = left.y.CompareTo(right.y);
+                return rowComparison != 0 ? rowComparison : left.x.CompareTo(right.x);
+            });
+
+            List<string> entries = new List<string>(normalizedCells.Count);
+            for (int index = 0; index < normalizedCells.Count; index++)
+                entries.Add(normalizedCells[index].x + "," + normalizedCells[index].y);
+
+            return string.Join(";", entries);
+        }
+
+        private static void CreateLegacyObstacle(GravityLevelDefinition level, ObstacleDefinition obstacle)
+        {
             Vector2Int fineSize = obstacle.quarterTurns % 2 == 0
                 ? obstacle.sizeInFineCells
                 : new Vector2Int(obstacle.sizeInFineCells.y, obstacle.sizeInFineCells.x);

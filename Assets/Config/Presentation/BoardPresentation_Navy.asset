@@ -18,6 +18,43 @@ MonoBehaviour:
   environmentBackdropMaterial: {fileID: 2100000, guid: 8393891fdbdf84e91990a0fcc91a9dd1, type: 2}
   boardBlockMaterial: {fileID: 2100000, guid: 2665f8a87af3146a29a80009bc5536ac, type: 2}
   staticBlockSprite: {fileID: 331641077, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  staticBlockShapes:
+  - shapeKey: 0,0
+    sprite: {fileID: 331641077, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;0,1
+    sprite: {fileID: 1655970616, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0
+    sprite: {fileID: 466977773, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;0,1
+    sprite: {fileID: 1305172143, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;0,1;1,1
+    sprite: {fileID: 312696800, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 1,0;0,1;1,1
+    sprite: {fileID: 1740514513, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;1,1
+    sprite: {fileID: -1151075137, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;0,1;1,1
+    sprite: {fileID: -120008594, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 2,0;0,1;1,1;2,1
+    sprite: {fileID: 890146513, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;0,1;1,1;2,1
+    sprite: {fileID: -503434636, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;2,0;0,1
+    sprite: {fileID: -854125864, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;2,0;2,1
+    sprite: {fileID: -73249555, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;1,1;1,2
+    sprite: {fileID: 955120991, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;0,1;0,2
+    sprite: {fileID: 2066327055, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;0,1;1,1;0,2
+    sprite: {fileID: -933377669, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 1,0;0,1;1,1;1,2
+    sprite: {fileID: 395582235, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 1,0;0,1;1,1;2,1
+    sprite: {fileID: 75189599, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;2,0;1,1
+    sprite: {fileID: -1067627346, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   gridDarkMaterial: {fileID: 2100000, guid: 7dc4f486ef1b84902a01b2c752089bc9, type: 2}
   gridLightMaterial: {fileID: 2100000, guid: 7be1e4d4450eb48d3b039f8b4e663a98, type: 2}
   gridSprite: {fileID: 494014031, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}

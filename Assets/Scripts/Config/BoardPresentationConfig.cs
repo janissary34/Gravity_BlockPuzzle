@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace GravityPuzzle.Config
@@ -20,6 +22,8 @@ namespace GravityPuzzle.Config
         [SerializeField] private Material boardBlockMaterial;
         [Tooltip("Base map-atlas module for static gameplay blocks. It is scaled to the authored grid footprint until a dedicated obstacle silhouette is supplied.")]
         [SerializeField] private Sprite staticBlockSprite;
+        [Tooltip("Whole map-atlas silhouettes keyed by normalized occupied board cells. Adjacent obstacle cells use these instead of rendering separate 1x1 modules.")]
+        [SerializeField] private List<BoardShapeVisualDefinition> staticBlockShapes = new List<BoardShapeVisualDefinition>();
         [Tooltip("Material used by the darker checker-grid cells.")]
         [SerializeField] private Material gridDarkMaterial;
         [Tooltip("Material used by the lighter checker-grid cells.")]
@@ -66,6 +70,28 @@ namespace GravityPuzzle.Config
         public float TopCornerHorizontalInset => Mathf.Max(0f, topCornerHorizontalInset);
         public float TopCornerVerticalInset => Mathf.Max(0f, topCornerVerticalInset);
 
+        public bool TryGetStaticBlockShape(string shapeKey, out Sprite sprite)
+        {
+            if (staticBlockShapes == null)
+            {
+                sprite = null;
+                return false;
+            }
+
+            for (int index = 0; index < staticBlockShapes.Count; index++)
+            {
+                BoardShapeVisualDefinition definition = staticBlockShapes[index];
+                if (definition.ShapeKey == shapeKey && definition.Sprite != null)
+                {
+                    sprite = definition.Sprite;
+                    return true;
+                }
+            }
+
+            sprite = null;
+            return false;
+        }
+
         public Material GetGridMaterial(bool alternateCell)
         {
             return alternateCell ? gridLightMaterial : gridDarkMaterial;
@@ -95,6 +121,16 @@ namespace GravityPuzzle.Config
                     return null;
             }
         }
+    }
+
+    [Serializable]
+    public struct BoardShapeVisualDefinition
+    {
+        [SerializeField] private string shapeKey;
+        [SerializeField] private Sprite sprite;
+
+        public string ShapeKey => shapeKey;
+        public Sprite Sprite => sprite;
     }
 
     public enum BoardFrameEdge

@@ -1530,11 +1530,10 @@ namespace GravityPuzzle
                                    !revealAreaCoordinator.HasPendingRevealContent;
                 if (!boardClearCompletionPending && !HasRemainingBoardPieces() && revealReady)
                 {
-                    // The board model owns completion. A piece that entered
-                    // shredding has already left the authoritative grid, so
-                    // its pooled root must not keep the authoritative board
-                    // alive. Its reward flight still has to reach the HUD
-                    // before the result presentation is allowed to begin.
+                    // Completion starts only after the final shredder feed has
+                    // fully released its pooled piece. Shredding is an active
+                    // lifecycle state: its feed still owns renderer clipping,
+                    // progress scheduling, audio and the Despawn transition.
                     boardClearCompletionPending = true;
                     progress?.CompleteForBoardClear();
                 }
@@ -1614,7 +1613,7 @@ namespace GravityPuzzle
                 if (model == null)
                     continue;
 
-                if (model.State != PieceState.Shredding && model.State != PieceState.Despawned)
+                if (model.State != PieceState.Despawned)
                     return true;
             }
 

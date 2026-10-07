@@ -954,7 +954,10 @@ namespace GravityPuzzle.Gameplay.Pieces
                 }
             }
 
-            modules.Sort(System.StringComparer.Ordinal);
+            // BuildShapeKey in the atlas authoring tool records cells in
+            // bottom-to-top row order. Preserve that canonical order here;
+            // lexicographic string sorting would place "0,1" before "1,0"
+            // and make valid L/T silhouettes miss their authored sprite.
             shapeKey = modules.Count > 0 ? string.Join(";", modules) : null;
             return !string.IsNullOrEmpty(shapeKey);
         }
