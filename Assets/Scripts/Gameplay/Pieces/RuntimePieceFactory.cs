@@ -835,7 +835,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             piece.ConfigureWholePiecePresentation(
                 visual.NormalSprite,
                 visual.IceSprite,
-                transform);
+                transform,
+                visual.PreferModularIce);
         }
 
         /// <summary>

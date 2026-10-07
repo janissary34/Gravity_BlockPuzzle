@@ -34,6 +34,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
     public static class BoosterFirstUseTutorialProgress
     {
         private const string KeyPrefix = "GravityPuzzle.BoosterFirstUse.";
+        private const string InventoryRepairKeyPrefix = "GravityPuzzle.BoosterFirstUse.InventoryRepair.";
 
         public static BoosterFirstUseTutorialState GetState(BoosterRewardConfig config)
         {
@@ -62,6 +63,29 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 return;
 
             PlayerPrefs.DeleteKey(GetKey(config));
+            PlayerPrefs.DeleteKey(GetInventoryRepairKey(config));
+            PlayerPrefs.Save();
+        }
+
+        /// <summary>
+        /// Repairs saves produced before the first-use reward and persistent
+        /// inventory became one transaction. The marker makes this migration
+        /// idempotent: a legitimately consumed booster is never replenished on
+        /// every level load.
+        /// </summary>
+        public static void RepairMissingInitialInventory(BoosterRewardConfig config)
+        {
+            if (config == null || GetState(config) == BoosterFirstUseTutorialState.NotStarted)
+                return;
+
+            string repairKey = GetInventoryRepairKey(config);
+            if (PlayerPrefs.GetInt(repairKey, 0) == 1)
+                return;
+
+            if (BoosterInventoryRuntime.Current.GetCount(config.BoosterType) <= 0)
+                BoosterInventoryRuntime.Current.Grant(config.BoosterType, 1);
+
+            PlayerPrefs.SetInt(repairKey, 1);
             PlayerPrefs.Save();
         }
 
@@ -71,6 +95,14 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 ? config.BoosterType.ToString()
                 : config.TutorialId;
             return KeyPrefix + id + "." + config.BoosterType;
+        }
+
+        private static string GetInventoryRepairKey(BoosterRewardConfig config)
+        {
+            string id = string.IsNullOrWhiteSpace(config.TutorialId)
+                ? config.BoosterType.ToString()
+                : config.TutorialId;
+            return InventoryRepairKeyPrefix + id + "." + config.BoosterType;
         }
     }
 
@@ -156,7 +188,10 @@ namespace GravityPuzzle.Gameplay.Tutorial
 
             BoosterFirstUseTutorialState persisted = BoosterFirstUseTutorialProgress.GetState(config);
             if (persisted == BoosterFirstUseTutorialState.Completed)
+            {
+                BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
                 return;
+            }
 
             if (persisted == BoosterFirstUseTutorialState.NotStarted)
             {
@@ -175,8 +210,12 @@ namespace GravityPuzzle.Gameplay.Tutorial
             for (int index = 0; index < configs.Length; index++)
             {
                 BoosterRewardConfig config = configs[index];
-                if (config == null || !Supports(config.BoosterType) ||
-                    BoosterFirstUseTutorialProgress.GetState(config) != BoosterFirstUseTutorialState.PendingRequiredUse)
+                if (config == null || !Supports(config.BoosterType))
+                    continue;
+
+                BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
+                if (BoosterFirstUseTutorialProgress.GetState(config) !=
+                    BoosterFirstUseTutorialState.PendingRequiredUse)
                     continue;
 
                 StartPending(config);

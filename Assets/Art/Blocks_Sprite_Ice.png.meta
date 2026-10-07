@@ -626,6 +626,27 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Ice_1X1
+      rect:
+        serializedVersion: 2
+        x: 1861
+        y: 1181
+        width: 155
+        height: 155
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8f30d9fc618a45b1b20f137fa5bca0d9
+      internalID: 2084758471
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -637,6 +658,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
+      Ice_1X1: 2084758471
       Ice_1X2_I: 453979135
       Ice_2X1_I: -160595345
       Ice_2X2_A: -982191573

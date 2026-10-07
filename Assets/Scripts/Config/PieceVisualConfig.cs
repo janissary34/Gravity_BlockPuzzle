@@ -177,10 +177,13 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite normalSprite;
         [Tooltip("Optional. When missing, frozen pieces use the modular brick-and-frost fallback rather than this normal silhouette.")]
         [SerializeField] private Sprite iceSprite;
+        [Tooltip("Keeps frozen presentation on full-size 1x1 brick modules instead of covering the shape with an opaque ice silhouette. Use for structures whose per-cell stud detail must remain visible.")]
+        [SerializeField] private bool preferModularIce;
 
         public string ShapeKey => shapeKey;
         public Sprite NormalSprite => normalSprite;
         public Sprite IceSprite => iceSprite;
+        public bool PreferModularIce => preferModularIce;
     }
 
     /// <summary>

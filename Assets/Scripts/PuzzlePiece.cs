@@ -130,6 +130,7 @@ namespace GravityPuzzle
         private SpriteRenderer wholePieceRenderer;
         private Sprite wholePieceNormalSprite;
         private Sprite wholePieceIceSprite;
+        private bool preferModularIcePresentation;
         private PieceShapeVisualTransform wholePieceTransform = PieceShapeVisualTransform.Identity;
         private Transform iceSlotsRoot;
         private readonly List<PiecePartSlot> partSlots = new List<PiecePartSlot>();
@@ -391,11 +392,13 @@ namespace GravityPuzzle
         public void ConfigureWholePiecePresentation(
             Sprite normalSprite,
             Sprite iceSprite,
-            PieceShapeVisualTransform transform)
+            PieceShapeVisualTransform transform,
+            bool preferModularIce = false)
         {
             ClearIceVisuals();
             wholePieceNormalSprite = normalSprite;
             wholePieceIceSprite = iceSprite;
+            preferModularIcePresentation = preferModularIce;
             wholePieceTransform = transform;
             RefreshWholePiecePresentation();
             PrototypeBoard board = PrototypeBoard.Active;
@@ -406,6 +409,7 @@ namespace GravityPuzzle
         {
             wholePieceNormalSprite = null;
             wholePieceIceSprite = null;
+            preferModularIcePresentation = false;
             wholePieceTransform = PieceShapeVisualTransform.Identity;
             if (wholePieceRenderer != null)
             {
@@ -1285,7 +1289,9 @@ namespace GravityPuzzle
             RefreshWholePiecePresentation();
             if (shouldBeFrozen)
             {
-                if (iceRenderers.Count == 0 && wholePieceIceSprite == null)
+                if (!preferModularIcePresentation &&
+                    iceRenderers.Count == 0 &&
+                    wholePieceIceSprite == null)
                     BuildIceVisuals();
 
                 int remainingCount = frozenUntilDestroyedCount - destroyedPieceCount;
@@ -1994,10 +2000,10 @@ namespace GravityPuzzle
             if (collisionCellVisuals == null)
                 return;
 
-            // Scene_Tuna's new ice atlas intentionally has no generic 1x1
-            // sprite. A neutral square preserves the current brick's lighting
-            // beneath a frost layer without duplicating the brick image (which
-            // used to produce doubled outlines on fragment shapes).
+            // A dedicated 1x1 overlay keeps modular frozen shapes on the same
+            // new atlas as whole silhouettes. When it is assigned it already
+            // contains the complete ice treatment, so a second frost layer
+            // would wash out the sprite and duplicate its rim.
             Sprite frostOverlay = iceOverlaySprite != null
                 ? iceOverlaySprite
                 : PrototypeBootstrap.GetSquareSprite();
@@ -2014,6 +2020,9 @@ namespace GravityPuzzle
                     iceOverlayTint,
                     source.sortingOrder + 5,
                     frostOverlay);
+                if (iceOverlaySprite != null)
+                    continue;
+
                 CreateIceLayer(
                     source,
                     "Ice Frost",
@@ -2395,6 +2404,27 @@ namespace GravityPuzzle
                 }
             }
 
+            // Modular ice intentionally uses the four full-size brick cells
+            // themselves so their sixteen stud details remain visible. Those
+            // cells are also the correct bounds owner for crack/break VFX.
+            if (!hasIceVisual && preferModularIcePresentation && collisionCellVisuals != null)
+            {
+                for (int index = 0; index < collisionCellVisuals.Count; index++)
+                {
+                    SpriteRenderer visual = collisionCellVisuals[index];
+                    if (visual == null || !visual.enabled)
+                        continue;
+
+                    if (hasIceVisual)
+                        combinedBounds.Encapsulate(visual.bounds);
+                    else
+                    {
+                        combinedBounds = visual.bounds;
+                        hasIceVisual = true;
+                    }
+                }
+            }
+
             return hasIceVisual ? combinedBounds.center : transform.position;
         }
 
@@ -2422,6 +2452,19 @@ namespace GravityPuzzle
 
                 sortingLayerId = renderer.sortingLayerID;
                 sortingOrder = Mathf.Max(sortingOrder, renderer.sortingOrder + 1);
+            }
+
+            if (preferModularIcePresentation && collisionCellVisuals != null)
+            {
+                for (int index = 0; index < collisionCellVisuals.Count; index++)
+                {
+                    SpriteRenderer renderer = collisionCellVisuals[index];
+                    if (renderer == null || !renderer.enabled)
+                        continue;
+
+                    sortingLayerId = renderer.sortingLayerID;
+                    sortingOrder = Mathf.Max(sortingOrder, renderer.sortingOrder + 1);
+                }
             }
         }
 
@@ -2454,9 +2497,12 @@ namespace GravityPuzzle
                 collisionCellVisuals.Count == 0)
                 return;
 
-            Sprite sprite = IsFrozen && wholePieceIceSprite != null
+            bool useModularIce = IsFrozen && preferModularIcePresentation;
+            Sprite sprite = IsFrozen && wholePieceIceSprite != null && !useModularIce
                 ? wholePieceIceSprite
                 : wholePieceNormalSprite;
+            if (useModularIce)
+                sprite = null;
             if (sprite == null)
             {
                 wholePieceRenderer.enabled = false;

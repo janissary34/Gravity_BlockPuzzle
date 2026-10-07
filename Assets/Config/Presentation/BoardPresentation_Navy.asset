@@ -13,11 +13,13 @@ MonoBehaviour:
   m_Name: BoardPresentation_Navy
   m_EditorClassIdentifier: 
   overrideLevelBackground: 1
-  backgroundColor: {r: 0.035, g: 0.055, b: 0.13, a: 1}
-  alternateBackgroundColor: {r: 0.085, g: 0.115, b: 0.22, a: 1}
+  backgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
+  alternateBackgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
+  environmentTint: {r: 0.78, g: 0.78, b: 0.78, a: 1}
   environmentBackdropMaterial: {fileID: 2100000, guid: 8393891fdbdf84e91990a0fcc91a9dd1, type: 2}
-  boardBlockMaterial: {fileID: 2100000, guid: 2665f8a87af3146a29a80009bc5536ac, type: 2}
+  boardBlockMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
   staticBlockSprite: {fileID: 331641077, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  staticBlockTint: {r: 0.16777663, g: 0.15045391, b: 0.46226418, a: 1}
   staticBlockShapes:
   - shapeKey: 0,0
     sprite: {fileID: 331641077, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
@@ -58,6 +60,10 @@ MonoBehaviour:
   gridDarkMaterial: {fileID: 2100000, guid: 7dc4f486ef1b84902a01b2c752089bc9, type: 2}
   gridLightMaterial: {fileID: 2100000, guid: 7be1e4d4450eb48d3b039f8b4e663a98, type: 2}
   gridSprite: {fileID: 494014031, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  gridDarkTint: {r: 0.72, g: 0.72, b: 0.78, a: 1}
+  gridLightTint: {r: 0.82, g: 0.82, b: 0.88, a: 1}
+  extendPresentationToViewportBottom: 1
+  viewportBottomPadding: 0.35
   cameraSizeMultiplier: 1.2
   topEdge: {fileID: 1112318756, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bottomEdge: {fileID: -448638201, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}

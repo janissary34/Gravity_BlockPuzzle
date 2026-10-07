@@ -416,6 +416,7 @@ namespace GravityPuzzle
             float fineCellSize = 1f / level.subdivisions;
 
             CreateEnvironmentBackdrop(background.transform, level);
+            CreateLowerScreenBackground(background.transform, level);
 
             for (int boardY = 0; boardY < level.boardRows; boardY++)
             {
@@ -427,7 +428,9 @@ namespace GravityPuzzle
                         : alternate;
                     bool isAlternateCell = (boardX + boardY) % 2 != 0;
                     Material gridMaterial = GetGridMaterial(isAlternateCell);
-                    Color presentationColor = gridMaterial != null ? Color.white : color;
+                    Color presentationColor = configuredBoardPresentationConfig != null
+                        ? configuredBoardPresentationConfig.GetGridTint(isAlternateCell)
+                        : color;
 
                     if (IsBoardCellFullyActive(level, boardCell))
                     {
@@ -481,7 +484,24 @@ namespace GravityPuzzle
                 "Board Environment Backdrop",
                 Vector2.zero,
                 new Vector2(level.boardColumns, level.boardRows),
-                Color.white,
+                configuredBoardPresentationConfig.EnvironmentTint,
+                configuredBoardPresentationConfig.EnvironmentBackdropMaterial,
+                -11);
+            backdrop.transform.SetParent(parent, true);
+        }
+
+        private static void CreateLowerScreenBackground(Transform parent, GravityLevelDefinition level)
+        {
+            float extension = ResolveLowerPresentationExtent(level);
+            if (extension <= .001f || configuredBoardPresentationConfig == null)
+                return;
+
+            float halfHeight = level.boardRows * .5f;
+            GameObject backdrop = PrototypeBootstrap.CreateVisualBlock(
+                "Lower Environment Backdrop",
+                new Vector2(0f, -halfHeight - extension * .5f),
+                new Vector2(level.boardColumns, extension),
+                configuredBoardPresentationConfig.EnvironmentTint,
                 configuredBoardPresentationConfig.EnvironmentBackdropMaterial,
                 -11);
             backdrop.transform.SetParent(parent, true);
@@ -577,8 +597,54 @@ namespace GravityPuzzle
                 BoardFrameEdge.Right,
                 ref edgeIndex);
             CreateOuterFrameCorners(frameRoot.transform, level, fineCellSize, thickness, ref edgeIndex);
+            CreateLowerFrameContinuation(frameRoot.transform, level, thickness, ref edgeIndex);
 
             CreateMapCollisionBlocks(level, exitWidth, fineCellSize);
+        }
+
+        private static void CreateLowerFrameContinuation(
+            Transform frameRoot,
+            GravityLevelDefinition level,
+            float thickness,
+            ref int edgeIndex)
+        {
+            float extension = ResolveLowerPresentationExtent(level);
+            float visibleLength = extension - thickness * .5f;
+            if (visibleLength <= .001f)
+                return;
+
+            float halfWidth = level.boardColumns * .5f;
+            float halfHeight = level.boardRows * .5f;
+            float top = -halfHeight - thickness * .5f;
+            float bottom = top - visibleLength;
+            float centreY = (top + bottom) * .5f;
+            CreateFrameEdge(
+                frameRoot,
+                $"Lower Frame Edge {++edgeIndex}",
+                new Vector2(-halfWidth - thickness * .5f, centreY),
+                new Vector2(thickness, visibleLength),
+                level.frameColor,
+                BoardFrameEdge.Left);
+            CreateFrameEdge(
+                frameRoot,
+                $"Lower Frame Edge {++edgeIndex}",
+                new Vector2(halfWidth + thickness * .5f, centreY),
+                new Vector2(thickness, visibleLength),
+                level.frameColor,
+                BoardFrameEdge.Right);
+        }
+
+        private static float ResolveLowerPresentationExtent(GravityLevelDefinition level)
+        {
+            if (level == null || configuredBoardPresentationConfig == null ||
+                !configuredBoardPresentationConfig.ExtendPresentationToViewportBottom)
+                return 0f;
+
+            float halfHeight = level.boardRows * .5f;
+            return Mathf.Max(
+                0f,
+                ResolveCameraSize(level) - halfHeight +
+                configuredBoardPresentationConfig.ViewportBottomPadding);
         }
 
         private static void CreateHorizontalFrameRuns(
@@ -1223,14 +1289,15 @@ namespace GravityPuzzle
                     centre,
                     rotatedSize,
                     Color.clear,
-                    false);
+                    false,
+                    renderVisual: false);
 
                 for (int y = 0; y < rotatedSize.y; y++)
                 for (int x = 0; x < rotatedSize.x; x++)
                 {
                     Vector2Int cell = obstacle.gridCell + new Vector2Int(x, y);
                     if (!visualCells.ContainsKey(cell))
-                        visualCells.Add(cell, obstacle.color);
+                        visualCells.Add(cell, ResolveStaticBlockColor(obstacle.color));
                 }
             }
 
@@ -1408,7 +1475,7 @@ namespace GravityPuzzle
                 obstacle.name,
                 CellWorldPosition(level, obstacle.centreCell),
                 worldSize,
-                obstacle.color,
+                ResolveStaticBlockColor(obstacle.color),
                 false,
                 configuredBoardPresentationConfig != null
                     ? configuredBoardPresentationConfig.BoardBlockMaterial
@@ -1416,6 +1483,13 @@ namespace GravityPuzzle
                 configuredBoardPresentationConfig != null
                     ? configuredBoardPresentationConfig.StaticBlockSprite
                     : null);
+        }
+
+        private static Color ResolveStaticBlockColor(Color authoredColor)
+        {
+            return configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.StaticBlockTint
+                : authoredColor;
         }
 
         private static void CreatePin(GravityLevelDefinition level, PinDefinition pin)

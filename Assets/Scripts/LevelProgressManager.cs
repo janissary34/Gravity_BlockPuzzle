@@ -114,6 +114,7 @@ namespace GravityPuzzle
         private Vector3 SliderPunchScale => tweenConfig.ProgressSliderPunchScale;
         private float ProgressVoxelCurveDropMultiplier => tweenConfig.ProgressVoxelCurveDropMultiplier;
         private float ProgressVoxelUiSize => tweenConfig.ProgressVoxelUiSize;
+        private int ProgressVoxelUiBurstCount => tweenConfig.ProgressVoxelUiBurstCount;
 
         public bool HasActiveFlyingVoxels => activeFlyingVoxelCount > 0;
         public bool HasPendingProgressPresentation => HasActiveFlyingVoxels ||
@@ -166,10 +167,8 @@ namespace GravityPuzzle
             hasTweenConfig = tweenConfig != null;
             if (!hasTweenConfig)
                 Debug.LogWarning("[LevelProgress] TweenConfig is missing; progress will update without tween presentation.", this);
-            ResolveActiveHudSlider();
-            EnsureSliderReference();
+            RefreshHudPresentationReferences();
             InitializeParticleVfxReference();
-            CachePresentationReferences();
             // The migrated HUD's prefab can retain an authored preview value.
             // Clear that presentation value before the first rendered frame;
             // the level runtime supplies the real denominator immediately
@@ -193,7 +192,7 @@ namespace GravityPuzzle
             if (IsActiveHudProgressSlider(progressSlider))
                 return;
 
-            if (activeHudCanvas == null || !activeHudCanvas.isActiveAndEnabled)
+            if (activeHudCanvas == null)
                 return;
 
             // Scene1 formerly pointed to the disabled Timer_Canvas slider. The
@@ -203,8 +202,7 @@ namespace GravityPuzzle
             for (int index = 0; index < sliders.Length; index++)
             {
                 Slider candidate = sliders[index];
-                if (candidate != null && candidate.isActiveAndEnabled &&
-                    candidate.gameObject.name == "UI_Progress_Slider")
+                if (candidate != null && candidate.gameObject.name == "UI_Progress_Slider")
                 {
                     progressSlider = candidate;
                     return;
@@ -216,21 +214,30 @@ namespace GravityPuzzle
             // visibly land away from the active HUD even when the bar itself
             // was updating correctly.
             progressSlider = null;
-            Debug.LogError("[LevelProgress] Active HUD Canvas has no enabled UI_Progress_Slider.", activeHudCanvas);
+            Debug.LogError("[LevelProgress] Active HUD Canvas has no authored UI_Progress_Slider.", activeHudCanvas);
         }
 
         private bool IsActiveHudProgressSlider(Slider slider)
         {
             return slider != null &&
                    activeHudCanvas != null &&
-                   activeHudCanvas.isActiveAndEnabled &&
-                   slider.isActiveAndEnabled &&
                    slider.gameObject.name == "UI_Progress_Slider" &&
                    slider.transform.IsChildOf(activeHudCanvas.transform);
         }
 
+        private void RefreshHudPresentationReferences()
+        {
+            ResolveActiveHudSlider();
+            EnsureSliderReference();
+            CachePresentationReferences();
+        }
+
         private void Start()
         {
+            // Scene reloads can run this manager's Awake before the HUD prefab
+            // has enabled its children. The serialized HUD root is authoritative,
+            // so refresh once more at Start without depending on active state.
+            RefreshHudPresentationReferences();
             mainCamera = PrototypeBootstrap.SceneCamera;
             if (mainCamera == null)
                 Debug.LogError("[LevelProgress] No gameplay camera is configured on Runtime Piece Factory Bootstrap.", this);
@@ -311,7 +318,7 @@ namespace GravityPuzzle
         /// </summary>
         public void InitializeLevelProgress()
         {
-            EnsureSliderReference();
+            RefreshHudPresentationReferences();
 
             hasAuthoredLevelTotal = false;
             authoredBlockUnits = 0;
@@ -321,7 +328,7 @@ namespace GravityPuzzle
 
         public void InitializeLevelProgress(GravityLevelDefinition level)
         {
-            EnsureSliderReference();
+            RefreshHudPresentationReferences();
             hasAuthoredLevelTotal = true;
             authoredBlockUnits = CountAuthoredPuzzlePieces(level);
             if (authoredBlockUnits <= 0)
@@ -525,7 +532,12 @@ namespace GravityPuzzle
                 }
             }
 
-            int count = Mathf.Max(1, flightCount);
+            // The authored particle count belongs to the single-draw-call world
+            // VFX. Mapping all of those particles to individual pooled UI Images
+            // exhausted the fallback pool as soon as several pieces reached the
+            // shredder together. Keep a small, readable HUD burst and distribute
+            // the same authoritative progress across it.
+            int count = Mathf.Clamp(flightCount, 1, ProgressVoxelUiBurstCount);
             float progressPerFlight = totalProgressAmount / count;
             for (int i = 0; i < count; i++)
                 SpawnFlyingVoxel(startWorldPos, voxelColor, progressPerFlight, null);

@@ -186,7 +186,8 @@ namespace GravityPuzzle
             Color color,
             bool roundCorners = true,
             Material presentationMaterial = null,
-            Sprite presentationSprite = null)
+            Sprite presentationSprite = null,
+            bool renderVisual = true)
         {
             GameObject block = CreateVisualBlock(
                 blockName,
@@ -196,7 +197,8 @@ namespace GravityPuzzle
                 presentationMaterial,
                 0,
                 presentationSprite,
-                presentationSprite != null);
+                presentationSprite != null,
+                renderVisual);
             BoxCollider2D collider = block.AddComponent<BoxCollider2D>();
             if (roundCorners)
                 RoundColliderCorners(collider, size);
@@ -235,7 +237,8 @@ namespace GravityPuzzle
             Material presentationMaterial = null,
             int sortingOrder = 0,
             Sprite presentationSprite = null,
-            bool fitSpriteToSize = false)
+            bool fitSpriteToSize = false,
+            bool renderVisual = true)
         {
             GameObject block = new GameObject(blockName);
             block.transform.position = position;
@@ -246,6 +249,7 @@ namespace GravityPuzzle
             renderer.color = color;
             renderer.sharedMaterial = presentationMaterial;
             renderer.sortingOrder = sortingOrder;
+            renderer.enabled = renderVisual;
 
             if (fitSpriteToSize && presentationSprite != null)
             {

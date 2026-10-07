@@ -33,11 +33,13 @@ namespace GravityPuzzle.Editor
             SerializedObject serializedConfig = new SerializedObject(config);
             SerializedProperty normalFallback = serializedConfig.FindProperty("normalFallbackSprite");
             normalFallback.objectReferenceValue = FindSprite(BrickAtlasPath, "BB_1X1");
-            // The ice atlas currently has no independently sliced 1x1 sprite.
-            // Leave this empty rather than stretching an unrelated silhouette.
-            // A missing ice sprite is valid: frozen pieces retain the normal
-            // silhouette and receive the configured ice overlay instead.
+            Sprite modularIceSprite = FindSprite(IceAtlasPath, "Ice_1X1");
+            // Modular frozen shapes keep their normal cell art underneath so
+            // thawing never requires rebuilding gameplay geometry. The new
+            // atlas cell is a temporary ice layer above those cells.
             serializedConfig.FindProperty("iceFallbackSprite").objectReferenceValue = null;
+            serializedConfig.FindProperty("iceOverlaySprite").objectReferenceValue = modularIceSprite;
+            serializedConfig.FindProperty("iceOverlayTint").colorValue = Color.white;
 
             SerializedProperty definitions = serializedConfig.FindProperty("shapeDefinitions");
             definitions.ClearArray();
@@ -54,6 +56,8 @@ namespace GravityPuzzle.Editor
                 definition.FindPropertyRelative("shapeKey").stringValue = pair.Key;
                 definition.FindPropertyRelative("normalSprite").objectReferenceValue = pair.Value;
                 definition.FindPropertyRelative("iceSprite").objectReferenceValue = iceSprite;
+                definition.FindPropertyRelative("preferModularIce").boolValue =
+                    pair.Key == "0,0;1,0;0,1;1,1";
             }
 
             serializedConfig.ApplyModifiedPropertiesWithoutUndo();

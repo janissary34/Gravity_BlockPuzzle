@@ -16,12 +16,16 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool overrideLevelBackground = true;
         [SerializeField] private Color backgroundColor = new Color(.035f, .055f, .13f, 1f);
         [SerializeField] private Color alternateBackgroundColor = new Color(.085f, .115f, .22f, 1f);
+        [Tooltip("Tint applied to the environment material behind the grid and below the board.")]
+        [SerializeField] private Color environmentTint = Color.white;
         [Tooltip("Material used behind the checker grid to give every generated board the authored environment base.")]
         [SerializeField] private Material environmentBackdropMaterial;
         [Tooltip("Material used by static board modules such as authored obstacles.")]
         [SerializeField] private Material boardBlockMaterial;
         [Tooltip("Base map-atlas module for static gameplay blocks. It is scaled to the authored grid footprint until a dedicated obstacle silhouette is supplied.")]
         [SerializeField] private Sprite staticBlockSprite;
+        [Tooltip("Shared tint for static gameplay obstacles. This keeps them in the same palette as the frame instead of retaining per-level placeholder colours.")]
+        [SerializeField] private Color staticBlockTint = Color.white;
         [Tooltip("Whole map-atlas silhouettes keyed by normalized occupied board cells. Adjacent obstacle cells use these instead of rendering separate 1x1 modules.")]
         [SerializeField] private List<BoardShapeVisualDefinition> staticBlockShapes = new List<BoardShapeVisualDefinition>();
         [Tooltip("Material used by the darker checker-grid cells.")]
@@ -30,6 +34,16 @@ namespace GravityPuzzle.Config
         [SerializeField] private Material gridLightMaterial;
         [Tooltip("Artist-authored grid tile from the map atlas. When empty, the legacy generated square is used.")]
         [SerializeField] private Sprite gridSprite;
+        [Tooltip("Designer-adjustable tint multiplied over the dark grid material.")]
+        [SerializeField] private Color gridDarkTint = Color.white;
+        [Tooltip("Designer-adjustable tint multiplied over the light grid material.")]
+        [SerializeField] private Color gridLightTint = Color.white;
+
+        [Header("Lower Screen Continuation")]
+        [Tooltip("Extends the solid environment background and side walls from the shredder to the bottom of the gameplay viewport.")]
+        [SerializeField] private bool extendPresentationToViewportBottom = true;
+        [Tooltip("Extra world-space coverage below the camera edge so aspect-ratio rounding cannot expose a seam.")]
+        [SerializeField, Min(0f)] private float viewportBottomPadding = .35f;
 
         [Header("Camera Framing")]
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
@@ -58,11 +72,17 @@ namespace GravityPuzzle.Config
         public bool OverrideLevelBackground => overrideLevelBackground;
         public Color BackgroundColor => backgroundColor;
         public Color AlternateBackgroundColor => alternateBackgroundColor;
+        public Color EnvironmentTint => environmentTint;
         public float CameraSizeMultiplier => Mathf.Max(1f, cameraSizeMultiplier);
         public Material EnvironmentBackdropMaterial => environmentBackdropMaterial;
         public Material BoardBlockMaterial => boardBlockMaterial;
         public Sprite StaticBlockSprite => staticBlockSprite;
+        public Color StaticBlockTint => staticBlockTint;
         public Sprite GridSprite => gridSprite;
+        public Color GridDarkTint => gridDarkTint;
+        public Color GridLightTint => gridLightTint;
+        public bool ExtendPresentationToViewportBottom => extendPresentationToViewportBottom;
+        public float ViewportBottomPadding => Mathf.Max(0f, viewportBottomPadding);
         public bool RenderBottomEdgeSegments => renderBottomEdgeSegments;
         public Material FrameMaterial => frameMaterial;
         public Color FrameTint => frameTint;
@@ -95,6 +115,11 @@ namespace GravityPuzzle.Config
         public Material GetGridMaterial(bool alternateCell)
         {
             return alternateCell ? gridLightMaterial : gridDarkMaterial;
+        }
+
+        public Color GetGridTint(bool alternateCell)
+        {
+            return alternateCell ? gridLightTint : gridDarkTint;
         }
 
         public Sprite GetEdgeSprite(BoardFrameEdge edge)
