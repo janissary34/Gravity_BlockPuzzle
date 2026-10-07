@@ -120,14 +120,20 @@ MonoBehaviour:
   - shapeKey: 0,0;0,1;1,1;1,2
     normalSprite: {fileID: 642778117, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: -1322214796, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+  - shapeKey: 0,0;1,0;2,0
+    normalSprite: {fileID: 21300000, guid: 631a6116a97ce4988b6252fe4d4321ff, type: 3}
+    iceSprite: {fileID: 0}
+  - shapeKey: 0,0;0,1;0,2
+    normalSprite: {fileID: 21300000, guid: c11cf64027ed341cda173d9442f29340, type: 3}
+    iceSprite: {fileID: 0}
   iceOverlaySprite: {fileID: 2084758471, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
   iceOverlayTint: {r: 1, g: 1, b: 1, a: 1}
   iceFrostTint: {r: 0.9, g: 0.98, b: 1, a: 0.32}
   bombOverlaySprite: {fileID: 21300000, guid: 0055f32440cd446adb05ef4e4b9aafd7, type: 3}
   bombOverlayFill: 1
-  restingOutlineWidth: 0.02
+  restingOutlineWidth: 0.001
   selectedOutlineWidth: 0.04
-  restingOutlineColor: {r: 0, g: 0, b: 0, a: 1}
+  restingOutlineColor: {r: 0, g: 0, b: 0, a: 0}
   selectedOutlineColor: {r: 1, g: 1, b: 1, a: 1}
   restingOutlineSortingOrder: 10
   selectedOutlineSortingOrder: 20

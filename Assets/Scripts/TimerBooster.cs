@@ -524,6 +524,10 @@ namespace GravityPuzzle
                 return;
 
             PrototypeBoard activeBoard = PrototypeBoard.Active;
+            bool isRequiredFirstUse = tutorialGate != null &&
+                                      tutorialGate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer);
+            if (isRequiredFirstUse && activeBoard != null && !activeBoard.IsTimerStarted)
+                activeBoard.StartTimer();
 
             // A Button can deliver its click through both a UnityEvent and an
             // IPointerClickHandler in the same frame. The board pause is an
@@ -839,8 +843,7 @@ namespace GravityPuzzle
             {
                 freeze.freezeDuration = effectiveDuration;
                 SubscribeToFreezeCompletion(freeze);
-                freeze.ActivateFreezeBooster();
-                if (freeze.IsFreezeActive)
+                if (freeze.ActivateFreezeFromPresentation())
                 {
                     // FreezeTimerBooster now owns the post-impact pause. Drop
                     // this sequence's owner without creating a timer gap.

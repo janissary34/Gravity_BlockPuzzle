@@ -251,7 +251,7 @@ namespace GravityPuzzle
 
             float halfHeight = level.boardRows * .5f;
             float cameraSize = ResolveCameraSize(level);
-            PrototypeBootstrap.ConfigureCamera(cameraSize, ResolveBoardBackgroundColor(level));
+            PrototypeBootstrap.ConfigureCamera(cameraSize, ResolveExteriorColor(level));
 
             PrototypeBoard boardState = configuredBoard;
             boardState.SetRemovalHeight(-halfHeight - 15f);
@@ -497,14 +497,37 @@ namespace GravityPuzzle
                 return;
 
             float halfHeight = level.boardRows * .5f;
+            Color bottomColor = configuredBoardPresentationConfig.LowerGradientTint;
+            bottomColor.a = 1f;
             GameObject backdrop = PrototypeBootstrap.CreateVisualBlock(
                 "Lower Environment Backdrop",
                 new Vector2(0f, -halfHeight - extension * .5f),
                 new Vector2(level.boardColumns, extension),
-                configuredBoardPresentationConfig.EnvironmentTint,
-                configuredBoardPresentationConfig.EnvironmentBackdropMaterial,
+                bottomColor,
+                configuredBoardPresentationConfig.BoardBlockMaterial,
                 -11);
             backdrop.transform.SetParent(parent, true);
+
+            int bandCount = configuredBoardPresentationConfig.LowerGradientBandCount;
+            float bandHeight = extension / bandCount;
+            Color topColor = configuredBoardPresentationConfig.ExteriorColor;
+            topColor.a = 1f;
+            for (int index = 0; index < bandCount; index++)
+            {
+                float normalizedDepth = (float)index / (bandCount - 1);
+                float smoothDepth = normalizedDepth * normalizedDepth * (3f - 2f * normalizedDepth);
+                Color bandTint = Color.Lerp(topColor, bottomColor, smoothDepth);
+
+                float centreY = -halfHeight - bandHeight * (index + .5f);
+                GameObject band = PrototypeBootstrap.CreateVisualBlock(
+                    $"Lower Gradient Band {index + 1}",
+                    new Vector2(0f, centreY),
+                    new Vector2(level.boardColumns, bandHeight + .015f),
+                    bandTint,
+                    configuredBoardPresentationConfig.BoardBlockMaterial,
+                    -10);
+                band.transform.SetParent(parent, true);
+            }
         }
 
         private static Material GetGridMaterial(bool isAlternateCell)
@@ -1112,6 +1135,14 @@ namespace GravityPuzzle
             return level != null ? level.backgroundColor : Color.black;
         }
 
+        private static Color ResolveExteriorColor(GravityLevelDefinition level)
+        {
+            if (configuredBoardPresentationConfig != null)
+                return configuredBoardPresentationConfig.ExteriorColor;
+
+            return ResolveBoardBackgroundColor(level);
+        }
+
         private static bool IsFineCellActive(GravityLevelDefinition level, Vector2Int cell)
         {
             if (cell.x < 0 || cell.y < 0 || cell.x >= level.FineColumns || cell.y >= level.FineRows)
@@ -1414,7 +1445,7 @@ namespace GravityPuzzle
                     boundsSize,
                     color,
                     configuredBoardPresentationConfig != null
-                        ? configuredBoardPresentationConfig.BoardBlockMaterial
+                        ? configuredBoardPresentationConfig.FrameMaterial
                         : null,
                     0,
                     sprite,
@@ -1433,7 +1464,7 @@ namespace GravityPuzzle
                     Vector2.one,
                     color,
                     configuredBoardPresentationConfig != null
-                        ? configuredBoardPresentationConfig.BoardBlockMaterial
+                        ? configuredBoardPresentationConfig.FrameMaterial
                         : null,
                     0,
                     configuredBoardPresentationConfig != null
@@ -1478,7 +1509,7 @@ namespace GravityPuzzle
                 ResolveStaticBlockColor(obstacle.color),
                 false,
                 configuredBoardPresentationConfig != null
-                    ? configuredBoardPresentationConfig.BoardBlockMaterial
+                    ? configuredBoardPresentationConfig.FrameMaterial
                     : null,
                 configuredBoardPresentationConfig != null
                     ? configuredBoardPresentationConfig.StaticBlockSprite
@@ -1488,7 +1519,7 @@ namespace GravityPuzzle
         private static Color ResolveStaticBlockColor(Color authoredColor)
         {
             return configuredBoardPresentationConfig != null
-                ? configuredBoardPresentationConfig.StaticBlockTint
+                ? configuredBoardPresentationConfig.FrameTint
                 : authoredColor;
         }
 

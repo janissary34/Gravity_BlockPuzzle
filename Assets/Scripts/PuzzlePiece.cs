@@ -654,6 +654,34 @@ namespace GravityPuzzle
             }
         }
 
+        /// <summary>
+        /// Resolves a point inside the rendered modular block and returns that
+        /// block's complete world footprint. Tutorial presentation uses this to
+        /// frame one authored block rather than one fine-grid subdivision.
+        /// </summary>
+        public bool TryGetTargetableCellAt(Vector2 worldPosition, out TargetableCell targetableCell)
+        {
+            targetableCell = default;
+            if (!TryGetCellIndexAt(worldPosition, out int targetIndex) ||
+                collisionCells == null || fullCollisionCellSizes == null ||
+                targetIndex < 0 || targetIndex >= collisionCells.Count ||
+                targetIndex >= fullCollisionCellSizes.Count)
+                return false;
+
+            BoxCollider2D cell = collisionCells[targetIndex];
+            if (cell == null)
+                return false;
+
+            Vector3 scale = cell.transform.lossyScale;
+            Vector2 localSize = fullCollisionCellSizes[targetIndex];
+            targetableCell = new TargetableCell(
+                cell.bounds.center,
+                new Vector2(
+                    localSize.x * Mathf.Abs(scale.x),
+                    localSize.y * Mathf.Abs(scale.y)));
+            return true;
+        }
+
         private void ApplyOutlinePresentation()
         {
             if (rootOutline != null)

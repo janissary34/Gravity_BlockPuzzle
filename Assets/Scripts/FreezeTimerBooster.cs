@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using GravityPuzzle.Presentation.Views;
 using GravityPuzzle.Config;
+using GravityPuzzle.Gameplay.Tutorial;
 using GravityPuzzle.Infrastructure.Services;
 
 namespace GravityPuzzle
@@ -96,30 +97,60 @@ namespace GravityPuzzle
         /// </summary>
         public void ActivateFreezeBooster()
         {
+            TryActivateFreeze(consumeInventory: true);
+        }
+
+        /// <summary>
+        /// Starts the authoritative freeze after TimerBooster has already
+        /// consumed the shared inventory use. Keeping that transaction in the
+        /// presentation owner prevents one button press from requiring two
+        /// inventory uses.
+        /// </summary>
+        public bool ActivateFreezeFromPresentation()
+        {
+            return TryActivateFreeze(consumeInventory: false);
+        }
+
+        private bool TryActivateFreeze(bool consumeInventory)
+        {
             SynchronizeLevel();
 
-            if (boundBoard == null || !HasUses || IsFreezeActive ||
+            bool isRequiredFirstUse = BoosterFirstUseTutorialRuntime.Gate != null &&
+                                      BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(
+                                          BoosterRewardType.FreezeTimer);
+            if (isRequiredFirstUse && boundBoard != null && !boundBoard.IsTimerStarted)
+                boundBoard.StartTimer();
+
+            if (boundBoard == null || (consumeInventory && !HasUses) || IsFreezeActive ||
                 LevelTimerUI.IsGameOver || !boundBoard.IsTimerActive || !boundBoard.IsTimerStarted ||
                 boundBoard.TimeRemaining <= 0f)
             {
                 RefreshButtonState();
-                return;
+                return false;
             }
 
             // Owner-based pausing means another system may already have paused
             // the timer. Releasing this boost later will not cancel that pause.
             if (!boundBoard.TryPauseTimer(this))
-                return;
+                return false;
 
             usedThisLevel = true;
-            if (boosterButtonRef == null &&
-                !BoosterInventoryRuntime.Current.TryConsume(BoosterRewardType.FreezeTimer))
+            if (consumeInventory &&
+                !TryConsumeInventoryUse())
             {
                 boundBoard.ResumeTimer(this);
-                return;
+                return false;
             }
             freezeRoutine = StartCoroutine(FreezeTimerRoutine(boundBoard));
             RefreshButtonState();
+            return true;
+        }
+
+        private bool TryConsumeInventoryUse()
+        {
+            return boosterButtonRef != null
+                ? boosterButtonRef.TryConsumeUse()
+                : BoosterInventoryRuntime.Current.TryConsume(BoosterRewardType.FreezeTimer);
         }
 
         private IEnumerator FreezeTimerRoutine(PrototypeBoard targetBoard)
@@ -197,13 +228,16 @@ namespace GravityPuzzle
             // removing them from the HUD. The whole button is also locked while
             // its timer-freeze sequence owns the board timer.
             bool hasUses = HasUses;
+            bool isRequiredFirstUse = BoosterFirstUseTutorialRuntime.Gate != null &&
+                                      BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(
+                                          BoosterRewardType.FreezeTimer);
             bool canInteract =
                 hasUses &&
                 !IsFreezeActive &&
                 boundBoard != null &&
                 !LevelTimerUI.IsGameOver &&
                 boundBoard.IsTimerActive &&
-                boundBoard.IsTimerStarted &&
+                (boundBoard.IsTimerStarted || isRequiredFirstUse) &&
                 boundBoard.TimeRemaining > 0f;
 
             if (buttonCanvasGroup != null)

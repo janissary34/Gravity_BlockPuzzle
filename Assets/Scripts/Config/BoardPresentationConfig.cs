@@ -16,6 +16,8 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool overrideLevelBackground = true;
         [SerializeField] private Color backgroundColor = new Color(.035f, .055f, .13f, 1f);
         [SerializeField] private Color alternateBackgroundColor = new Color(.085f, .115f, .22f, 1f);
+        [Tooltip("Solid colour outside the playable board. Match this to the dominant frame tone for a continuous environment.")]
+        [SerializeField] private Color exteriorColor = new Color(.047f, .032f, .321f, 1f);
         [Tooltip("Tint applied to the environment material behind the grid and below the board.")]
         [SerializeField] private Color environmentTint = Color.white;
         [Tooltip("Material used behind the checker grid to give every generated board the authored environment base.")]
@@ -44,6 +46,10 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool extendPresentationToViewportBottom = true;
         [Tooltip("Extra world-space coverage below the camera edge so aspect-ratio rounding cannot expose a seam.")]
         [SerializeField, Min(0f)] private float viewportBottomPadding = .35f;
+        [Tooltip("Darkest colour reached at the viewport bottom. The gradient begins at Exterior Color directly below the shredder.")]
+        [SerializeField] private Color lowerGradientTint = new Color(.01f, .015f, .09f, 1f);
+        [Tooltip("Number of static bands used to approximate the lower-screen gradient.")]
+        [SerializeField, Range(2, 48)] private int lowerGradientBandCount = 16;
 
         [Header("Camera Framing")]
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
@@ -72,6 +78,7 @@ namespace GravityPuzzle.Config
         public bool OverrideLevelBackground => overrideLevelBackground;
         public Color BackgroundColor => backgroundColor;
         public Color AlternateBackgroundColor => alternateBackgroundColor;
+        public Color ExteriorColor => exteriorColor;
         public Color EnvironmentTint => environmentTint;
         public float CameraSizeMultiplier => Mathf.Max(1f, cameraSizeMultiplier);
         public Material EnvironmentBackdropMaterial => environmentBackdropMaterial;
@@ -83,6 +90,8 @@ namespace GravityPuzzle.Config
         public Color GridLightTint => gridLightTint;
         public bool ExtendPresentationToViewportBottom => extendPresentationToViewportBottom;
         public float ViewportBottomPadding => Mathf.Max(0f, viewportBottomPadding);
+        public Color LowerGradientTint => lowerGradientTint;
+        public int LowerGradientBandCount => Mathf.Clamp(lowerGradientBandCount, 2, 48);
         public bool RenderBottomEdgeSegments => renderBottomEdgeSegments;
         public Material FrameMaterial => frameMaterial;
         public Color FrameTint => frameTint;

@@ -213,11 +213,19 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 if (config == null || !Supports(config.BoosterType))
                     continue;
 
-                BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
                 if (BoosterFirstUseTutorialProgress.GetState(config) !=
                     BoosterFirstUseTutorialState.PendingRequiredUse)
                     continue;
 
+                // A pending targeted lesson may survive a level restart or a
+                // later debug jump. Resume it only on a board that actually
+                // contains its authored target; otherwise it would block an
+                // unrelated level and surface a false missing-target error.
+                if (config.BoosterType != BoosterRewardType.FreezeTimer &&
+                    !HasResolvableTarget(config))
+                    continue;
+
+                BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
                 StartPending(config);
                 return;
             }
@@ -263,7 +271,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 return true;
 
             return TryGetExpectedHammerCell(target.Piece, out GridCoordinate expectedCell) &&
-                   target.Cell.Equals(expectedCell);
+                   IsSameAuthoredBlock(target.Cell, expectedCell);
         }
 
         public void NotifyEffectApplied(BoosterRewardType boosterType)
@@ -282,22 +290,22 @@ namespace GravityPuzzle.Gameplay.Tutorial
 
         private void StartPending(BoosterRewardConfig config)
         {
-            // A required-use tutorial must always have one consumable use.
-            // This also repairs saves created by older builds where the
-            // tutorial state was persisted before its inventory grant.
-            if (BoosterInventoryRuntime.Current.GetCount(config.BoosterType) <= 0)
-                BoosterInventoryRuntime.Current.Grant(config.BoosterType, 1);
-
             if (config.BoosterType != BoosterRewardType.FreezeTimer &&
                 !HasResolvableTarget(config))
             {
-                Debug.LogError(
-                    "[BoosterTutorial] Required target is missing or invalid. Tutorial remains pending, but input was released to avoid a player soft-lock.");
+                Debug.LogWarning(
+                    "[BoosterTutorial] Required target is not present on the active board; the lesson remains pending for its authored level.");
                 board?.ResumeTimer(this);
                 activeConfig = null;
                 state = BoosterFirstUseTutorialState.PendingRequiredUse;
                 return;
             }
+
+            // A required-use tutorial must always have one consumable use.
+            // This also repairs saves created by older builds where the
+            // tutorial state was persisted before its inventory grant.
+            if (BoosterInventoryRuntime.Current.GetCount(config.BoosterType) <= 0)
+                BoosterInventoryRuntime.Current.Grant(config.BoosterType, 1);
 
             activeConfig = config;
             state = BoosterFirstUseTutorialState.AwaitingBoosterTap;
@@ -385,6 +393,8 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 position = GravityLevelGridCoordinates.FineCellToWorld(
                     level,
                     targetCell);
+                if (piece.TryGetTargetableCellAt(position, out PuzzlePiece.TargetableCell targetableCell))
+                    position = targetableCell.Center;
                 return true;
             }
 
@@ -402,12 +412,19 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 if (level == null)
                     return;
 
-                float fineCellSize = 1f / level.subdivisions;
+                Vector2 targetSize = Vector2.one;
+                if (expectedPiece.TryGetTargetableCellAt(
+                        worldPosition,
+                        out PuzzlePiece.TargetableCell targetableCell))
+                {
+                    worldPosition = targetableCell.Center;
+                    targetSize = targetableCell.Size;
+                }
                 BoosterTargetingPresentation.ShowFirstUseBoardTarget(
                     activeConfig.BoosterType,
                     expectedPiece,
                     worldPosition,
-                    Vector2.one * fineCellSize);
+                    targetSize);
                 return;
             }
 
@@ -479,6 +496,19 @@ namespace GravityPuzzle.Gameplay.Tutorial
             }
 
             return false;
+        }
+
+        private static bool IsSameAuthoredBlock(GridCoordinate candidate, GridCoordinate expected)
+        {
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null || level.subdivisions <= 0)
+                return candidate.Equals(expected);
+
+            int subdivisions = level.subdivisions;
+            return Mathf.FloorToInt((float)candidate.X / subdivisions) ==
+                   Mathf.FloorToInt((float)expected.X / subdivisions) &&
+                   Mathf.FloorToInt((float)candidate.Y / subdivisions) ==
+                   Mathf.FloorToInt((float)expected.Y / subdivisions);
         }
 
         private bool TryGetExpectedDefinition(PuzzlePiece expectedPiece, out PieceDefinition definition)
