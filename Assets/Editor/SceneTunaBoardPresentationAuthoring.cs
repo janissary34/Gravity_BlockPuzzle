@@ -15,7 +15,7 @@ namespace GravityPuzzle.Editor
     public static class SceneTunaBoardPresentationAuthoring
     {
         private const string ConfigPath = "Assets/Config/Presentation/BoardPresentation_Navy.asset";
-        private const string MapAtlasPath = "Assets/Art/Map2.png";
+        private const string MapAtlasPath = "Assets/Art/map.png";
         private const string NavyMaterialPath = "Assets/Materials/M_Blue 6.mat";
 
         [MenuItem("Gravity Puzzle/Art/Apply Navy Board Presentation To Active Scene")]
@@ -67,15 +67,19 @@ namespace GravityPuzzle.Editor
             SetSprite(serializedConfig, "rightEdge", "Map2_6");
             SetSprite(serializedConfig, "topLeftCorner", "Map2_4");
             SetSprite(serializedConfig, "topRightCorner", "Map2_3");
-            SetSprite(serializedConfig, "bottomLeftCorner", "Map2_0");
-            SetSprite(serializedConfig, "bottomRightCorner", "Map2_5");
+            serializedConfig.FindProperty("bottomLeftCorner").objectReferenceValue = null;
+            serializedConfig.FindProperty("bottomRightCorner").objectReferenceValue = null;
+            serializedConfig.FindProperty("renderBottomEdgeSegments").boolValue = false;
             serializedConfig.FindProperty("frameMaterial").objectReferenceValue =
                 AssetDatabase.LoadAssetAtPath<Material>(NavyMaterialPath);
             serializedConfig.FindProperty("overrideLevelBackground").boolValue = true;
             serializedConfig.FindProperty("backgroundColor").colorValue = new Color(.035f, .055f, .13f, 1f);
             serializedConfig.FindProperty("alternateBackgroundColor").colorValue = new Color(.085f, .115f, .22f, 1f);
-            serializedConfig.FindProperty("cameraSizeMultiplier").floatValue = 1.1f;
+            serializedConfig.FindProperty("cameraSizeMultiplier").floatValue = 1.2f;
             serializedConfig.FindProperty("frameTint").colorValue = Color.white;
+            serializedConfig.FindProperty("cornerOutset").vector2Value = Vector2.zero;
+            serializedConfig.FindProperty("topCornerHorizontalInset").floatValue = .25f;
+            serializedConfig.FindProperty("topCornerVerticalInset").floatValue = .25f;
             serializedConfig.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();

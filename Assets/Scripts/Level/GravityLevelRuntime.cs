@@ -17,6 +17,8 @@ namespace GravityPuzzle
     public static class GravityLevelRuntime
     {
         private const string PreviewPathKey = "GravityPuzzle.PreviewLevelPath";
+        private const int FrameSortingOrder = -8;
+        private const int FrameCornerSortingOrder = FrameSortingOrder + 1;
         private static GravityLevelDefinition[] levels = Array.Empty<GravityLevelDefinition>();
         private static GravityLevelSequence configuredSequence;
         private static PrototypeBoard configuredBoard;
@@ -538,8 +540,12 @@ namespace GravityPuzzle
 
                     if (!IsFineCellActive(level, cell + Vector2Int.down))
                     {
-                        if (y == 0)
+                        if (y == 0 &&
+                            (configuredBoardPresentationConfig == null ||
+                             configuredBoardPresentationConfig.RenderBottomEdgeSegments))
+                        {
                             CreateBottomEdgeWithExit(frameRoot.transform, level, centre, fineCellSize, exitWidth, thickness, ref edgeIndex);
+                        }
                     }
                 }
             }
@@ -607,14 +613,45 @@ namespace GravityPuzzle
                     int length = x - startX;
                     Vector2 firstCentre = CellWorldPosition(level, new Vector2Int(startX, y));
                     Vector2 lastCentre = CellWorldPosition(level, new Vector2Int(x - 1, y));
+                    float leftTrim = 0f;
+                    float rightTrim = 0f;
+                    if (frameEdge == BoardFrameEdge.Top && y == level.FineRows - 1)
+                    {
+                        if (startX == 0 && HasOuterFrameCorner(
+                                level,
+                                new Vector2Int(0, level.FineRows - 1),
+                                BoardFrameEdge.TopLeftCorner))
+                        {
+                            leftTrim = GetCornerJoinTrim(
+                                fineCellSize,
+                                thickness,
+                                configuredBoardPresentationConfig.CornerOutset.x) +
+                                configuredBoardPresentationConfig.TopCornerHorizontalInset;
+                        }
+
+                        if (x == level.FineColumns && HasOuterFrameCorner(
+                                level,
+                                new Vector2Int(level.FineColumns - 1, level.FineRows - 1),
+                                BoardFrameEdge.TopRightCorner))
+                        {
+                            rightTrim = GetCornerJoinTrim(
+                                fineCellSize,
+                                thickness,
+                                configuredBoardPresentationConfig.CornerOutset.x) +
+                                configuredBoardPresentationConfig.TopCornerHorizontalInset;
+                        }
+                    }
+
+                    float runLength = length * fineCellSize + thickness;
+                    float visibleLength = Mathf.Max(.001f, runLength - leftTrim - rightTrim);
                     Vector2 position = new Vector2(
-                        (firstCentre.x + lastCentre.x) * .5f,
+                        (firstCentre.x + lastCentre.x) * .5f + (leftTrim - rightTrim) * .5f,
                         firstCentre.y + verticalDirection * (fineCellSize + thickness) * .5f);
                     CreateFrameEdge(
                         frameRoot,
                         $"Frame Edge {++edgeIndex}",
                         position,
-                        new Vector2(length * fineCellSize + thickness, thickness),
+                        new Vector2(visibleLength, thickness),
                         level.frameColor,
                         frameEdge);
                 }
@@ -652,14 +689,47 @@ namespace GravityPuzzle
                     int length = y - startY;
                     Vector2 firstCentre = CellWorldPosition(level, new Vector2Int(x, startY));
                     Vector2 lastCentre = CellWorldPosition(level, new Vector2Int(x, y - 1));
+                    float bottomTrim = 0f;
+                    float topTrim = 0f;
+                    if (startY == 0)
+                    {
+                        BoardFrameEdge bottomCorner = frameEdge == BoardFrameEdge.Left
+                            ? BoardFrameEdge.BottomLeftCorner
+                            : BoardFrameEdge.BottomRightCorner;
+                        if (HasOuterFrameCorner(level, new Vector2Int(x, 0), bottomCorner))
+                        {
+                            bottomTrim = GetCornerJoinTrim(
+                                fineCellSize,
+                                thickness,
+                                configuredBoardPresentationConfig.CornerOutset.y);
+                        }
+                    }
+
+                    if (y == level.FineRows)
+                    {
+                        BoardFrameEdge topCorner = frameEdge == BoardFrameEdge.Left
+                            ? BoardFrameEdge.TopLeftCorner
+                            : BoardFrameEdge.TopRightCorner;
+                        if (HasOuterFrameCorner(level, new Vector2Int(x, level.FineRows - 1), topCorner))
+                        {
+                            topTrim = GetCornerJoinTrim(
+                                fineCellSize,
+                                thickness,
+                                configuredBoardPresentationConfig.CornerOutset.y) +
+                                configuredBoardPresentationConfig.TopCornerVerticalInset;
+                        }
+                    }
+
+                    float runLength = length * fineCellSize + thickness;
+                    float visibleLength = Mathf.Max(.001f, runLength - bottomTrim - topTrim);
                     Vector2 position = new Vector2(
                         firstCentre.x + horizontalDirection * (fineCellSize + thickness) * .5f,
-                        (firstCentre.y + lastCentre.y) * .5f);
+                        (firstCentre.y + lastCentre.y) * .5f + (bottomTrim - topTrim) * .5f);
                     CreateFrameEdge(
                         frameRoot,
                         $"Frame Edge {++edgeIndex}",
                         position,
-                        new Vector2(thickness, length * fineCellSize + thickness),
+                        new Vector2(thickness, visibleLength),
                         level.frameColor,
                         frameEdge);
                 }
@@ -758,6 +828,31 @@ namespace GravityPuzzle
             float exitLeft = -exitWidth * .5f;
             float exitRight = exitWidth * .5f;
             float y = cellCentre.y - fineCellSize * .5f - thickness * .5f;
+            float halfWidth = level.boardColumns * .5f;
+            float cornerInset = Mathf.Max(
+                0f,
+                GetCornerJoinTrim(
+                    fineCellSize,
+                    thickness,
+                    configuredBoardPresentationConfig != null
+                        ? configuredBoardPresentationConfig.CornerOutset.x
+                        : 0f) - thickness * .5f);
+
+            if (Mathf.Approximately(cellLeft, -halfWidth) && HasOuterFrameCorner(
+                    level,
+                    Vector2Int.zero,
+                    BoardFrameEdge.BottomLeftCorner))
+            {
+                cellLeft += cornerInset;
+            }
+
+            if (Mathf.Approximately(cellRight, halfWidth) && HasOuterFrameCorner(
+                    level,
+                    new Vector2Int(level.FineColumns - 1, 0),
+                    BoardFrameEdge.BottomRightCorner))
+            {
+                cellRight -= cornerInset;
+            }
 
             float leftLength = Mathf.Max(0f, Mathf.Min(cellRight, exitLeft) - cellLeft);
             if (leftLength > .001f)
@@ -813,15 +908,17 @@ namespace GravityPuzzle
 
             float halfWidth = level.boardColumns * .5f;
             float halfHeight = level.boardRows * .5f;
-            float cornerSize = Mathf.Max(fineCellSize + thickness, thickness * 2f);
+            float cornerSize = GetOuterFrameCornerSize(fineCellSize, thickness);
             Vector2 cornerOutset = configuredBoardPresentationConfig.CornerOutset;
+            float topCornerInset = configuredBoardPresentationConfig.TopCornerHorizontalInset;
+            float topCornerVerticalInset = configuredBoardPresentationConfig.TopCornerVerticalInset;
             CreateFrameCorner(
                 frameRoot,
                 level,
                 new Vector2Int(0, level.FineRows - 1),
                 new Vector2(
-                    -halfWidth - thickness * .5f - cornerOutset.x,
-                    halfHeight + thickness * .5f + cornerOutset.y),
+                    -halfWidth - thickness * .5f - cornerOutset.x + topCornerInset,
+                    halfHeight + thickness * .5f + cornerOutset.y - topCornerVerticalInset),
                 cornerSize,
                 BoardFrameEdge.TopLeftCorner,
                 ref edgeIndex);
@@ -830,8 +927,8 @@ namespace GravityPuzzle
                 level,
                 new Vector2Int(level.FineColumns - 1, level.FineRows - 1),
                 new Vector2(
-                    halfWidth + thickness * .5f + cornerOutset.x,
-                    halfHeight + thickness * .5f + cornerOutset.y),
+                    halfWidth + thickness * .5f + cornerOutset.x - topCornerInset,
+                    halfHeight + thickness * .5f + cornerOutset.y - topCornerVerticalInset),
                 cornerSize,
                 BoardFrameEdge.TopRightCorner,
                 ref edgeIndex);
@@ -879,6 +976,31 @@ namespace GravityPuzzle
                 corner);
         }
 
+        private static bool HasOuterFrameCorner(
+            GravityLevelDefinition level,
+            Vector2Int requiredCell,
+            BoardFrameEdge corner)
+        {
+            return configuredBoardPresentationConfig != null &&
+                   IsFineCellActive(level, requiredCell) &&
+                   configuredBoardPresentationConfig.GetEdgeSprite(corner) != null;
+        }
+
+        private static float GetOuterFrameCornerSize(float fineCellSize, float thickness)
+        {
+            return Mathf.Max(fineCellSize + thickness, thickness * 2f);
+        }
+
+        private static float GetCornerJoinTrim(
+            float fineCellSize,
+            float thickness,
+            float cornerOutset)
+        {
+            return Mathf.Max(
+                0f,
+                GetOuterFrameCornerSize(fineCellSize, thickness) * .5f - cornerOutset);
+        }
+
         private static void ApplyFramePresentation(
             SpriteRenderer renderer,
             Vector2 size,
@@ -894,7 +1016,9 @@ namespace GravityPuzzle
             renderer.sprite = sprite;
             renderer.sharedMaterial = configuredBoardPresentationConfig.FrameMaterial;
             renderer.color = configuredBoardPresentationConfig.FrameTint;
-            renderer.sortingOrder = -8;
+            renderer.sortingOrder = IsFrameCorner(edge)
+                ? FrameCornerSortingOrder
+                : FrameSortingOrder;
 
             Vector2 spriteSize = sprite.bounds.size;
             if (spriteSize.x <= 0f || spriteSize.y <= 0f)
@@ -904,6 +1028,14 @@ namespace GravityPuzzle
                 size.x / spriteSize.x,
                 size.y / spriteSize.y,
                 1f);
+        }
+
+        private static bool IsFrameCorner(BoardFrameEdge edge)
+        {
+            return edge == BoardFrameEdge.TopLeftCorner ||
+                   edge == BoardFrameEdge.TopRightCorner ||
+                   edge == BoardFrameEdge.BottomLeftCorner ||
+                   edge == BoardFrameEdge.BottomRightCorner;
         }
 
         private static Color ResolveBoardBackgroundColor(GravityLevelDefinition level)

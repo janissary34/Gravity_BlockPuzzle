@@ -29,7 +29,7 @@ namespace GravityPuzzle.Config
 
         [Header("Camera Framing")]
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
-        [SerializeField, Min(1f)] private float cameraSizeMultiplier = 1.1f;
+        [SerializeField, Min(1f)] private float cameraSizeMultiplier = 1.2f;
 
         [Header("Scene Tuna Frame Atlas")]
         [SerializeField] private Sprite topEdge;
@@ -40,10 +40,16 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite topRightCorner;
         [SerializeField] private Sprite bottomLeftCorner;
         [SerializeField] private Sprite bottomRightCorner;
+        [Tooltip("Draws short bottom-frame segments beside the shredder opening. Disable for the open-bottom Scene Tuna frame.")]
+        [SerializeField] private bool renderBottomEdgeSegments;
         [SerializeField] private Material frameMaterial;
         [SerializeField] private Color frameTint = Color.white;
-        [Tooltip("Moves each outer corner away from its adjoining straight frame pieces in world units. Tune this when an atlas corner's baked padding changes.")]
-        [SerializeField] private Vector2 cornerOutset = new Vector2(.25f, .25f);
+        [Tooltip("Fine correction from the exact intersection of the adjoining straight edges. Zero joins the corner to both edges; positive values move it outward.")]
+        [SerializeField] private Vector2 cornerOutset = Vector2.zero;
+        [Tooltip("Moves the top-left corner right and the top-right corner left. The top straight edge is shortened by the same amount so the sprites meet without overlap.")]
+        [SerializeField, Min(0f)] private float topCornerHorizontalInset = .25f;
+        [Tooltip("Moves both top corners downward. The side edges are shortened by the same amount so the sprites meet without overlap.")]
+        [SerializeField, Min(0f)] private float topCornerVerticalInset = .25f;
 
         public bool OverrideLevelBackground => overrideLevelBackground;
         public Color BackgroundColor => backgroundColor;
@@ -53,9 +59,12 @@ namespace GravityPuzzle.Config
         public Material BoardBlockMaterial => boardBlockMaterial;
         public Sprite StaticBlockSprite => staticBlockSprite;
         public Sprite GridSprite => gridSprite;
+        public bool RenderBottomEdgeSegments => renderBottomEdgeSegments;
         public Material FrameMaterial => frameMaterial;
         public Color FrameTint => frameTint;
         public Vector2 CornerOutset => Vector2.Max(Vector2.zero, cornerOutset);
+        public float TopCornerHorizontalInset => Mathf.Max(0f, topCornerHorizontalInset);
+        public float TopCornerVerticalInset => Mathf.Max(0f, topCornerVerticalInset);
 
         public Material GetGridMaterial(bool alternateCell)
         {

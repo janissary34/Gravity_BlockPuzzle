@@ -233,6 +233,27 @@ namespace GravityPuzzle
             if (!receivedPointerDown)
                 return;
 
+            ProcessTargetPosition(screenPosition);
+        }
+
+        /// <summary>
+        /// Routes a pointer position from the UI targeting surface to the
+        /// armed rocket. Returns false when no rocket is armed.
+        /// </summary>
+        public static bool TryHandleTargetingPointer(Vector2 screenPosition)
+        {
+            if (activeBooster == null)
+                return false;
+
+            activeBooster.ProcessTargetPosition(screenPosition);
+            return true;
+        }
+
+        private void ProcessTargetPosition(Vector2 screenPosition)
+        {
+            if (activeBooster != this)
+                return;
+
             if (!PuzzleDragController.TryScreenToBoardWorld(screenPosition, out Vector2 worldPosition))
             {
                 // An invalid target click is an explicit cancellation; it does
