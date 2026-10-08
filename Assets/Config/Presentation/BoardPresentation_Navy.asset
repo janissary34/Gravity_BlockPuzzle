@@ -15,7 +15,7 @@ MonoBehaviour:
   overrideLevelBackground: 1
   backgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
   alternateBackgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
-  exteriorColor: {r: 0.046592418, g: 0.03177287, b: 0.3207547, a: 1}
+  exteriorColor: {r: 0.16777663, g: 0.15045391, b: 0.46226418, a: 1}
   environmentTint: {r: 0.78, g: 0.78, b: 0.78, a: 1}
   environmentBackdropMaterial: {fileID: 2100000, guid: 8393891fdbdf84e91990a0fcc91a9dd1, type: 2}
   boardBlockMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
@@ -61,12 +61,12 @@ MonoBehaviour:
   gridDarkMaterial: {fileID: 2100000, guid: 7dc4f486ef1b84902a01b2c752089bc9, type: 2}
   gridLightMaterial: {fileID: 2100000, guid: 7be1e4d4450eb48d3b039f8b4e663a98, type: 2}
   gridSprite: {fileID: 494014031, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  gridDarkTint: {r: 0.72, g: 0.72, b: 0.78, a: 1}
+  gridDarkTint: {r: 0.5, g: 0.5, b: 0.58, a: 1}
   gridLightTint: {r: 0.82, g: 0.82, b: 0.88, a: 1}
   extendPresentationToViewportBottom: 1
   viewportBottomPadding: 0.35
   lowerGradientTint: {r: 0.006, g: 0.005, b: 0.045, a: 1}
-  lowerGradientBandCount: 32
+  lowerGradientBandCount: 48
   cameraSizeMultiplier: 1.2
   topEdge: {fileID: 1112318756, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bottomEdge: {fileID: -448638201, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}

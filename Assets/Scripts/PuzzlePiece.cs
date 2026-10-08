@@ -130,6 +130,7 @@ namespace GravityPuzzle
         private SpriteRenderer wholePieceRenderer;
         private Sprite wholePieceNormalSprite;
         private Sprite wholePieceIceSprite;
+        private bool preferModularNormalPresentation;
         private bool preferModularIcePresentation;
         private PieceShapeVisualTransform wholePieceTransform = PieceShapeVisualTransform.Identity;
         private Transform iceSlotsRoot;
@@ -393,11 +394,13 @@ namespace GravityPuzzle
             Sprite normalSprite,
             Sprite iceSprite,
             PieceShapeVisualTransform transform,
-            bool preferModularIce = false)
+            bool preferModularIce = false,
+            bool preferModularNormal = false)
         {
             ClearIceVisuals();
             wholePieceNormalSprite = normalSprite;
             wholePieceIceSprite = iceSprite;
+            preferModularNormalPresentation = preferModularNormal;
             preferModularIcePresentation = preferModularIce;
             wholePieceTransform = transform;
             RefreshWholePiecePresentation();
@@ -409,6 +412,7 @@ namespace GravityPuzzle
         {
             wholePieceNormalSprite = null;
             wholePieceIceSprite = null;
+            preferModularNormalPresentation = false;
             preferModularIcePresentation = false;
             wholePieceTransform = PieceShapeVisualTransform.Identity;
             if (wholePieceRenderer != null)
@@ -1317,9 +1321,8 @@ namespace GravityPuzzle
             RefreshWholePiecePresentation();
             if (shouldBeFrozen)
             {
-                if (!preferModularIcePresentation &&
-                    iceRenderers.Count == 0 &&
-                    wholePieceIceSprite == null)
+                if (iceRenderers.Count == 0 &&
+                    (wholePieceIceSprite == null || preferModularIcePresentation))
                     BuildIceVisuals();
 
                 int remainingCount = frozenUntilDestroyedCount - destroyedPieceCount;
@@ -2525,11 +2528,12 @@ namespace GravityPuzzle
                 collisionCellVisuals.Count == 0)
                 return;
 
+            bool useModularNormal = !IsFrozen && preferModularNormalPresentation;
             bool useModularIce = IsFrozen && preferModularIcePresentation;
             Sprite sprite = IsFrozen && wholePieceIceSprite != null && !useModularIce
                 ? wholePieceIceSprite
                 : wholePieceNormalSprite;
-            if (useModularIce)
+            if (useModularNormal || useModularIce)
                 sprite = null;
             if (sprite == null)
             {

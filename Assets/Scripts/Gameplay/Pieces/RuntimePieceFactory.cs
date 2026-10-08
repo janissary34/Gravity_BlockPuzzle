@@ -20,6 +20,7 @@ namespace GravityPuzzle.Gameplay.Pieces
     //arda
     public static class RuntimePieceFactory
     {
+        private const string FourModuleSquareShapeKey = "0,0;1,0;0,1;1,1";
         private const string GridBlockName = "Grid Block";
         private const string BlockCellName = "Block Cell";
         private const string HookCellName = "Hook Cell";
@@ -420,6 +421,11 @@ namespace GravityPuzzle.Gameplay.Pieces
             List<SpriteRenderer> collisionCellVisuals = new List<SpriteRenderer>(parts.Count);
             List<VoxelShard> voxelShards = new List<VoxelShard>(
                 parts.Count * VoxelBlockBuilder.Subdivisions * VoxelBlockBuilder.Subdivisions);
+            bool usesModularIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
+                                  definition.frozenMoveCount > 0;
+            float presentationScaleMultiplier = usesModularIce && pieceVisualConfig != null
+                ? pieceVisualConfig.ModularIceCellScale
+                : 1f;
             for (int index = 0; index < parts.Count; index++)
             {
                 PiecePartSlot slot = puzzlePiece.GetPartSlot(index);
@@ -430,7 +436,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                     GetCellPresentationSprite(voxelSprite, parts[index].Size),
                     presentationMaterial,
                     out SpriteRenderer cellVisual,
-                    voxelShards);
+                    voxelShards,
+                    presentationScaleMultiplier);
                 collisionCells.Add(collider);
                 collisionCellVisuals.Add(cellVisual);
             }
@@ -642,7 +649,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             Sprite voxelSprite,
             Material presentationMaterial,
             out SpriteRenderer cellVisual,
-            List<VoxelShard> voxelShards = null)
+            List<VoxelShard> voxelShards = null,
+            float presentationScaleMultiplier = 1f)
         {
             cellVisual = slot.Visual;
             bool visualUsesSlotTransform = cellVisual.transform == slot.transform;
@@ -691,8 +699,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                     ? presentationSprite.bounds.size
                     : Vector2.one;
                 Vector3 presentationScale = new Vector3(
-                    spriteBounds.x > 0f ? part.Size.x / spriteBounds.x : part.Size.x,
-                    spriteBounds.y > 0f ? part.Size.y / spriteBounds.y : part.Size.y,
+                    (spriteBounds.x > 0f ? part.Size.x / spriteBounds.x : part.Size.x) * presentationScaleMultiplier,
+                    (spriteBounds.y > 0f ? part.Size.y / spriteBounds.y : part.Size.y) * presentationScaleMultiplier,
                     1f);
                 if (visualUsesSlotTransform)
                     slot.transform.localScale = presentationScale;
@@ -832,11 +840,13 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             // A normal sprite is retained underneath the ice art so the ice
             // release returns to the same authored silhouette.
+            bool forceModularSquare = shapeKey == FourModuleSquareShapeKey;
             piece.ConfigureWholePiecePresentation(
-                visual.NormalSprite,
+                forceModularSquare ? null : visual.NormalSprite,
                 visual.IceSprite,
                 transform,
-                visual.PreferModularIce);
+                visual.PreferModularIce || forceModularSquare,
+                visual.PreferModularNormal || forceModularSquare);
         }
 
         /// <summary>
@@ -887,34 +897,34 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             int width = maximumX - minimumX + 1;
             int height = maximumY - minimumY + 1;
-            int largestScale = Mathf.Min(width, height);
-            for (int scale = largestScale; scale >= 1; scale--)
-            {
-                if (width % scale != 0 || height % scale != 0 ||
-                    occupiedCells.Count % (scale * scale) != 0)
-                    continue;
+            // Atlas modules represent authored board cells. Trying arbitrary
+            // larger divisors makes a complete 2x2 piece look like one giant
+            // 1x1 module and stretches BB_1X1 over all four cells. Use the
+            // level's authoritative fine-cell subdivision so visual grouping
+            // cannot silently change the piece's structural composition.
+            int moduleScale = Mathf.Max(1, level.subdivisions);
+            if (width % moduleScale != 0 || height % moduleScale != 0 ||
+                occupiedCells.Count % (moduleScale * moduleScale) != 0)
+                return false;
 
-                if (!TryBuildUniformScaledShapeKey(
-                        occupiedCells,
-                        minimumX,
-                        minimumY,
-                        width,
-                        height,
-                        scale,
-                        out string candidateKey))
-                    continue;
+            if (!TryBuildUniformScaledShapeKey(
+                    occupiedCells,
+                    minimumX,
+                    minimumY,
+                    width,
+                    height,
+                    moduleScale,
+                    out string candidateKey))
+                return false;
 
-                if (pieceVisualConfig.TryGetShapePresentation(
-                        candidateKey,
-                        out _,
-                        out _))
-                {
-                    shapeKey = candidateKey;
-                    return true;
-                }
-            }
+            if (!pieceVisualConfig.TryGetShapePresentation(
+                    candidateKey,
+                    out _,
+                    out _))
+                return false;
 
-            return false;
+            shapeKey = candidateKey;
+            return true;
         }
 
         private static bool TryBuildUniformScaledShapeKey(

@@ -106,12 +106,12 @@ namespace GravityPuzzle
         /// presentation owner prevents one button press from requiring two
         /// inventory uses.
         /// </summary>
-        public bool ActivateFreezeFromPresentation()
+        public bool ActivateFreezeFromPresentation(object presentationPauseOwner)
         {
-            return TryActivateFreeze(consumeInventory: false);
+            return TryActivateFreeze(consumeInventory: false, presentationPauseOwner);
         }
 
-        private bool TryActivateFreeze(bool consumeInventory)
+        private bool TryActivateFreeze(bool consumeInventory, object presentationPauseOwner = null)
         {
             SynchronizeLevel();
 
@@ -129,9 +129,13 @@ namespace GravityPuzzle
                 return false;
             }
 
-            // Owner-based pausing means another system may already have paused
-            // the timer. Releasing this boost later will not cancel that pause.
-            if (!boundBoard.TryPauseTimer(this))
+            // The timer presentation pauses on the input frame, then hands
+            // that exact pause to this authoritative effect at impact. An
+            // atomic transfer prevents a one-frame resume between owners.
+            bool acquiredPause = presentationPauseOwner != null
+                ? boundBoard.TryTransferTimerPause(presentationPauseOwner, this)
+                : boundBoard.TryPauseTimer(this);
+            if (!acquiredPause)
                 return false;
 
             usedThisLevel = true;

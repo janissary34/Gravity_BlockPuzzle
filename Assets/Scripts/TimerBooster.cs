@@ -843,11 +843,11 @@ namespace GravityPuzzle
             {
                 freeze.freezeDuration = effectiveDuration;
                 SubscribeToFreezeCompletion(freeze);
-                if (freeze.ActivateFreezeFromPresentation())
+                if (freeze.ActivateFreezeFromPresentation(this))
                 {
-                    // FreezeTimerBooster now owns the post-impact pause. Drop
-                    // this sequence's owner without creating a timer gap.
-                    ReleaseSequenceTimerPause();
+                    // FreezeTimerBooster received the existing board pause
+                    // atomically. Forget our local ownership without resuming.
+                    sequencePausedBoard = null;
                     // Begin visual progression only after the authoritative
                     // pause has actually started, so both windows share the
                     // same first frame and duration.

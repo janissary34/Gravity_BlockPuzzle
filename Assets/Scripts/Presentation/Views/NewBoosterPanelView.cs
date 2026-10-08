@@ -32,8 +32,11 @@ namespace GravityPuzzle.Presentation.Views
 
         private void Awake()
         {
+            // Reward reveals are mandatory and complete through Claim. Keeping
+            // the legacy close control visible suggests an unsupported exit and
+            // can leave the reward/tutorial state half-applied.
             if (closeButton != null)
-                closeButton.onClick.AddListener(Close);
+                closeButton.gameObject.SetActive(false);
             if (continueButton != null)
                 continueButton.onClick.AddListener(Continue);
         }
@@ -58,8 +61,6 @@ namespace GravityPuzzle.Presentation.Views
 
         private void OnDestroy()
         {
-            if (closeButton != null)
-                closeButton.onClick.RemoveListener(Close);
             if (continueButton != null)
                 continueButton.onClick.RemoveListener(Continue);
 

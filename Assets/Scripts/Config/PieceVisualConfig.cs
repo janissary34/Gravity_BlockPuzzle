@@ -20,6 +20,8 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite normalFallbackSprite;
         [Tooltip("Artist-authored 1x1 ice block used when a frozen piece has no matching silhouette.")]
         [SerializeField] private Sprite iceFallbackSprite;
+        [Tooltip("Small presentation-only overlap for adjacent modular ice cells. It closes transparent sprite gutters without changing board or collider scale.")]
+        [SerializeField, Min(1f)] private float modularIceCellScale = 1.045f;
         [Tooltip("Whole-piece atlas sprites keyed by a normalized silhouette. Frozen shapes without a matching ice sprite use the modular brick-and-frost fallback.")]
         [SerializeField] private List<PieceShapeVisualDefinition> shapeDefinitions = new List<PieceShapeVisualDefinition>();
 
@@ -49,6 +51,7 @@ namespace GravityPuzzle.Config
         public IReadOnlyList<PiecePaletteDefinition> PaletteDefinitions => paletteDefinitions;
         public Sprite NormalFallbackSprite => normalFallbackSprite;
         public Sprite IceFallbackSprite => iceFallbackSprite;
+        public float ModularIceCellScale => Mathf.Max(1f, modularIceCellScale);
         public Sprite IceOverlaySprite => iceOverlaySprite;
         public Color IceOverlayTint => iceOverlayTint;
         public Color IceFrostTint => iceFrostTint;
@@ -177,12 +180,15 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite normalSprite;
         [Tooltip("Optional. When missing, frozen pieces use the modular brick-and-frost fallback rather than this normal silhouette.")]
         [SerializeField] private Sprite iceSprite;
+        [Tooltip("Keeps the intact normal piece on its authored 1x1 modules instead of replacing it with one atlas silhouette.")]
+        [SerializeField] private bool preferModularNormal;
         [Tooltip("Keeps frozen presentation on full-size 1x1 brick modules instead of covering the shape with an opaque ice silhouette. Use for structures whose per-cell stud detail must remain visible.")]
         [SerializeField] private bool preferModularIce;
 
         public string ShapeKey => shapeKey;
         public Sprite NormalSprite => normalSprite;
         public Sprite IceSprite => iceSprite;
+        public bool PreferModularNormal => preferModularNormal;
         public bool PreferModularIce => preferModularIce;
     }
 

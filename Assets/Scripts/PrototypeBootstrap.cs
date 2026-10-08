@@ -1478,6 +1478,22 @@ namespace GravityPuzzle
                 timerPauseOwners.Remove(owner);
         }
 
+        /// <summary>
+        /// Atomically hands an existing timer pause to another owner. This is
+        /// used when a presentation sequence starts an effect whose gameplay
+        /// component must own the remainder of the pause window.
+        /// </summary>
+        public bool TryTransferTimerPause(object currentOwner, object nextOwner)
+        {
+            if (currentOwner == null || nextOwner == null ||
+                !timerPauseOwners.Contains(currentOwner))
+                return false;
+
+            timerPauseOwners.Add(nextOwner);
+            timerPauseOwners.Remove(currentOwner);
+            return true;
+        }
+
         public void SetRemovalHeight(float height)
         {
             removalHeight = height;

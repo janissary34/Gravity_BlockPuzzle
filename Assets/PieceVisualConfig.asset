@@ -40,6 +40,7 @@ MonoBehaviour:
     material: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
   normalFallbackSprite: {fileID: -1313627307, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
   iceFallbackSprite: {fileID: 0}
+  modularIceCellScale: 1.075
   shapeDefinitions:
   - shapeKey: 0,0
     normalSprite: {fileID: -1313627307, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
@@ -63,8 +64,9 @@ MonoBehaviour:
     normalSprite: {fileID: -1618421186, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: -1251365498, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
   - shapeKey: 0,0;1,0;0,1;1,1
-    normalSprite: {fileID: 1399951306, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
+    normalSprite: {fileID: 0}
     iceSprite: {fileID: 1857232792, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
+    preferModularNormal: 1
     preferModularIce: 1
   - shapeKey: 0,0;1,0;1,1;1,2
     normalSprite: {fileID: -1861986604, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
@@ -127,7 +129,7 @@ MonoBehaviour:
     normalSprite: {fileID: 21300000, guid: c11cf64027ed341cda173d9442f29340, type: 3}
     iceSprite: {fileID: 0}
   iceOverlaySprite: {fileID: 2084758471, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
-  iceOverlayTint: {r: 1, g: 1, b: 1, a: 1}
+  iceOverlayTint: {r: 1, g: 1, b: 1, a: 0.82}
   iceFrostTint: {r: 0.9, g: 0.98, b: 1, a: 0.32}
   bombOverlaySprite: {fileID: 21300000, guid: 0055f32440cd446adb05ef4e4b9aafd7, type: 3}
   bombOverlayFill: 1

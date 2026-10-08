@@ -16,7 +16,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool overrideLevelBackground = true;
         [SerializeField] private Color backgroundColor = new Color(.035f, .055f, .13f, 1f);
         [SerializeField] private Color alternateBackgroundColor = new Color(.085f, .115f, .22f, 1f);
-        [Tooltip("Solid colour outside the playable board. Match this to the dominant frame tone for a continuous environment.")]
+        [Tooltip("Solid colour outside the playable board. This is shared with the frame and obstacle palette for a continuous environment.")]
         [SerializeField] private Color exteriorColor = new Color(.047f, .032f, .321f, 1f);
         [Tooltip("Tint applied to the environment material behind the grid and below the board.")]
         [SerializeField] private Color environmentTint = Color.white;

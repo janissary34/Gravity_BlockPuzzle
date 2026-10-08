@@ -40,7 +40,7 @@ MonoBehaviour:
   progressVoxelRotationRange: 160
   progressVoxelCurveDropMultiplier: 0.8
   progressVoxelUiSize: 0.32
-  progressVoxelUiBurstCount: 10
+  progressVoxelUiBurstCount: 16
   progressSliderPunchDuration: 0.12
   progressSliderPunchScale: {x: 0.045, y: 0.045, z: 0}
   progressSliderPunchVibrato: 6
