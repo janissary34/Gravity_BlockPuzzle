@@ -380,10 +380,10 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.BombOverlaySprite : null,
                 pieceVisualConfig != null ? pieceVisualConfig.BombOverlayFill : .82f,
                 definition.frozenMoveCount,
-                definition.iceCounterFontSize,
-                definition.iceCounterTextColor,
-                definition.iceCounterOutlineColor,
-                definition.iceCounterOutlineWidth,
+                pieceVisualConfig != null ? pieceVisualConfig.IceCounterFontSize : definition.iceCounterFontSize,
+                pieceVisualConfig != null ? pieceVisualConfig.IceCounterTextColor : definition.iceCounterTextColor,
+                pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineColor : definition.iceCounterOutlineColor,
+                pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineWidth : definition.iceCounterOutlineWidth,
                 definition.iceCounterOffset,
                 definition.specialBlockType,
                 definition.bombTimerSeconds,
@@ -831,21 +831,19 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
                                definition.frozenMoveCount > 0;
-            // An atlas normal sprite is not an ice fallback. If the artist has
-            // not supplied this exact ice silhouette, preserve its geometry by
-            // keeping the modular brick presentation and applying the generic
-            // frost layer instead of exposing normal or legacy ice art.
-            if (isFrozenIce && visual.IceSprite == null)
-                return;
-
-            // A normal sprite is retained underneath the ice art so the ice
-            // release returns to the same authored silhouette.
+            // Ice uses the exact authored silhouette when one exists. Its
+            // logical cells remain unchanged, so thawing a four-cell square
+            // still reveals four normal brick modules without stretching a
+            // gameplay cell or changing board occupancy.
             bool forceModularSquare = shapeKey == FourModuleSquareShapeKey;
+            bool useModularIce = isFrozenIce &&
+                                 (pieceVisualConfig.UseUnifiedModularIce ||
+                                  visual.PreferModularIce);
             piece.ConfigureWholePiecePresentation(
                 forceModularSquare ? null : visual.NormalSprite,
                 visual.IceSprite,
                 transform,
-                visual.PreferModularIce || forceModularSquare,
+                useModularIce,
                 visual.PreferModularNormal || forceModularSquare);
         }
 

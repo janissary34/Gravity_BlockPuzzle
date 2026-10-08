@@ -4782,6 +4782,7 @@ GameObject:
   - component: {fileID: 2687835043217169175}
   - component: {fileID: 9164068488278492767}
   - component: {fileID: 4297202554148660215}
+  - component: {fileID: 7517149451319310593}
   m_Layer: 0
   m_Name: BlockPiece
   m_TagString: Untagged
@@ -5007,6 +5008,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
+--- !u!114 &7517149451319310593
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 837552066669875295}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9feb48b69f1546b194e2d4598a161e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dissolveMaterial: {fileID: 2100000, guid: aa30528ad0ad94ee19aeeecd19133311, type: 2}
 --- !u!1 &844454339040870038
 GameObject:
   m_ObjectHideFlags: 0

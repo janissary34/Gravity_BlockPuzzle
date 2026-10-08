@@ -28,6 +28,8 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite staticBlockSprite;
         [Tooltip("Shared tint for static gameplay obstacles. This keeps them in the same palette as the frame instead of retaining per-level placeholder colours.")]
         [SerializeField] private Color staticBlockTint = Color.white;
+        [Tooltip("Presentation-only overlap used by modular obstacle cells when no exact connected silhouette exists. Values above one close transparent sprite gutters without changing collision geometry.")]
+        [SerializeField, Min(1f)] private float modularStaticBlockScale = 1.04f;
         [Tooltip("Whole map-atlas silhouettes keyed by normalized occupied board cells. Adjacent obstacle cells use these instead of rendering separate 1x1 modules.")]
         [SerializeField] private List<BoardShapeVisualDefinition> staticBlockShapes = new List<BoardShapeVisualDefinition>();
         [Tooltip("Material used by the darker checker-grid cells.")]
@@ -50,6 +52,8 @@ namespace GravityPuzzle.Config
         [SerializeField] private Color lowerGradientTint = new Color(.01f, .015f, .09f, 1f);
         [Tooltip("Number of static bands used to approximate the lower-screen gradient.")]
         [SerializeField, Range(2, 48)] private int lowerGradientBandCount = 16;
+        [Tooltip("Black overlay opacity reached at the bottom of the lower checker grid. This is separate from material tint because authored grid shaders may not multiply SpriteRenderer colour.")]
+        [SerializeField, Range(0f, 1f)] private float lowerGridBottomOverlayAlpha = .78f;
 
         [Header("Camera Framing")]
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
@@ -85,6 +89,7 @@ namespace GravityPuzzle.Config
         public Material BoardBlockMaterial => boardBlockMaterial;
         public Sprite StaticBlockSprite => staticBlockSprite;
         public Color StaticBlockTint => staticBlockTint;
+        public float ModularStaticBlockScale => Mathf.Max(1f, modularStaticBlockScale);
         public Sprite GridSprite => gridSprite;
         public Color GridDarkTint => gridDarkTint;
         public Color GridLightTint => gridLightTint;
@@ -92,6 +97,7 @@ namespace GravityPuzzle.Config
         public float ViewportBottomPadding => Mathf.Max(0f, viewportBottomPadding);
         public Color LowerGradientTint => lowerGradientTint;
         public int LowerGradientBandCount => Mathf.Clamp(lowerGradientBandCount, 2, 48);
+        public float LowerGridBottomOverlayAlpha => Mathf.Clamp01(lowerGridBottomOverlayAlpha);
         public bool RenderBottomEdgeSegments => renderBottomEdgeSegments;
         public Material FrameMaterial => frameMaterial;
         public Color FrameTint => frameTint;

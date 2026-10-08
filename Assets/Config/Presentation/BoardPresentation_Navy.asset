@@ -15,12 +15,13 @@ MonoBehaviour:
   overrideLevelBackground: 1
   backgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
   alternateBackgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
-  exteriorColor: {r: 0.16777663, g: 0.15045391, b: 0.46226418, a: 1}
-  environmentTint: {r: 0.78, g: 0.78, b: 0.78, a: 1}
+  exteriorColor: {r: 0.29411766, g: 0.2509804, b: 0.67058825, a: 1}
+  environmentTint: {r: 1, g: 1, b: 1, a: 1}
   environmentBackdropMaterial: {fileID: 2100000, guid: 8393891fdbdf84e91990a0fcc91a9dd1, type: 2}
-  boardBlockMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  boardBlockMaterial: {fileID: 2100000, guid: 2665f8a87af3146a29a80009bc5536ac, type: 2}
   staticBlockSprite: {fileID: 331641077, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  staticBlockTint: {r: 0.16777663, g: 0.15045391, b: 0.46226418, a: 1}
+  staticBlockTint: {r: 1, g: 1, b: 1, a: 1}
+  modularStaticBlockScale: 1.04
   staticBlockShapes:
   - shapeKey: 0,0
     sprite: {fileID: 331641077, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
@@ -58,15 +59,16 @@ MonoBehaviour:
     sprite: {fileID: 75189599, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   - shapeKey: 0,0;1,0;2,0;1,1
     sprite: {fileID: -1067627346, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  gridDarkMaterial: {fileID: 2100000, guid: 7dc4f486ef1b84902a01b2c752089bc9, type: 2}
-  gridLightMaterial: {fileID: 2100000, guid: 7be1e4d4450eb48d3b039f8b4e663a98, type: 2}
+  gridDarkMaterial: {fileID: 2100000, guid: 87f5b5fe9a9fb4d73b3589e4644d11d9, type: 2}
+  gridLightMaterial: {fileID: 2100000, guid: 1dc913d4610c745e3937c65821f60d81, type: 2}
   gridSprite: {fileID: 494014031, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  gridDarkTint: {r: 0.5, g: 0.5, b: 0.58, a: 1}
-  gridLightTint: {r: 0.82, g: 0.82, b: 0.88, a: 1}
+  gridDarkTint: {r: 1, g: 1, b: 1, a: 0.9490196}
+  gridLightTint: {r: 1, g: 1, b: 1, a: 0.9490196}
   extendPresentationToViewportBottom: 1
   viewportBottomPadding: 0.35
-  lowerGradientTint: {r: 0.006, g: 0.005, b: 0.045, a: 1}
+  lowerGradientTint: {r: 0.0025, g: 0.002, b: 0.018, a: 1}
   lowerGradientBandCount: 48
+  lowerGridBottomOverlayAlpha: 0.82
   cameraSizeMultiplier: 1.2
   topEdge: {fileID: 1112318756, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bottomEdge: {fileID: -448638201, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
@@ -77,7 +79,7 @@ MonoBehaviour:
   bottomLeftCorner: {fileID: 0}
   bottomRightCorner: {fileID: 0}
   renderBottomEdgeSegments: 0
-  frameMaterial: {fileID: 2100000, guid: e1ee295b3a3014db590529cd3972d26c, type: 2}
+  frameMaterial: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
   frameTint: {r: 1, g: 1, b: 1, a: 1}
   cornerOutset: {x: 0, y: 0}
   topCornerHorizontalInset: 0.25

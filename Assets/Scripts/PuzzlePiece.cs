@@ -158,6 +158,7 @@ namespace GravityPuzzle
         private Collider2D[] solidColliders;
         private PhysicsMaterial2D[] defaultSolidColliderMaterials;
         private SpriteRenderer[] shredderPresentationRenderers;
+        private ShredderDissolvePresentation shredderDissolvePresentation;
         private float restingOutlineWidth = 0.05f;
         private float selectedOutlineWidth = 0.08f;
         private Color restingOutlineColor = Color.black;
@@ -224,6 +225,7 @@ namespace GravityPuzzle
         {
             Body = GetComponent<Rigidbody2D>();
             GridFallView = GetComponent<PieceGridFallView>();
+            shredderDissolvePresentation = GetComponent<ShredderDissolvePresentation>();
             compositeCollider = GetComponent<CompositeCollider2D>();
             rootOutline = GetComponent<LineRenderer>();
             PiecePartSlot[] cachedPartSlots = GetComponentsInChildren<PiecePartSlot>(true);
@@ -1032,7 +1034,10 @@ namespace GravityPuzzle
         /// feed changes clipping or visibility. Pool return restores this state
         /// before the next piece rents the prefab root.
         /// </summary>
-        public void BeginShredderPresentation(SpriteRenderer[] renderers)
+        public void BeginShredderPresentation(
+            SpriteRenderer[] renderers,
+            float shredderY,
+            ShredderConfig shredderConfig)
         {
             RestoreShredderPresentation();
             // The collider footprint shrinks one board cell at a time during
@@ -1062,6 +1067,9 @@ namespace GravityPuzzle
                 shredderPresentationMaskStates[index] = renderer.maskInteraction;
                 shredderPresentationSortingOrders[index] = renderer.sortingOrder;
             }
+
+            if (shredderConfig != null && shredderConfig.EnableAdvancedShreddingPresentation)
+                shredderDissolvePresentation?.Begin(renderers, shredderY, shredderConfig);
         }
 
         /// <summary>
@@ -1089,6 +1097,12 @@ namespace GravityPuzzle
         public void ApplyShredderPresentationClipping()
         {
             if (shredderPresentationRenderers == null)
+                return;
+
+            // The dissolve shader clips against the same world-space cutter
+            // line but has a softly irregular edge. Keep the legacy mask as a
+            // compatibility fallback for prefabs that do not carry it.
+            if (shredderDissolvePresentation != null && shredderDissolvePresentation.IsActive)
                 return;
 
             for (int index = 0; index < shredderPresentationRenderers.Length; index++)
@@ -1120,6 +1134,7 @@ namespace GravityPuzzle
 
         private void RestoreShredderPresentation()
         {
+            shredderDissolvePresentation?.Restore();
             if (shredderPresentationRenderers == null)
                 return;
 

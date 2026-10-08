@@ -12,6 +12,46 @@ namespace GravityPuzzle.Config
         [Tooltip("Distance below the shredder line where particles emerge from beneath the wheels.")]
         [Range(0f, 2f)] [SerializeField] private float exitSeamOffsetBelowShredder = 0.65f;
 
+        [Header("Contact Occlusion Presentation")]
+        [Tooltip("Keeps the clipped edge slightly inside the rotating teeth, so material is hidden by the mechanism instead of appearing to vanish on its top edge.")]
+        [Range(0f, .5f)] [SerializeField] private float feedMaskMouthInset = .14f;
+        [Tooltip("Emits small square debris continuously from the same hidden edge. This is independent from the optional dissolve shader.")]
+        [SerializeField] private bool enableContactDebrisPresentation = true;
+        [Tooltip("Maximum number of progress-voxel handoffs emitted from one atlas block while it crosses the cutter. Wider blocks use more origins along their active contact span.")]
+        [Range(1, 16)] [SerializeField] private int maxContactProgressEmissions = 8;
+
+        [Header("Grinding Debris Presentation")]
+        [Tooltip("Opt-in gate for the experimental rough-cut shader and continuous debris. Keep disabled until it has been play-tested on target devices.")]
+        [SerializeField] private bool enableAdvancedShreddingPresentation;
+        [Tooltip("Small square fragments emitted per second for each world unit at the active cutter edge.")]
+        [Range(0f, 80f)] [SerializeField] private float debrisPerSecondPerWorldUnit = 22f;
+        [Tooltip("Extra fragments emitted where a rendered cell fully crosses the cutter edge.")]
+        [Range(0, 16)] [SerializeField] private int debrisBurstPerCrossedCell = 3;
+        [Tooltip("Hard upper bound on one feed's debris emission in a frame.")]
+        [Range(1, 32)] [SerializeField] private int maxDebrisPerFrame = 10;
+        [Tooltip("Lifetime of a square debris fragment in seconds.")]
+        [Range(.05f, 2f)] [SerializeField] private float debrisLifetime = .48f;
+        [Tooltip("World-space size range for debris fragments.")]
+        [SerializeField] private Vector2 debrisSizeRange = new Vector2(.055f, .14f);
+        [Tooltip("Initial downward pull that makes fragments read as being drawn into the wheels.")]
+        [Range(0f, 8f)] [SerializeField] private float debrisDownwardSpeed = 2.8f;
+        [Tooltip("Small lateral variation applied as fragments leave the cutter line.")]
+        [Range(0f, 4f)] [SerializeField] private float debrisHorizontalSpeed = .75f;
+        [Tooltip("Particle-system gravity multiplier for the debris after it leaves the wheels.")]
+        [Range(0f, 2f)] [SerializeField] private float debrisGravityModifier = .35f;
+        [Tooltip("Maximum absolute angular velocity, in degrees per second, for a debris fragment.")]
+        [Range(0f, 1440f)] [SerializeField] private float debrisAngularVelocity = 540f;
+        [Tooltip("Sorting order for debris. Keep it behind teeth and in front of the clipped block edge.")]
+        [SerializeField] private int debrisSortingOrder = 24;
+
+        [Header("Rough Cutter Edge")]
+        [Tooltip("Maximum world-space variation in the dissolve edge. This prevents a rectangular mask cut.")]
+        [Range(0f, .5f)] [SerializeField] private float cutterEdgeAmplitude = .075f;
+        [Tooltip("World-space width of the soft, irregular dissolve band.")]
+        [Range(.001f, .25f)] [SerializeField] private float cutterEdgeSoftness = .035f;
+        [Tooltip("Horizontal frequency of the fixed mechanical tooth pattern.")]
+        [Range(1f, 32f)] [SerializeField] private float cutterNoiseFrequency = 12f;
+
         [Header("Prefab")]
         [SerializeField] private ShredderWheel wheelPrefab;
         [Min(1)] [SerializeField] private int wheelPoolCapacity = 16;
@@ -90,6 +130,23 @@ namespace GravityPuzzle.Config
         public float VoxelEjectionSpreadAngle => voxelEjectionSpreadAngle;
         public int ParticlesPerShreddedCell => particlesPerShreddedCell;
         public float ExitSeamOffsetBelowShredder => exitSeamOffsetBelowShredder;
+        public float FeedMaskMouthInset => feedMaskMouthInset;
+        public bool EnableContactDebrisPresentation => enableContactDebrisPresentation;
+        public int MaxContactProgressEmissions => maxContactProgressEmissions;
+        public float DebrisPerSecondPerWorldUnit => debrisPerSecondPerWorldUnit;
+        public bool EnableAdvancedShreddingPresentation => enableAdvancedShreddingPresentation;
+        public int DebrisBurstPerCrossedCell => debrisBurstPerCrossedCell;
+        public int MaxDebrisPerFrame => maxDebrisPerFrame;
+        public float DebrisLifetime => debrisLifetime;
+        public Vector2 DebrisSizeRange => debrisSizeRange;
+        public float DebrisDownwardSpeed => debrisDownwardSpeed;
+        public float DebrisHorizontalSpeed => debrisHorizontalSpeed;
+        public float DebrisGravityModifier => debrisGravityModifier;
+        public float DebrisAngularVelocity => debrisAngularVelocity;
+        public int DebrisSortingOrder => debrisSortingOrder;
+        public float CutterEdgeAmplitude => cutterEdgeAmplitude;
+        public float CutterEdgeSoftness => cutterEdgeSoftness;
+        public float CutterNoiseFrequency => cutterNoiseFrequency;
         public float FeedSpeed => feedSpeed;
         public int FeedQueueCapacity => feedQueueCapacity;
         public float TremorIntensity => tremorIntensity;

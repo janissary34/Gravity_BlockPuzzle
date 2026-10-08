@@ -16,6 +16,8 @@ namespace GravityPuzzle.Config
         [SerializeField] private List<PiecePaletteDefinition> paletteDefinitions = new List<PiecePaletteDefinition>();
 
         [Header("Modular Block Presentation")]
+        [Tooltip("Keeps every frozen shape on the same cell-based presentation path. The underlying modules remain identical before and after ice breaks, while optional whole-shape normal art can still appear after thawing.")]
+        [SerializeField] private bool useUnifiedModularIce = true;
         [Tooltip("Artist-authored 1x1 brick used when a complete piece has no matching silhouette, including hammer fragments.")]
         [SerializeField] private Sprite normalFallbackSprite;
         [Tooltip("Artist-authored 1x1 ice block used when a frozen piece has no matching silhouette.")]
@@ -30,6 +32,11 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite iceOverlaySprite;
         [SerializeField] private Color iceOverlayTint = new Color(1f, 1f, 1f, .42f);
         [SerializeField] private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
+        [Tooltip("Shared counter style for every frozen piece. Level assets own the remaining move count, while this config owns its visual language.")]
+        [SerializeField] private float iceCounterFontSize = 36f;
+        [SerializeField] private Color iceCounterTextColor = Color.white;
+        [SerializeField] private Color iceCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
+        [SerializeField, Range(0f, 1f)] private float iceCounterOutlineWidth = .22f;
 
         [Header("Bomb Presentation")]
         [Tooltip("Sprite rendered above Bomb blocks. Leave empty to keep their normal piece visual.")]
@@ -49,12 +56,17 @@ namespace GravityPuzzle.Config
         public IReadOnlyList<PieceVisualDefinition> Definitions => definitions;
         public Material IceMaterial => iceMaterial;
         public IReadOnlyList<PiecePaletteDefinition> PaletteDefinitions => paletteDefinitions;
+        public bool UseUnifiedModularIce => useUnifiedModularIce;
         public Sprite NormalFallbackSprite => normalFallbackSprite;
         public Sprite IceFallbackSprite => iceFallbackSprite;
         public float ModularIceCellScale => Mathf.Max(1f, modularIceCellScale);
         public Sprite IceOverlaySprite => iceOverlaySprite;
         public Color IceOverlayTint => iceOverlayTint;
         public Color IceFrostTint => iceFrostTint;
+        public float IceCounterFontSize => Mathf.Max(1f, iceCounterFontSize);
+        public Color IceCounterTextColor => iceCounterTextColor;
+        public Color IceCounterOutlineColor => iceCounterOutlineColor;
+        public float IceCounterOutlineWidth => Mathf.Clamp01(iceCounterOutlineWidth);
         public Sprite BombOverlaySprite => bombOverlaySprite;
         public float BombOverlayFill => bombOverlayFill;
         public float RestingOutlineWidth => restingOutlineWidth;

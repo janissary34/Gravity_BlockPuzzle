@@ -14,6 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   particlesPerShreddedCell: 40
   exitSeamOffsetBelowShredder: 0.35
+  feedMaskMouthInset: 0.14
+  enableContactDebrisPresentation: 1
+  maxContactProgressEmissions: 8
+  enableAdvancedShreddingPresentation: 0
+  debrisPerSecondPerWorldUnit: 48
+  debrisBurstPerCrossedCell: 3
+  maxDebrisPerFrame: 16
+  debrisLifetime: 0.48
+  debrisSizeRange: {x: 0.055, y: 0.14}
+  debrisDownwardSpeed: 2.8
+  debrisHorizontalSpeed: 0.75
+  debrisGravityModifier: 0.35
+  debrisAngularVelocity: 540
+  debrisSortingOrder: 24
+  cutterEdgeAmplitude: 0.075
+  cutterEdgeSoftness: 0.035
+  cutterNoiseFrequency: 12
   wheelPrefab: {fileID: 6496321627930684527, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
   wheelPoolCapacity: 32
   catchZonePrefab: {fileID: 1348796746018862400, guid: 38977ea9b7627446fb5feb095e7ae1d6, type: 3}

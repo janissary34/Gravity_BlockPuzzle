@@ -238,7 +238,8 @@ namespace GravityPuzzle
             int sortingOrder = 0,
             Sprite presentationSprite = null,
             bool fitSpriteToSize = false,
-            bool renderVisual = true)
+            bool renderVisual = true,
+            bool sliceSpriteToSize = false)
         {
             GameObject block = new GameObject(blockName);
             block.transform.position = position;
@@ -251,7 +252,16 @@ namespace GravityPuzzle
             renderer.sortingOrder = sortingOrder;
             renderer.enabled = renderVisual;
 
-            if (fitSpriteToSize && presentationSprite != null)
+            if (sliceSpriteToSize && presentationSprite != null)
+            {
+                // Preserve authored corners while allowing arbitrary solid
+                // obstacle rectangles. Sprite border data owns the fixed
+                // edge thickness; only the centre region stretches.
+                block.transform.localScale = Vector3.one;
+                renderer.drawMode = SpriteDrawMode.Sliced;
+                renderer.size = size;
+            }
+            else if (fitSpriteToSize && presentationSprite != null)
             {
                 Vector2 spriteSize = presentationSprite.bounds.size;
                 if (spriteSize.x > 0f && spriteSize.y > 0f)

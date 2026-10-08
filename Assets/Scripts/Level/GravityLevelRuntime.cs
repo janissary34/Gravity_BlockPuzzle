@@ -503,30 +503,63 @@ namespace GravityPuzzle
                 "Lower Environment Backdrop",
                 new Vector2(0f, -halfHeight - extension * .5f),
                 new Vector2(level.boardColumns, extension),
-                bottomColor,
-                configuredBoardPresentationConfig.BoardBlockMaterial,
+                Color.white,
+                configuredBoardPresentationConfig.EnvironmentBackdropMaterial,
                 -11);
             backdrop.transform.SetParent(parent, true);
 
+            // Continue the board checker below the shredder instead of
+            // replacing it with flat gradient strips. The grid materials stay
+            // authoritative; renderer tint only darkens successive rows toward
+            // the bottom edge of the camera.
+            int rowCount = Mathf.Max(1, Mathf.CeilToInt(extension));
+            for (int row = 0; row < rowCount; row++)
+            {
+                float normalizedDepth = Mathf.Clamp01((row + .5f) / extension);
+                float smoothDepth = normalizedDepth * normalizedDepth * (3f - 2f * normalizedDepth);
+                Color depthTint = Color.Lerp(Color.white, bottomColor, smoothDepth);
+                float centreY = -halfHeight - row - .5f;
+                for (int column = 0; column < level.boardColumns; column++)
+                {
+                    bool isAlternateCell = (column - row - 1) % 2 != 0;
+                    Color gridTint = configuredBoardPresentationConfig.GetGridTint(isAlternateCell);
+                    Color presentationTint = new Color(
+                        gridTint.r * depthTint.r,
+                        gridTint.g * depthTint.g,
+                        gridTint.b * depthTint.b,
+                        gridTint.a);
+                    GameObject cell = PrototypeBootstrap.CreateVisualBlock(
+                        $"Lower Grid Cell {column}, {-row - 1}",
+                        new Vector2(-level.boardColumns * .5f + column + .5f, centreY),
+                        Vector2.one * 1.015f,
+                        presentationTint,
+                        GetGridMaterial(isAlternateCell),
+                        -10,
+                        configuredBoardPresentationConfig.GridSprite,
+                        true);
+                    cell.transform.SetParent(parent, true);
+                }
+            }
+
             int bandCount = configuredBoardPresentationConfig.LowerGradientBandCount;
             float bandHeight = extension / bandCount;
-            Color topColor = configuredBoardPresentationConfig.ExteriorColor;
-            topColor.a = 1f;
-            for (int index = 0; index < bandCount; index++)
+            for (int bandIndex = 0; bandIndex < bandCount; bandIndex++)
             {
-                float normalizedDepth = (float)index / (bandCount - 1);
+                float normalizedDepth = (float)bandIndex / (bandCount - 1);
                 float smoothDepth = normalizedDepth * normalizedDepth * (3f - 2f * normalizedDepth);
-                Color bandTint = Color.Lerp(topColor, bottomColor, smoothDepth);
-
-                float centreY = -halfHeight - bandHeight * (index + .5f);
-                GameObject band = PrototypeBootstrap.CreateVisualBlock(
-                    $"Lower Gradient Band {index + 1}",
-                    new Vector2(0f, centreY),
-                    new Vector2(level.boardColumns, bandHeight + .015f),
-                    bandTint,
-                    configuredBoardPresentationConfig.BoardBlockMaterial,
-                    -10);
-                band.transform.SetParent(parent, true);
+                Color overlayColor = new Color(
+                    0f,
+                    0f,
+                    0f,
+                    configuredBoardPresentationConfig.LowerGridBottomOverlayAlpha * smoothDepth);
+                GameObject overlay = PrototypeBootstrap.CreateVisualBlock(
+                    $"Lower Grid Darkening Band {bandIndex + 1}",
+                    new Vector2(0f, -halfHeight - bandHeight * (bandIndex + .5f)),
+                    new Vector2(level.boardColumns, bandHeight + .02f),
+                    overlayColor,
+                    null,
+                    -9);
+                overlay.transform.SetParent(parent, true);
             }
         }
 
@@ -1428,14 +1461,8 @@ namespace GravityPuzzle
                 configuredBoardPresentationConfig.TryGetStaticBlockShape(shapeKey, out shapeSprite);
 
             Vector2Int boundsSize = maximum - minimum + Vector2Int.one;
-            bool isSolidRectangle = cells.Count == boundsSize.x * boundsSize.y;
-            if (shapeSprite != null || isSolidRectangle)
+            if (shapeSprite != null)
             {
-                Sprite sprite = shapeSprite != null
-                    ? shapeSprite
-                    : configuredBoardPresentationConfig != null
-                        ? configuredBoardPresentationConfig.StaticBlockSprite
-                        : null;
                 Vector2 centre = new Vector2(
                     -level.boardColumns * .5f + minimum.x + boundsSize.x * .5f,
                     -level.boardRows * .5f + minimum.y + boundsSize.y * .5f);
@@ -1445,26 +1472,54 @@ namespace GravityPuzzle
                     boundsSize,
                     color,
                     configuredBoardPresentationConfig != null
-                        ? configuredBoardPresentationConfig.FrameMaterial
+                        ? configuredBoardPresentationConfig.BoardBlockMaterial
                         : null,
                     0,
-                    sprite,
-                    sprite != null);
+                    shapeSprite,
+                    true);
                 return;
             }
 
-            // The map atlas does not yet cover every possible authored
-            // topology. Preserve its exact footprint until art supplies that
-            // silhouette; known shapes above remain a single renderer.
+            bool isSolidRectangle = cells.Count == boundsSize.x * boundsSize.y;
+            Sprite modularSprite = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.StaticBlockSprite
+                : null;
+            if (isSolidRectangle && modularSprite != null)
+            {
+                Vector2 centre = new Vector2(
+                    -level.boardColumns * .5f + minimum.x + boundsSize.x * .5f,
+                    -level.boardRows * .5f + minimum.y + boundsSize.y * .5f);
+                PrototypeBootstrap.CreateVisualBlock(
+                    "Sliced Obstacle Visual",
+                    centre,
+                    boundsSize,
+                    color,
+                    configuredBoardPresentationConfig.BoardBlockMaterial,
+                    0,
+                    modularSprite,
+                    false,
+                    true,
+                    true);
+                return;
+            }
+
+            // The map atlas does not cover every possible authored topology.
+            // Preserve those shapes as connected modular cells instead of
+            // stretching a 1x1 sprite across their bounding rectangle. The
+            // small presentation-only overlap closes transparent gutters;
+            // gameplay occupancy and collision sizes remain unchanged.
+            float modularScale = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.ModularStaticBlockScale
+                : 1f;
             for (int index = 0; index < cells.Count; index++)
             {
                 PrototypeBootstrap.CreateVisualBlock(
                     "Obstacle Visual",
                     GridCellWorldPosition(level, cells[index]),
-                    Vector2.one,
+                    Vector2.one * modularScale,
                     color,
                     configuredBoardPresentationConfig != null
-                        ? configuredBoardPresentationConfig.FrameMaterial
+                        ? configuredBoardPresentationConfig.BoardBlockMaterial
                         : null,
                     0,
                     configuredBoardPresentationConfig != null
@@ -1509,7 +1564,7 @@ namespace GravityPuzzle
                 ResolveStaticBlockColor(obstacle.color),
                 false,
                 configuredBoardPresentationConfig != null
-                    ? configuredBoardPresentationConfig.FrameMaterial
+                    ? configuredBoardPresentationConfig.BoardBlockMaterial
                     : null,
                 configuredBoardPresentationConfig != null
                     ? configuredBoardPresentationConfig.StaticBlockSprite
@@ -1519,7 +1574,7 @@ namespace GravityPuzzle
         private static Color ResolveStaticBlockColor(Color authoredColor)
         {
             return configuredBoardPresentationConfig != null
-                ? configuredBoardPresentationConfig.FrameTint
+                ? configuredBoardPresentationConfig.StaticBlockTint
                 : authoredColor;
         }
 
