@@ -22,6 +22,16 @@ namespace GravityPuzzle.Config
         [SerializeField] private Color environmentTint = Color.white;
         [Tooltip("Material used behind the checker grid to give every generated board the authored environment base.")]
         [SerializeField] private Material environmentBackdropMaterial;
+        [Tooltip("Transparent gradient material used to darken only the outer viewport edges behind the board.")]
+        [SerializeField] private Material exteriorEdgeDarkeningMaterial;
+        [Tooltip("Width in world units over which the exterior environment gently darkens toward each screen edge.")]
+        [SerializeField, Min(.1f)] private float exteriorEdgeDarkeningWidth = 1.25f;
+        [Tooltip("Maximum black overlay alpha at the outermost viewport edge.")]
+        [SerializeField, Range(0f, .5f)] private float exteriorEdgeDarkeningAlpha = .16f;
+        [Tooltip("Dedicated material behind playable grid cells. Keeping this separate from the exterior environment reproduces Scene Tuna's dark board interior without coupling the board to an ice material.")]
+        [SerializeField] private Material boardInteriorMaterial;
+        [Tooltip("Tint applied to the board-interior material behind the checker grid.")]
+        [SerializeField] private Color boardInteriorTint = new Color(.07f, .056f, .34f, 1f);
         [Tooltip("Material used by static board modules such as authored obstacles.")]
         [SerializeField] private Material boardBlockMaterial;
         [Tooltip("Base map-atlas module for static gameplay blocks. It is scaled to the authored grid footprint until a dedicated obstacle silhouette is supplied.")]
@@ -46,14 +56,20 @@ namespace GravityPuzzle.Config
         [Header("Lower Screen Continuation")]
         [Tooltip("Extends the solid environment background and side walls from the shredder to the bottom of the gameplay viewport.")]
         [SerializeField] private bool extendPresentationToViewportBottom = true;
+        [Tooltip("Continues checker tiles below the shredder. Scene Tuna uses a clean solid lower area, so this is normally disabled.")]
+        [SerializeField] private bool renderGridBelowShredder;
         [Tooltip("Extra world-space coverage below the camera edge so aspect-ratio rounding cannot expose a seam.")]
         [SerializeField, Min(0f)] private float viewportBottomPadding = .35f;
         [Tooltip("Darkest colour reached at the viewport bottom. The gradient begins at Exterior Color directly below the shredder.")]
         [SerializeField] private Color lowerGradientTint = new Color(.01f, .015f, .09f, 1f);
-        [Tooltip("Number of static bands used to approximate the lower-screen gradient.")]
-        [SerializeField, Range(2, 48)] private int lowerGradientBandCount = 16;
         [Tooltip("Black overlay opacity reached at the bottom of the lower checker grid. This is separate from material tint because authored grid shaders may not multiply SpriteRenderer colour.")]
         [SerializeField, Range(0f, 1f)] private float lowerGridBottomOverlayAlpha = .78f;
+        [Tooltip("Transparent sprite material used only by the lower-grid darkening overlay.")]
+        [SerializeField] private Material lowerGridDarkeningMaterial;
+
+        [Header("Grid Geometry")]
+        [Tooltip("Presentation-only scale of each authored grid tile inside its logical cell. Scene Tuna's tiles use 0.96, exposing the dark board interior in the seams without changing grid rules.")]
+        [SerializeField, Range(.8f, 1.05f)] private float gridCellVisualScale = .96f;
 
         [Header("Camera Framing")]
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
@@ -72,6 +88,14 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool renderBottomEdgeSegments;
         [SerializeField] private Material frameMaterial;
         [SerializeField] private Color frameTint = Color.white;
+        [Tooltip("Native Scene Tuna scale for repeatable straight frame atlas modules. Modules repeat along long edges instead of stretching one sprite across the board.")]
+        [SerializeField, Min(.1f)] private float frameModuleScale = .5f;
+        [Tooltip("Presentation-only thickness of straight frame modules relative to gameplay frame thickness. Collision geometry is unaffected.")]
+        [SerializeField, Range(.2f, 1f)] private float frameVisualThicknessMultiplier = .55f;
+        [Tooltip("Dedicated thickness for the authored top-edge sprite, whose atlas rect contains more vertical padding than the side modules.")]
+        [SerializeField, Range(.1f, 1f)] private float topEdgeVisualThicknessMultiplier = .25f;
+        [Tooltip("Moves the authored top-edge sprite into the board to compensate for transparent atlas padding. Collision geometry is unaffected.")]
+        [SerializeField, Range(0f, .5f)] private float topEdgeInwardOverlap = .2f;
         [Tooltip("Fine correction from the exact intersection of the adjoining straight edges. Zero joins the corner to both edges; positive values move it outward.")]
         [SerializeField] private Vector2 cornerOutset = Vector2.zero;
         [Tooltip("Moves the top-left corner right and the top-right corner left. The top straight edge is shortened by the same amount so the sprites meet without overlap.")]
@@ -86,6 +110,11 @@ namespace GravityPuzzle.Config
         public Color EnvironmentTint => environmentTint;
         public float CameraSizeMultiplier => Mathf.Max(1f, cameraSizeMultiplier);
         public Material EnvironmentBackdropMaterial => environmentBackdropMaterial;
+        public Material ExteriorEdgeDarkeningMaterial => exteriorEdgeDarkeningMaterial;
+        public float ExteriorEdgeDarkeningWidth => Mathf.Max(.1f, exteriorEdgeDarkeningWidth);
+        public float ExteriorEdgeDarkeningAlpha => Mathf.Clamp(exteriorEdgeDarkeningAlpha, 0f, .5f);
+        public Material BoardInteriorMaterial => boardInteriorMaterial;
+        public Color BoardInteriorTint => boardInteriorTint;
         public Material BoardBlockMaterial => boardBlockMaterial;
         public Sprite StaticBlockSprite => staticBlockSprite;
         public Color StaticBlockTint => staticBlockTint;
@@ -94,13 +123,20 @@ namespace GravityPuzzle.Config
         public Color GridDarkTint => gridDarkTint;
         public Color GridLightTint => gridLightTint;
         public bool ExtendPresentationToViewportBottom => extendPresentationToViewportBottom;
+        public bool RenderGridBelowShredder => renderGridBelowShredder;
         public float ViewportBottomPadding => Mathf.Max(0f, viewportBottomPadding);
         public Color LowerGradientTint => lowerGradientTint;
-        public int LowerGradientBandCount => Mathf.Clamp(lowerGradientBandCount, 2, 48);
         public float LowerGridBottomOverlayAlpha => Mathf.Clamp01(lowerGridBottomOverlayAlpha);
+        public Material LowerGridDarkeningMaterial => lowerGridDarkeningMaterial;
+        public float GridCellVisualScale => Mathf.Clamp(gridCellVisualScale, .8f, 1.05f);
         public bool RenderBottomEdgeSegments => renderBottomEdgeSegments;
         public Material FrameMaterial => frameMaterial;
         public Color FrameTint => frameTint;
+        public float FrameModuleScale => Mathf.Max(.1f, frameModuleScale);
+        public float FrameVisualThicknessMultiplier => Mathf.Clamp(frameVisualThicknessMultiplier, .2f, 1f);
+        public float TopEdgeVisualThicknessMultiplier =>
+            Mathf.Clamp(topEdgeVisualThicknessMultiplier, .1f, 1f);
+        public float TopEdgeInwardOverlap => Mathf.Clamp(topEdgeInwardOverlap, 0f, .5f);
         public Vector2 CornerOutset => Vector2.Max(Vector2.zero, cornerOutset);
         public float TopCornerHorizontalInset => Mathf.Max(0f, topCornerHorizontalInset);
         public float TopCornerVerticalInset => Mathf.Max(0f, topCornerVerticalInset);

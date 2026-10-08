@@ -415,7 +415,8 @@ namespace GravityPuzzle
                 : Color.Lerp(baseColor, Color.white, .08f);
             float fineCellSize = 1f / level.subdivisions;
 
-            CreateEnvironmentBackdrop(background.transform, level);
+            CreateViewportEnvironmentBackdrop(background.transform, level);
+            CreateBoardInteriorBackdrop(background.transform, level);
             CreateLowerScreenBackground(background.transform, level);
 
             for (int boardY = 0; boardY < level.boardRows; boardY++)
@@ -437,7 +438,7 @@ namespace GravityPuzzle
                         GameObject square = PrototypeBootstrap.CreateVisualBlock(
                             $"Background Grid Cell {boardX}, {boardY}",
                             GridCellWorldPosition(level, boardCell),
-                            Vector2.one,
+                            Vector2.one * ResolveGridCellVisualScale(),
                             presentationColor,
                             gridMaterial,
                             -10,
@@ -460,7 +461,7 @@ namespace GravityPuzzle
                         GameObject fragment = PrototypeBootstrap.CreateVisualBlock(
                             $"Legacy Background Fragment {fineCell.x}, {fineCell.y}",
                             CellWorldPosition(level, fineCell),
-                            Vector2.one * fineCellSize,
+                            Vector2.one * fineCellSize * ResolveGridCellVisualScale(),
                             presentationColor,
                             gridMaterial,
                             -10,
@@ -474,18 +475,113 @@ namespace GravityPuzzle
             }
         }
 
-        private static void CreateEnvironmentBackdrop(Transform parent, GravityLevelDefinition level)
+        private static void CreateViewportEnvironmentBackdrop(
+            Transform parent,
+            GravityLevelDefinition level)
         {
             if (configuredBoardPresentationConfig == null ||
                 configuredBoardPresentationConfig.EnvironmentBackdropMaterial == null)
+                return;
+
+            float cameraHalfHeight = ResolveCameraSize(level) +
+                                     configuredBoardPresentationConfig.ViewportBottomPadding;
+            float height = cameraHalfHeight * 2f;
+            float width = height * CameraAspect();
+            GameObject backdrop = PrototypeBootstrap.CreateVisualBlock(
+                "Viewport Environment Backdrop",
+                Vector2.zero,
+                new Vector2(width, height),
+                configuredBoardPresentationConfig.EnvironmentTint,
+                configuredBoardPresentationConfig.EnvironmentBackdropMaterial,
+                -20);
+            backdrop.transform.SetParent(parent, true);
+
+            CreateViewportEdgeDarkening(parent, width, height);
+        }
+
+        private static void CreateViewportEdgeDarkening(
+            Transform parent,
+            float viewportWidth,
+            float viewportHeight)
+        {
+            Material material = configuredBoardPresentationConfig.ExteriorEdgeDarkeningMaterial;
+            float alpha = configuredBoardPresentationConfig.ExteriorEdgeDarkeningAlpha;
+            if (material == null || alpha <= .001f)
+                return;
+
+            float fadeWidth = Mathf.Min(
+                configuredBoardPresentationConfig.ExteriorEdgeDarkeningWidth,
+                Mathf.Min(viewportWidth, viewportHeight) * .5f);
+            Color tint = new Color(0f, 0f, 0f, alpha);
+            float halfWidth = viewportWidth * .5f;
+            float halfHeight = viewportHeight * .5f;
+
+            CreateEdgeDarkeningStrip(
+                parent,
+                "Exterior Top Darkening",
+                new Vector2(0f, halfHeight - fadeWidth * .5f),
+                new Vector2(viewportWidth, fadeWidth),
+                180f,
+                tint,
+                material);
+            CreateEdgeDarkeningStrip(
+                parent,
+                "Exterior Bottom Darkening",
+                new Vector2(0f, -halfHeight + fadeWidth * .5f),
+                new Vector2(viewportWidth, fadeWidth),
+                0f,
+                tint,
+                material);
+            CreateEdgeDarkeningStrip(
+                parent,
+                "Exterior Left Darkening",
+                new Vector2(-halfWidth + fadeWidth * .5f, 0f),
+                new Vector2(fadeWidth, viewportHeight),
+                -90f,
+                tint,
+                material);
+            CreateEdgeDarkeningStrip(
+                parent,
+                "Exterior Right Darkening",
+                new Vector2(halfWidth - fadeWidth * .5f, 0f),
+                new Vector2(fadeWidth, viewportHeight),
+                90f,
+                tint,
+                material);
+        }
+
+        private static void CreateEdgeDarkeningStrip(
+            Transform parent,
+            string name,
+            Vector2 position,
+            Vector2 size,
+            float rotation,
+            Color tint,
+            Material material)
+        {
+            GameObject strip = PrototypeBootstrap.CreateVisualBlock(
+                name,
+                position,
+                size,
+                tint,
+                material,
+                -19);
+            strip.transform.rotation = Quaternion.Euler(0f, 0f, rotation);
+            strip.transform.SetParent(parent, true);
+        }
+
+        private static void CreateBoardInteriorBackdrop(Transform parent, GravityLevelDefinition level)
+        {
+            if (configuredBoardPresentationConfig == null ||
+                configuredBoardPresentationConfig.BoardInteriorMaterial == null)
                 return;
 
             GameObject backdrop = PrototypeBootstrap.CreateVisualBlock(
                 "Board Environment Backdrop",
                 Vector2.zero,
                 new Vector2(level.boardColumns, level.boardRows),
-                configuredBoardPresentationConfig.EnvironmentTint,
-                configuredBoardPresentationConfig.EnvironmentBackdropMaterial,
+                configuredBoardPresentationConfig.BoardInteriorTint,
+                configuredBoardPresentationConfig.BoardInteriorMaterial,
                 -11);
             backdrop.transform.SetParent(parent, true);
         }
@@ -497,70 +593,70 @@ namespace GravityPuzzle
                 return;
 
             float halfHeight = level.boardRows * .5f;
-            Color bottomColor = configuredBoardPresentationConfig.LowerGradientTint;
-            bottomColor.a = 1f;
             GameObject backdrop = PrototypeBootstrap.CreateVisualBlock(
                 "Lower Environment Backdrop",
                 new Vector2(0f, -halfHeight - extension * .5f),
                 new Vector2(level.boardColumns, extension),
-                Color.white,
-                configuredBoardPresentationConfig.EnvironmentBackdropMaterial,
+                configuredBoardPresentationConfig.BoardInteriorTint,
+                configuredBoardPresentationConfig.BoardInteriorMaterial,
                 -11);
             backdrop.transform.SetParent(parent, true);
 
-            // Continue the board checker below the shredder instead of
-            // replacing it with flat gradient strips. The grid materials stay
-            // authoritative; renderer tint only darkens successive rows toward
-            // the bottom edge of the camera.
-            int rowCount = Mathf.Max(1, Mathf.CeilToInt(extension));
-            for (int row = 0; row < rowCount; row++)
+            if (configuredBoardPresentationConfig.RenderGridBelowShredder)
             {
-                float normalizedDepth = Mathf.Clamp01((row + .5f) / extension);
-                float smoothDepth = normalizedDepth * normalizedDepth * (3f - 2f * normalizedDepth);
-                Color depthTint = Color.Lerp(Color.white, bottomColor, smoothDepth);
-                float centreY = -halfHeight - row - .5f;
-                for (int column = 0; column < level.boardColumns; column++)
+                Color bottomColor = configuredBoardPresentationConfig.LowerGradientTint;
+                bottomColor.a = 1f;
+                int rowCount = Mathf.Max(1, Mathf.CeilToInt(extension));
+                for (int row = 0; row < rowCount; row++)
                 {
-                    bool isAlternateCell = (column - row - 1) % 2 != 0;
-                    Color gridTint = configuredBoardPresentationConfig.GetGridTint(isAlternateCell);
-                    Color presentationTint = new Color(
-                        gridTint.r * depthTint.r,
-                        gridTint.g * depthTint.g,
-                        gridTint.b * depthTint.b,
-                        gridTint.a);
-                    GameObject cell = PrototypeBootstrap.CreateVisualBlock(
-                        $"Lower Grid Cell {column}, {-row - 1}",
-                        new Vector2(-level.boardColumns * .5f + column + .5f, centreY),
-                        Vector2.one * 1.015f,
-                        presentationTint,
-                        GetGridMaterial(isAlternateCell),
-                        -10,
-                        configuredBoardPresentationConfig.GridSprite,
-                        true);
-                    cell.transform.SetParent(parent, true);
+                    float normalizedDepth = Mathf.Clamp01((row + .5f) / extension);
+                    float delayedDepth = normalizedDepth * normalizedDepth * normalizedDepth;
+                    float smoothDepth = delayedDepth * delayedDepth * (3f - 2f * delayedDepth);
+                    Color depthTint = Color.Lerp(Color.white, bottomColor, smoothDepth);
+                    float centreY = -halfHeight - row - .5f;
+                    for (int column = 0; column < level.boardColumns; column++)
+                    {
+                        bool isAlternateCell = (column - row - 1) % 2 != 0;
+                        Color gridTint = configuredBoardPresentationConfig.GetGridTint(isAlternateCell);
+                        Color presentationTint = new Color(
+                            gridTint.r * depthTint.r,
+                            gridTint.g * depthTint.g,
+                            gridTint.b * depthTint.b,
+                            gridTint.a * (1f - smoothDepth));
+                        GameObject cell = PrototypeBootstrap.CreateVisualBlock(
+                            $"Lower Grid Cell {column}, {-row - 1}",
+                            new Vector2(-level.boardColumns * .5f + column + .5f, centreY),
+                            Vector2.one * ResolveGridCellVisualScale(),
+                            presentationTint,
+                            GetGridMaterial(isAlternateCell),
+                            -10,
+                            configuredBoardPresentationConfig.GridSprite,
+                            true);
+                        cell.transform.SetParent(parent, true);
+                    }
                 }
             }
 
-            int bandCount = configuredBoardPresentationConfig.LowerGradientBandCount;
-            float bandHeight = extension / bandCount;
-            for (int bandIndex = 0; bandIndex < bandCount; bandIndex++)
-            {
-                float normalizedDepth = (float)bandIndex / (bandCount - 1);
-                float smoothDepth = normalizedDepth * normalizedDepth * (3f - 2f * normalizedDepth);
-                Color overlayColor = new Color(
-                    0f,
-                    0f,
-                    0f,
-                    configuredBoardPresentationConfig.LowerGridBottomOverlayAlpha * smoothDepth);
-                GameObject overlay = PrototypeBootstrap.CreateVisualBlock(
-                    $"Lower Grid Darkening Band {bandIndex + 1}",
-                    new Vector2(0f, -halfHeight - bandHeight * (bandIndex + .5f)),
-                    new Vector2(level.boardColumns, bandHeight + .02f),
-                    overlayColor,
-                    null,
-                    -9);
-                overlay.transform.SetParent(parent, true);
-            }
+            Color overlayColor = new Color(
+                0f,
+                0f,
+                0f,
+                configuredBoardPresentationConfig.LowerGridBottomOverlayAlpha);
+            GameObject overlay = PrototypeBootstrap.CreateVisualBlock(
+                "Lower Grid Darkening Gradient",
+                new Vector2(0f, -halfHeight - extension * .5f),
+                new Vector2(level.boardColumns, extension + .02f),
+                overlayColor,
+                configuredBoardPresentationConfig.LowerGridDarkeningMaterial,
+                -9);
+            overlay.transform.SetParent(parent, true);
+        }
+
+        private static float ResolveGridCellVisualScale()
+        {
+            return configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.GridCellVisualScale
+                : 1f;
         }
 
         private static Material GetGridMaterial(bool isAlternateCell)
@@ -1011,10 +1107,89 @@ namespace GravityPuzzle
             Color color,
             BoardFrameEdge frameEdge)
         {
+            if (configuredBoardPresentationConfig != null &&
+                configuredBoardPresentationConfig.GetEdgeSprite(frameEdge) == null)
+                return;
+
+            if (!IsFrameCorner(frameEdge) && TryCreateRepeatedFrameModules(
+                    frameRoot,
+                    name,
+                    position,
+                    size,
+                    frameEdge))
+                return;
+
             GameObject frameObject = PrototypeBootstrap.CreateVisualBlock(name, position, size, color);
             frameObject.transform.SetParent(frameRoot, true);
 
             ApplyFramePresentation(frameObject.GetComponent<SpriteRenderer>(), size, frameEdge);
+        }
+
+        private static bool TryCreateRepeatedFrameModules(
+            Transform frameRoot,
+            string name,
+            Vector2 position,
+            Vector2 size,
+            BoardFrameEdge frameEdge)
+        {
+            if (configuredBoardPresentationConfig == null)
+                return false;
+
+            Sprite sprite = configuredBoardPresentationConfig.GetEdgeSprite(frameEdge);
+            if (sprite == null)
+                return false;
+
+            bool horizontal = frameEdge == BoardFrameEdge.Top ||
+                              frameEdge == BoardFrameEdge.Bottom;
+            float thicknessMultiplier = frameEdge == BoardFrameEdge.Top
+                ? configuredBoardPresentationConfig.TopEdgeVisualThicknessMultiplier
+                : configuredBoardPresentationConfig.FrameVisualThicknessMultiplier;
+            float originalThickness = horizontal ? size.y : size.x;
+            float visualThickness = originalThickness * thicknessMultiplier;
+            float inwardOffset = (originalThickness - visualThickness) * .5f;
+            if (frameEdge == BoardFrameEdge.Top)
+                position.y -= inwardOffset +
+                              configuredBoardPresentationConfig.TopEdgeInwardOverlap;
+            else if (frameEdge == BoardFrameEdge.Bottom)
+                position.y += inwardOffset;
+            else if (frameEdge == BoardFrameEdge.Left)
+                position.x += inwardOffset;
+            else if (frameEdge == BoardFrameEdge.Right)
+                position.x -= inwardOffset;
+
+            Vector2 spriteSize = sprite.bounds.size;
+            float nativeLength = (horizontal ? spriteSize.x : spriteSize.y) *
+                                 configuredBoardPresentationConfig.FrameModuleScale;
+            float requestedLength = horizontal ? size.x : size.y;
+            if (nativeLength <= .001f || requestedLength <= .001f)
+                return false;
+
+            int moduleCount = Mathf.Max(1, Mathf.RoundToInt(requestedLength / nativeLength));
+            float moduleLength = requestedLength / moduleCount;
+            for (int moduleIndex = 0; moduleIndex < moduleCount; moduleIndex++)
+            {
+                float offset = -requestedLength * .5f +
+                               moduleLength * (moduleIndex + .5f);
+                Vector2 modulePosition = position +
+                                         (horizontal
+                                             ? Vector2.right * offset
+                                             : Vector2.up * offset);
+                Vector2 moduleSize = horizontal
+                    ? new Vector2(moduleLength, visualThickness)
+                    : new Vector2(visualThickness, moduleLength);
+                GameObject module = PrototypeBootstrap.CreateVisualBlock(
+                    $"{name} Module {moduleIndex + 1}",
+                    modulePosition,
+                    moduleSize,
+                    configuredBoardPresentationConfig.FrameTint,
+                    configuredBoardPresentationConfig.FrameMaterial,
+                    FrameSortingOrder,
+                    sprite,
+                    true);
+                module.transform.SetParent(frameRoot, true);
+            }
+
+            return true;
         }
 
         private static void CreateOuterFrameCorners(
@@ -1109,7 +1284,10 @@ namespace GravityPuzzle
 
         private static float GetOuterFrameCornerSize(float fineCellSize, float thickness)
         {
-            return Mathf.Max(fineCellSize + thickness, thickness * 2f);
+            // Scene Tuna authors each corner as one grid-sized atlas module.
+            // Including frame thickness here enlarged the artwork and produced
+            // solid rectangular caps above the board.
+            return Mathf.Max(fineCellSize, thickness * 2f);
         }
 
         private static float GetCornerJoinTrim(

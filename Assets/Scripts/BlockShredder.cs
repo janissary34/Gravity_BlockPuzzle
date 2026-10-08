@@ -181,6 +181,11 @@ namespace GravityPuzzle
 
             // 2. Capture the current presentation before the feed mask begins
             // clipping the piece beneath the cutter.
+            // An intact atlas is a single large SpriteRenderer and can only
+            // ever read as a rectangular mask. Switch to the authored modular
+            // cells before caching renderers so each row becomes a tangible
+            // cutter surface with its own irregular edge.
+            piece.PrepareModularShredderSurface();
             SpriteRenderer[] pieceRenderers = piece.ConfiguredShredderRenderers ?? EmptyRenderers;
             piece.BeginShredderPresentation(pieceRenderers, shredderY, shredderConfig);
             piece.ApplyShredderPresentationClipping();
@@ -209,20 +214,8 @@ namespace GravityPuzzle
             }
             shardList.Sort((a, b) => a.transform.position.y.CompareTo(b.transform.position.y));
 
-            // Emit directly beneath the rotating shredder wheels. Starting a
-            // flight on the cutter line puts it inside the feed mask and behind
-            // the wheel art for its first frames, making the shred reward look
-            // as if it never spawned.
-            float offsetBelow = shredderConfig != null ? shredderConfig.ExitSeamOffsetBelowShredder : 0.65f;
-            float grinderExitSeamY = shredderY - offsetBelow;
-
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
             float totalProgress = Mathf.Max(0f, piece.RemainingProgressUnits);
-            float progressPerGrain = totalProgress /
-                                     (float)Mathf.Max(1, shardList.Count * LevelProgressManager.SandGrainsPerRenderedVoxel);
-            float scheduledProgress = 0f;
-            float bufferedParticleProgress = 0f;
-            Vector2 bufferedParticlePosition = new Vector2(piece.transform.position.x, grinderExitSeamY);
             float maxTime = 4.0f;
             float elapsed = 0f;
             float previousShakeOffsetX = 0f;
@@ -237,18 +230,10 @@ namespace GravityPuzzle
             float visualCutterY = shredderY - (shredderConfig != null
                 ? shredderConfig.FeedMaskMouthInset
                 : 0f);
-            int genericRendererCount = CountGenericShredderRenderers(pieceRenderers, shardTransforms);
-            bool usesAtlasProgressPresentation = shardList.Count == 0 && genericRendererCount > 0;
-            int contactProgressEmissionCount = usesAtlasProgressPresentation
-                ? Mathf.Clamp(
-                    Mathf.CeilToInt(piece.CollisionBounds.size.x * 2f),
-                    1,
-                    shredderConfig != null ? shredderConfig.MaxContactProgressEmissions : 8)
-                : 0;
-            float contactProgressQuantum = contactProgressEmissionCount > 0
-                ? totalProgress / contactProgressEmissionCount
-                : 0f;
-            float contactProgressScheduled = 0f;
+            // Fragments start at the visible mouth/top tooth tangent, before
+            // the mask hides material farther inside the wheel mechanism.
+            float debrisContactY = shredderY;
+            bool contactPresentationStarted = false;
 
             // 3. The kinematic feed owns the descent while this coroutine watches
             // the crossing cells and converts them to shred effects.
@@ -282,20 +267,24 @@ namespace GravityPuzzle
                     }
                 }
 
-                // Release only the cells that have now crossed the cutter.
-                // This transaction also wakes grid gravity, allowing an upper
-                // piece to follow the shrinking shredder footprint in the same
-                // feed instead of waiting for this complete piece to despawn.
-                piece.ReleaseCollisionCellsAtOrBelow(shredderY);
-
+                // Sample the visual contact before removing collision cells.
+                // This guarantees that the entry burst is emitted on the exact
+                // frame the block reaches the shredder mouth, rather than one
+                // frame later after its lower geometry has been released.
                 bool hasContactSpan = TryGetCutterContactSpan(
                     pieceRenderers,
-                    visualCutterY,
+                    debrisContactY,
                     out float contactMinX,
                     out float contactMaxX);
                 float contactWidth = hasContactSpan
                     ? Mathf.Max(.05f, contactMaxX - contactMinX)
                     : 0f;
+
+                // Release only the cells that have now crossed the cutter.
+                // This transaction also wakes grid gravity, allowing an upper
+                // piece to follow the shrinking shredder footprint in the same
+                // feed instead of waiting for this complete piece to despawn.
+                piece.ReleaseCollisionCellsAtOrBelow(shredderY);
 
                 // This is deliberately time-based rather than a final burst.
                 // Do not begin until visible material reaches the hidden cutter
@@ -303,6 +292,21 @@ namespace GravityPuzzle
                 if (hasContactSpan && debrisParticleSystem != null && shredderConfig != null &&
                     shredderConfig.EnableContactDebrisPresentation)
                 {
+                    Vector2 contactCenter = new Vector2(
+                        (contactMinX + contactMaxX) * .5f,
+                        debrisContactY);
+                    if (!contactPresentationStarted)
+                    {
+                        int entryBurstCount = Mathf.Min(
+                            shredderConfig.MaxDebrisPerFrame,
+                            Mathf.CeilToInt(contactWidth * shredderConfig.DebrisEntryBurstPerWorldUnit));
+                        debrisParticleSystem.EmitAtCutter(
+                            contactCenter,
+                            contactWidth,
+                            tileColor,
+                            entryBurstCount);
+                    }
+
                     debrisAccumulator += Time.deltaTime *
                                        shredderConfig.DebrisPerSecondPerWorldUnit * contactWidth;
                     int debrisCount = Mathf.Min(
@@ -312,53 +316,20 @@ namespace GravityPuzzle
                     {
                         debrisAccumulator -= debrisCount;
                         debrisParticleSystem.EmitAtCutter(
-                            new Vector2((contactMinX + contactMaxX) * .5f, visualCutterY),
+                            contactCenter,
                             contactWidth,
                             tileColor,
                             debrisCount);
                     }
                 }
 
-                // Artist-atlas blocks have one renderer, so waiting for its
-                // final hide used to launch all reward voxels from one point
-                // after the shred was over. Convert its visible crossing into
-                // a handful of bounded, pooled handoffs while the cutter is
-                // actually consuming it. Each origin is sampled across the
-                // active horizontal contact span.
-                if (hasContactSpan && usesAtlasProgressPresentation &&
-                    contactProgressQuantum > 0f)
-                {
-                    float crossingProgress = totalProgress * CalculateGenericCrossingFraction(
-                        pieceRenderers,
-                        shardTransforms,
-                        visualCutterY,
-                        genericRendererCount);
-                    int emittedThisFrame = 0;
-                    while (contactProgressScheduled + contactProgressQuantum <= crossingProgress + .0001f &&
-                           emittedThisFrame < 2)
-                    {
-                        float originX = Random.Range(contactMinX, contactMaxX);
-                        Vector2 contactWorldPos = new Vector2(originX, visualCutterY);
-                        LevelProgressManager progressManager = LevelProgressManager.Instance;
-                        if (progressManager != null)
-                        {
-                            progressManager.SpawnFlyingVoxel(
-                                contactWorldPos,
-                                Opaque(tileColor),
-                                contactProgressQuantum);
-                        }
+                if (hasContactSpan)
+                    contactPresentationStarted = true;
 
-                        contactProgressScheduled += contactProgressQuantum;
-                        scheduledProgress += contactProgressQuantum;
-                        bufferedParticlePosition = contactWorldPos;
-                        emittedThisFrame++;
-                    }
-                }
-
-                int targetPieceParticles = Mathf.Max(1, (int)(Mathf.Max(1f, totalProgress) * (shredderConfig != null ? shredderConfig.ParticlesPerShreddedCell : 8)));
-                int emissionStride = Mathf.Max(1, shardList.Count / targetPieceParticles);
-
-                // A) Shred voxel shards crossing the cutter line and exit at the gear seam.
+                // A) Shred voxel shards crossing the cutter line. Their visual
+                // material conversion is handled by the local cutter particles;
+                // progress remains a separate, single HUD acknowledgement after
+                // the feed completes instead of launching from the mouth.
                 for (int i = 0; i < shardList.Count; i++)
                 {
                     VoxelShard shard = shardList[i];
@@ -368,34 +339,7 @@ namespace GravityPuzzle
                     {
                         processedShards.Add(shard);
 
-                        Vector2 contactWorldPos = new Vector2(
-                            shard.transform.position.x,
-                            shredderY);
-                        Vector2 emissionWorldPos = new Vector2(
-                            contactWorldPos.x,
-                            grinderExitSeamY);
-                        Color shardColor = tileColor;
-
-                        float shardProgress = progressPerGrain * LevelProgressManager.SandGrainsPerRenderedVoxel;
-                        scheduledProgress += shardProgress;
-                        bufferedParticleProgress += shardProgress;
-                        bufferedParticlePosition = emissionWorldPos;
-
-                        bool shouldEmitParticle = (processedShards.Count % emissionStride == 0);
-                        if (shouldEmitParticle)
-                        {
-                            shard.BeginProgressHandoff(
-                                emissionWorldPos,
-                                shardColor,
-                                bufferedParticleProgress,
-                                1);
-                            PlayParticleShredSound();
-                            bufferedParticleProgress = 0f;
-                        }
-                        else
-                        {
-                            shard.Recycle();
-                        }
+                        shard.Recycle();
                     }
                 }
 
@@ -425,10 +369,6 @@ namespace GravityPuzzle
                         Vector2 contactWorldPos = new Vector2(
                             r.transform.position.x,
                             visualCutterY);
-                        Vector2 emissionWorldPos = new Vector2(
-                            contactWorldPos.x,
-                            grinderExitSeamY);
-
                         if (debrisParticleSystem != null && shredderConfig != null &&
                             shredderConfig.EnableContactDebrisPresentation)
                         {
@@ -439,26 +379,7 @@ namespace GravityPuzzle
                                 shredderConfig.DebrisBurstPerCrossedCell);
                         }
 
-                        if (shardList.Count == 0 && !usesAtlasProgressPresentation)
-                        {
-                            // Whole-piece atlas art and the modular brick fallback
-                            // intentionally have no voxel objects to cross the
-                            // cutter. Keep their audible feedback on the same
-                            // rate-limited sound path as legacy voxel pieces.
-                            PlayParticleShredSound();
-                            LevelProgressManager progressManager = LevelProgressManager.Instance;
-                            if (progressManager != null)
-                            {
-                                float cellProgress = totalProgress / Mathf.Max(1, pieceRenderers.Length);
-                                scheduledProgress += cellProgress;
-                                int burstCount = shredderConfig != null ? shredderConfig.ParticlesPerShreddedCell : 24;
-                                progressManager.SpawnFlyingVoxelBurst(
-                                    emissionWorldPos,
-                                    Opaque(tileColor),
-                                    cellProgress,
-                                    burstCount);
-                            }
-                        }
+                        PlayParticleShredSound();
                     }
                     else
                     {
@@ -482,32 +403,15 @@ namespace GravityPuzzle
 
             if (piece != null)
             {
-                // The incomplete final bucket still represents shredded units.
-                // Route it through the same flight presentation rather than
-                // advancing the slider before a particle reaches the pin.
-                if (bufferedParticleProgress > 0.0001f)
+                // World-space debris is the only shred visual. Progress is
+                // committed after the material has fully converted so no HUD
+                // voxel can be mistaken for a crumb escaping the cutter.
+                if (totalProgress > 0.0001f)
                 {
                     LevelProgressManager progressManager = LevelProgressManager.Instance;
                     if (progressManager != null)
                     {
-                        progressManager.SpawnFlyingVoxel(
-                            bufferedParticlePosition,
-                            Opaque(tileColor),
-                            bufferedParticleProgress);
-                    }
-                }
-
-                float outstandingProgress = Mathf.Max(0f, totalProgress - scheduledProgress);
-                if (outstandingProgress > 0.0001f)
-                {
-                    LevelProgressManager progressManager = LevelProgressManager.Instance;
-                    if (progressManager != null)
-                    {
-                        progressManager.SpawnFlyingVoxel(
-                            new Vector2(piece.transform.position.x, grinderExitSeamY),
-                            Opaque(tileColor),
-                            outstandingProgress,
-                            null);
+                        progressManager.AddProgress(totalProgress);
                     }
                 }
 
@@ -519,25 +423,6 @@ namespace GravityPuzzle
         }
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);
-
-        private static int CountGenericShredderRenderers(
-            SpriteRenderer[] renderers,
-            HashSet<Transform> shardTransforms)
-        {
-            int count = 0;
-            for (int index = 0; index < renderers.Length; index++)
-            {
-                SpriteRenderer renderer = renderers[index];
-                if (renderer == null || shardTransforms.Contains(renderer.transform) ||
-                    renderer.gameObject.name.StartsWith("Selected Fill") ||
-                    renderer.gameObject.name.StartsWith("White Selection"))
-                    continue;
-
-                count++;
-            }
-
-            return count;
-        }
 
         private static bool TryGetCutterContactSpan(
             SpriteRenderer[] renderers,
@@ -564,32 +449,6 @@ namespace GravityPuzzle
             }
 
             return minX <= maxX;
-        }
-
-        private static float CalculateGenericCrossingFraction(
-            SpriteRenderer[] renderers,
-            HashSet<Transform> shardTransforms,
-            float cutterY,
-            int genericRendererCount)
-        {
-            if (genericRendererCount <= 0)
-                return 0f;
-
-            float crossingTotal = 0f;
-            for (int index = 0; index < renderers.Length; index++)
-            {
-                SpriteRenderer renderer = renderers[index];
-                if (renderer == null || shardTransforms.Contains(renderer.transform) ||
-                    renderer.gameObject.name.StartsWith("Selected Fill") ||
-                    renderer.gameObject.name.StartsWith("White Selection"))
-                    continue;
-
-                Bounds bounds = renderer.bounds;
-                float height = Mathf.Max(.001f, bounds.size.y);
-                crossingTotal += Mathf.Clamp01((cutterY - bounds.min.y) / height);
-            }
-
-            return Mathf.Clamp01(crossingTotal / genericRendererCount);
         }
 
         private void PlayParticleShredSound()

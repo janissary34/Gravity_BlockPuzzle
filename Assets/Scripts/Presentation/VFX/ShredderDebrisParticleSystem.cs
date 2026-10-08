@@ -40,7 +40,7 @@ namespace GravityPuzzle.Presentation.VFX
             main.playOnAwake = false;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 512;
+            main.maxParticles = config.DebrisParticleCapacity;
             main.gravityModifier = config.DebrisGravityModifier;
 
             ParticleSystem.EmissionModule emission = particleSystemComponent.emission;
@@ -77,8 +77,16 @@ namespace GravityPuzzle.Presentation.VFX
 
             particleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
             particleRenderer.sortingOrder = config.DebrisSortingOrder;
+            if (config.DebrisMaterial != null)
+                particleRenderer.sharedMaterial = config.DebrisMaterial;
         }
 
+        /// <summary>
+        /// Emits debris from the visible material-conversion band at the mouth.
+        /// The vertical distribution is deliberate: a single horizontal source
+        /// reads as a mask edge, while this compact volume reads as block matter
+        /// continuously breaking apart before it disappears behind the wheels.
+        /// </summary>
         public void EmitAtCutter(Vector2 cutterPosition, float width, Color color, int count)
         {
             if (particleSystemComponent == null || config == null || count <= 0)
@@ -90,6 +98,7 @@ namespace GravityPuzzle.Presentation.VFX
             Vector2 sizeRange = config.DebrisSizeRange;
             float minSize = Mathf.Min(sizeRange.x, sizeRange.y);
             float maxSize = Mathf.Max(sizeRange.x, sizeRange.y);
+            float bandHeight = config.DebrisContactBandHeight;
             Color opaqueColor = new Color(color.r, color.g, color.b, 1f);
             for (int index = 0; index < count; index++)
             {
@@ -97,10 +106,10 @@ namespace GravityPuzzle.Presentation.VFX
                 {
                     position = cutterPosition + new Vector2(
                         Random.Range(-width * .5f, width * .5f),
-                        Random.Range(-.035f, .035f)),
+                        Random.Range(-.035f, bandHeight)),
                     velocity = new Vector3(
                         Random.Range(-config.DebrisHorizontalSpeed, config.DebrisHorizontalSpeed),
-                        -config.DebrisDownwardSpeed * Random.Range(.7f, 1.15f),
+                        -config.DebrisDownwardSpeed * Random.Range(.35f, .85f),
                         0f),
                     startColor = opaqueColor,
                     startSize = Random.Range(minSize, maxSize),

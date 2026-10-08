@@ -12,22 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50a1c14f239a644cb9c0492628aa4e8e, type: 3}
   m_Name: ShredderConfig
   m_EditorClassIdentifier: 
-  particlesPerShreddedCell: 40
-  exitSeamOffsetBelowShredder: 0.35
   feedMaskMouthInset: 0.14
   enableContactDebrisPresentation: 1
-  maxContactProgressEmissions: 8
-  enableAdvancedShreddingPresentation: 0
-  debrisPerSecondPerWorldUnit: 48
-  debrisBurstPerCrossedCell: 3
-  maxDebrisPerFrame: 16
-  debrisLifetime: 0.48
-  debrisSizeRange: {x: 0.055, y: 0.14}
-  debrisDownwardSpeed: 2.8
+  enableAdvancedShreddingPresentation: 1
+  debrisPerSecondPerWorldUnit: 600
+  debrisEntryBurstPerWorldUnit: 60
+  debrisContactBandHeight: 0.22
+  debrisBurstPerCrossedCell: 12
+  maxDebrisPerFrame: 96
+  debrisParticleCapacity: 1536
+  debrisLifetime: 0.58
+  debrisSizeRange: {x: 0.035, y: 0.09}
+  debrisDownwardSpeed: 1.4
   debrisHorizontalSpeed: 0.75
   debrisGravityModifier: 0.35
   debrisAngularVelocity: 540
-  debrisSortingOrder: 24
+  debrisSortingOrder: 28
+  debrisMaterial: {fileID: 2100000, guid: 7c2f5cdfc9c4450a9938e69f3dd6cee1, type: 2}
   cutterEdgeAmplitude: 0.075
   cutterEdgeSoftness: 0.035
   cutterNoiseFrequency: 12
@@ -53,7 +54,7 @@ MonoBehaviour:
   hubSortingOrder: 27
   voxelEjectionDirection: {x: 0, y: -1.2}
   voxelEjectionSpreadAngle: 40
-  feedSpeed: 3
+  feedSpeed: 5.5
   feedQueueCapacity: 16
   tremorIntensity: 0.045
   tremorFrequency: 55

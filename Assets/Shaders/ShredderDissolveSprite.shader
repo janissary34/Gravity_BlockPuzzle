@@ -8,6 +8,7 @@ Shader "GravityPuzzle/Shredder Dissolve Sprite"
         _EdgeAmplitude("Edge Amplitude", Float) = .075
         _EdgeSoftness("Edge Softness", Float) = .035
         _NoiseFrequency("Noise Frequency", Float) = 12
+        _ShredTint("Shred Tint", Color) = (1,1,1,1)
     }
 
     SubShader
@@ -48,6 +49,7 @@ Shader "GravityPuzzle/Shredder Dissolve Sprite"
                 float _EdgeAmplitude;
                 float _EdgeSoftness;
                 float _NoiseFrequency;
+                float4 _ShredTint;
             CBUFFER_END
 
             float Hash(float value)
@@ -68,7 +70,7 @@ Shader "GravityPuzzle/Shredder Dissolve Sprite"
 
             half4 Frag(Varyings input) : SV_Target
             {
-                half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.color;
+                half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.color * _ShredTint;
                 float tooth = Hash(floor(input.positionWS.x * _NoiseFrequency));
                 float wave = sin(input.positionWS.x * _NoiseFrequency * 2.17) * .35;
                 float cutterEdge = _ShredLine + ((tooth - .5) + wave) * _EdgeAmplitude;

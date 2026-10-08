@@ -437,6 +437,32 @@ namespace GravityPuzzle
         public SpriteRenderer[] ConfiguredShredderRenderers => configuredShredderRenderers;
         public IReadOnlyList<PiecePartSlot> PartSlots => partSlots;
 
+        /// <summary>
+        /// Replaces an intact atlas silhouette with its already-authored modular
+        /// cells before the piece enters the cutter. This is presentation-only:
+        /// colliders and board ownership remain untouched. Having a real cell
+        /// surface lets the shredder consume a row at a time instead of hiding
+        /// one large rectangle behind the wheel art.
+        /// </summary>
+        public void PrepareModularShredderSurface()
+        {
+            if (wholePieceRenderer == null || !wholePieceRenderer.enabled ||
+                collisionCellVisuals == null || collisionCellVisuals.Count == 0)
+                return;
+
+            wholePieceRenderer.enabled = false;
+            SetModularCellPresentationVisible(true);
+
+            if (configuredShredderRenderers == null ||
+                configuredShredderRenderers.Length != collisionCellVisuals.Count)
+            {
+                configuredShredderRenderers = new SpriteRenderer[collisionCellVisuals.Count];
+            }
+
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+                configuredShredderRenderers[index] = collisionCellVisuals[index];
+        }
+
         public void ClearVoxelPresentation()
         {
             configuredVoxelShards.Clear();
@@ -1069,7 +1095,11 @@ namespace GravityPuzzle
             }
 
             if (shredderConfig != null && shredderConfig.EnableAdvancedShreddingPresentation)
-                shredderDissolvePresentation?.Begin(renderers, shredderY, shredderConfig);
+                shredderDissolvePresentation?.Begin(
+                    renderers,
+                    shredderY,
+                    shredderConfig,
+                    VisualColor);
         }
 
         /// <summary>

@@ -14,6 +14,7 @@ namespace GravityPuzzle.Presentation.Views
         private static readonly int EdgeAmplitudeId = Shader.PropertyToID("_EdgeAmplitude");
         private static readonly int EdgeSoftnessId = Shader.PropertyToID("_EdgeSoftness");
         private static readonly int NoiseFrequencyId = Shader.PropertyToID("_NoiseFrequency");
+        private static readonly int ShredTintId = Shader.PropertyToID("_ShredTint");
 
         [SerializeField] private Material dissolveMaterial;
 
@@ -22,6 +23,7 @@ namespace GravityPuzzle.Presentation.Views
         private Material[] originalMaterials;
         private ShredderConfig config;
         private float shredderY;
+        private Color shredTint;
 
         public bool IsActive => activeRenderers != null && dissolveMaterial != null;
 
@@ -33,7 +35,11 @@ namespace GravityPuzzle.Presentation.Views
             propertyBlock = new MaterialPropertyBlock();
         }
 
-        public void Begin(SpriteRenderer[] renderers, float cutterY, ShredderConfig shredderConfig)
+        public void Begin(
+            SpriteRenderer[] renderers,
+            float cutterY,
+            ShredderConfig shredderConfig,
+            Color presentationColor)
         {
             Restore();
             if (dissolveMaterial == null || renderers == null || renderers.Length == 0 || shredderConfig == null)
@@ -43,6 +49,11 @@ namespace GravityPuzzle.Presentation.Views
             originalMaterials = new Material[renderers.Length];
             shredderY = cutterY;
             config = shredderConfig;
+            shredTint = new Color(
+                presentationColor.r,
+                presentationColor.g,
+                presentationColor.b,
+                1f);
             for (int index = 0; index < activeRenderers.Length; index++)
             {
                 SpriteRenderer renderer = activeRenderers[index];
@@ -103,6 +114,7 @@ namespace GravityPuzzle.Presentation.Views
             propertyBlock.SetFloat(EdgeAmplitudeId, config.CutterEdgeAmplitude);
             propertyBlock.SetFloat(EdgeSoftnessId, config.CutterEdgeSoftness);
             propertyBlock.SetFloat(NoiseFrequencyId, config.CutterNoiseFrequency);
+            propertyBlock.SetColor(ShredTintId, shredTint);
             renderer.SetPropertyBlock(propertyBlock);
         }
     }
