@@ -417,16 +417,16 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Field_Purple_White_Large
+      name: CreamBG2
       rect:
         serializedVersion: 2
-        x: 670
-        y: 971
-        width: 341
-        height: 128
+        x: 649
+        y: 991
+        width: 431
+        height: 132
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 44, y: 45, z: 44, w: 45}
       outline: []
       physicsShape: []
       tessellationDetail: 0
@@ -800,7 +800,7 @@ TextureImporter:
         serializedVersion: 2
         x: 1362
         y: 1897
-        width: 134
+        width: 139
         height: 146
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
@@ -1662,9 +1662,9 @@ TextureImporter:
       CommonAssets_UI_LionPack (1)_6: -763147038
       CommonAssets_UI_LionPack (1)_8: 496005527
       CommonAssets_UI_LionPack (1)_9: -774148210
+      CreamBG2: 883737079
       Effect_Glow_White: 813511280
       Field_Blue_White: -95687652
-      Field_Purple_White_Large: 883737079
       Good: 2106901203
       Hammer: 965006765
       HapticOff: 148027651
