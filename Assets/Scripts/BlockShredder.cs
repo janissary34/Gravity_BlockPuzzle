@@ -234,6 +234,8 @@ namespace GravityPuzzle
             // the mask hides material farther inside the wheel mechanism.
             float debrisContactY = shredderY;
             bool contactPresentationStarted = false;
+            Vector2 lastContactCenter = Vector2.zero;
+            float lastContactWidth = 0f;
 
             // 3. The kinematic feed owns the descent while this coroutine watches
             // the crossing cells and converts them to shred effects.
@@ -271,14 +273,16 @@ namespace GravityPuzzle
                 // This guarantees that the entry burst is emitted on the exact
                 // frame the block reaches the shredder mouth, rather than one
                 // frame later after its lower geometry has been released.
-                bool hasContactSpan = TryGetCutterContactSpan(
+                bool hasContactSurface = TryGetCutterContactSurface(
                     pieceRenderers,
                     debrisContactY,
-                    out float contactMinX,
-                    out float contactMaxX);
-                float contactWidth = hasContactSpan
-                    ? Mathf.Max(.05f, contactMaxX - contactMinX)
-                    : 0f;
+                    out float contactWidth,
+                    out Vector2 currentContactCenter);
+                if (hasContactSurface)
+                {
+                    lastContactWidth = contactWidth;
+                    lastContactCenter = currentContactCenter;
+                }
 
                 // Release only the cells that have now crossed the cutter.
                 // This transaction also wakes grid gravity, allowing an upper
@@ -289,19 +293,17 @@ namespace GravityPuzzle
                 // This is deliberately time-based rather than a final burst.
                 // Do not begin until visible material reaches the hidden cutter
                 // edge; before that moment no crumbs should appear at the mouth.
-                if (hasContactSpan && debrisParticleSystem != null && shredderConfig != null &&
+                if (hasContactSurface && debrisParticleSystem != null && shredderConfig != null &&
                     shredderConfig.EnableContactDebrisPresentation)
                 {
-                    Vector2 contactCenter = new Vector2(
-                        (contactMinX + contactMaxX) * .5f,
-                        debrisContactY);
                     if (!contactPresentationStarted)
                     {
                         int entryBurstCount = Mathf.Min(
-                            shredderConfig.MaxDebrisPerFrame,
+                            shredderConfig.MaxDebrisEntryBurstPerFrame,
                             Mathf.CeilToInt(contactWidth * shredderConfig.DebrisEntryBurstPerWorldUnit));
-                        debrisParticleSystem.EmitAtCutter(
-                            contactCenter,
+                        EmitEntryBurstAtContactSurface(
+                            pieceRenderers,
+                            debrisContactY,
                             contactWidth,
                             tileColor,
                             entryBurstCount);
@@ -315,15 +317,16 @@ namespace GravityPuzzle
                     if (debrisCount > 0)
                     {
                         debrisAccumulator -= debrisCount;
-                        debrisParticleSystem.EmitAtCutter(
-                            contactCenter,
+                        EmitDebrisAtContactSurface(
+                            pieceRenderers,
+                            debrisContactY,
                             contactWidth,
                             tileColor,
                             debrisCount);
                     }
                 }
 
-                if (hasContactSpan)
+                if (hasContactSurface)
                     contactPresentationStarted = true;
 
                 // A) Shred voxel shards crossing the cutter line. Their visual
@@ -395,6 +398,7 @@ namespace GravityPuzzle
 
                 if (topBelowShredder || (allShardsDone && activeCount == 0))
                 {
+                    EmitFinalDebrisBurst(lastContactCenter, lastContactWidth, tileColor);
                     break;
                 }
 
@@ -411,7 +415,14 @@ namespace GravityPuzzle
                     LevelProgressManager progressManager = LevelProgressManager.Instance;
                     if (progressManager != null)
                     {
-                        progressManager.AddProgress(totalProgress);
+                        // The shredder owns only the world-space conversion.
+                        // The established prewarmed HUD-flight system owns the
+                        // Bézier route and adds progress on arrival.
+                        progressManager.SpawnFlyingVoxelBurst(
+                            new Vector3(lastContactCenter.x, debrisContactY, 0f),
+                            tileColor,
+                            totalProgress,
+                            Mathf.CeilToInt(totalProgress));
                     }
                 }
 
@@ -424,14 +435,20 @@ namespace GravityPuzzle
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);
 
-        private static bool TryGetCutterContactSpan(
+        /// <summary>
+        /// Finds the width of real material currently intersecting the cutter.
+        /// We deliberately keep this separate from emission: a concave piece can
+        /// have several disconnected contact cells, and emitting once over their
+        /// enclosing bounds would put debris in the empty gaps.
+        /// </summary>
+        private static bool TryGetCutterContactSurface(
             SpriteRenderer[] renderers,
             float cutterY,
-            out float minX,
-            out float maxX)
+            out float totalWidth,
+            out Vector2 weightedCenter)
         {
-            minX = float.PositiveInfinity;
-            maxX = float.NegativeInfinity;
+            totalWidth = 0f;
+            weightedCenter = new Vector2(0f, cutterY);
             for (int index = 0; index < renderers.Length; index++)
             {
                 SpriteRenderer renderer = renderers[index];
@@ -444,11 +461,118 @@ namespace GravityPuzzle
                 if (bounds.min.y > cutterY || bounds.max.y <= cutterY)
                     continue;
 
-                minX = Mathf.Min(minX, bounds.min.x);
-                maxX = Mathf.Max(maxX, bounds.max.x);
+                float width = Mathf.Max(.05f, bounds.size.x);
+                totalWidth += width;
+                weightedCenter.x += bounds.center.x * width;
             }
 
-            return minX <= maxX;
+            if (totalWidth <= 0f)
+                return false;
+
+            weightedCenter.x /= totalWidth;
+            return true;
+        }
+
+        /// <summary>
+        /// Emits independently from every renderer touching the cutter. This
+        /// keeps voxel sources glued to the teeth/material intersections even
+        /// for stepped, split, and irregular piece silhouettes.
+        /// </summary>
+        private void EmitDebrisAtContactSurface(
+            SpriteRenderer[] renderers,
+            float cutterY,
+            float totalWidth,
+            Color color,
+            int totalCount)
+        {
+            if (totalCount <= 0 || totalWidth <= 0f)
+                return;
+
+            int emittedCount = 0;
+            float remainingWidth = totalWidth;
+            for (int index = 0; index < renderers.Length; index++)
+            {
+                SpriteRenderer renderer = renderers[index];
+                if (renderer == null || !renderer.enabled ||
+                    renderer.gameObject.name.StartsWith("Selected Fill") ||
+                    renderer.gameObject.name.StartsWith("White Selection"))
+                    continue;
+
+                Bounds bounds = renderer.bounds;
+                if (bounds.min.y > cutterY || bounds.max.y <= cutterY)
+                    continue;
+
+                float width = Mathf.Max(.05f, bounds.size.x);
+                int remaining = totalCount - emittedCount;
+                int count = remainingWidth <= width
+                    ? remaining
+                    : Mathf.Min(remaining, Mathf.RoundToInt(remaining * width / remainingWidth));
+                if (count <= 0)
+                {
+                    remainingWidth -= width;
+                    continue;
+                }
+
+                debrisParticleSystem.EmitAtCutter(
+                    new Vector2(bounds.center.x, cutterY),
+                    width,
+                    color,
+                    count);
+                emittedCount += count;
+                remainingWidth -= width;
+            }
+        }
+
+        private void EmitEntryBurstAtContactSurface(
+            SpriteRenderer[] renderers,
+            float cutterY,
+            float totalWidth,
+            Color color,
+            int totalCount)
+        {
+            if (totalCount <= 0 || totalWidth <= 0f)
+                return;
+
+            int emittedCount = 0;
+            float remainingWidth = totalWidth;
+            for (int index = 0; index < renderers.Length; index++)
+            {
+                SpriteRenderer renderer = renderers[index];
+                if (renderer == null || !renderer.enabled ||
+                    renderer.gameObject.name.StartsWith("Selected Fill") ||
+                    renderer.gameObject.name.StartsWith("White Selection"))
+                    continue;
+
+                Bounds bounds = renderer.bounds;
+                if (bounds.min.y > cutterY || bounds.max.y <= cutterY)
+                    continue;
+
+                float width = Mathf.Max(.05f, bounds.size.x);
+                int remaining = totalCount - emittedCount;
+                int count = remainingWidth <= width
+                    ? remaining
+                    : Mathf.Min(remaining, Mathf.RoundToInt(remaining * width / remainingWidth));
+                if (count > 0)
+                {
+                    debrisParticleSystem.EmitEntryBurstAtCutter(
+                        new Vector2(bounds.center.x, cutterY), width, color, count);
+                    emittedCount += count;
+                }
+
+                remainingWidth -= width;
+            }
+        }
+
+        private void EmitFinalDebrisBurst(Vector2 contactCenter, float contactWidth, Color color)
+        {
+            if (debrisParticleSystem == null || shredderConfig == null ||
+                !shredderConfig.EnableContactDebrisPresentation || contactWidth <= 0f)
+                return;
+
+            int count = Mathf.Min(
+                shredderConfig.MaxDebrisPerFrame,
+                Mathf.CeilToInt(contactWidth * shredderConfig.DebrisFinalBurstPerWorldUnit));
+            debrisParticleSystem.EmitAtCutter(contactCenter, contactWidth, color, count);
         }
 
         private void PlayParticleShredSound()

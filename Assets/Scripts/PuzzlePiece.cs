@@ -446,11 +446,26 @@ namespace GravityPuzzle
         /// </summary>
         public void PrepareModularShredderSurface()
         {
-            if (wholePieceRenderer == null || !wholePieceRenderer.enabled ||
-                collisionCellVisuals == null || collisionCellVisuals.Count == 0)
+            // Keep a complete authored silhouette intact for the full feed.
+            // The feed mask occludes it inside the teeth, avoiding the visual
+            // gaps that appeared when vertically stacked modules were exposed
+            // one at a time. Modular cells remain the fallback for pieces that
+            // do not have an authored whole-piece surface.
+            if (wholePieceRenderer != null && wholePieceRenderer.enabled)
+            {
+                SetModularCellPresentationVisible(false);
+                configuredShredderRenderers = new[] { wholePieceRenderer };
+                return;
+            }
+
+            if (collisionCellVisuals == null || collisionCellVisuals.Count == 0)
                 return;
 
-            wholePieceRenderer.enabled = false;
+            // Most current pieces are already composed from modular cells and
+            // therefore do not have an enabled atlas renderer to swap out.
+            // They still need the same explicit renderer list as atlas-backed
+            // pieces; without it the shredder has no contact surface to sample
+            // and consequently emits no debris at all.
             SetModularCellPresentationVisible(true);
 
             if (configuredShredderRenderers == null ||

@@ -56,8 +56,8 @@ namespace GravityPuzzle.Editor
                 definition.FindPropertyRelative("shapeKey").stringValue = pair.Key;
                 definition.FindPropertyRelative("normalSprite").objectReferenceValue = pair.Value;
                 definition.FindPropertyRelative("iceSprite").objectReferenceValue = iceSprite;
-                definition.FindPropertyRelative("preferModularIce").boolValue =
-                    pair.Key == "0,0;1,0;0,1;1,1";
+                definition.FindPropertyRelative("preferModularNormal").boolValue = false;
+                definition.FindPropertyRelative("preferModularIce").boolValue = false;
             }
 
             serializedConfig.ApplyModifiedPropertiesWithoutUndo();

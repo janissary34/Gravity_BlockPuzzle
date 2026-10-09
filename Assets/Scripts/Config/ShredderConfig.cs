@@ -15,17 +15,21 @@ namespace GravityPuzzle.Config
         [Tooltip("Opt-in gate for the experimental rough-cut shader and continuous debris. Keep disabled until it has been play-tested on target devices.")]
         [SerializeField] private bool enableAdvancedShreddingPresentation;
         [Tooltip("Small square fragments emitted per second for each world unit at the active cutter edge.")]
-        [Range(0f, 1000f)] [SerializeField] private float debrisPerSecondPerWorldUnit = 600f;
+        [Range(0f, 5000f)] [SerializeField] private float debrisPerSecondPerWorldUnit = 600f;
         [Tooltip("Dense square-fragment burst emitted across the block's contact width on the first shredder-contact frame.")]
-        [Range(0f, 128f)] [SerializeField] private float debrisEntryBurstPerWorldUnit = 60f;
+        [Range(0f, 512f)] [SerializeField] private float debrisEntryBurstPerWorldUnit = 60f;
+        [Tooltip("Shared maximum for initial contact bursts in one frame. This permits a dense first impact while bounding simultaneous feeds.")]
+        [Range(1, 1024)] [SerializeField] private int maxDebrisEntryBurstPerFrame = 512;
+        [Tooltip("Extra square-fragment burst emitted from the last active cutter contact when a piece has fully entered the wheels.")]
+        [Range(0f, 512f)] [SerializeField] private float debrisFinalBurstPerWorldUnit = 36f;
         [Tooltip("Height of the material-conversion band above the cutter. Fragments are born inside this band instead of from a single flat line.")]
         [Range(.01f, 1f)] [SerializeField] private float debrisContactBandHeight = .22f;
         [Tooltip("Extra fragments emitted where a rendered cell fully crosses the cutter edge.")]
         [Range(0, 32)] [SerializeField] private int debrisBurstPerCrossedCell = 12;
-        [Tooltip("Hard upper bound on one feed's debris emission in a frame.")]
-        [Range(1, 128)] [SerializeField] private int maxDebrisPerFrame = 96;
+        [Tooltip("Hard shared upper bound on cutter debris emitted by the single particle system in one frame.")]
+        [Range(1, 512)] [SerializeField] private int maxDebrisPerFrame = 96;
         [Tooltip("Fixed particle capacity shared by all active shredder mouths. This is preallocated once and does not instantiate at runtime.")]
-        [Range(128, 2048)] [SerializeField] private int debrisParticleCapacity = 1536;
+        [Range(128, 8192)] [SerializeField] private int debrisParticleCapacity = 1536;
         [Tooltip("Lifetime of a square debris fragment in seconds.")]
         [Range(.05f, 2f)] [SerializeField] private float debrisLifetime = .58f;
         [Tooltip("World-space size range for debris fragments.")]
@@ -131,6 +135,8 @@ namespace GravityPuzzle.Config
         public bool EnableContactDebrisPresentation => enableContactDebrisPresentation;
         public float DebrisPerSecondPerWorldUnit => debrisPerSecondPerWorldUnit;
         public float DebrisEntryBurstPerWorldUnit => debrisEntryBurstPerWorldUnit;
+        public int MaxDebrisEntryBurstPerFrame => maxDebrisEntryBurstPerFrame;
+        public float DebrisFinalBurstPerWorldUnit => debrisFinalBurstPerWorldUnit;
         public float DebrisContactBandHeight => debrisContactBandHeight;
         public bool EnableAdvancedShreddingPresentation => enableAdvancedShreddingPresentation;
         public int DebrisBurstPerCrossedCell => debrisBurstPerCrossedCell;

@@ -14,17 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   feedMaskMouthInset: 0.14
   enableContactDebrisPresentation: 1
-  enableAdvancedShreddingPresentation: 1
-  debrisPerSecondPerWorldUnit: 600
-  debrisEntryBurstPerWorldUnit: 60
-  debrisContactBandHeight: 0.22
-  debrisBurstPerCrossedCell: 12
+  enableAdvancedShreddingPresentation: 0
+  debrisPerSecondPerWorldUnit: 4500
+  debrisEntryBurstPerWorldUnit: 256
+  maxDebrisEntryBurstPerFrame: 256
+  debrisFinalBurstPerWorldUnit: 180
+  debrisContactBandHeight: 0.18
+  debrisBurstPerCrossedCell: 48
   maxDebrisPerFrame: 96
-  debrisParticleCapacity: 1536
-  debrisLifetime: 0.58
-  debrisSizeRange: {x: 0.035, y: 0.09}
-  debrisDownwardSpeed: 1.4
-  debrisHorizontalSpeed: 0.75
+  debrisParticleCapacity: 4096
+  debrisLifetime: 0.55
+  debrisSizeRange: {x: 0.03, y: 0.075}
+  debrisDownwardSpeed: 3.2
+  debrisHorizontalSpeed: 0.5
   debrisGravityModifier: 0.35
   debrisAngularVelocity: 540
   debrisSortingOrder: 28
@@ -54,7 +56,7 @@ MonoBehaviour:
   hubSortingOrder: 27
   voxelEjectionDirection: {x: 0, y: -1.2}
   voxelEjectionSpreadAngle: 40
-  feedSpeed: 5.5
+  feedSpeed: 9.5
   feedQueueCapacity: 16
   tremorIntensity: 0.045
   tremorFrequency: 55

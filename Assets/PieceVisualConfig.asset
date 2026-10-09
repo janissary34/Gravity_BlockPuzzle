@@ -65,9 +65,9 @@ MonoBehaviour:
     normalSprite: {fileID: -1618421186, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: -1251365498, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
   - shapeKey: 0,0;1,0;0,1;1,1
-    normalSprite: {fileID: 0}
+    normalSprite: {fileID: 1399951306, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: 1857232792, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
-    preferModularNormal: 1
+    preferModularNormal: 0
     preferModularIce: 0
   - shapeKey: 0,0;1,0;1,1;1,2
     normalSprite: {fileID: -1861986604, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}

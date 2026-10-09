@@ -26,6 +26,8 @@ namespace GravityPuzzle
         private static RevealPresentationConfig configuredRevealPresentationConfig;
         private static BoardPresentationConfig configuredBoardPresentationConfig;
         private static RevealPresentationConfig fallbackRevealPresentationConfig;
+        private static Sprite obstacleJoinSprite;
+        private static Sprite obstacleJoinSpriteSource;
         private static int currentLevelIndex = -1;
         private static BoosterRewardConfig queuedBoosterReward;
         private static bool levelSequenceInitialized;
@@ -48,6 +50,8 @@ namespace GravityPuzzle
             configuredRevealPresentationConfig = null;
             configuredBoardPresentationConfig = null;
             fallbackRevealPresentationConfig = null;
+            obstacleJoinSprite = null;
+            obstacleJoinSpriteSource = null;
             currentLevelIndex = -1;
             queuedBoosterReward = null;
             levelSequenceInitialized = false;
@@ -935,6 +939,15 @@ namespace GravityPuzzle
                                 configuredBoardPresentationConfig.CornerOutset.y) +
                                 configuredBoardPresentationConfig.TopCornerVerticalInset;
                         }
+                        else if (configuredBoardPresentationConfig != null)
+                        {
+                            // With no authored corner cap, end the side rail at the same
+                            // inset used by the top rail. Otherwise the collision-sized
+                            // vertical run protrudes above the presentation-only top edge
+                            // and creates the two antenna-like bars seen at the board top.
+                            topTrim = thickness * .5f +
+                                      configuredBoardPresentationConfig.TopEdgeInwardOverlap;
+                        }
                     }
 
                     float runLength = length * fineCellSize + thickness;
@@ -1145,21 +1158,27 @@ namespace GravityPuzzle
                 ? configuredBoardPresentationConfig.TopEdgeVisualThicknessMultiplier
                 : configuredBoardPresentationConfig.FrameVisualThicknessMultiplier;
             float originalThickness = horizontal ? size.y : size.x;
-            float visualThickness = originalThickness * thicknessMultiplier;
-            float inwardOffset = (originalThickness - visualThickness) * .5f;
+            Vector2 spriteSize = sprite.bounds.size;
+            float nativeScale = configuredBoardPresentationConfig.FrameModuleScale;
+            float visualThickness = (horizontal ? spriteSize.y : spriteSize.x) *
+                                    nativeScale * thicknessMultiplier;
+
+            // Authored Scene Tuna modules straddle the logical board boundary.
+            // The former implementation aligned their inner transparent edge
+            // with the boundary, which exposed the atlas padding as a gap and
+            // produced the detached double-line visible above the grid.
             if (frameEdge == BoardFrameEdge.Top)
-                position.y -= inwardOffset +
+                position.y -= originalThickness * .5f +
                               configuredBoardPresentationConfig.TopEdgeInwardOverlap;
             else if (frameEdge == BoardFrameEdge.Bottom)
-                position.y += inwardOffset;
+                position.y += originalThickness * .5f;
             else if (frameEdge == BoardFrameEdge.Left)
-                position.x += inwardOffset;
+                position.x += originalThickness * .5f;
             else if (frameEdge == BoardFrameEdge.Right)
-                position.x -= inwardOffset;
+                position.x -= originalThickness * .5f;
 
-            Vector2 spriteSize = sprite.bounds.size;
             float nativeLength = (horizontal ? spriteSize.x : spriteSize.y) *
-                                 configuredBoardPresentationConfig.FrameModuleScale;
+                                 nativeScale;
             float requestedLength = horizontal ? size.x : size.y;
             if (nativeLength <= .001f || requestedLength <= .001f)
                 return false;
@@ -1185,7 +1204,11 @@ namespace GravityPuzzle
                     configuredBoardPresentationConfig.FrameMaterial,
                     FrameSortingOrder,
                     sprite,
-                    true);
+                    true,
+                    true,
+                    false,
+                    false,
+                    frameEdge == BoardFrameEdge.Top);
                 module.transform.SetParent(frameRoot, true);
             }
 
@@ -1658,34 +1681,19 @@ namespace GravityPuzzle
                 return;
             }
 
-            bool isSolidRectangle = cells.Count == boundsSize.x * boundsSize.y;
             Sprite modularSprite = configuredBoardPresentationConfig != null
                 ? configuredBoardPresentationConfig.StaticBlockSprite
                 : null;
-            if (isSolidRectangle && modularSprite != null)
+            if (modularSprite != null)
             {
-                Vector2 centre = new Vector2(
-                    -level.boardColumns * .5f + minimum.x + boundsSize.x * .5f,
-                    -level.boardRows * .5f + minimum.y + boundsSize.y * .5f);
-                PrototypeBootstrap.CreateVisualBlock(
-                    "Sliced Obstacle Visual",
-                    centre,
-                    boundsSize,
-                    color,
-                    configuredBoardPresentationConfig.BoardBlockMaterial,
-                    0,
-                    modularSprite,
-                    false,
-                    true,
-                    true);
+                CreateSlicedObstacleRuns(level, cells, color, modularSprite);
                 return;
             }
 
             // The map atlas does not cover every possible authored topology.
-            // Preserve those shapes as connected modular cells instead of
-            // stretching a 1x1 sprite across their bounding rectangle. The
-            // small presentation-only overlap closes transparent gutters;
-            // gameplay occupancy and collision sizes remain unchanged.
+            // If the configured fallback sprite is missing, retain a visible
+            // cell-by-cell fallback. Gameplay occupancy and collision sizes
+            // remain unchanged in either presentation path.
             float modularScale = configuredBoardPresentationConfig != null
                 ? configuredBoardPresentationConfig.ModularStaticBlockScale
                 : 1f;
@@ -1706,6 +1714,230 @@ namespace GravityPuzzle
                     configuredBoardPresentationConfig != null &&
                     configuredBoardPresentationConfig.StaticBlockSprite != null);
             }
+        }
+
+        private static void CreateSlicedObstacleRuns(
+            GravityLevelDefinition level,
+            List<Vector2Int> cells,
+            Color color,
+            Sprite modularSprite)
+        {
+            // Exact atlas silhouettes remain the preferred path. For shapes
+            // that the atlas does not contain, merge contiguous row spans and
+            // then extend identical spans vertically. This turns an arbitrary
+            // polyomino into a small set of connected 9-sliced rectangles
+            // instead of exposing the bevel and transparent gutter of every
+            // individual 1x1 sprite.
+            List<Vector2Int> orderedCells = new List<Vector2Int>(cells);
+            orderedCells.Sort((left, right) =>
+            {
+                int rowComparison = left.y.CompareTo(right.y);
+                return rowComparison != 0 ? rowComparison : left.x.CompareTo(right.x);
+            });
+
+            List<RectInt> rectangles = new List<RectInt>();
+            for (int cellIndex = 0; cellIndex < orderedCells.Count;)
+            {
+                int row = orderedCells[cellIndex].y;
+                int runStart = orderedCells[cellIndex].x;
+                int runEnd = runStart;
+                cellIndex++;
+                while (cellIndex < orderedCells.Count && orderedCells[cellIndex].y == row)
+                {
+                    int column = orderedCells[cellIndex].x;
+                    if (column == runEnd + 1)
+                    {
+                        runEnd = column;
+                        cellIndex++;
+                        continue;
+                    }
+
+                    AddOrExtendObstacleRectangle(rectangles, runStart, runEnd, row);
+                    runStart = column;
+                    runEnd = column;
+                    cellIndex++;
+                }
+
+                AddOrExtendObstacleRectangle(rectangles, runStart, runEnd, row);
+            }
+
+            float overlapScale = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.ModularStaticBlockScale
+                : 1f;
+            Material material = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.BoardBlockMaterial
+                : null;
+            for (int index = 0; index < rectangles.Count; index++)
+            {
+                RectInt rectangle = rectangles[index];
+                Vector2 centre = new Vector2(
+                    -level.boardColumns * .5f + rectangle.x + rectangle.width * .5f,
+                    -level.boardRows * .5f + rectangle.y + rectangle.height * .5f);
+                Vector2 visualSize = new Vector2(rectangle.width, rectangle.height) * overlapScale;
+                PrototypeBootstrap.CreateVisualBlock(
+                    "Sliced Obstacle Visual",
+                    centre,
+                    visualSize,
+                    color,
+                    material,
+                    0,
+                    modularSprite,
+                    false,
+                    true,
+                    true);
+            }
+
+            CreateObstacleJoinVisuals(level, rectangles, color, material, modularSprite);
+        }
+
+        private static void CreateObstacleJoinVisuals(
+            GravityLevelDefinition level,
+            List<RectInt> rectangles,
+            Color color,
+            Material material,
+            Sprite modularSprite)
+        {
+            // A fallback polyomino can require more than one sliced rectangle.
+            // Their independently bevelled ends would otherwise remain visible
+            // at shared edges and make one obstacle read as separate pieces.
+            // These flat patches live wholly inside the occupied silhouette and
+            // cover only those internal caps; gameplay geometry is untouched.
+            float inset = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.ModularStaticBlockJoinInset
+                : .12f;
+            float depth = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.ModularStaticBlockJoinDepth
+                : .42f;
+            Sprite joinSprite = GetObstacleJoinSprite(modularSprite);
+
+            for (int firstIndex = 0; firstIndex < rectangles.Count; firstIndex++)
+            {
+                RectInt first = rectangles[firstIndex];
+                for (int secondIndex = firstIndex + 1; secondIndex < rectangles.Count; secondIndex++)
+                {
+                    RectInt second = rectangles[secondIndex];
+                    if (first.yMax == second.yMin || second.yMax == first.yMin)
+                    {
+                        int overlapMin = Mathf.Max(first.xMin, second.xMin);
+                        int overlapMax = Mathf.Min(first.xMax, second.xMax);
+                        float width = overlapMax - overlapMin - inset * 2f;
+                        if (width > 0f)
+                        {
+                            float boundary = first.yMax == second.yMin ? first.yMax : second.yMax;
+                            CreateObstacleJoinVisual(
+                                level,
+                                new Vector2((overlapMin + overlapMax) * .5f, boundary),
+                                new Vector2(width, depth),
+                                color,
+                                material,
+                                joinSprite);
+                        }
+                    }
+
+                    if (first.xMax != second.xMin && second.xMax != first.xMin)
+                        continue;
+
+                    int verticalOverlapMin = Mathf.Max(first.yMin, second.yMin);
+                    int verticalOverlapMax = Mathf.Min(first.yMax, second.yMax);
+                    float height = verticalOverlapMax - verticalOverlapMin - inset * 2f;
+                    if (height <= 0f)
+                        continue;
+
+                    float verticalBoundary = first.xMax == second.xMin ? first.xMax : second.xMax;
+                    CreateObstacleJoinVisual(
+                        level,
+                        new Vector2(verticalBoundary, (verticalOverlapMin + verticalOverlapMax) * .5f),
+                        new Vector2(depth, height),
+                        color,
+                        material,
+                        joinSprite);
+                }
+            }
+        }
+
+        private static Sprite GetObstacleJoinSprite(Sprite source)
+        {
+            if (obstacleJoinSprite != null && obstacleJoinSpriteSource == source)
+                return obstacleJoinSprite;
+
+            // The shader samples both the sprite atlas and its matching gloss
+            // atlas. A generated white square therefore reads unrelated UVs
+            // and appears as a dark rectangular artefact. Reusing the opaque
+            // centre of the obstacle sprite keeps both texture lookups aligned
+            // while omitting the rounded border that the join must cover.
+            Rect sourceRect = source.rect;
+            Vector4 border = source.border;
+            Rect centreRect = Rect.MinMaxRect(
+                sourceRect.xMin + border.x,
+                sourceRect.yMin + border.y,
+                sourceRect.xMax - border.z,
+                sourceRect.yMax - border.w);
+            if (centreRect.width < 1f || centreRect.height < 1f)
+            {
+                float inset = Mathf.Min(sourceRect.width, sourceRect.height) * .25f;
+                centreRect = Rect.MinMaxRect(
+                    sourceRect.xMin + inset,
+                    sourceRect.yMin + inset,
+                    sourceRect.xMax - inset,
+                    sourceRect.yMax - inset);
+            }
+
+            obstacleJoinSpriteSource = source;
+            obstacleJoinSprite = Sprite.Create(
+                source.texture,
+                centreRect,
+                new Vector2(.5f, .5f),
+                source.pixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect);
+            obstacleJoinSprite.name = source.name + " Join Centre";
+            return obstacleJoinSprite;
+        }
+
+        private static void CreateObstacleJoinVisual(
+            GravityLevelDefinition level,
+            Vector2 boardPosition,
+            Vector2 size,
+            Color color,
+            Material material,
+            Sprite joinSprite)
+        {
+            Vector2 worldPosition = new Vector2(
+                -level.boardColumns * .5f + boardPosition.x,
+                -level.boardRows * .5f + boardPosition.y);
+            PrototypeBootstrap.CreateVisualBlock(
+                "Obstacle Join Visual",
+                worldPosition,
+                size,
+                color,
+                material,
+                1,
+                joinSprite,
+                true);
+        }
+
+        private static void AddOrExtendObstacleRectangle(
+            List<RectInt> rectangles,
+            int runStart,
+            int runEnd,
+            int row)
+        {
+            int runWidth = runEnd - runStart + 1;
+            for (int index = rectangles.Count - 1; index >= 0; index--)
+            {
+                RectInt rectangle = rectangles[index];
+                if (rectangle.x != runStart || rectangle.width != runWidth || rectangle.yMax != row)
+                    continue;
+
+                rectangles[index] = new RectInt(
+                    rectangle.x,
+                    rectangle.y,
+                    rectangle.width,
+                    rectangle.height + 1);
+                return;
+            }
+
+            rectangles.Add(new RectInt(runStart, row, runWidth, 1));
         }
 
         private static string BuildNormalizedShapeKey(

@@ -38,8 +38,12 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite staticBlockSprite;
         [Tooltip("Shared tint for static gameplay obstacles. This keeps them in the same palette as the frame instead of retaining per-level placeholder colours.")]
         [SerializeField] private Color staticBlockTint = Color.white;
-        [Tooltip("Presentation-only overlap used by modular obstacle cells when no exact connected silhouette exists. Values above one close transparent sprite gutters without changing collision geometry.")]
-        [SerializeField, Min(1f)] private float modularStaticBlockScale = 1.04f;
+        [Tooltip("Presentation-only overlap used by merged obstacle strips when no exact connected silhouette exists. Values above one close transparent sprite gutters without changing collision geometry.")]
+        [SerializeField, Min(1f)] private float modularStaticBlockScale = 1.1f;
+        [Tooltip("Inset from the ends of a shared edge when filling the join between fallback obstacle rectangles. This preserves the authored outer bevel while hiding internal rounded caps.")]
+        [SerializeField, Range(0f, .45f)] private float modularStaticBlockJoinInset = .12f;
+        [Tooltip("Depth of the presentation-only fill centred across a shared edge between fallback obstacle rectangles.")]
+        [SerializeField, Range(.1f, 1f)] private float modularStaticBlockJoinDepth = .42f;
         [Tooltip("Whole map-atlas silhouettes keyed by normalized occupied board cells. Adjacent obstacle cells use these instead of rendering separate 1x1 modules.")]
         [SerializeField] private List<BoardShapeVisualDefinition> staticBlockShapes = new List<BoardShapeVisualDefinition>();
         [Tooltip("Material used by the darker checker-grid cells.")]
@@ -119,6 +123,8 @@ namespace GravityPuzzle.Config
         public Sprite StaticBlockSprite => staticBlockSprite;
         public Color StaticBlockTint => staticBlockTint;
         public float ModularStaticBlockScale => Mathf.Max(1f, modularStaticBlockScale);
+        public float ModularStaticBlockJoinInset => Mathf.Clamp(modularStaticBlockJoinInset, 0f, .45f);
+        public float ModularStaticBlockJoinDepth => Mathf.Clamp(modularStaticBlockJoinDepth, .1f, 1f);
         public Sprite GridSprite => gridSprite;
         public Color GridDarkTint => gridDarkTint;
         public Color GridLightTint => gridLightTint;

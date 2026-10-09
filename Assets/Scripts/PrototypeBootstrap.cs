@@ -239,7 +239,9 @@ namespace GravityPuzzle
             Sprite presentationSprite = null,
             bool fitSpriteToSize = false,
             bool renderVisual = true,
-            bool sliceSpriteToSize = false)
+            bool sliceSpriteToSize = false,
+            bool flipX = false,
+            bool flipY = false)
         {
             GameObject block = new GameObject(blockName);
             block.transform.position = position;
@@ -251,6 +253,8 @@ namespace GravityPuzzle
             renderer.sharedMaterial = presentationMaterial;
             renderer.sortingOrder = sortingOrder;
             renderer.enabled = renderVisual;
+            renderer.flipX = flipX;
+            renderer.flipY = flipY;
 
             if (sliceSpriteToSize && presentationSprite != null)
             {

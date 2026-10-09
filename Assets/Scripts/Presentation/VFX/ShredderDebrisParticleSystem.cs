@@ -14,6 +14,9 @@ namespace GravityPuzzle.Presentation.VFX
         private ParticleSystem particleSystemComponent;
         private ParticleSystemRenderer particleRenderer;
         private ShredderConfig config;
+        private int budgetFrame = -1;
+        private int emittedParticleCountThisFrame;
+        private int emittedEntryBurstCountThisFrame;
 
         private void Awake()
         {
@@ -40,11 +43,29 @@ namespace GravityPuzzle.Presentation.VFX
             main.playOnAwake = false;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
+            // The shared emitter lives on the progress manager, not at every
+            // cutter mouth. Never let off-screen bounds of that host suppress
+            // an explicitly emitted, on-screen shredder burst.
+            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             main.maxParticles = config.DebrisParticleCapacity;
             main.gravityModifier = config.DebrisGravityModifier;
 
             ParticleSystem.EmissionModule emission = particleSystemComponent.emission;
             emission.enabled = false;
+
+            ParticleSystem.ShapeModule shape = particleSystemComponent.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+
+            ParticleSystem.VelocityOverLifetimeModule velocityOverLifetime = particleSystemComponent.velocityOverLifetime;
+            velocityOverLifetime.enabled = true;
+            velocityOverLifetime.space = ParticleSystemSimulationSpace.World;
+            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(
+                -config.DebrisHorizontalSpeed,
+                config.DebrisHorizontalSpeed);
+            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(
+                -config.DebrisDownwardSpeed * .85f,
+                -config.DebrisDownwardSpeed * .35f);
 
             ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = particleSystemComponent.sizeOverLifetime;
             sizeOverLifetime.enabled = true;
@@ -69,12 +90,15 @@ namespace GravityPuzzle.Presentation.VFX
                 });
             colorOverLifetime.color = fade;
 
+            // The assigned unlit debris material already renders a solid
+            // square quad. Texture-sheet animation is deliberately disabled:
+            // runtime-generated sprites are not consistently supported by
+            // all mobile particle backends and could make otherwise-emitted
+            // particles invisible.
             ParticleSystem.TextureSheetAnimationModule textureSheet = particleSystemComponent.textureSheetAnimation;
-            textureSheet.enabled = true;
-            textureSheet.mode = ParticleSystemAnimationMode.Sprites;
-            if (textureSheet.spriteCount == 0)
-                textureSheet.AddSprite(PrototypeBootstrap.GetSquareSprite());
+            textureSheet.enabled = false;
 
+            particleRenderer.enabled = true;
             particleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
             particleRenderer.sortingOrder = config.DebrisSortingOrder;
             if (config.DebrisMaterial != null)
@@ -92,6 +116,36 @@ namespace GravityPuzzle.Presentation.VFX
             if (particleSystemComponent == null || config == null || count <= 0)
                 return;
 
+            RefreshFrameBudget();
+            int remainingParticleBudget = config.MaxDebrisPerFrame - emittedParticleCountThisFrame;
+            int particleCount = Mathf.Min(count, Mathf.Max(0, remainingParticleBudget));
+            if (particleCount <= 0)
+                return;
+            emittedParticleCountThisFrame += particleCount;
+            EmitParticles(cutterPosition, width, color, particleCount);
+        }
+
+        /// <summary>
+        /// The first tooth contact gets its own bounded GPU-particle budget so
+        /// it reads as material fracturing, not as a gradual mask reveal.
+        /// </summary>
+        public void EmitEntryBurstAtCutter(Vector2 cutterPosition, float width, Color color, int count)
+        {
+            if (particleSystemComponent == null || config == null || count <= 0)
+                return;
+
+            RefreshFrameBudget();
+            int remainingBurstBudget = config.MaxDebrisEntryBurstPerFrame - emittedEntryBurstCountThisFrame;
+            int particleCount = Mathf.Min(count, Mathf.Max(0, remainingBurstBudget));
+            if (particleCount <= 0)
+                return;
+
+            emittedEntryBurstCountThisFrame += particleCount;
+            EmitParticles(cutterPosition, width, color, particleCount);
+        }
+
+        private void EmitParticles(Vector2 cutterPosition, float width, Color color, int particleCount)
+        {
             if (!particleSystemComponent.isPlaying)
                 particleSystemComponent.Play();
 
@@ -100,25 +154,35 @@ namespace GravityPuzzle.Presentation.VFX
             float maxSize = Mathf.Max(sizeRange.x, sizeRange.y);
             float bandHeight = config.DebrisContactBandHeight;
             Color opaqueColor = new Color(color.r, color.g, color.b, 1f);
-            for (int index = 0; index < count; index++)
-            {
-                ParticleSystem.EmitParams parameters = new ParticleSystem.EmitParams
-                {
-                    position = cutterPosition + new Vector2(
-                        Random.Range(-width * .5f, width * .5f),
-                        Random.Range(-.035f, bandHeight)),
-                    velocity = new Vector3(
-                        Random.Range(-config.DebrisHorizontalSpeed, config.DebrisHorizontalSpeed),
-                        -config.DebrisDownwardSpeed * Random.Range(.35f, .85f),
-                        0f),
-                    startColor = opaqueColor,
-                    startSize = Random.Range(minSize, maxSize),
-                    startLifetime = config.DebrisLifetime * Random.Range(.78f, 1.18f),
-                    rotation = Random.Range(0f, 360f),
-                    angularVelocity = Random.Range(-config.DebrisAngularVelocity, config.DebrisAngularVelocity)
-                };
-                particleSystemComponent.Emit(parameters, 1);
-            }
+            // Shape, lifetime, size and velocity modules randomise individual
+            // particles on the native side. A single bulk call therefore
+            // creates a true field of voxels rather than stacked copies of one
+            // particle, with no managed loop per particle.
+            ParticleSystem.MainModule main = particleSystemComponent.main;
+            main.startColor = opaqueColor;
+            main.startSize = new ParticleSystem.MinMaxCurve(minSize, maxSize);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(
+                config.DebrisLifetime * .78f,
+                config.DebrisLifetime * 1.18f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+
+            ParticleSystem.ShapeModule shape = particleSystemComponent.shape;
+            float sourceHeight = bandHeight + .035f;
+            shape.scale = new Vector3(width, sourceHeight, 0f);
+            Vector3 sourceCenter = cutterPosition + Vector2.up * ((bandHeight - .035f) * .5f);
+            shape.position = particleSystemComponent.transform.InverseTransformPoint(sourceCenter);
+            particleSystemComponent.Emit(particleCount);
+        }
+
+        private void RefreshFrameBudget()
+        {
+            int currentFrame = Time.frameCount;
+            if (budgetFrame == currentFrame)
+                return;
+
+            budgetFrame = currentFrame;
+            emittedParticleCountThisFrame = 0;
+            emittedEntryBurstCountThisFrame = 0;
         }
     }
 }

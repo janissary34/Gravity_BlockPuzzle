@@ -20,7 +20,6 @@ namespace GravityPuzzle.Gameplay.Pieces
     //arda
     public static class RuntimePieceFactory
     {
-        private const string FourModuleSquareShapeKey = "0,0;1,0;0,1;1,1";
         private const string GridBlockName = "Grid Block";
         private const string BlockCellName = "Block Cell";
         private const string HookCellName = "Hook Cell";
@@ -831,20 +830,15 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
                                definition.frozenMoveCount > 0;
-            // Ice uses the exact authored silhouette when one exists. Its
-            // logical cells remain unchanged, so thawing a four-cell square
-            // still reveals four normal brick modules without stretching a
-            // gameplay cell or changing board occupancy.
-            bool forceModularSquare = shapeKey == FourModuleSquareShapeKey;
             bool useModularIce = isFrozenIce &&
                                  (pieceVisualConfig.UseUnifiedModularIce ||
                                   visual.PreferModularIce);
             piece.ConfigureWholePiecePresentation(
-                forceModularSquare ? null : visual.NormalSprite,
+                visual.NormalSprite,
                 visual.IceSprite,
                 transform,
                 useModularIce,
-                visual.PreferModularNormal || forceModularSquare);
+                visual.PreferModularNormal);
         }
 
         /// <summary>
