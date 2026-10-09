@@ -337,7 +337,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 854
-        y: 1181
+        y: 1184
         width: 310
         height: 310
       alignment: 0
@@ -357,8 +357,8 @@ TextureImporter:
       name: M_2X2_C
       rect:
         serializedVersion: 2
-        x: 1192
-        y: 1184
+        x: 1195
+        y: 1182
         width: 310
         height: 310
       alignment: 0
@@ -378,7 +378,7 @@ TextureImporter:
       name: M_2X2_B
       rect:
         serializedVersion: 2
-        x: 854
+        x: 855
         y: 843
         width: 310
         height: 310
@@ -441,7 +441,7 @@ TextureImporter:
       name: M_1x2
       rect:
         serializedVersion: 2
-        x: 1792
+        x: 1793
         y: 32
         width: 155
         height: 310
@@ -462,8 +462,8 @@ TextureImporter:
       name: M_1x1
       rect:
         serializedVersion: 2
-        x: 1866
-        y: 711
+        x: 1864
+        y: 722
         width: 155
         height: 155
       alignment: 0
@@ -504,7 +504,7 @@ TextureImporter:
       name: M_3x2_D
       rect:
         serializedVersion: 2
-        x: 726
+        x: 728
         y: 51
         width: 455
         height: 310
@@ -525,8 +525,8 @@ TextureImporter:
       name: M_3x2_A
       rect:
         serializedVersion: 2
-        x: 1214
-        y: 375
+        x: 1216
+        y: 374
         width: 455
         height: 310
       alignment: 0
@@ -546,7 +546,7 @@ TextureImporter:
       name: M_3x2_C
       rect:
         serializedVersion: 2
-        x: 1208
+        x: 1206
         y: 51
         width: 455
         height: 310
@@ -610,7 +610,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1709
-        y: 1552
+        y: 1554
         width: 310
         height: 455
       alignment: 0
@@ -651,7 +651,7 @@ TextureImporter:
       name: M_T_B
       rect:
         serializedVersion: 2
-        x: 1354
+        x: 1355
         y: 1520
         width: 310
         height: 455
@@ -672,7 +672,7 @@ TextureImporter:
       name: M_T_A
       rect:
         serializedVersion: 2
-        x: 57
+        x: 55
         y: 1540
         width: 310
         height: 455
@@ -773,6 +773,27 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: BG2
+      rect:
+        serializedVersion: 2
+        x: 934
+        y: 1540
+        width: 85
+        height: 85
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c677fb50aa7c14e2cb9c5cbddffb704d
+      internalID: -1994115321
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -787,6 +808,7 @@ TextureImporter:
       name: _ShineMask
     nameFileIdTable:
       BG: -1950294464
+      BG2: -1994115321
       Corner_Bottom_Left: 907948875
       Corner_Bottom_Right: -2049558506
       Corner_Top_Left: 1180291467
