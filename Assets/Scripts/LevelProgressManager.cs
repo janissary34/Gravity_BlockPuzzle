@@ -93,14 +93,13 @@ namespace GravityPuzzle
         private bool boardClearCompletionRequested;
         private bool completionPresentationFinished;
 
-        // World-space ParticleSystem effects cannot be composited reliably over
-        // an overlay canvas. The prewarmed UI view is the deterministic flight
-        // presenter for Scene_Tuna's Screen Space - Overlay HUD; the particle
-        // system remains available for authored world-space HUDs.
+        // The particle flight stays behind an overlay HUD at its final pixels,
+        // but is visible throughout its route and the slider fill is committed
+        // on arrival.  This lets one preallocated renderer carry every shred
+        // voxel instead of dropping most of them due to a UI-view pool limit.
         private bool CanUseWorldParticleVfx => progressVoxelVfx != null &&
                                                 progressVoxelVfx.CanRenderFlights &&
-                                                progressCanvas != null &&
-                                                progressCanvas.renderMode != RenderMode.ScreenSpaceOverlay;
+                                                progressCanvas != null;
 
         private float SliderFillDuration => tweenConfig.ProgressSliderFillDuration;
         private Ease SliderFillEase => tweenConfig.ProgressSliderFillEase;
@@ -455,21 +454,39 @@ namespace GravityPuzzle
 
             activeFlyingVoxelCount++;
 
-            // Continue the real free-fall motion for a short distance in UI
-            // space, then curve upward toward the bar. The Bezier's first
-            // tangent points down, so there is no abrupt stop-and-go corner.
-            float curveDrop = Mathf.Max(42f, ProgressVoxelCurveDropMultiplier * 85f);
-            Vector2 control = start + new Vector2(
-                UnityEngine.Random.Range(-28f, 28f),
-                -curveDrop);
-            float flightDuration = VoxelFlightDuration + UnityEngine.Random.Range(-.08f, .12f);
+            // Spill down from the cutter with organic depth variation and lateral scatter,
+            // then pull up toward the slider in a lively curved arc rather than a rigid flat beam.
+            float baseDrop = Mathf.Max(135f, ProgressVoxelCurveDropMultiplier * 180f);
+            float dropDistance = baseDrop * UnityEngine.Random.Range(0.82f, 1.25f);
+            float dropScatterX = UnityEngine.Random.Range(-18f, 18f);
+            Vector2 spillEnd = new Vector2(start.x + dropScatterX, start.y - dropDistance);
+
+            float riseArchOffsetX = UnityEngine.Random.Range(-32f, 32f);
+            float riseArchT = UnityEngine.Random.Range(0.25f, 0.42f);
+            Vector2 riseControl = new Vector2(
+                spillEnd.x + riseArchOffsetX,
+                Mathf.Lerp(spillEnd.y, target.y, riseArchT));
+
+            float flightDuration = VoxelFlightDuration * UnityEngine.Random.Range(0.92f, 1.12f);
+            float spillFraction = UnityEngine.Random.Range(0.28f, 0.36f);
+            float spillDuration = flightDuration * spillFraction;
+            float riseDuration = Mathf.Max(.01f, flightDuration - spillDuration);
+            float startDelay = UnityEngine.Random.Range(0f, 0.05f);
+
             Sequence flightSequence = DOTween.Sequence()
                 .SetLink(flyingVoxel.gameObject, LinkBehaviour.KillOnDisable)
-                .SetAutoKill(true)
-                .SetDelay(UnityEngine.Random.Range(0f, .12f));
-            flightSequence.Append(DOVirtual.Float(0f, 1f, flightDuration, progress =>
-                voxelRect.anchoredPosition = QuadraticBezier(start, control, target, progress)).SetEase(VoxelFlightEase));
-            flightSequence.Join(voxelRect.DORotate(new Vector3(0f, 0f, UnityEngine.Random.Range(-VoxelRotationRange, VoxelRotationRange)), flightDuration, RotateMode.FastBeyond360));
+                .SetAutoKill(true);
+
+            if (startDelay > 0.001f)
+            {
+                flightSequence.AppendInterval(startDelay);
+            }
+
+            flightSequence.Append(DOVirtual.Float(0f, 1f, spillDuration, progress =>
+                voxelRect.anchoredPosition = Vector2.LerpUnclamped(start, spillEnd, progress * progress)));
+            flightSequence.Append(DOVirtual.Float(0f, 1f, riseDuration, progress =>
+                voxelRect.anchoredPosition = QuadraticBezier(spillEnd, riseControl, target, progress)).SetEase(VoxelFlightEase));
+            flightSequence.Insert(startDelay, voxelRect.DORotate(new Vector3(0f, 0f, UnityEngine.Random.Range(-VoxelRotationRange, VoxelRotationRange)), flightDuration, RotateMode.FastBeyond360));
             bool flightResolved = false;
             void ResolveFlight()
             {
@@ -513,7 +530,12 @@ namespace GravityPuzzle
         /// Presents one logical reward as several pooled UI voxels while keeping
         /// the total gameplay progress exactly equal to totalProgressAmount.
         /// </summary>
-        public void SpawnFlyingVoxelBurst(Vector3 startWorldPos, Color voxelColor, float totalProgressAmount, int flightCount)
+        public void SpawnFlyingVoxelBurst(
+            Vector3 startWorldPos,
+            Color voxelColor,
+            float totalProgressAmount,
+            int flightCount,
+            float sourceWidth = 0f)
         {
             if (levelCompletedTriggered) return;
 
@@ -524,7 +546,8 @@ namespace GravityPuzzle
                     startWorldPos,
                     Opaque(voxelColor),
                     flightCount,
-                    VoxelFlightDuration);
+                    VoxelFlightDuration,
+                    sourceWidth);
                 if (progressVoxelVfx.IsFlightGroupActive(flightGroupId))
                 {
                     StartCoroutine(ApplyProgressWhenVfxArrives(totalProgressAmount, null, flightGroupId));
@@ -532,15 +555,22 @@ namespace GravityPuzzle
                 }
             }
 
-            // The authored particle count belongs to the single-draw-call world
-            // VFX. Mapping all of those particles to individual pooled UI Images
-            // exhausted the fallback pool as soon as several pieces reached the
-            // shredder together. Keep a small, readable HUD burst and distribute
-            // the same authoritative progress across it.
+            // Scene_Tuna uses the pooled HUD presenter. Keep its fixed capacity
+            // bounded for mobile, while mapping the visible grains across the
+            // actual cutter surface rather than spawning a single centre stack.
             int count = Mathf.Clamp(flightCount, 1, ProgressVoxelUiBurstCount);
             float progressPerFlight = totalProgressAmount / count;
             for (int i = 0; i < count; i++)
-                SpawnFlyingVoxel(startWorldPos, voxelColor, progressPerFlight, null);
+            {
+                float sourceT = count > 1 ? i / (float)(count - 1) : .5f;
+                float stepJitterX = count > 1 ? UnityEngine.Random.Range(-0.06f, 0.06f) * (sourceWidth / count) : 0f;
+                float stepJitterY = UnityEngine.Random.Range(-0.04f, 0.04f);
+                Vector3 grainStart = startWorldPos + new Vector3(
+                    (sourceT - .5f) * Mathf.Max(0f, sourceWidth) + stepJitterX,
+                    stepJitterY,
+                    0f);
+                SpawnFlyingVoxel(grainStart, voxelColor, progressPerFlight, null);
+            }
         }
 
         private IEnumerator ApplyProgressWhenVfxArrives(float progressAmount, Action onArrival, int flightGroupId)

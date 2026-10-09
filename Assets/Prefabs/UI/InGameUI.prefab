@@ -52641,7 +52641,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 19877600, guid: 36bdc02b23d9ca94d93bd715c0cca5c0, type: 3}
       propertyPath: InitialModule.startSize.scalar
-      value: 0.6
+      value: 1.25
       objectReference: {fileID: 0}
     - target: {fileID: 19877600, guid: 36bdc02b23d9ca94d93bd715c0cca5c0, type: 3}
       propertyPath: InitialModule.startSpeed.scalar
@@ -52735,11 +52735,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4238923884158317462, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
       propertyPath: maxDropDistance
-      value: 2.5
+      value: 1.25
       objectReference: {fileID: 0}
     - target: {fileID: 4238923884158317462, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
       propertyPath: minDropDistance
-      value: 1.5
+      value: 0.9
       objectReference: {fileID: 0}
     - target: {fileID: 4238923884158317462, guid: ac2f2c80a2d57428fb90a8d16b3f0550, type: 3}
       propertyPath: baseParticleSize

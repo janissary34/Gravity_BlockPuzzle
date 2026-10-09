@@ -4849,8 +4849,9 @@ MonoBehaviour:
   sortingLayerName: Default
   particleMultiplier: 1
   baseParticleSize: 0.28
-  minDropDistance: 0.2
-  maxDropDistance: 0.5
-  horizontalScatterRadius: 0.6
+  minDropDistance: 1.5
+  maxDropDistance: 2.5
+  horizontalScatterRadius: 0.12
+  dropPhaseFraction: 0.35
   flightDuration: 0.65
   easeType: 1

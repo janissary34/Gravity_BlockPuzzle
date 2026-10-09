@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: ShredderConfig
   m_EditorClassIdentifier: 
   feedMaskMouthInset: 0.14
-  enableContactDebrisPresentation: 1
+  enableContactDebrisPresentation: 0
+  progressVoxelMultiplier: 4
   enableAdvancedShreddingPresentation: 0
   debrisPerSecondPerWorldUnit: 4500
   debrisEntryBurstPerWorldUnit: 256
@@ -26,7 +27,7 @@ MonoBehaviour:
   debrisLifetime: 0.55
   debrisSizeRange: {x: 0.03, y: 0.075}
   debrisDownwardSpeed: 3.2
-  debrisHorizontalSpeed: 0.5
+  debrisHorizontalSpeed: 0.12
   debrisGravityModifier: 0.35
   debrisAngularVelocity: 540
   debrisSortingOrder: 28

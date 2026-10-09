@@ -121,9 +121,10 @@ namespace GravityPuzzle
             if (isRequiredFirstUse && boundBoard != null && !boundBoard.IsTimerStarted)
                 boundBoard.StartTimer();
 
+            bool isTimerValid = boundBoard != null &&
+                                ((boundBoard.IsTimerActive && boundBoard.IsTimerStarted) || isRequiredFirstUse);
             if (boundBoard == null || (consumeInventory && !HasUses) || IsFreezeActive ||
-                LevelTimerUI.IsGameOver || !boundBoard.IsTimerActive || !boundBoard.IsTimerStarted ||
-                boundBoard.TimeRemaining <= 0f)
+                LevelTimerUI.IsGameOver || !isTimerValid || boundBoard.TimeRemaining <= 0f)
             {
                 RefreshButtonState();
                 return false;
@@ -235,12 +236,14 @@ namespace GravityPuzzle
             bool isRequiredFirstUse = BoosterFirstUseTutorialRuntime.Gate != null &&
                                       BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(
                                           BoosterRewardType.FreezeTimer);
+            bool isTimerActiveOrTutorial = boundBoard != null &&
+                (boundBoard.IsTimerActive || (isRequiredFirstUse && boundBoard.TimeLimit > 0f && boundBoard.IsLevelRunning));
             bool canInteract =
                 hasUses &&
                 !IsFreezeActive &&
                 boundBoard != null &&
                 !LevelTimerUI.IsGameOver &&
-                boundBoard.IsTimerActive &&
+                isTimerActiveOrTutorial &&
                 (boundBoard.IsTimerStarted || isRequiredFirstUse) &&
                 boundBoard.TimeRemaining > 0f;
 

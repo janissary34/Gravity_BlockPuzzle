@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   blockPieceCapacity: 50
   shredVoxelCapacity: 1200
-  progressVoxelCapacity: 96
+  progressVoxelCapacity: 256
   useVoxelShardGrid: 1
   voxelSubdivisions: 8

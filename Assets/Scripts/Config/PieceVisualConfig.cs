@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace GravityPuzzle.Config
@@ -20,6 +21,10 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool useUnifiedModularIce = true;
         [Tooltip("Artist-authored 1x1 brick used when a complete piece has no matching silhouette, including hammer fragments.")]
         [SerializeField] private Sprite normalFallbackSprite;
+        [Tooltip("Seamless horizontal three-module bar used to compose connected shapes that have no dedicated atlas silhouette.")]
+        [SerializeField] private Sprite horizontalJoinedFallbackSprite;
+        [Tooltip("Seamless vertical three-module bar used to compose connected shapes that have no dedicated atlas silhouette.")]
+        [SerializeField] private Sprite verticalJoinedFallbackSprite;
         [Tooltip("Artist-authored 1x1 ice block used when a frozen piece has no matching silhouette.")]
         [SerializeField] private Sprite iceFallbackSprite;
         [Tooltip("Small presentation-only overlap for adjacent modular ice cells. It closes transparent sprite gutters without changing board or collider scale.")]
@@ -33,6 +38,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private Color iceOverlayTint = new Color(1f, 1f, 1f, .42f);
         [SerializeField] private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
         [Tooltip("Shared counter style for every frozen piece. Level assets own the remaining move count, while this config owns its visual language.")]
+        [SerializeField] private TMP_FontAsset iceCounterFont;
         [SerializeField] private float iceCounterFontSize = 36f;
         [SerializeField] private Color iceCounterTextColor = Color.white;
         [SerializeField] private Color iceCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
@@ -58,11 +64,14 @@ namespace GravityPuzzle.Config
         public IReadOnlyList<PiecePaletteDefinition> PaletteDefinitions => paletteDefinitions;
         public bool UseUnifiedModularIce => useUnifiedModularIce;
         public Sprite NormalFallbackSprite => normalFallbackSprite;
+        public Sprite HorizontalJoinedFallbackSprite => horizontalJoinedFallbackSprite;
+        public Sprite VerticalJoinedFallbackSprite => verticalJoinedFallbackSprite;
         public Sprite IceFallbackSprite => iceFallbackSprite;
         public float ModularIceCellScale => Mathf.Max(1f, modularIceCellScale);
         public Sprite IceOverlaySprite => iceOverlaySprite;
         public Color IceOverlayTint => iceOverlayTint;
         public Color IceFrostTint => iceFrostTint;
+        public TMP_FontAsset IceCounterFont => iceCounterFont;
         public float IceCounterFontSize => Mathf.Max(1f, iceCounterFontSize);
         public Color IceCounterTextColor => iceCounterTextColor;
         public Color IceCounterOutlineColor => iceCounterOutlineColor;
@@ -196,12 +205,15 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool preferModularNormal;
         [Tooltip("Keeps frozen presentation on full-size 1x1 brick modules instead of covering the shape with an opaque ice silhouette. Use for structures whose per-cell stud detail must remain visible.")]
         [SerializeField] private bool preferModularIce;
+        [Tooltip("Renders this silhouette as a bordered tiled sprite so straight pieces can grow without exposing seams between 1x1 modules.")]
+        [SerializeField] private bool tileNormalSpriteToBounds;
 
         public string ShapeKey => shapeKey;
         public Sprite NormalSprite => normalSprite;
         public Sprite IceSprite => iceSprite;
         public bool PreferModularNormal => preferModularNormal;
         public bool PreferModularIce => preferModularIce;
+        public bool TileNormalSpriteToBounds => tileNormalSpriteToBounds;
     }
 
     /// <summary>

@@ -37,11 +37,13 @@ namespace GravityPuzzle.Presentation.VFX
 
         [Header("Bezier Arc Settings (P0 -> P1 -> P2)")]
         [Tooltip("Minimum downward drop for control point P1 (shredder blade fall effect).")]
-        [Range(0.2f, 8f)] [SerializeField] private float minDropDistance = 1.5f;
+        [Range(0.2f, 8f)] [SerializeField] private float minDropDistance = 1.8f;
         [Tooltip("Maximum downward drop for control point P1 (shredder blade fall effect).")]
-        [Range(0.5f, 10f)] [SerializeField] private float maxDropDistance = 2.5f;
-        [Tooltip("Horizontal random scatter (+-X) for control point P1.")]
+        [Range(0.5f, 10f)] [SerializeField] private float maxDropDistance = 3.2f;
+        [Tooltip("Small horizontal width for the coherent stream at control point P1.")]
         [Range(0.05f, 2f)] [SerializeField] private float horizontalScatterRadius = 0.45f;
+        [Tooltip("Fraction of the flight reserved for the visible downward spill before the return arc begins.")]
+        [Range(.05f, .6f)] [SerializeField] private float dropPhaseFraction = .35f;
         [Tooltip("Base flight duration from P0 to P2 in seconds.")]
         [Range(0.2f, 2f)] [SerializeField] private float flightDuration = 0.65f;
         [Tooltip("Easing curve applied to Bezier parameter t.")]
@@ -163,7 +165,12 @@ namespace GravityPuzzle.Presentation.VFX
         /// <summary>
         /// Emits flying particles that follow P0 (Contact) -> P1 (Drop/Scatter) -> P2 (Slider Handle Target).
         /// </summary>
-        public int EmitVoxel(Vector3 contactWorldPos, Color color, float flightDuration = 0.55f, int count = 1)
+        public int EmitVoxel(
+            Vector3 contactWorldPos,
+            Color color,
+            float flightDuration = 0.55f,
+            int count = 1,
+            float sourceWidth = 0f)
         {
             if (!CanRenderFlights)
                 return 0;
@@ -185,15 +192,18 @@ namespace GravityPuzzle.Presentation.VFX
                 if (activeCount >= MaxActiveFlights)
                     break;
 
-                // P0: Instantaneous contact world position with minor microscopic jitter
-                Vector3 p0 = contactWorldPos + new Vector3(
-                    Random.Range(-0.06f, 0.06f),
-                    Random.Range(-0.02f, 0.02f),
-                    0f);
+                // Spread grains over the actual material touching the cutter,
+                // not from one artificial centre point. The small jitter only
+                // prevents identical quads from overpainting each other.
+                float sourceT = totalCount > 1 ? i / (float)(totalCount - 1) : .5f;
+                float sourceOffsetX = (sourceT - .5f) * Mathf.Max(0f, sourceWidth);
+                float sourceJitterX = Random.Range(-0.04f, 0.04f);
+                float sourceJitterY = Random.Range(-0.04f, 0.04f);
+                Vector3 p0 = contactWorldPos + new Vector3(sourceOffsetX + sourceJitterX, sourceJitterY, 0f);
 
-                // P1: Drop control point (0.5 - 1.0 units below P0, with +-X horizontal scatter)
+                // P1: downward drop with organic depth variation and lateral scatter
                 float drop = Random.Range(minDropDistance, maxDropDistance);
-                float scatterX = Random.Range(-horizontalScatterRadius, horizontalScatterRadius);
+                float scatterX = Random.Range(-horizontalScatterRadius, horizontalScatterRadius) * 0.35f;
                 Vector3 p1 = new Vector3(p0.x + scatterX, p0.y - drop, 0f);
 
                 activeFlights[activeCount] = new FlightData
@@ -202,7 +212,7 @@ namespace GravityPuzzle.Presentation.VFX
                     p1 = p1,
                     p2 = p2,
                     elapsed = 0f,
-                    duration = duration + Random.Range(-0.04f, 0.04f),
+                    duration = duration * Random.Range(0.92f, 1.12f),
                     groupId = groupId,
                     color = color32,
                     size = Random.Range(baseParticleSize * 0.85f, baseParticleSize * 1.15f)
@@ -217,10 +227,15 @@ namespace GravityPuzzle.Presentation.VFX
         /// <summary>
         /// Emits a burst of particles for booster impacts (Hammer, Rocket).
         /// </summary>
-        public int EmitVoxelBurst(Vector3 contactWorldPos, Color color, int particleCount, float flightDuration = 0.55f)
+        public int EmitVoxelBurst(
+            Vector3 contactWorldPos,
+            Color color,
+            int particleCount,
+            float flightDuration = 0.55f,
+            float sourceWidth = 0f)
         {
-            int clampedCount = Mathf.Clamp(particleCount, 1, 128);
-            return EmitVoxel(contactWorldPos, color, flightDuration, clampedCount);
+            int clampedCount = Mathf.Clamp(particleCount, 1, MaxActiveFlights);
+            return EmitVoxel(contactWorldPos, color, flightDuration, clampedCount, sourceWidth);
         }
 
         /// <summary>Returns true while any particle in the emitted group is still visible.</summary>
@@ -252,14 +267,29 @@ namespace GravityPuzzle.Presentation.VFX
                 float normalizedTime = flight.elapsed / flight.duration;
                 bool reachedTarget = normalizedTime >= 1f;
 
-                // Apply easing to normalized time parameter
-                float t = ApplyEasing(Mathf.Clamp01(normalizedTime), easeType);
-
-                // Authentic 3-stage Quadratic Bezier equation: B(t) = (1-t)^2*P0 + 2*(1-t)*t*P1 + t^2*P2
-                float inv = 1f - t;
-                Vector3 pos = inv * inv * flight.p0 +
-                              2f * inv * t * flight.p1 +
-                              t * t * flight.p2;
+                float dropFraction = Mathf.Clamp(dropPhaseFraction, .05f, .6f);
+                Vector3 pos;
+                if (normalizedTime < dropFraction)
+                {
+                    // Stage one: material visibly spills out of the teeth.
+                    float dropT = Mathf.Clamp01(normalizedTime / dropFraction);
+                    pos = Vector3.LerpUnclamped(flight.p0, flight.p1, dropT * dropT);
+                }
+                else
+                {
+                    // Stage two: the same grain is pulled back up to the
+                    // slider along a quadratic Bézier, not respawned there.
+                    float riseT = Mathf.Clamp01((normalizedTime - dropFraction) / (1f - dropFraction));
+                    float t = ApplyEasing(riseT, easeType);
+                    Vector3 riseControl = new Vector3(
+                        flight.p1.x,
+                        Mathf.Lerp(flight.p1.y, flight.p2.y, .38f),
+                        0f);
+                    float inv = 1f - t;
+                    pos = inv * inv * flight.p1 +
+                          2f * inv * t * riseControl +
+                          t * t * flight.p2;
+                }
                 pos.z = 0f;
 
                 particleBuffer[aliveCount].position = pos;

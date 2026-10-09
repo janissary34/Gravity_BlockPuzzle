@@ -7,7 +7,7 @@ namespace GravityPuzzle.Config
     {
         [Min(0)] [SerializeField] private int blockPieceCapacity = 32;
         [Min(0)] [SerializeField] private int shredVoxelCapacity = 128;
-        [Min(0)] [SerializeField] private int progressVoxelCapacity = 96;
+        [Min(0)] [SerializeField] private int progressVoxelCapacity = 256;
 
         [Header("Voxel Presentation Mode")]
         [Tooltip("If true, pieces are composed of subdivided VoxelShards (legacy). If false (default), pieces use clean solid cells with Particle System effects.")]

@@ -86,6 +86,7 @@ namespace GravityPuzzle.Editor
                 AssetDatabase.LoadAssetAtPath<Material>(GridDarkMaterialPath);
             serializedConfig.FindProperty("gridLightMaterial").objectReferenceValue =
                 AssetDatabase.LoadAssetAtPath<Material>(GridLightMaterialPath);
+            SetSprite(serializedConfig, "gridSprite", "BG2");
             serializedConfig.FindProperty("overrideLevelBackground").boolValue = true;
             Color environmentColor = new Color(.22f, .18f, .5f, 1f);
             serializedConfig.FindProperty("backgroundColor").colorValue = environmentColor;

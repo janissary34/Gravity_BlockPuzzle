@@ -16,6 +16,8 @@ namespace GravityPuzzle.Editor
         private const string ConfigPath = "Assets/PieceVisualConfig.asset";
         private const string BrickAtlasPath = "Assets/Art/BrickBlocks.png";
         private const string IceAtlasPath = "Assets/Art/Blocks_Sprite_Ice.png";
+        private const string HorizontalStraightSpritePath = "Assets/Art/BrickBlock_3x1_Generated.png";
+        private const string VerticalStraightSpritePath = "Assets/Art/BrickBlock_1x3_Generated.png";
         private const float PixelsPerModule = 155f;
 
         [MenuItem("Gravity Puzzle/Art/Build Piece Shape Visual Config")]
@@ -33,6 +35,10 @@ namespace GravityPuzzle.Editor
             SerializedObject serializedConfig = new SerializedObject(config);
             SerializedProperty normalFallback = serializedConfig.FindProperty("normalFallbackSprite");
             normalFallback.objectReferenceValue = FindSprite(BrickAtlasPath, "BB_1X1");
+            serializedConfig.FindProperty("horizontalJoinedFallbackSprite").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<Sprite>(HorizontalStraightSpritePath);
+            serializedConfig.FindProperty("verticalJoinedFallbackSprite").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<Sprite>(VerticalStraightSpritePath);
             Sprite modularIceSprite = FindSprite(IceAtlasPath, "Ice_1X1");
             // Modular frozen shapes keep their normal cell art underneath so
             // thawing never requires rebuilding gameplay geometry. The new
@@ -58,7 +64,17 @@ namespace GravityPuzzle.Editor
                 definition.FindPropertyRelative("iceSprite").objectReferenceValue = iceSprite;
                 definition.FindPropertyRelative("preferModularNormal").boolValue = false;
                 definition.FindPropertyRelative("preferModularIce").boolValue = false;
+                definition.FindPropertyRelative("tileNormalSpriteToBounds").boolValue = false;
             }
+
+            Sprite horizontalStraightSprite =
+                AssetDatabase.LoadAssetAtPath<Sprite>(HorizontalStraightSpritePath);
+            Sprite verticalStraightSprite =
+                AssetDatabase.LoadAssetAtPath<Sprite>(VerticalStraightSpritePath);
+            AddStraightDefinition(definitions, "0,0;1,0;2,0", horizontalStraightSprite, false);
+            AddStraightDefinition(definitions, "0,0;1,0;2,0;3,0", horizontalStraightSprite, true);
+            AddStraightDefinition(definitions, "0,0;0,1;0,2", verticalStraightSprite, false);
+            AddStraightDefinition(definitions, "0,0;0,1;0,2;0,3", verticalStraightSprite, true);
 
             serializedConfig.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(config);
@@ -66,6 +82,44 @@ namespace GravityPuzzle.Editor
             Debug.Log(
                 $"[PieceShapeVisualConfig] Configured {definitions.arraySize} normal artist silhouettes " +
                 $"({iceMatchedShapeCount} with dedicated ice art). Missing ice art uses the configured ice overlay.");
+        }
+
+        private static void AddStraightDefinition(
+            SerializedProperty definitions,
+            string shapeKey,
+            Sprite sprite,
+            bool tileToBounds)
+        {
+            if (sprite == null)
+            {
+                Debug.LogError($"[PieceShapeVisualConfig] Tiled straight sprite for '{shapeKey}' was not found.");
+                return;
+            }
+
+            SerializedProperty definition = null;
+            for (int index = 0; index < definitions.arraySize; index++)
+            {
+                SerializedProperty candidate = definitions.GetArrayElementAtIndex(index);
+                if (candidate.FindPropertyRelative("shapeKey").stringValue == shapeKey)
+                {
+                    definition = candidate;
+                    break;
+                }
+            }
+
+            if (definition == null)
+            {
+                int index = definitions.arraySize;
+                definitions.InsertArrayElementAtIndex(index);
+                definition = definitions.GetArrayElementAtIndex(index);
+            }
+
+            definition.FindPropertyRelative("shapeKey").stringValue = shapeKey;
+            definition.FindPropertyRelative("normalSprite").objectReferenceValue = sprite;
+            definition.FindPropertyRelative("iceSprite").objectReferenceValue = null;
+            definition.FindPropertyRelative("preferModularNormal").boolValue = false;
+            definition.FindPropertyRelative("preferModularIce").boolValue = false;
+            definition.FindPropertyRelative("tileNormalSpriteToBounds").boolValue = tileToBounds;
         }
 
         private static Dictionary<string, Sprite> ReadSpritesByShape(string path)

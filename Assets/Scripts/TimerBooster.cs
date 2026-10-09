@@ -504,10 +504,16 @@ namespace GravityPuzzle
             bool isSequenceRunning = activeSequence != null && activeSequence.IsActive();
             bool isFreezeActive = activeFreezeBooster != null && activeFreezeBooster.IsFreezeActive;
 
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
+            bool isRequiredFirstUse = tutorialGate != null &&
+                                      tutorialGate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer);
+            bool isTimerActiveOrTutorial = board != null &&
+                (board.IsTimerActive || (isRequiredFirstUse && board.TimeLimit > 0f && board.IsLevelRunning));
+
             boosterButton.interactable =
                 board != null &&
-                board.IsTimerActive &&
-                board.IsTimerStarted &&
+                isTimerActiveOrTutorial &&
+                (board.IsTimerStarted || isRequiredFirstUse) &&
                 board.TimeRemaining > 0f &&
                 !LevelTimerUI.IsGameOver &&
                 !isSequenceRunning &&
@@ -536,7 +542,11 @@ namespace GravityPuzzle
             if (sequencePausedBoard == activeBoard)
                 return;
 
-            if (activeBoard == null || !activeBoard.IsTimerActive || !activeBoard.IsTimerStarted || activeBoard.TimeRemaining <= 0f || LevelTimerUI.IsGameOver)
+            bool isTimerValid = activeBoard != null &&
+                                ((activeBoard.IsTimerActive && activeBoard.IsTimerStarted) || isRequiredFirstUse) &&
+                                activeBoard.TimeRemaining > 0f &&
+                                !LevelTimerUI.IsGameOver;
+            if (!isTimerValid)
             {
                 Debug.LogWarning("[TimerBooster] Cannot play sequence: timer has not started or is inactive.");
                 return;

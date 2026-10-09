@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace GravityPuzzle.Gameplay.Pieces
@@ -18,6 +19,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             Sprite bombOverlaySprite,
             float bombOverlayFill,
             int frozenMoveCount,
+            TMP_FontAsset iceCounterFont,
             float iceCounterFontSize,
             Color iceCounterTextColor,
             Color iceCounterOutlineColor,
@@ -43,6 +45,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             BombOverlaySprite = bombOverlaySprite;
             BombOverlayFill = bombOverlayFill;
             FrozenMoveCount = frozenMoveCount;
+            IceCounterFont = iceCounterFont;
             IceCounterFontSize = iceCounterFontSize;
             IceCounterTextColor = iceCounterTextColor;
             IceCounterOutlineColor = iceCounterOutlineColor;
@@ -69,6 +72,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         public Sprite BombOverlaySprite { get; }
         public float BombOverlayFill { get; }
         public int FrozenMoveCount { get; }
+        public TMP_FontAsset IceCounterFont { get; }
         public float IceCounterFontSize { get; }
         public Color IceCounterTextColor { get; }
         public Color IceCounterOutlineColor { get; }

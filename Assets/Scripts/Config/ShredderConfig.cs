@@ -11,6 +11,8 @@ namespace GravityPuzzle.Config
         [Range(0f, .5f)] [SerializeField] private float feedMaskMouthInset = .14f;
         [Tooltip("Emits small square debris continuously from the same hidden edge. This is independent from the optional dissolve shader.")]
         [SerializeField] private bool enableContactDebrisPresentation = true;
+        [Tooltip("Visible progress grains emitted for each authored cutter voxel. These use the shared particle flight buffer and all travel to the slider.")]
+        [Range(1, 8)] [SerializeField] private int progressVoxelMultiplier = 4;
         [Header("Grinding Debris Presentation")]
         [Tooltip("Opt-in gate for the experimental rough-cut shader and continuous debris. Keep disabled until it has been play-tested on target devices.")]
         [SerializeField] private bool enableAdvancedShreddingPresentation;
@@ -133,6 +135,7 @@ namespace GravityPuzzle.Config
         public float VoxelEjectionSpreadAngle => voxelEjectionSpreadAngle;
         public float FeedMaskMouthInset => feedMaskMouthInset;
         public bool EnableContactDebrisPresentation => enableContactDebrisPresentation;
+        public int ProgressVoxelMultiplier => progressVoxelMultiplier;
         public float DebrisPerSecondPerWorldUnit => debrisPerSecondPerWorldUnit;
         public float DebrisEntryBurstPerWorldUnit => debrisEntryBurstPerWorldUnit;
         public int MaxDebrisEntryBurstPerFrame => maxDebrisEntryBurstPerFrame;

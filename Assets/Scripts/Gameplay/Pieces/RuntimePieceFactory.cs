@@ -379,6 +379,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.BombOverlaySprite : null,
                 pieceVisualConfig != null ? pieceVisualConfig.BombOverlayFill : .82f,
                 definition.frozenMoveCount,
+                pieceVisualConfig != null ? pieceVisualConfig.IceCounterFont : null,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterFontSize : definition.iceCounterFontSize,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterTextColor : definition.iceCounterTextColor,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineColor : definition.iceCounterOutlineColor,
@@ -820,13 +821,25 @@ namespace GravityPuzzle.Gameplay.Pieces
             GravityLevelDefinition level,
             PieceDefinition definition)
         {
-            if (piece == null || pieceVisualConfig == null ||
-                !TryGetAtlasShapeKey(level, definition, out string shapeKey) ||
-                !pieceVisualConfig.TryGetShapePresentation(
+            if (piece == null || pieceVisualConfig == null)
+                return;
+
+            List<Vector2Int> moduleCells = new List<Vector2Int>();
+            if (!TryGetUniformModuleShape(level, definition, moduleCells, out string shapeKey))
+                return;
+
+            if (!pieceVisualConfig.TryGetShapePresentation(
                     shapeKey,
                     out PieceShapeVisualDefinition visual,
                     out PieceShapeVisualTransform transform))
+            {
+                piece.ConfigureJoinedModulePresentation(
+                    moduleCells,
+                    pieceVisualConfig.NormalFallbackSprite,
+                    pieceVisualConfig.HorizontalJoinedFallbackSprite,
+                    pieceVisualConfig.VerticalJoinedFallbackSprite);
                 return;
+            }
 
             bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
                                definition.frozenMoveCount > 0;
@@ -838,7 +851,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                 visual.IceSprite,
                 transform,
                 useModularIce,
-                visual.PreferModularNormal);
+                visual.PreferModularNormal,
+                visual.TileNormalSpriteToBounds);
         }
 
         /// <summary>
@@ -849,12 +863,14 @@ namespace GravityPuzzle.Gameplay.Pieces
         /// occupied square of the same scale; irregular damage safely falls
         /// back to the modular presentation.
         /// </summary>
-        private static bool TryGetAtlasShapeKey(
+        private static bool TryGetUniformModuleShape(
             GravityLevelDefinition level,
             PieceDefinition definition,
+            List<Vector2Int> moduleCells,
             out string shapeKey)
         {
             shapeKey = null;
+            moduleCells.Clear();
             if (level == null || definition == null || definition.cells == null ||
                 definition.cells.Count == 0)
                 return false;
@@ -906,13 +922,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                     width,
                     height,
                     moduleScale,
+                    moduleCells,
                     out string candidateKey))
-                return false;
-
-            if (!pieceVisualConfig.TryGetShapePresentation(
-                    candidateKey,
-                    out _,
-                    out _))
                 return false;
 
             shapeKey = candidateKey;
@@ -926,9 +937,11 @@ namespace GravityPuzzle.Gameplay.Pieces
             int width,
             int height,
             int scale,
+            List<Vector2Int> modules,
             out string shapeKey)
         {
-            List<string> modules = new List<string>();
+            modules.Clear();
+            List<string> moduleKeys = new List<string>();
             for (int moduleY = 0; moduleY < height / scale; moduleY++)
             {
                 for (int moduleX = 0; moduleX < width / scale; moduleX++)
@@ -953,7 +966,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                         return false;
                     }
 
-                    modules.Add(moduleX + "," + moduleY);
+                    modules.Add(new Vector2Int(moduleX, moduleY));
+                    moduleKeys.Add(moduleX + "," + moduleY);
                 }
             }
 
@@ -961,7 +975,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             // bottom-to-top row order. Preserve that canonical order here;
             // lexicographic string sorting would place "0,1" before "1,0"
             // and make valid L/T silhouettes miss their authored sprite.
-            shapeKey = modules.Count > 0 ? string.Join(";", modules) : null;
+            shapeKey = moduleKeys.Count > 0 ? string.Join(";", moduleKeys) : null;
             return !string.IsNullOrEmpty(shapeKey);
         }
 

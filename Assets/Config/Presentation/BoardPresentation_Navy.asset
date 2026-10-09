@@ -66,9 +66,9 @@ MonoBehaviour:
     sprite: {fileID: 75189599, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   - shapeKey: 0,0;1,0;2,0;1,1
     sprite: {fileID: -1067627346, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  gridDarkMaterial: {fileID: 2100000, guid: 87f5b5fe9a9fb4d73b3589e4644d11d9, type: 2}
-  gridLightMaterial: {fileID: 2100000, guid: 1dc913d4610c745e3937c65821f60d81, type: 2}
-  gridSprite: {fileID: -1950294464, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  gridDarkMaterial: {fileID: 2100000, guid: 7dc4f486ef1b84902a01b2c752089bc9, type: 2}
+  gridLightMaterial: {fileID: 2100000, guid: 7be1e4d4450eb48d3b039f8b4e663a98, type: 2}
+  gridSprite: {fileID: -1994115321, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   gridDarkTint: {r: 1, g: 1, b: 1, a: 0.9490196}
   gridLightTint: {r: 1, g: 1, b: 1, a: 0.9490196}
   extendPresentationToViewportBottom: 1

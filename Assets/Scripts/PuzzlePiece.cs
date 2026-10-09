@@ -125,11 +125,17 @@ namespace GravityPuzzle
             ? 0f
             : GravityGridMetrics.RestingPieceCollisionSkinInCells;
 
+        public int CollisionCellCount => collisionCells != null ? collisionCells.Count : 0;
+        public IReadOnlyList<BoxCollider2D> CollisionCells => collisionCells;
+
         private readonly List<SpriteRenderer> iceRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> iceSlots = new List<SpriteRenderer>();
+        private readonly List<JoinedPieceSegment> joinedPieceSegments = new List<JoinedPieceSegment>();
+        private readonly List<SpriteRenderer> joinedPieceRenderers = new List<SpriteRenderer>();
         private SpriteRenderer wholePieceRenderer;
         private Sprite wholePieceNormalSprite;
         private Sprite wholePieceIceSprite;
+        private bool tileWholePieceNormalPresentation;
         private bool preferModularNormalPresentation;
         private bool preferModularIcePresentation;
         private PieceShapeVisualTransform wholePieceTransform = PieceShapeVisualTransform.Identity;
@@ -185,6 +191,8 @@ namespace GravityPuzzle
         private int frozenUntilDestroyedCount;
         private int previousFrozenRemaining = -1;
         private TextMeshPro iceCounterText;
+        private TMP_FontAsset iceCounterFont;
+        private TMP_FontAsset defaultCounterFont;
         private Action<PuzzlePiece> returnToPool;
         private float iceCounterFontSize = 36f;
         private Color iceCounterTextColor = Color.black;
@@ -198,6 +206,22 @@ namespace GravityPuzzle
         private Vector2 bombCounterOffset;
         private SpriteRenderer bombOverlayRenderer;
         private int previousBombRemaining = -1;
+
+        private readonly struct JoinedPieceSegment
+        {
+            public Sprite Sprite { get; }
+            public Vector2 Offset { get; }
+            public Vector2 Size { get; }
+            public bool Tiled { get; }
+
+            public JoinedPieceSegment(Sprite sprite, Vector2 offset, Vector2 size, bool tiled)
+            {
+                Sprite = sprite;
+                Offset = offset;
+                Size = size;
+                Tiled = tiled;
+            }
+        }
 
         private struct ShredderReservationCell
         {
@@ -249,6 +273,7 @@ namespace GravityPuzzle
                 if (textComponents[index].name == IceCounterPresentationName)
                 {
                     iceCounterText = textComponents[index];
+                    defaultCounterFont = iceCounterText.font;
                     break;
                 }
             }
@@ -397,14 +422,167 @@ namespace GravityPuzzle
             Sprite iceSprite,
             PieceShapeVisualTransform transform,
             bool preferModularIce = false,
-            bool preferModularNormal = false)
+            bool preferModularNormal = false,
+            bool tileNormalSpriteToBounds = false)
         {
             ClearIceVisuals();
+            ClearJoinedPiecePresentation();
             wholePieceNormalSprite = normalSprite;
             wholePieceIceSprite = iceSprite;
             preferModularNormalPresentation = preferModularNormal;
             preferModularIcePresentation = preferModularIce;
+            tileWholePieceNormalPresentation = tileNormalSpriteToBounds;
             wholePieceTransform = transform;
+            RefreshWholePiecePresentation();
+            PrototypeBoard board = PrototypeBoard.Active;
+            RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+        }
+
+        /// <summary>
+        /// Builds an intact presentation for a uniform module shape that has no
+        /// authored silhouette. Maximal horizontal and vertical bars overlap at
+        /// corners, hiding internal module caps without changing colliders or
+        /// authoritative board occupancy.
+        /// </summary>
+        public void ConfigureJoinedModulePresentation(
+            IReadOnlyList<Vector2Int> moduleCells,
+            Sprite singleModuleSprite,
+            Sprite horizontalBarSprite,
+            Sprite verticalBarSprite)
+        {
+            ClearIceVisuals();
+            ClearWholePiecePresentation();
+            if (moduleCells == null || moduleCells.Count == 0 ||
+                singleModuleSprite == null || horizontalBarSprite == null ||
+                verticalBarSprite == null)
+                return;
+
+            HashSet<Vector2Int> occupied = new HashSet<Vector2Int>();
+            int minimumX = int.MaxValue;
+            int minimumY = int.MaxValue;
+            int maximumX = int.MinValue;
+            int maximumY = int.MinValue;
+            for (int index = 0; index < moduleCells.Count; index++)
+            {
+                Vector2Int cell = moduleCells[index];
+                if (!occupied.Add(cell))
+                    continue;
+
+                minimumX = Mathf.Min(minimumX, cell.x);
+                minimumY = Mathf.Min(minimumY, cell.y);
+                maximumX = Mathf.Max(maximumX, cell.x);
+                maximumY = Mathf.Max(maximumY, cell.y);
+            }
+
+            if (occupied.Count == 0)
+                return;
+
+            Vector2 shapeCenter = new Vector2(
+                (minimumX + maximumX + 1f) * .5f,
+                (minimumY + maximumY + 1f) * .5f);
+            HashSet<Vector2Int> covered = new HashSet<Vector2Int>();
+            HashSet<Vector2Int> horizontalCovered = new HashSet<Vector2Int>();
+            HashSet<Vector2Int> verticalCovered = new HashSet<Vector2Int>();
+
+            for (int y = minimumY; y <= maximumY; y++)
+            {
+                int x = minimumX;
+                while (x <= maximumX)
+                {
+                    if (!occupied.Contains(new Vector2Int(x, y)))
+                    {
+                        x++;
+                        continue;
+                    }
+
+                    int start = x;
+                    while (x + 1 <= maximumX && occupied.Contains(new Vector2Int(x + 1, y)))
+                        x++;
+
+                    int length = x - start + 1;
+                    if (length >= 2)
+                    {
+                        Vector2 runCenter = new Vector2(start + length * .5f, y + .5f);
+                        joinedPieceSegments.Add(new JoinedPieceSegment(
+                            horizontalBarSprite,
+                            runCenter - shapeCenter,
+                            new Vector2(length, 1f),
+                            length != 3));
+                        for (int coveredX = start; coveredX <= x; coveredX++)
+                        {
+                            Vector2Int coveredCell = new Vector2Int(coveredX, y);
+                            covered.Add(coveredCell);
+                            horizontalCovered.Add(coveredCell);
+                        }
+                    }
+
+                    x++;
+                }
+            }
+
+            for (int x = minimumX; x <= maximumX; x++)
+            {
+                int y = minimumY;
+                while (y <= maximumY)
+                {
+                    if (!occupied.Contains(new Vector2Int(x, y)))
+                    {
+                        y++;
+                        continue;
+                    }
+
+                    int start = y;
+                    while (y + 1 <= maximumY && occupied.Contains(new Vector2Int(x, y + 1)))
+                        y++;
+
+                    int length = y - start + 1;
+                    if (length >= 2)
+                    {
+                        Vector2 runCenter = new Vector2(x + .5f, start + length * .5f);
+                        joinedPieceSegments.Add(new JoinedPieceSegment(
+                            verticalBarSprite,
+                            runCenter - shapeCenter,
+                            new Vector2(1f, length),
+                            length != 3));
+                        for (int coveredY = start; coveredY <= y; coveredY++)
+                        {
+                            Vector2Int coveredCell = new Vector2Int(x, coveredY);
+                            covered.Add(coveredCell);
+                            verticalCovered.Add(coveredCell);
+                        }
+                    }
+
+                    y++;
+                }
+            }
+
+            // A one-module cap at every bar intersection masks the rounded
+            // endpoints of both bars. The bars remain visible beneath it, so
+            // the outer silhouette stays continuous through L/T/C corners.
+            foreach (Vector2Int cell in horizontalCovered)
+            {
+                if (!verticalCovered.Contains(cell))
+                    continue;
+
+                joinedPieceSegments.Add(new JoinedPieceSegment(
+                    singleModuleSprite,
+                    new Vector2(cell.x + .5f, cell.y + .5f) - shapeCenter,
+                    Vector2.one,
+                    false));
+            }
+
+            foreach (Vector2Int cell in occupied)
+            {
+                if (covered.Contains(cell))
+                    continue;
+
+                joinedPieceSegments.Add(new JoinedPieceSegment(
+                    singleModuleSprite,
+                    new Vector2(cell.x + .5f, cell.y + .5f) - shapeCenter,
+                    Vector2.one,
+                    false));
+            }
+
             RefreshWholePiecePresentation();
             PrototypeBoard board = PrototypeBoard.Active;
             RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
@@ -412,25 +590,44 @@ namespace GravityPuzzle
 
         public void ClearWholePiecePresentation()
         {
+            ClearJoinedPiecePresentation();
             wholePieceNormalSprite = null;
             wholePieceIceSprite = null;
             preferModularNormalPresentation = false;
             preferModularIcePresentation = false;
+            tileWholePieceNormalPresentation = false;
             wholePieceTransform = PieceShapeVisualTransform.Identity;
-            if (wholePieceRenderer != null)
-            {
-                wholePieceRenderer.enabled = false;
-                wholePieceRenderer.sprite = null;
-                wholePieceRenderer.color = Color.white;
-                wholePieceRenderer.sharedMaterial = null;
-                wholePieceRenderer.flipX = false;
-                wholePieceRenderer.flipY = false;
-                wholePieceRenderer.transform.localPosition = Vector3.zero;
-                wholePieceRenderer.transform.localRotation = Quaternion.identity;
-                wholePieceRenderer.transform.localScale = Vector3.one;
-            }
+            ResetWholePieceRenderer(wholePieceRenderer);
+            wholePieceRenderer = iceSlots.Count > 0 ? iceSlots[0] : null;
 
             SetModularCellPresentationVisible(true);
+        }
+
+        private void ClearJoinedPiecePresentation()
+        {
+            for (int index = 0; index < joinedPieceRenderers.Count; index++)
+                ResetWholePieceRenderer(joinedPieceRenderers[index]);
+
+            joinedPieceRenderers.Clear();
+            joinedPieceSegments.Clear();
+        }
+
+        private void ResetWholePieceRenderer(SpriteRenderer renderer)
+        {
+            if (renderer == null)
+                return;
+
+            renderer.enabled = false;
+            renderer.sprite = null;
+            renderer.color = Color.white;
+            renderer.sharedMaterial = null;
+            renderer.flipX = false;
+            renderer.flipY = false;
+            renderer.drawMode = SpriteDrawMode.Simple;
+            renderer.transform.SetParent(iceSlotsRoot, false);
+            renderer.transform.localPosition = Vector3.zero;
+            renderer.transform.localRotation = Quaternion.identity;
+            renderer.transform.localScale = Vector3.one;
         }
 
         public IReadOnlyList<VoxelShard> ConfiguredVoxelShards => configuredVoxelShards;
@@ -454,7 +651,9 @@ namespace GravityPuzzle
             if (wholePieceRenderer != null && wholePieceRenderer.enabled)
             {
                 SetModularCellPresentationVisible(false);
-                configuredShredderRenderers = new[] { wholePieceRenderer };
+                configuredShredderRenderers = joinedPieceRenderers.Count > 0
+                    ? joinedPieceRenderers.ToArray()
+                    : new[] { wholePieceRenderer };
                 return;
             }
 
@@ -792,6 +991,7 @@ namespace GravityPuzzle
             bombOverlayFill = setup.BombOverlayFill;
             ConfigureFreeze(
                 setup.SpecialBlockType == PieceSpecialBlockType.Bomb ? 0 : setup.FrozenMoveCount,
+                setup.IceCounterFont,
                 setup.IceCounterFontSize,
                 setup.IceCounterTextColor,
                 setup.IceCounterOutlineColor,
@@ -1203,7 +1403,7 @@ namespace GravityPuzzle
                 rootOutline.sortingOrder = shredderPresentationOutlineSortingOrder;
         }
 
-        public void ReleaseCollisionCellsAtOrBelow(float worldY)
+        public void ReleaseCollisionCellsAtOrBelow(float worldY, List<BoxCollider2D> releasedBuffer = null)
         {
             AdvanceShredderGridReleaseFrontier(worldY);
 
@@ -1220,6 +1420,9 @@ namespace GravityPuzzle
                 // This physical cell has entered the grinder. Remove only this
                 // lower section; the remaining upper cells stay solid until they
                 // reach the same line on a later physics step.
+                if (releasedBuffer != null)
+                    releasedBuffer.Add(cell);
+
                 cell.enabled = false;
                 geometryChanged = true;
             }
@@ -1311,6 +1514,7 @@ namespace GravityPuzzle
 
         public void ConfigureFreeze(
             int requiredDestroyedPieces,
+            TMP_FontAsset counterFont,
             float counterFontSize,
             Color counterTextColor,
             Color counterOutlineColor,
@@ -1318,6 +1522,7 @@ namespace GravityPuzzle
             Vector2 counterOffset)
         {
             frozenUntilDestroyedCount = Mathf.Max(0, requiredDestroyedPieces);
+            iceCounterFont = counterFont;
             iceCounterFontSize = Mathf.Max(1f, counterFontSize);
             iceCounterTextColor = counterTextColor;
             iceCounterOutlineColor = counterOutlineColor;
@@ -2227,6 +2432,8 @@ namespace GravityPuzzle
             // Apply style on every refresh, not only on object creation. This
             // keeps Play Mode previews in sync after editor recompilation and
             // after changing the serialized level settings.
+            if (iceCounterFont != null)
+                iceCounterText.font = iceCounterFont;
             iceCounterText.color = iceCounterTextColor;
             iceCounterText.enabled = true;
             iceCounterText.enableAutoSizing = false;
@@ -2267,6 +2474,8 @@ namespace GravityPuzzle
                 MinimumBombCounterFontScale,
                 MaximumBombCounterFontScale);
 
+            if (defaultCounterFont != null)
+                iceCounterText.font = defaultCounterFont;
             iceCounterText.color = bombCounterTextColor;
             iceCounterText.enabled = true;
             iceCounterText.enableAutoSizing = false;
@@ -2354,7 +2563,7 @@ namespace GravityPuzzle
             {
                 SpriteRenderer candidate = iceSlots[index];
                 if (candidate == null || candidate == wholePieceRenderer ||
-                    iceRenderers.Contains(candidate))
+                    iceRenderers.Contains(candidate) || joinedPieceRenderers.Contains(candidate))
                     continue;
 
                 renderer = candidate;
@@ -2590,6 +2799,15 @@ namespace GravityPuzzle
 
             bool useModularNormal = !IsFrozen && preferModularNormalPresentation;
             bool useModularIce = IsFrozen && preferModularIcePresentation;
+            if (!IsFrozen && !useModularNormal && joinedPieceSegments.Count > 0)
+            {
+                RefreshJoinedPiecePresentation();
+                return;
+            }
+
+            for (int index = 0; index < joinedPieceRenderers.Count; index++)
+                ResetWholePieceRenderer(joinedPieceRenderers[index]);
+            joinedPieceRenderers.Clear();
             Sprite sprite = IsFrozen && wholePieceIceSprite != null && !useModularIce
                 ? wholePieceIceSprite
                 : wholePieceNormalSprite;
@@ -2613,13 +2831,31 @@ namespace GravityPuzzle
                 0f,
                 0f,
                 wholePieceTransform.QuarterTurns * 90f);
-            wholePieceRenderer.transform.localScale = new Vector3(
-                (swapsDimensions ? size.y : size.x) / sprite.bounds.size.x,
-                (swapsDimensions ? size.x : size.y) / sprite.bounds.size.y,
-                1f);
             wholePieceRenderer.sprite = sprite;
             wholePieceRenderer.flipX = wholePieceTransform.FlipX;
             wholePieceRenderer.flipY = false;
+            bool tileNormalSprite = sprite == wholePieceNormalSprite &&
+                                    tileWholePieceNormalPresentation &&
+                                    wholePieceTransform.QuarterTurns == 0 &&
+                                    !wholePieceTransform.FlipX;
+            if (tileNormalSprite)
+            {
+                float moduleScale = size.x >= size.y
+                    ? size.y / sprite.bounds.size.y
+                    : size.x / sprite.bounds.size.x;
+                wholePieceRenderer.drawMode = SpriteDrawMode.Tiled;
+                wholePieceRenderer.tileMode = SpriteTileMode.Continuous;
+                wholePieceRenderer.transform.localScale = new Vector3(moduleScale, moduleScale, 1f);
+                wholePieceRenderer.size = size / moduleScale;
+            }
+            else
+            {
+                wholePieceRenderer.drawMode = SpriteDrawMode.Simple;
+                wholePieceRenderer.transform.localScale = new Vector3(
+                    (swapsDimensions ? size.y : size.x) / sprite.bounds.size.x,
+                    (swapsDimensions ? size.x : size.y) / sprite.bounds.size.y,
+                    1f);
+            }
             wholePieceRenderer.sharedMaterial = IsFrozen && wholePieceIceSprite != null
                 ? icePresentationMaterial
                 : PresentationMaterial;
@@ -2634,6 +2870,95 @@ namespace GravityPuzzle
             wholePieceRenderer.enabled = true;
             SetModularCellPresentationVisible(false);
             configuredShredderRenderers = new[] { wholePieceRenderer };
+        }
+
+        private void RefreshJoinedPiecePresentation()
+        {
+            if (joinedPieceSegments.Count > iceSlots.Count)
+            {
+                Debug.LogWarning(
+                    $"[PuzzlePiece] Joined presentation needs {joinedPieceSegments.Count} slots, " +
+                    $"but the prefab provides {iceSlots.Count}. Falling back to modular cells.",
+                    this);
+                SetModularCellPresentationVisible(true);
+                configuredShredderRenderers = null;
+                return;
+            }
+
+            GetModularPresentationBounds(out Vector2 center, out Vector2 totalSize);
+            GetJoinedPresentationExtents(out int width, out int height);
+            Vector2 unitSize = new Vector2(totalSize.x / width, totalSize.y / height);
+            joinedPieceRenderers.Clear();
+            for (int index = 0; index < joinedPieceSegments.Count; index++)
+            {
+                JoinedPieceSegment segment = joinedPieceSegments[index];
+                SpriteRenderer renderer = iceSlots[index];
+                if (renderer == null || segment.Sprite == null ||
+                    segment.Sprite.bounds.size.x <= 0f || segment.Sprite.bounds.size.y <= 0f)
+                    continue;
+
+                Vector2 targetSize = Vector2.Scale(segment.Size, unitSize);
+                renderer.transform.SetParent(transform, false);
+                renderer.transform.localPosition = center + Vector2.Scale(segment.Offset, unitSize);
+                renderer.transform.localRotation = Quaternion.identity;
+                renderer.sprite = segment.Sprite;
+                renderer.flipX = false;
+                renderer.flipY = false;
+                if (segment.Tiled)
+                {
+                    float scale = targetSize.x >= targetSize.y
+                        ? targetSize.y / segment.Sprite.bounds.size.y
+                        : targetSize.x / segment.Sprite.bounds.size.x;
+                    renderer.drawMode = SpriteDrawMode.Tiled;
+                    renderer.tileMode = SpriteTileMode.Continuous;
+                    renderer.transform.localScale = new Vector3(scale, scale, 1f);
+                    renderer.size = targetSize / scale;
+                }
+                else
+                {
+                    renderer.drawMode = SpriteDrawMode.Simple;
+                    renderer.transform.localScale = new Vector3(
+                        targetSize.x / segment.Sprite.bounds.size.x,
+                        targetSize.y / segment.Sprite.bounds.size.y,
+                        1f);
+                }
+
+                renderer.sharedMaterial = PresentationMaterial;
+                renderer.color = PresentationMaterial != null ? Color.white : VisualColor;
+                renderer.sortingOrder = 5 + index;
+                renderer.enabled = true;
+                joinedPieceRenderers.Add(renderer);
+            }
+
+            if (joinedPieceRenderers.Count == 0)
+            {
+                SetModularCellPresentationVisible(true);
+                configuredShredderRenderers = null;
+                return;
+            }
+
+            wholePieceRenderer = joinedPieceRenderers[0];
+            SetModularCellPresentationVisible(false);
+            configuredShredderRenderers = joinedPieceRenderers.ToArray();
+        }
+
+        private void GetJoinedPresentationExtents(out int width, out int height)
+        {
+            float minimumX = float.PositiveInfinity;
+            float minimumY = float.PositiveInfinity;
+            float maximumX = float.NegativeInfinity;
+            float maximumY = float.NegativeInfinity;
+            for (int index = 0; index < joinedPieceSegments.Count; index++)
+            {
+                JoinedPieceSegment segment = joinedPieceSegments[index];
+                minimumX = Mathf.Min(minimumX, segment.Offset.x - segment.Size.x * .5f);
+                minimumY = Mathf.Min(minimumY, segment.Offset.y - segment.Size.y * .5f);
+                maximumX = Mathf.Max(maximumX, segment.Offset.x + segment.Size.x * .5f);
+                maximumY = Mathf.Max(maximumY, segment.Offset.y + segment.Size.y * .5f);
+            }
+
+            width = Mathf.Max(1, Mathf.RoundToInt(maximumX - minimumX));
+            height = Mathf.Max(1, Mathf.RoundToInt(maximumY - minimumY));
         }
 
         private void SetModularCellPresentationVisible(bool visible)

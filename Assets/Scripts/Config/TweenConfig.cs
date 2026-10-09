@@ -39,7 +39,7 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float progressVoxelCurveDropMultiplier = .8f;
         [Min(.001f)] [SerializeField] private float progressVoxelUiSize = .32f;
         [Tooltip("Maximum pooled UI grains shown for one logical progress burst. World-space particle bursts keep their authored particle count.")]
-        [Min(1)] [SerializeField] private int progressVoxelUiBurstCount = 6;
+        [Min(1)] [SerializeField] private int progressVoxelUiBurstCount = 96;
         [Min(.001f)] [SerializeField] private float progressSliderPunchDuration = .12f;
         [SerializeField] private Vector3 progressSliderPunchScale = new Vector3(.045f, .045f, 0f);
         [Min(1)] [SerializeField] private int progressSliderPunchVibrato = 6;
