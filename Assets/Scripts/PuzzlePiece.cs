@@ -127,6 +127,7 @@ namespace GravityPuzzle
 
         public int CollisionCellCount => collisionCells != null ? collisionCells.Count : 0;
         public IReadOnlyList<BoxCollider2D> CollisionCells => collisionCells;
+        public IReadOnlyList<SpriteRenderer> CollisionCellVisuals => collisionCellVisuals;
 
         private readonly List<SpriteRenderer> iceRenderers = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> iceSlots = new List<SpriteRenderer>();
@@ -681,6 +682,76 @@ namespace GravityPuzzle
         {
             configuredVoxelShards.Clear();
             configuredShredderRenderers = null;
+        }
+
+        /// <summary>
+        /// Populates the buffer with world-space bounding boxes of each active block cell.
+        /// This ensures cutter contact and voxel emission respect the true piece geometry,
+        /// avoiding false bounds on empty notches in L, U, or irregular pieces.
+        /// </summary>
+        public int GetActiveCellBounds(List<Bounds> resultsBuffer)
+        {
+            if (resultsBuffer == null)
+                return 0;
+
+            resultsBuffer.Clear();
+
+            // 1. Authoritative physical collision cells: each 1x1 block has its own
+            // BoxCollider2D on its part slot with true local/world transform.
+            if (collisionCells != null && collisionCells.Count > 0)
+            {
+                for (int i = 0; i < collisionCells.Count; i++)
+                {
+                    BoxCollider2D cell = collisionCells[i];
+                    if (cell == null)
+                        continue;
+
+                    Vector3 center = cell.transform.TransformPoint(cell.offset);
+                    Vector3 scale = cell.transform.lossyScale;
+                    Vector2 cellSize = cell.size;
+
+                    float width = Mathf.Max(0.2f, cellSize.x * Mathf.Abs(scale.x));
+                    float height = Mathf.Max(0.2f, cellSize.y * Mathf.Abs(scale.y));
+                    resultsBuffer.Add(new Bounds(center, new Vector3(width, height, 1f)));
+                }
+
+                if (resultsBuffer.Count > 0)
+                    return resultsBuffer.Count;
+            }
+
+            // 2. Modular cell visuals fallback
+            if (collisionCellVisuals != null && collisionCellVisuals.Count > 0)
+            {
+                for (int i = 0; i < collisionCellVisuals.Count; i++)
+                {
+                    SpriteRenderer visual = collisionCellVisuals[i];
+                    if (visual == null)
+                        continue;
+
+                    Vector3 center = visual.transform.position;
+                    Vector3 scale = visual.transform.lossyScale;
+                    Vector2 cellSize = (fullCollisionCellSizes != null && i < fullCollisionCellSizes.Count)
+                        ? fullCollisionCellSizes[i]
+                        : Vector2.one;
+
+                    float width = Mathf.Max(0.2f, cellSize.x * Mathf.Abs(scale.x));
+                    float height = Mathf.Max(0.2f, cellSize.y * Mathf.Abs(scale.y));
+                    resultsBuffer.Add(new Bounds(center, new Vector3(width, height, 1f)));
+                }
+
+                if (resultsBuffer.Count > 0)
+                    return resultsBuffer.Count;
+            }
+
+            // 3. Last fallback: root transform / renderer bounds
+            if (wholePieceRenderer != null && wholePieceRenderer.enabled)
+            {
+                resultsBuffer.Add(wholePieceRenderer.bounds);
+                return 1;
+            }
+
+            resultsBuffer.Add(new Bounds(transform.position, Vector3.one));
+            return 1;
         }
 
         public void RemoveVoxelPresentation(IReadOnlyList<VoxelShard> voxels)
@@ -1993,30 +2064,50 @@ namespace GravityPuzzle
 
         // The rendered voxel grid is intentionally made of child VoxelShard
         // objects. Its parent SpriteRenderer is a disabled placeholder, so it
-        // cannot be used as hit-test authority. Use the authored part-slot
-        // transform and its cached visual size instead. This remains valid
-        // while normal-play colliders are disabled and never queries physics.
+        // cannot be used as hit-test authority. Use the authored cell
+        // bounds transformed into the piece's unscaled coordinate space
+        // and its cached cell size instead. This remains valid
+        // regardless of atlas sprite scales or presentation states.
         private bool TryGetCellIndexAt(Vector2 worldPosition, out int targetIndex)
         {
             targetIndex = -1;
-            if (collisionCellVisuals == null || fullCollisionCellSizes == null ||
-                collisionCellVisuals.Count == 0)
+            int cellCount = collisionCells != null
+                ? collisionCells.Count
+                : (collisionCellVisuals != null ? collisionCellVisuals.Count : 0);
+            if (cellCount == 0 || fullCollisionCellSizes == null)
                 return false;
 
+            Vector2 pieceLocalPoint = transform.InverseTransformPoint(worldPosition);
             float closestDistance = float.PositiveInfinity;
-            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            for (int index = 0; index < cellCount; index++)
             {
-                SpriteRenderer visual = collisionCellVisuals[index];
-                if (visual == null || !visual.gameObject.activeInHierarchy ||
-                    index >= fullCollisionCellSizes.Count)
+                if (index >= fullCollisionCellSizes.Count)
                     continue;
 
-                Vector2 localPoint = visual.transform.InverseTransformPoint(worldPosition);
-                Vector2 halfSize = fullCollisionCellSizes[index] * .5f;
-                if (Mathf.Abs(localPoint.x) > halfSize.x || Mathf.Abs(localPoint.y) > halfSize.y)
+                BoxCollider2D cell = collisionCells != null && index < collisionCells.Count
+                    ? collisionCells[index]
+                    : null;
+                SpriteRenderer visual = collisionCellVisuals != null && index < collisionCellVisuals.Count
+                    ? collisionCellVisuals[index]
+                    : null;
+
+                if (cell != null && !cell.enabled)
+                    continue;
+                if (cell == null && (visual == null || !visual.gameObject.activeInHierarchy))
                     continue;
 
-                float distance = localPoint.sqrMagnitude;
+                Vector2 cellWorldCenter = cell != null
+                    ? (Vector2)cell.bounds.center
+                    : (visual != null ? (Vector2)visual.bounds.center : Vector2.zero);
+                Vector2 cellLocalCenter = transform.InverseTransformPoint(cellWorldCenter);
+
+                Vector2 localSize = fullCollisionCellSizes[index];
+                Vector2 halfSize = localSize * .5f;
+                Vector2 diff = pieceLocalPoint - cellLocalCenter;
+                if (Mathf.Abs(diff.x) > halfSize.x + .005f || Mathf.Abs(diff.y) > halfSize.y + .005f)
+                    continue;
+
+                float distance = diff.sqrMagnitude;
                 if (distance >= closestDistance)
                     continue;
 

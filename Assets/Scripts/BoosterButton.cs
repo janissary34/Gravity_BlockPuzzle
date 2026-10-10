@@ -24,6 +24,9 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Text component displaying count (Legacy UI Text). Auto-found if null.")]
         private Text countUiText;
 
+        [SerializeField, Tooltip("Optional CanvasGroup to hide the button when not introduced. Auto-found if null.")]
+        private CanvasGroup buttonCanvasGroup;
+
         [Header("Events")]
         [Tooltip("Event fired when the booster button is clicked and has remaining uses.")]
         public UnityEvent onBoosterClicked;
@@ -45,9 +48,51 @@ namespace GravityPuzzle
         public bool HasBoosterType => hasBoosterType;
         public BoosterRewardType BoosterType => boosterType;
 
+        public static int GetIntroductionLevel(BoosterRewardType type)
+        {
+            return type switch
+            {
+                BoosterRewardType.FreezeTimer => 4,
+                BoosterRewardType.Hammer => 6,
+                BoosterRewardType.Rocket => 10,
+                _ => 1
+            };
+        }
+
+        public bool IsIntroduced
+        {
+            get
+            {
+                if (!hasBoosterType)
+                    return true;
+
+                if (GravityLevelRuntime.IsEditorLevelPreview && HasLevelPreviewUses())
+                    return true;
+
+                if (BoosterFirstUseTutorialRuntime.Gate != null &&
+                    BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(boosterType))
+                    return true;
+
+                int introLevel = GetIntroductionLevel(boosterType);
+                if (GravityLevelRuntime.CurrentLevelNumber < introLevel)
+                    return false;
+
+                if (BoosterInventoryRuntime.Current.IsUnlocked(boosterType))
+                    return true;
+
+                if (HasUses)
+                    return true;
+
+                return false;
+            }
+        }
+
+
         private void Awake()
         {
             button = GetComponent<Button>();
+            if (buttonCanvasGroup == null)
+                buttonCanvasGroup = GetComponent<CanvasGroup>();
             rocketBooster = GetComponent<RocketBooster>();
             hammerBooster = GetComponent<HammerBooster>();
             timerBooster = GetComponent<TimerBooster>();
@@ -244,14 +289,55 @@ namespace GravityPuzzle
 
         public void RefreshButtonState()
         {
+            if (buttonCanvasGroup == null)
+            {
+                buttonCanvasGroup = GetComponent<CanvasGroup>();
+            }
+
+            bool isIntroduced = IsIntroduced;
+
+            if (!isIntroduced)
+            {
+                if (buttonCanvasGroup != null)
+                {
+                    buttonCanvasGroup.alpha = 0f;
+                    buttonCanvasGroup.interactable = false;
+                    buttonCanvasGroup.blocksRaycasts = false;
+                }
+
+                if (button != null)
+                {
+                    button.interactable = false;
+                }
+                return;
+            }
+
+            if (buttonCanvasGroup != null)
+            {
+                buttonCanvasGroup.alpha = HasUses ? 1f : 0.55f;
+                buttonCanvasGroup.interactable = HasUses;
+                buttonCanvasGroup.blocksRaycasts = HasUses;
+            }
+
             if (button != null)
             {
-                bool isAvailableInCurrentContext = !hasBoosterType ||
-                                                   BoosterInventoryRuntime.Current.IsUnlocked(boosterType) ||
-                                                   GravityLevelRuntime.IsEditorLevelPreview;
-                button.interactable = HasUses &&
-                                      isAvailableInCurrentContext;
+                button.interactable = HasUses;
             }
+        }
+
+        private bool HasLevelPreviewUses()
+        {
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null)
+                return false;
+
+            return boosterType switch
+            {
+                BoosterRewardType.FreezeTimer => level.timerBoosterCount > 0,
+                BoosterRewardType.Hammer => level.hammerBoosterCount > 0,
+                BoosterRewardType.Rocket => level.rocketBoosterCount > 0,
+                _ => false
+            };
         }
 
         private void HandleInventoryCountChanged(BoosterRewardType changedType, int count)

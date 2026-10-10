@@ -21,7 +21,7 @@ MonoBehaviour:
   maxDebrisEntryBurstPerFrame: 256
   debrisFinalBurstPerWorldUnit: 180
   debrisContactBandHeight: 0.18
-  debrisBurstPerCrossedCell: 48
+  debrisBurstPerCrossedCell: 32
   maxDebrisPerFrame: 96
   debrisParticleCapacity: 4096
   debrisLifetime: 0.55
@@ -57,7 +57,7 @@ MonoBehaviour:
   hubSortingOrder: 27
   voxelEjectionDirection: {x: 0, y: -1.2}
   voxelEjectionSpreadAngle: 40
-  feedSpeed: 9.5
+  feedSpeed: 2
   feedQueueCapacity: 16
   tremorIntensity: 0.045
   tremorFrequency: 55

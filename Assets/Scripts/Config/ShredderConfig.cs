@@ -95,7 +95,7 @@ namespace GravityPuzzle.Config
         [Range(0f, 180f)] [SerializeField] private float voxelEjectionSpreadAngle = 40f;
 
         [Header("Piece Feed")]
-        [Min(0.01f)] [SerializeField] private float feedSpeed = 5.5f;
+        [Min(0.01f)] [SerializeField] private float feedSpeed = 3.8f;
         [Tooltip("Maximum number of pieces that have reached one shredder mouth and may feed concurrently.")]
         [Min(1)] [SerializeField] private int feedQueueCapacity = 16;
         [Min(0f)] [SerializeField] private float tremorIntensity = .045f;

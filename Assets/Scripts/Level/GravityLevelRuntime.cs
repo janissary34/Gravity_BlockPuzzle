@@ -421,6 +421,7 @@ namespace GravityPuzzle
 
             CreateViewportEnvironmentBackdrop(background.transform, level);
             CreateBoardInteriorBackdrop(background.transform, level);
+            CreateBoardEdgeGlow(background.transform, level);
             CreateLowerScreenBackground(background.transform, level);
 
             for (int boardY = 0; boardY < level.boardRows; boardY++)
@@ -561,7 +562,8 @@ namespace GravityPuzzle
             Vector2 size,
             float rotation,
             Color tint,
-            Material material)
+            Material material,
+            int sortingOrder = -19)
         {
             GameObject strip = PrototypeBootstrap.CreateVisualBlock(
                 name,
@@ -569,7 +571,7 @@ namespace GravityPuzzle
                 size,
                 tint,
                 material,
-                -19);
+                sortingOrder);
             strip.transform.rotation = Quaternion.Euler(0f, 0f, rotation);
             strip.transform.SetParent(parent, true);
         }
@@ -580,14 +582,63 @@ namespace GravityPuzzle
                 configuredBoardPresentationConfig.BoardInteriorMaterial == null)
                 return;
 
+            float lowerExtension = ResolveLowerPresentationExtent(level);
+            float panelPadding = configuredBoardPresentationConfig.BoardInteriorPadding;
             GameObject backdrop = PrototypeBootstrap.CreateVisualBlock(
                 "Board Environment Backdrop",
-                Vector2.zero,
-                new Vector2(level.boardColumns, level.boardRows),
+                new Vector2(0f, -lowerExtension * .5f),
+                new Vector2(
+                    level.boardColumns + panelPadding,
+                    level.boardRows + lowerExtension + panelPadding),
                 configuredBoardPresentationConfig.BoardInteriorTint,
                 configuredBoardPresentationConfig.BoardInteriorMaterial,
-                -11);
+                -11,
+                configuredBoardPresentationConfig.BoardInteriorSprite,
+                true);
             backdrop.transform.SetParent(parent, true);
+        }
+
+        private static void CreateBoardEdgeGlow(Transform parent, GravityLevelDefinition level)
+        {
+            Material material = configuredBoardPresentationConfig.LowerGridDarkeningMaterial;
+            Color glowColor = configuredBoardPresentationConfig.BoardEdgeGlowColor;
+            if (material == null || glowColor.a <= .001f)
+                return;
+
+            float glowWidth = configuredBoardPresentationConfig.BoardEdgeGlowWidth;
+            float halfWidth = level.boardColumns * .5f;
+            float halfHeight = level.boardRows * .5f;
+            float lowerExtension = ResolveLowerPresentationExtent(level);
+            float verticalLength = level.boardRows + lowerExtension;
+            float verticalCentre = -lowerExtension * .5f;
+
+            CreateEdgeDarkeningStrip(
+                parent,
+                "Board Top Soft Edge",
+                new Vector2(0f, halfHeight + glowWidth * .5f),
+                new Vector2(level.boardColumns + glowWidth * 2f, glowWidth),
+                0f,
+                glowColor,
+                material,
+                -12);
+            CreateEdgeDarkeningStrip(
+                parent,
+                "Board Left Soft Edge",
+                new Vector2(-halfWidth - glowWidth * .5f, verticalCentre),
+                new Vector2(verticalLength, glowWidth),
+                90f,
+                glowColor,
+                material,
+                -12);
+            CreateEdgeDarkeningStrip(
+                parent,
+                "Board Right Soft Edge",
+                new Vector2(halfWidth + glowWidth * .5f, verticalCentre),
+                new Vector2(verticalLength, glowWidth),
+                -90f,
+                glowColor,
+                material,
+                -12);
         }
 
         private static void CreateLowerScreenBackground(Transform parent, GravityLevelDefinition level)
@@ -844,7 +895,6 @@ namespace GravityPuzzle
                                 BoardFrameEdge.TopLeftCorner))
                         {
                             leftTrim = GetCornerJoinTrim(
-                                fineCellSize,
                                 thickness,
                                 configuredBoardPresentationConfig.CornerOutset.x) +
                                 configuredBoardPresentationConfig.TopCornerHorizontalInset;
@@ -856,7 +906,6 @@ namespace GravityPuzzle
                                 BoardFrameEdge.TopRightCorner))
                         {
                             rightTrim = GetCornerJoinTrim(
-                                fineCellSize,
                                 thickness,
                                 configuredBoardPresentationConfig.CornerOutset.x) +
                                 configuredBoardPresentationConfig.TopCornerHorizontalInset;
@@ -920,7 +969,6 @@ namespace GravityPuzzle
                         if (HasOuterFrameCorner(level, new Vector2Int(x, 0), bottomCorner))
                         {
                             bottomTrim = GetCornerJoinTrim(
-                                fineCellSize,
                                 thickness,
                                 configuredBoardPresentationConfig.CornerOutset.y);
                         }
@@ -934,7 +982,6 @@ namespace GravityPuzzle
                         if (HasOuterFrameCorner(level, new Vector2Int(x, level.FineRows - 1), topCorner))
                         {
                             topTrim = GetCornerJoinTrim(
-                                fineCellSize,
                                 thickness,
                                 configuredBoardPresentationConfig.CornerOutset.y) +
                                 configuredBoardPresentationConfig.TopCornerVerticalInset;
@@ -1062,7 +1109,6 @@ namespace GravityPuzzle
             float cornerInset = Mathf.Max(
                 0f,
                 GetCornerJoinTrim(
-                    fineCellSize,
                     thickness,
                     configuredBoardPresentationConfig != null
                         ? configuredBoardPresentationConfig.CornerOutset.x
@@ -1227,7 +1273,7 @@ namespace GravityPuzzle
 
             float halfWidth = level.boardColumns * .5f;
             float halfHeight = level.boardRows * .5f;
-            float cornerSize = GetOuterFrameCornerSize(fineCellSize, thickness);
+            float cornerSize = GetOuterFrameCornerSize(thickness);
             Vector2 cornerOutset = configuredBoardPresentationConfig.CornerOutset;
             float topCornerInset = configuredBoardPresentationConfig.TopCornerHorizontalInset;
             float topCornerVerticalInset = configuredBoardPresentationConfig.TopCornerVerticalInset;
@@ -1236,8 +1282,8 @@ namespace GravityPuzzle
                 level,
                 new Vector2Int(0, level.FineRows - 1),
                 new Vector2(
-                    -halfWidth - thickness * .5f - cornerOutset.x + topCornerInset,
-                    halfHeight + thickness * .5f + cornerOutset.y - topCornerVerticalInset),
+                    -halfWidth - cornerOutset.x + topCornerInset,
+                    halfHeight + cornerOutset.y - topCornerVerticalInset),
                 cornerSize,
                 BoardFrameEdge.TopLeftCorner,
                 ref edgeIndex);
@@ -1246,8 +1292,8 @@ namespace GravityPuzzle
                 level,
                 new Vector2Int(level.FineColumns - 1, level.FineRows - 1),
                 new Vector2(
-                    halfWidth + thickness * .5f + cornerOutset.x - topCornerInset,
-                    halfHeight + thickness * .5f + cornerOutset.y - topCornerVerticalInset),
+                    halfWidth + cornerOutset.x - topCornerInset,
+                    halfHeight + cornerOutset.y - topCornerVerticalInset),
                 cornerSize,
                 BoardFrameEdge.TopRightCorner,
                 ref edgeIndex);
@@ -1305,22 +1351,31 @@ namespace GravityPuzzle
                    configuredBoardPresentationConfig.GetEdgeSprite(corner) != null;
         }
 
-        private static float GetOuterFrameCornerSize(float fineCellSize, float thickness)
+        private static float GetOuterFrameCornerSize(float thickness)
         {
-            // Scene Tuna authors each corner as one grid-sized atlas module.
-            // Including frame thickness here enlarged the artwork and produced
-            // solid rectangular caps above the board.
-            return Mathf.Max(fineCellSize, thickness * 2f);
+            Sprite cornerSprite = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.GetEdgeSprite(BoardFrameEdge.TopLeftCorner)
+                : null;
+            if (cornerSprite == null)
+                return Mathf.Max(.001f, thickness);
+
+            // Keep the authored Scene Tuna corner at its native module scale.
+            // Compressing it to the logical collision-frame thickness turns
+            // the curve into a detached square cap at the end of the top rail.
+            Vector2 spriteSize = cornerSprite.bounds.size;
+            return Mathf.Max(
+                .001f,
+                Mathf.Max(spriteSize.x, spriteSize.y) *
+                configuredBoardPresentationConfig.FrameModuleScale);
         }
 
         private static float GetCornerJoinTrim(
-            float fineCellSize,
             float thickness,
             float cornerOutset)
         {
             return Mathf.Max(
                 0f,
-                GetOuterFrameCornerSize(fineCellSize, thickness) * .5f - cornerOutset);
+                GetOuterFrameCornerSize(thickness) * .5f - cornerOutset);
         }
 
         private static void ApplyFramePresentation(
@@ -1336,9 +1391,10 @@ namespace GravityPuzzle
                 return;
 
             renderer.sprite = sprite;
+            bool isCorner = IsFrameCorner(edge);
             renderer.sharedMaterial = configuredBoardPresentationConfig.FrameMaterial;
             renderer.color = configuredBoardPresentationConfig.FrameTint;
-            renderer.sortingOrder = IsFrameCorner(edge)
+            renderer.sortingOrder = isCorner
                 ? FrameCornerSortingOrder
                 : FrameSortingOrder;
 
@@ -1911,7 +1967,12 @@ namespace GravityPuzzle
                 size,
                 color,
                 material,
-                1,
+                // The patch is a seam backing, not a foreground surface.
+                // Drawing it above the sliced rectangles exposed its flat
+                // rectangular silhouette and produced the large bars visible
+                // on irregular obstacles. Behind the obstacle it appears only
+                // through the transparent gutter at a shared edge.
+                -1,
                 joinSprite,
                 true);
         }

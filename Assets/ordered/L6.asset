@@ -23,7 +23,7 @@ MonoBehaviour:
   gravityScale: 1.5
   coinAmount: 20
   rocketBoosterCount: 0
-  hammerBoosterCount: 3
+  hammerBoosterCount: 1
   timerBoosterCount: 3
   useAutomaticCameraFit: 1
   fixedCameraSize: 9

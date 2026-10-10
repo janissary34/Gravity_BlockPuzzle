@@ -100,6 +100,8 @@ namespace GravityPuzzle
                 boosterButton.onClick.AddListener(ActivateRocketBooster);
             }
 
+            BoosterInventoryRuntime.Current.CountChanged += HandleInventoryCountChanged;
+
             SynchronizeLevel();
             UpdateCountUI();
             RefreshButtonState();
@@ -131,10 +133,21 @@ namespace GravityPuzzle
                 boosterButton.onClick.RemoveListener(ActivateRocketBooster);
             }
 
+            BoosterInventoryRuntime.Current.CountChanged -= HandleInventoryCountChanged;
+
             if (boundBoard != null)
                 boundBoard.GameStateChanged -= HandleGameStateChanged;
 
             CancelRocketSelection();
+        }
+
+        private void HandleInventoryCountChanged(BoosterRewardType changedType, int count)
+        {
+            if (changedType != BoosterRewardType.Rocket)
+                return;
+
+            UpdateCountUI();
+            RefreshButtonState();
         }
 
         public void ActivateRocketBooster()
@@ -563,6 +576,14 @@ namespace GravityPuzzle
                     countUiText = GetComponentInChildren<Text>(true);
                 }
             }
+
+            if (buttonCanvasGroup == null)
+            {
+                if (boosterButton != null)
+                    buttonCanvasGroup = boosterButton.GetComponent<CanvasGroup>();
+                if (buttonCanvasGroup == null)
+                    buttonCanvasGroup = GetComponent<CanvasGroup>();
+            }
         }
 
         private BoosterButton GetRocketBoosterButton()
@@ -633,6 +654,24 @@ namespace GravityPuzzle
 
             int currentUses = RemainingCount;
             bool hasUses = currentUses > 0;
+            bool isIntroduced = boosterButtonRef != null
+                ? boosterButtonRef.IsIntroduced
+                : (GravityLevelRuntime.CurrentLevelNumber >= BoosterButton.GetIntroductionLevel(BoosterRewardType.Rocket) &&
+                   (BoosterInventoryRuntime.Current.IsUnlocked(BoosterRewardType.Rocket) || hasUses));
+
+            if (!isIntroduced)
+            {
+                if (buttonCanvasGroup != null)
+                {
+                    buttonCanvasGroup.alpha = 0f;
+                    buttonCanvasGroup.interactable = false;
+                    buttonCanvasGroup.blocksRaycasts = false;
+                }
+
+                boosterButton.interactable = false;
+                return;
+            }
+
             if (buttonCanvasGroup != null)
             {
                 buttonCanvasGroup.alpha = hasUses ? 1f : 0.55f;

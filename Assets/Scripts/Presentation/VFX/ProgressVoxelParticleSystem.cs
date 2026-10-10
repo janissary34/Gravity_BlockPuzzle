@@ -60,7 +60,10 @@ namespace GravityPuzzle.Presentation.VFX
             public bool arrived;
             public Color32 color;
             public float size;
+            public float progress;
         }
+
+        public event System.Action<float> OnProgressArrived;
 
         private readonly FlightData[] activeFlights = new FlightData[MaxActiveFlights];
         private readonly ParticleSystem.Particle[] particleBuffer = new ParticleSystem.Particle[MaxActiveFlights];
@@ -170,7 +173,8 @@ namespace GravityPuzzle.Presentation.VFX
             Color color,
             float flightDuration = 0.55f,
             int count = 1,
-            float sourceWidth = 0f)
+            float sourceWidth = 0f,
+            float progressAmount = 0f)
         {
             if (!CanRenderFlights)
                 return 0;
@@ -186,6 +190,7 @@ namespace GravityPuzzle.Presentation.VFX
                 nextFlightGroupId = 1;
 
             int totalCount = count * Mathf.Max(1, particleMultiplier);
+            float progressPerParticle = totalCount > 0 ? progressAmount / totalCount : 0f;
 
             for (int i = 0; i < totalCount; i++)
             {
@@ -215,7 +220,8 @@ namespace GravityPuzzle.Presentation.VFX
                     duration = duration * Random.Range(0.92f, 1.12f),
                     groupId = groupId,
                     color = color32,
-                    size = Random.Range(baseParticleSize * 0.85f, baseParticleSize * 1.15f)
+                    size = Random.Range(baseParticleSize * 0.85f, baseParticleSize * 1.15f),
+                    progress = progressPerParticle
                 };
 
                 activeCount++;
@@ -232,10 +238,11 @@ namespace GravityPuzzle.Presentation.VFX
             Color color,
             int particleCount,
             float flightDuration = 0.55f,
-            float sourceWidth = 0f)
+            float sourceWidth = 0f,
+            float progressAmount = 0f)
         {
             int clampedCount = Mathf.Clamp(particleCount, 1, MaxActiveFlights);
-            return EmitVoxel(contactWorldPos, color, flightDuration, clampedCount, sourceWidth);
+            return EmitVoxel(contactWorldPos, color, flightDuration, clampedCount, sourceWidth, progressAmount);
         }
 
         /// <summary>Returns true while any particle in the emitted group is still visible.</summary>
@@ -256,6 +263,7 @@ namespace GravityPuzzle.Presentation.VFX
 
             float dt = Time.deltaTime;
             int aliveCount = 0;
+            float arrivedProgressThisFrame = 0f;
 
             for (int i = 0; i < activeCount; i++)
             {
@@ -266,6 +274,12 @@ namespace GravityPuzzle.Presentation.VFX
 
                 float normalizedTime = flight.elapsed / flight.duration;
                 bool reachedTarget = normalizedTime >= 1f;
+
+                if (!flight.arrived && reachedTarget && flight.progress > 0.00001f)
+                {
+                    arrivedProgressThisFrame += flight.progress;
+                    flight.progress = 0f;
+                }
 
                 float dropFraction = Mathf.Clamp(dropPhaseFraction, .05f, .6f);
                 Vector3 pos;
@@ -312,6 +326,11 @@ namespace GravityPuzzle.Presentation.VFX
             activeCount = aliveCount;
             if (activeCount > 0 || prevCount > 0)
                 particleSys.SetParticles(particleBuffer, activeCount);
+
+            if (arrivedProgressThisFrame > 0.00001f)
+            {
+                OnProgressArrived?.Invoke(arrivedProgressThisFrame);
+            }
         }
 
         private static float ApplyEasing(float t, BezierEaseType type)

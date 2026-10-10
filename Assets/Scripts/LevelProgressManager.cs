@@ -97,9 +97,10 @@ namespace GravityPuzzle
         // but is visible throughout its route and the slider fill is committed
         // on arrival.  This lets one preallocated renderer carry every shred
         // voxel instead of dropping most of them due to a UI-view pool limit.
-        private bool CanUseWorldParticleVfx => progressVoxelVfx != null &&
-                                                progressVoxelVfx.CanRenderFlights &&
-                                                progressCanvas != null;
+        // The authored UI flight presenter (FlyingProgressVoxelView) delivers
+        // the screen-space downward drop below the teeth, tumble rotation, and
+        // the quadratic Bezier arc to the slider handle.
+        private bool CanUseWorldParticleVfx => false;
 
         private float SliderFillDuration => tweenConfig.ProgressSliderFillDuration;
         private Ease SliderFillEase => tweenConfig.ProgressSliderFillEase;
@@ -178,12 +179,34 @@ namespace GravityPuzzle
 
         private void InitializeParticleVfxReference()
         {
-            if (progressParticleSystem != null)
+            if (progressParticleSystem != null && progressVoxelVfx == null)
             {
                 progressVoxelVfx = progressParticleSystem.GetComponent<ProgressVoxelParticleSystem>();
                 if (progressVoxelVfx == null)
-                    Debug.LogWarning("[LevelProgress] The assigned particle system has no ProgressVoxelParticleSystem. UI flight fallback will be used.", this);
+                    Debug.LogWarning("[LevelProgress] The assigned particle system has no ProgressVoxelParticleSystem. Searching in HUD canvas...", this);
             }
+
+            if (progressVoxelVfx == null && progressCanvas != null)
+            {
+                progressVoxelVfx = progressCanvas.GetComponentInChildren<ProgressVoxelParticleSystem>(true);
+            }
+
+            if (progressVoxelVfx == null && activeHudCanvas != null)
+            {
+                progressVoxelVfx = activeHudCanvas.GetComponentInChildren<ProgressVoxelParticleSystem>(true);
+            }
+
+            if (progressVoxelVfx != null)
+            {
+                progressVoxelVfx.OnProgressArrived -= HandleVfxProgressArrived;
+                progressVoxelVfx.OnProgressArrived += HandleVfxProgressArrived;
+            }
+        }
+
+        private void HandleVfxProgressArrived(float amount)
+        {
+            AddProgress(amount);
+            TryCommitBoardClearProgress();
         }
 
         private void ResolveActiveHudSlider()
@@ -542,17 +565,14 @@ namespace GravityPuzzle
             if (CanUseWorldParticleVfx)
             {
                 progressVoxelVfx.SetTargetPosition(GetTargetWorldPosition());
-                int flightGroupId = progressVoxelVfx.EmitVoxelBurst(
+                progressVoxelVfx.EmitVoxelBurst(
                     startWorldPos,
                     Opaque(voxelColor),
                     flightCount,
                     VoxelFlightDuration,
-                    sourceWidth);
-                if (progressVoxelVfx.IsFlightGroupActive(flightGroupId))
-                {
-                    StartCoroutine(ApplyProgressWhenVfxArrives(totalProgressAmount, null, flightGroupId));
-                    return;
-                }
+                    sourceWidth,
+                    totalProgressAmount);
+                return;
             }
 
             // Scene_Tuna uses the pooled HUD presenter. Keep its fixed capacity
@@ -562,13 +582,11 @@ namespace GravityPuzzle
             float progressPerFlight = totalProgressAmount / count;
             for (int i = 0; i < count; i++)
             {
-                float sourceT = count > 1 ? i / (float)(count - 1) : .5f;
-                float stepJitterX = count > 1 ? UnityEngine.Random.Range(-0.06f, 0.06f) * (sourceWidth / count) : 0f;
+                float offsetX = (count > 1)
+                    ? ((i / (float)(count - 1)) - .5f) * Mathf.Max(0f, sourceWidth) + UnityEngine.Random.Range(-0.06f, 0.06f) * (sourceWidth / count)
+                    : (sourceWidth > 0.01f ? UnityEngine.Random.Range(-0.48f, 0.48f) * sourceWidth : 0f);
                 float stepJitterY = UnityEngine.Random.Range(-0.04f, 0.04f);
-                Vector3 grainStart = startWorldPos + new Vector3(
-                    (sourceT - .5f) * Mathf.Max(0f, sourceWidth) + stepJitterX,
-                    stepJitterY,
-                    0f);
+                Vector3 grainStart = startWorldPos + new Vector3(offsetX, stepJitterY, 0f);
                 SpawnFlyingVoxel(grainStart, voxelColor, progressPerFlight, null);
             }
         }
@@ -794,6 +812,11 @@ namespace GravityPuzzle
 
         private void OnDestroy()
         {
+            if (progressVoxelVfx != null)
+            {
+                progressVoxelVfx.OnProgressArrived -= HandleVfxProgressArrived;
+            }
+
             if (Instance == this)
             {
                 Instance = null;

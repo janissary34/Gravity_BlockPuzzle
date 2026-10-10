@@ -39,9 +39,9 @@ namespace GravityPuzzle.Editor
 
             RuntimePieceFactoryBootstrap bootstrap = FindComponentInScene<RuntimePieceFactoryBootstrap>(scene);
             Transform legacyTimerCanvas = FindSceneRoot(scene, "Timer_Canvas (1)");
-            if (bootstrap == null || legacyTimerCanvas == null)
+            if (bootstrap == null)
             {
-                Debug.LogError("[SceneTunaUI] Runtime Piece Factory Bootstrap and Timer_Canvas (1) are required.");
+                Debug.LogError("[SceneTunaUI] Runtime Piece Factory Bootstrap is required.");
                 return;
             }
 
@@ -49,7 +49,7 @@ namespace GravityPuzzle.Editor
             if (uiRoot == null)
                 return;
 
-            GameObject fullscreenSuccess = FindDescendant(legacyTimerCanvas, "FullscreenSuccess")?.gameObject;
+            GameObject fullscreenSuccess = legacyTimerCanvas != null ? FindDescendant(legacyTimerCanvas, "FullscreenSuccess")?.gameObject : null;
             if (fullscreenSuccess == null)
                 fullscreenSuccess = FindDescendant(uiRoot.transform, "FullscreenSuccess")?.gameObject;
             if (fullscreenSuccess == null)
@@ -70,9 +70,12 @@ namespace GravityPuzzle.Editor
             // remain scene instances because LevelTimerUI owns their runtime
             // controls, but must live below the new active canvas rather than
             // the legacy canvas which is about to be disabled.
-            Transform panelsRoot = FindDescendant(legacyTimerCanvas, "New_Panels");
-            if (panelsRoot != null && panelsRoot.parent != uiRoot.transform)
-                panelsRoot.SetParent(uiRoot.transform, false);
+            if (legacyTimerCanvas != null)
+            {
+                Transform panelsRoot = FindDescendant(legacyTimerCanvas, "New_Panels");
+                if (panelsRoot != null && panelsRoot.parent != uiRoot.transform)
+                    panelsRoot.SetParent(uiRoot.transform, false);
+            }
 
             LevelTimerUI timerUi = uiRoot.GetComponentInChildren<LevelTimerUI>(true);
             if (timerUi == null)
@@ -86,12 +89,15 @@ namespace GravityPuzzle.Editor
             ConfigureBootstrapReferences(bootstrap, uiRoot.transform, fullscreenSuccess);
             ConfigureBoosterTargetingPresentation(scene, uiRoot.transform);
 
-            legacyTimerCanvas.gameObject.SetActive(false);
+            if (legacyTimerCanvas != null)
+            {
+                legacyTimerCanvas.gameObject.SetActive(false);
+                EditorUtility.SetDirty(legacyTimerCanvas.gameObject);
+            }
             EditorUtility.SetDirty(uiRoot);
-            EditorUtility.SetDirty(legacyTimerCanvas.gameObject);
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            Debug.Log("[SceneTunaUI] The complete Scene_Tuna InGameUI prefab is now the active HUD. The legacy Timer_Canvas is disabled for rollback safety.");
+            Debug.Log("[SceneTunaUI] The complete Scene_Tuna InGameUI prefab is now the active HUD.");
         }
 
         [MenuItem("Gravity Puzzle/Art/Normalize Fullscreen Success Prefab")]

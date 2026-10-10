@@ -15,20 +15,24 @@ MonoBehaviour:
   overrideLevelBackground: 1
   backgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
   alternateBackgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
-  exteriorColor: {r: 0.29411766, g: 0.2509804, b: 0.67058825, a: 1}
-  environmentTint: {r: 0.84, g: 0.84, b: 0.84, a: 1}
+  exteriorColor: {r: 0.22941178, g: 0.19576471, b: 0.52305883, a: 1}
+  environmentTint: {r: 0.78, g: 0.78, b: 0.78, a: 1}
   environmentBackdropMaterial: {fileID: 2100000, guid: 8393891fdbdf84e91990a0fcc91a9dd1, type: 2}
   exteriorEdgeDarkeningMaterial: {fileID: 2100000, guid: b9cf6272a86e4c8cbd13c5d1a848c72a, type: 2}
   exteriorEdgeDarkeningWidth: 1.5
   exteriorEdgeDarkeningAlpha: 0.22
-  boardInteriorMaterial: {fileID: 2100000, guid: a18b7cd96da24a77a5b1097ed52de401, type: 2}
+  boardInteriorMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  boardInteriorSprite: {fileID: -1950294464, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  boardInteriorPadding: 0
+  boardEdgeGlowColor: {r: 0.28, g: 0.24, b: 0.68, a: 0.32}
+  boardEdgeGlowWidth: 0.16
   boardInteriorTint: {r: 0.069572225, g: 0.056069765, b: 0.33962262, a: 1}
   boardBlockMaterial: {fileID: 2100000, guid: 2665f8a87af3146a29a80009bc5536ac, type: 2}
   staticBlockSprite: {fileID: 331641077, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   staticBlockTint: {r: 1, g: 1, b: 1, a: 1}
-  modularStaticBlockScale: 1.1
-  modularStaticBlockJoinInset: 0.12
-  modularStaticBlockJoinDepth: 0.42
+  modularStaticBlockScale: 1.03
+  modularStaticBlockJoinInset: 0.2
+  modularStaticBlockJoinDepth: 0.14
   staticBlockShapes:
   - shapeKey: 0,0
     sprite: {fileID: 331641077, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
@@ -66,11 +70,11 @@ MonoBehaviour:
     sprite: {fileID: 75189599, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   - shapeKey: 0,0;1,0;2,0;1,1
     sprite: {fileID: -1067627346, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  gridDarkMaterial: {fileID: 2100000, guid: 7dc4f486ef1b84902a01b2c752089bc9, type: 2}
-  gridLightMaterial: {fileID: 2100000, guid: 7be1e4d4450eb48d3b039f8b4e663a98, type: 2}
+  gridDarkMaterial: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
+  gridLightMaterial: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
   gridSprite: {fileID: -1994115321, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  gridDarkTint: {r: 1, g: 1, b: 1, a: 0.9490196}
-  gridLightTint: {r: 1, g: 1, b: 1, a: 0.9490196}
+  gridDarkTint: {r: 0.15024416, g: 0.11814703, b: 0.4245283, a: 1}
+  gridLightTint: {r: 0.19590934, g: 0.16273585, b: 0.5, a: 1}
   extendPresentationToViewportBottom: 1
   renderGridBelowShredder: 1
   viewportBottomPadding: 0.35
@@ -79,20 +83,20 @@ MonoBehaviour:
   lowerGridDarkeningMaterial: {fileID: 2100000, guid: b9cf6272a86e4c8cbd13c5d1a848c72a, type: 2}
   gridCellVisualScale: 0.96
   cameraSizeMultiplier: 1.1
-  topEdge: {fileID: -448638201, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  topEdge: {fileID: 0}
   bottomEdge: {fileID: -448638201, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  leftEdge: {fileID: -188560374, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  rightEdge: {fileID: 1536040797, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  leftEdge: {fileID: 0}
+  rightEdge: {fileID: 0}
   topLeftCorner: {fileID: 0}
   topRightCorner: {fileID: 0}
   bottomLeftCorner: {fileID: 0}
   bottomRightCorner: {fileID: 0}
   renderBottomEdgeSegments: 0
-  frameMaterial: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
-  frameTint: {r: 1, g: 1, b: 1, a: 1}
+  frameMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  frameTint: {r: 0.29411766, g: 0.2509804, b: 0.67058825, a: 1}
   frameModuleScale: 0.5
-  frameVisualThicknessMultiplier: 0.5
-  topEdgeVisualThicknessMultiplier: 0.25
+  frameVisualThicknessMultiplier: 1
+  topEdgeVisualThicknessMultiplier: 1
   topEdgeInwardOverlap: 0.056
   cornerOutset: {x: 0, y: 0}
   topCornerHorizontalInset: 0.25

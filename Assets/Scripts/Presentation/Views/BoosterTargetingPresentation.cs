@@ -148,10 +148,18 @@ namespace GravityPuzzle.Presentation.Views
             if (group == null)
                 return;
 
-            bool unlocked = BoosterInventoryRuntime.Current.IsUnlocked(boosterType);
-            group.alpha = unlocked ? 1f : 0f;
-            group.interactable = unlocked;
-            group.blocksRaycasts = unlocked;
+            BoosterButton button = group.GetComponent<BoosterButton>();
+            if (button != null)
+            {
+                button.RefreshButtonState();
+                return;
+            }
+
+            bool introduced = GravityLevelRuntime.CurrentLevelNumber >= BoosterButton.GetIntroductionLevel(boosterType) &&
+                              (BoosterInventoryRuntime.Current.IsUnlocked(boosterType) || BoosterInventoryRuntime.Current.GetCount(boosterType) > 0);
+            group.alpha = introduced ? 1f : 0f;
+            group.interactable = introduced;
+            group.blocksRaycasts = introduced;
         }
 
         public static void Show(Mode mode)

@@ -339,6 +339,13 @@ namespace GravityPuzzle
 
             if (timer_obj != null)
             {
+                CanvasGroup timerCg = timer_obj.GetComponent<CanvasGroup>();
+                if (timerCg != null)
+                {
+                    timerCg.blocksRaycasts = false;
+                    timerCg.interactable = false;
+                }
+
                 if (timerPresentationCanvas == null)
                     timerPresentationCanvas = timer_obj.GetComponent<Canvas>();
 
@@ -604,6 +611,13 @@ namespace GravityPuzzle
                 originalScale = Vector3.one;
             }
 
+            CanvasGroup activeTimerCg = timer_obj.GetComponent<CanvasGroup>();
+            if (activeTimerCg != null)
+            {
+                activeTimerCg.blocksRaycasts = false;
+                activeTimerCg.interactable = false;
+            }
+
             // Ensure timer_obj and ALL its child Images (like baseClockImage) are fully active, enabled, and visible (opacity = 1)
             timer_obj.SetActive(true);
 
@@ -611,6 +625,7 @@ namespace GravityPuzzle
             foreach (var img in allImages)
             {
                 if (img == null) continue;
+                img.raycastTarget = false;
                 img.gameObject.SetActive(true);
                 img.enabled = true;
 
@@ -1202,6 +1217,8 @@ namespace GravityPuzzle
                 if (timerUrgencyCanvasGroup == null)
                     return;
 
+                timerUrgencyCanvasGroup.blocksRaycasts = false;
+                timerUrgencyCanvasGroup.interactable = false;
                 timerUrgencyCanvasGroup.alpha = 0f;
                 urgencyFadeTween = timerUrgencyCanvasGroup
                     .DOFade(1f, UrgencyFadeInDuration)
@@ -1263,14 +1280,22 @@ namespace GravityPuzzle
             StopFreezeSlider(immediate: true);
 
             // Atmosphere
-            if (freezeTimerGlow != null)        freezeTimerGlow.alpha = 0f;
-            if (freezeFrostBorder != null)      freezeFrostBorder.alpha = 0f;
-            if (freezeEdgeGlow != null)         freezeEdgeGlow.alpha = 0f;
-            if (freezeDarkVignette != null)     freezeDarkVignette.alpha = 0f;
+            if (freezeTimerGlow != null)        { freezeTimerGlow.alpha = 0f; freezeTimerGlow.blocksRaycasts = false; }
+            if (freezeFrostBorder != null)      { freezeFrostBorder.alpha = 0f; freezeFrostBorder.blocksRaycasts = false; }
+            if (freezeEdgeGlow != null)         { freezeEdgeGlow.alpha = 0f; freezeEdgeGlow.blocksRaycasts = false; }
+            if (freezeDarkVignette != null)     { freezeDarkVignette.alpha = 0f; freezeDarkVignette.blocksRaycasts = false; }
 
             // Indicator
-            if (freezeTimerIndicator != null)     freezeTimerIndicator.alpha = 0f;
+            if (freezeTimerIndicator != null)     { freezeTimerIndicator.alpha = 0f; freezeTimerIndicator.blocksRaycasts = false; }
             if (freezeTimerIndicatorRect != null) freezeTimerIndicatorRect.localScale = Vector3.one * 0.8f;
+
+            if (freezeImpactImageCG != null)    freezeImpactImageCG.blocksRaycasts = false;
+            if (freezeImpactVaporCG != null)    freezeImpactVaporCG.blocksRaycasts = false;
+            if (timerUrgencyCanvasGroup != null)
+            {
+                timerUrgencyCanvasGroup.blocksRaycasts = false;
+                timerUrgencyCanvasGroup.interactable = false;
+            }
 
             StopNewAmbientSnow(true);
             StopNewImpactParticles();

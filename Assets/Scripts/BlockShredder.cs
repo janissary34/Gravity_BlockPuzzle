@@ -46,6 +46,26 @@ namespace GravityPuzzle
         };
         private float nextParticleShredSoundTime;
 
+        private readonly struct CutterContactSegment
+        {
+            public readonly float MinX;
+            public readonly float MaxX;
+            public readonly float Width;
+            public readonly float CenterX;
+
+            public CutterContactSegment(float minX, float maxX)
+            {
+                MinX = minX;
+                MaxX = maxX;
+                Width = Mathf.Max(0.05f, maxX - minX);
+                CenterX = (minX + maxX) * 0.5f;
+            }
+        }
+
+        private readonly CutterContactSegment[] activeSegmentsBuffer = new CutterContactSegment[16];
+        private readonly Vector2[] rawContactBoundsBuffer = new Vector2[32];
+        private readonly List<Bounds> cachedCellBoundsBuffer = new List<Bounds>(32);
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -222,16 +242,27 @@ namespace GravityPuzzle
 
             HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
             float totalProgress = Mathf.Max(0f, piece.RemainingProgressUnits);
-            // Progress units describe board ownership, not the visual grain
-            // density.  Use the prebuilt voxel presentation count so a single
-            // logical board unit can still send a readable cluster of small
-            // cubes along the slider path.
-            int progressFlightCount = piece.ActiveVoxelPresentationCount *
-                                      (shredderConfig != null ? shredderConfig.ProgressVoxelMultiplier : 1);
-            float maxTime = 4.0f;
+            piece.GetActiveCellBounds(cachedCellBoundsBuffer);
+            int blockCount = Mathf.Max(1, piece.ProgressUnits);
+            if (cachedCellBoundsBuffer.Count > 0)
+                blockCount = Mathf.Max(blockCount, cachedCellBoundsBuffer.Count);
+
+            // Total flights are strictly and directly proportional to the piece's block count!
+            // 1-block piece -> 28 flights
+            // 2-block piece -> 56 flights
+            // 3-block piece -> 84 flights
+            // 4-block piece -> 112 flights
+            const int BaseFlightsPerBlock = 28;
+            int multiplier = (shredderConfig != null && shredderConfig.ProgressVoxelMultiplier > 0)
+                ? shredderConfig.ProgressVoxelMultiplier
+                : 1;
+            int flightsPerBlock = Mathf.Clamp(BaseFlightsPerBlock * multiplier, 20, 60);
+            int progressFlightCount = blockCount * flightsPerBlock;
+
+            float maxTime = 6.0f;
             float elapsed = 0f;
             float previousShakeOffsetX = 0f;
-            float feedSpeed = shredderConfig != null ? shredderConfig.FeedSpeed : .7f;
+            float feedSpeed = shredderConfig != null ? shredderConfig.FeedSpeed : 3.8f;
             float tremorIntensity = shredderConfig != null ? shredderConfig.TremorIntensity : .045f;
             float tremorFrequency = shredderConfig != null ? shredderConfig.TremorFrequency : 55f;
             float shakeAmplitude = shredderConfig != null ? shredderConfig.FeedShakeAmplitude : 2.5f;
@@ -246,16 +277,15 @@ namespace GravityPuzzle
             // the mask hides material farther inside the wheel mechanism.
             float debrisContactY = shredderY;
             int totalCollisionCells = piece.CollisionCellCount;
-            int remainingCellsToEmit = totalCollisionCells;
+
+            // Total area based on true cell blocks (1 unit per block)
+            float totalRendererArea = Mathf.Max(0.5f, blockCount * 1.0f);
             float remainingProgressToEmit = totalProgress;
             int remainingFlightsToEmit = progressFlightCount;
+            float progressVoxelAccumulator = 0f;
+
             List<BoxCollider2D> releasedCellsBuffer = new List<BoxCollider2D>(Mathf.Max(4, totalCollisionCells));
             bool contactPresentationStarted = false;
-            // The first visible cutter contact is the common source for both
-            // the dense native debris field and the pooled HUD voxels.  This
-            // prevents the progress material from appearing as a second,
-            // unrelated burst after the piece has already vanished.
-            bool progressBurstScheduled = false;
             Vector2 lastContactCenter = Vector2.zero;
             float lastContactWidth = 0f;
 
@@ -291,12 +321,12 @@ namespace GravityPuzzle
                     }
                 }
 
-                // Sample the visual contact before removing collision cells.
-                // This guarantees that the entry burst is emitted on the exact
-                // frame the block reaches the shredder mouth, rather than one
-                // frame later after its lower geometry has been released.
+                // Sample active block cells directly so concave/notched pieces (L, U, etc.)
+                // never produce false contact in empty air.
+                piece.GetActiveCellBounds(cachedCellBoundsBuffer);
+
                 bool hasContactSurface = TryGetCutterContactSurface(
-                    pieceRenderers,
+                    cachedCellBoundsBuffer,
                     debrisContactY,
                     out float contactWidth,
                     out Vector2 currentContactCenter);
@@ -306,114 +336,91 @@ namespace GravityPuzzle
                     lastContactCenter = currentContactCenter;
                 }
 
-                // Release cells that have reached the cutter mouth. The threshold includes
-                // the entry mouth margin so that on the exact frame the piece enters the shredder,
-                // the entering cells emit voxels immediately rather than waiting for physics descent.
+                // Release cells that have reached the cutter mouth for physics clearance.
                 releasedCellsBuffer.Clear();
                 float cutterThresholdY = shredderY + (shredderConfig != null
                     ? shredderConfig.CaptureApproachDistance + 0.12f
                     : 0.16f);
                 piece.ReleaseCollisionCellsAtOrBelow(cutterThresholdY, releasedCellsBuffer);
 
-                // Emit flying progress voxels precisely from each individual cell
-                // that crosses the cutter on this frame. For irregular shapes like
-                // L-pieces, voxels only spawn where cells actually touch the cutter,
-                // never from empty concavities. For tall pieces, voxels emit progressively
-                // as each row enters the teeth.
-                if (releasedCellsBuffer.Count > 0 && remainingProgressToEmit > .0001f)
+                // Continuous voxel stream: distribute voxels smoothly every frame while contacting cutter
+                if (hasContactSurface && contactWidth > 0f && remainingFlightsToEmit > 0)
                 {
-                    LevelProgressManager progressManager = LevelProgressManager.Instance;
+                    float dy = feedSpeed * Time.deltaTime;
+                    float frameArea = contactWidth * dy;
+                    float frameFraction = frameArea / totalRendererArea;
 
-                    if (releasedCellsBuffer.Count > 1)
+                    progressVoxelAccumulator += progressFlightCount * frameFraction;
+
+                    if (progressVoxelAccumulator >= 1f)
                     {
-                        releasedCellsBuffer.Sort(CompareCellsByCenterX);
-                    }
-
-                    int segmentStart = 0;
-                    while (segmentStart < releasedCellsBuffer.Count)
-                    {
-                        BoxCollider2D firstCell = releasedCellsBuffer[segmentStart];
-                        if (firstCell == null)
+                        int flightsToEmit = Mathf.Min(remainingFlightsToEmit, Mathf.FloorToInt(progressVoxelAccumulator));
+                        if (flightsToEmit > 0)
                         {
-                            segmentStart++;
-                            continue;
-                        }
-
-                        int segmentEnd = segmentStart;
-                        float segMinX = firstCell.bounds.min.x;
-                        float segMaxX = firstCell.bounds.max.x;
-
-                        // Find all contiguous cells horizontally adjacent to this segment
-                        while (segmentEnd + 1 < releasedCellsBuffer.Count)
-                        {
-                            BoxCollider2D nextCell = releasedCellsBuffer[segmentEnd + 1];
-                            if (nextCell == null)
-                                break;
-
-                            if (nextCell.bounds.min.x - segMaxX <= 0.35f)
-                            {
-                                segmentEnd++;
-                                segMaxX = Mathf.Max(segMaxX, nextCell.bounds.max.x);
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-
-                        int cellsInSegment = segmentEnd - segmentStart + 1;
-                        float segProgress = 0f;
-                        int segFlights = 0;
-
-                        for (int i = 0; i < cellsInSegment; i++)
-                        {
-                            float cellProgress = remainingCellsToEmit > 1
-                                ? remainingProgressToEmit / remainingCellsToEmit
+                            float progressToEmit = remainingFlightsToEmit > 0
+                                ? Mathf.Min(remainingProgressToEmit, remainingProgressToEmit * (flightsToEmit / (float)remainingFlightsToEmit))
                                 : remainingProgressToEmit;
-                            int cellFlights = remainingCellsToEmit > 1
-                                ? Mathf.Max(1, remainingFlightsToEmit / remainingCellsToEmit)
-                                : remainingFlightsToEmit;
 
-                            remainingProgressToEmit = Mathf.Max(0f, remainingProgressToEmit - cellProgress);
-                            remainingFlightsToEmit = Mathf.Max(0, remainingFlightsToEmit - cellFlights);
-                            remainingCellsToEmit = Mathf.Max(0, remainingCellsToEmit - 1);
+                            progressVoxelAccumulator -= flightsToEmit;
+                            remainingFlightsToEmit = Mathf.Max(0, remainingFlightsToEmit - flightsToEmit);
+                            remainingProgressToEmit = Mathf.Max(0f, remainingProgressToEmit - progressToEmit);
 
-                            segProgress += cellProgress;
-                            segFlights += cellFlights;
+                            LevelProgressManager progressManager = LevelProgressManager.Instance;
+                            if (progressManager != null && progressToEmit > 0.00001f)
+                            {
+                                int segCount = GetActiveCutterSegments(cachedCellBoundsBuffer, debrisContactY);
+                                if (segCount <= 1)
+                                {
+                                    float emitCenterX = segCount == 1 ? activeSegmentsBuffer[0].CenterX : currentContactCenter.x;
+                                    float emitWidth = segCount == 1 ? activeSegmentsBuffer[0].Width : contactWidth;
+                                    progressManager.SpawnFlyingVoxelBurst(
+                                        new Vector3(emitCenterX, debrisContactY, 0f),
+                                        tileColor,
+                                        progressToEmit,
+                                        flightsToEmit,
+                                        emitWidth);
+                                }
+                                else
+                                {
+                                    float totalSegWidth = 0f;
+                                    for (int s = 0; s < segCount; s++)
+                                        totalSegWidth += activeSegmentsBuffer[s].Width;
+
+                                    if (totalSegWidth <= 0.001f)
+                                        totalSegWidth = 1f;
+
+                                    int flightsLeftInBatch = flightsToEmit;
+                                    float progressLeftInBatch = progressToEmit;
+
+                                    for (int s = 0; s < segCount; s++)
+                                    {
+                                        CutterContactSegment seg = activeSegmentsBuffer[s];
+                                        bool isLast = s == segCount - 1;
+                                        int segFlights = isLast
+                                            ? flightsLeftInBatch
+                                            : Mathf.Min(flightsLeftInBatch, Mathf.Max(1, Mathf.RoundToInt(flightsToEmit * (seg.Width / totalSegWidth))));
+                                        float segProgress = isLast
+                                            ? progressLeftInBatch
+                                            : Mathf.Min(progressLeftInBatch, progressToEmit * (seg.Width / totalSegWidth));
+
+                                        flightsLeftInBatch = Mathf.Max(0, flightsLeftInBatch - segFlights);
+                                        progressLeftInBatch = Mathf.Max(0f, progressLeftInBatch - segProgress);
+
+                                        if (segFlights > 0 && segProgress > 0.00001f)
+                                        {
+                                            progressManager.SpawnFlyingVoxelBurst(
+                                                new Vector3(seg.CenterX, debrisContactY, 0f),
+                                                tileColor,
+                                                segProgress,
+                                                segFlights,
+                                                seg.Width);
+                                        }
+                                    }
+                                }
+                            }
+
+                            PlayParticleShredSound();
                         }
-
-                        float segWidth = Mathf.Max(0.95f * cellsInSegment, segMaxX - segMinX);
-                        float segCenterX = (segMinX + segMaxX) * 0.5f;
-
-                        if (progressManager != null && segProgress > .0001f)
-                        {
-                            progressManager.SpawnFlyingVoxelBurst(
-                                new Vector3(segCenterX, debrisContactY, 0f),
-                                tileColor,
-                                segProgress,
-                                segFlights,
-                                segWidth);
-                            progressBurstScheduled = true;
-                        }
-
-                        segmentStart = segmentEnd + 1;
-                    }
-                }
-                else if (totalCollisionCells == 0 && hasContactSurface && !progressBurstScheduled && remainingProgressToEmit > .0001f)
-                {
-                    // Fallback for pieces without individual collision cells: emit on first contact.
-                    LevelProgressManager progressManager = LevelProgressManager.Instance;
-                    if (progressManager != null)
-                    {
-                        progressManager.SpawnFlyingVoxelBurst(
-                            new Vector3(currentContactCenter.x, debrisContactY, 0f),
-                            tileColor,
-                            remainingProgressToEmit,
-                            remainingFlightsToEmit,
-                            contactWidth);
-                        progressBurstScheduled = true;
-                        remainingProgressToEmit = 0f;
-                        remainingFlightsToEmit = 0;
                     }
                 }
 
@@ -429,7 +436,7 @@ namespace GravityPuzzle
                             shredderConfig.MaxDebrisEntryBurstPerFrame,
                             Mathf.CeilToInt(contactWidth * shredderConfig.DebrisEntryBurstPerWorldUnit));
                         EmitEntryBurstAtContactSurface(
-                            pieceRenderers,
+                            cachedCellBoundsBuffer,
                             debrisContactY,
                             contactWidth,
                             tileColor,
@@ -445,7 +452,7 @@ namespace GravityPuzzle
                     {
                         debrisAccumulator -= debrisCount;
                         EmitDebrisAtContactSurface(
-                            pieceRenderers,
+                            cachedCellBoundsBuffer,
                             debrisContactY,
                             contactWidth,
                             tileColor,
@@ -525,6 +532,32 @@ namespace GravityPuzzle
 
                 if (topBelowShredder || (allShardsDone && activeCount == 0))
                 {
+                    // Flush any remaining progress or flights when the piece finishes feeding
+                    if (remainingProgressToEmit > 0.0001f || remainingFlightsToEmit > 0)
+                    {
+                        LevelProgressManager progressManager = LevelProgressManager.Instance;
+                        if (progressManager != null)
+                        {
+                            int flushFlights = Mathf.Min(remainingFlightsToEmit, 4);
+                            if (flushFlights > 0)
+                            {
+                                progressManager.SpawnFlyingVoxelBurst(
+                                    new Vector3(lastContactCenter.x, debrisContactY, 0f),
+                                    tileColor,
+                                    remainingProgressToEmit,
+                                    flushFlights,
+                                    lastContactWidth);
+                            }
+                            else if (remainingProgressToEmit > 0.0001f)
+                            {
+                                progressManager.AddProgress(remainingProgressToEmit);
+                            }
+                        }
+
+                        remainingProgressToEmit = 0f;
+                        remainingFlightsToEmit = 0;
+                    }
+
                     EmitFinalDebrisBurst(lastContactCenter, lastContactWidth, tileColor);
                     break;
                 }
@@ -545,12 +578,20 @@ namespace GravityPuzzle
                         // The shredder owns only the world-space conversion.
                         // The established prewarmed HUD-flight system owns the
                         // Bézier route and adds progress on arrival.
-                        progressManager.SpawnFlyingVoxelBurst(
-                            new Vector3(lastContactCenter.x, debrisContactY, 0f),
-                            tileColor,
-                            remainingProgressToEmit,
-                            Mathf.Max(1, remainingFlightsToEmit),
-                            lastContactWidth);
+                        int flushFlights = Mathf.Min(remainingFlightsToEmit, 4);
+                        if (flushFlights > 0)
+                        {
+                            progressManager.SpawnFlyingVoxelBurst(
+                                new Vector3(lastContactCenter.x, debrisContactY, 0f),
+                                tileColor,
+                                remainingProgressToEmit,
+                                flushFlights,
+                                lastContactWidth);
+                        }
+                        else
+                        {
+                            progressManager.AddProgress(remainingProgressToEmit);
+                        }
                     }
 
                     remainingProgressToEmit = 0f;
@@ -573,23 +614,20 @@ namespace GravityPuzzle
         /// enclosing bounds would put debris in the empty gaps.
         /// </summary>
         private static bool TryGetCutterContactSurface(
-            SpriteRenderer[] renderers,
+            List<Bounds> cellBounds,
             float cutterY,
             out float totalWidth,
             out Vector2 weightedCenter)
         {
             totalWidth = 0f;
             weightedCenter = new Vector2(0f, cutterY);
-            for (int index = 0; index < renderers.Length; index++)
-            {
-                SpriteRenderer renderer = renderers[index];
-                if (renderer == null || !renderer.enabled ||
-                    renderer.gameObject.name.StartsWith("Selected Fill") ||
-                    renderer.gameObject.name.StartsWith("White Selection"))
-                    continue;
+            if (cellBounds == null || cellBounds.Count == 0)
+                return false;
 
-                Bounds bounds = renderer.bounds;
-                if (bounds.min.y > cutterY || bounds.max.y <= cutterY)
+            for (int index = 0; index < cellBounds.Count; index++)
+            {
+                Bounds bounds = cellBounds[index];
+                if (bounds.min.y > cutterY + 0.08f || bounds.max.y < cutterY - 0.08f)
                     continue;
 
                 float width = Mathf.Max(.05f, bounds.size.x);
@@ -604,33 +642,90 @@ namespace GravityPuzzle
             return true;
         }
 
+        private int GetActiveCutterSegments(
+            List<Bounds> cellBounds,
+            float cutterY)
+        {
+            if (cellBounds == null || cellBounds.Count == 0)
+                return 0;
+
+            int touchingCount = 0;
+            for (int index = 0; index < cellBounds.Count; index++)
+            {
+                Bounds bounds = cellBounds[index];
+                if (bounds.min.y > cutterY + 0.08f || bounds.max.y < cutterY - 0.08f)
+                    continue;
+
+                if (touchingCount < rawContactBoundsBuffer.Length)
+                {
+                    rawContactBoundsBuffer[touchingCount] = new Vector2(bounds.min.x, bounds.max.x);
+                    touchingCount++;
+                }
+            }
+
+            if (touchingCount == 0)
+                return 0;
+
+            // In-place sort by min.x (insertion sort for tiny arrays - 0 allocations)
+            for (int i = 1; i < touchingCount; i++)
+            {
+                Vector2 key = rawContactBoundsBuffer[i];
+                int j = i - 1;
+                while (j >= 0 && rawContactBoundsBuffer[j].x > key.x)
+                {
+                    rawContactBoundsBuffer[j + 1] = rawContactBoundsBuffer[j];
+                    j--;
+                }
+                rawContactBoundsBuffer[j + 1] = key;
+            }
+
+            // Merge contiguous segments
+            int segmentCount = 0;
+            float currentMinX = rawContactBoundsBuffer[0].x;
+            float currentMaxX = rawContactBoundsBuffer[0].y;
+
+            for (int i = 1; i < touchingCount; i++)
+            {
+                if (rawContactBoundsBuffer[i].x - currentMaxX <= 0.35f)
+                {
+                    currentMaxX = Mathf.Max(currentMaxX, rawContactBoundsBuffer[i].y);
+                }
+                else
+                {
+                    if (segmentCount < activeSegmentsBuffer.Length)
+                        activeSegmentsBuffer[segmentCount++] = new CutterContactSegment(currentMinX, currentMaxX);
+                    currentMinX = rawContactBoundsBuffer[i].x;
+                    currentMaxX = rawContactBoundsBuffer[i].y;
+                }
+            }
+
+            if (segmentCount < activeSegmentsBuffer.Length)
+                activeSegmentsBuffer[segmentCount++] = new CutterContactSegment(currentMinX, currentMaxX);
+
+            return segmentCount;
+        }
+
         /// <summary>
-        /// Emits independently from every renderer touching the cutter. This
+        /// Emits independently from every active cell touching the cutter. This
         /// keeps voxel sources glued to the teeth/material intersections even
         /// for stepped, split, and irregular piece silhouettes.
         /// </summary>
         private void EmitDebrisAtContactSurface(
-            SpriteRenderer[] renderers,
+            List<Bounds> cellBounds,
             float cutterY,
             float totalWidth,
             Color color,
             int totalCount)
         {
-            if (totalCount <= 0 || totalWidth <= 0f)
+            if (totalCount <= 0 || totalWidth <= 0f || cellBounds == null)
                 return;
 
             int emittedCount = 0;
             float remainingWidth = totalWidth;
-            for (int index = 0; index < renderers.Length; index++)
+            for (int index = 0; index < cellBounds.Count; index++)
             {
-                SpriteRenderer renderer = renderers[index];
-                if (renderer == null || !renderer.enabled ||
-                    renderer.gameObject.name.StartsWith("Selected Fill") ||
-                    renderer.gameObject.name.StartsWith("White Selection"))
-                    continue;
-
-                Bounds bounds = renderer.bounds;
-                if (bounds.min.y > cutterY || bounds.max.y <= cutterY)
+                Bounds bounds = cellBounds[index];
+                if (bounds.min.y > cutterY + 0.08f || bounds.max.y < cutterY - 0.08f)
                     continue;
 
                 float width = Mathf.Max(.05f, bounds.size.x);
@@ -655,27 +750,21 @@ namespace GravityPuzzle
         }
 
         private void EmitEntryBurstAtContactSurface(
-            SpriteRenderer[] renderers,
+            List<Bounds> cellBounds,
             float cutterY,
             float totalWidth,
             Color color,
             int totalCount)
         {
-            if (totalCount <= 0 || totalWidth <= 0f)
+            if (totalCount <= 0 || totalWidth <= 0f || cellBounds == null)
                 return;
 
             int emittedCount = 0;
             float remainingWidth = totalWidth;
-            for (int index = 0; index < renderers.Length; index++)
+            for (int index = 0; index < cellBounds.Count; index++)
             {
-                SpriteRenderer renderer = renderers[index];
-                if (renderer == null || !renderer.enabled ||
-                    renderer.gameObject.name.StartsWith("Selected Fill") ||
-                    renderer.gameObject.name.StartsWith("White Selection"))
-                    continue;
-
-                Bounds bounds = renderer.bounds;
-                if (bounds.min.y > cutterY || bounds.max.y <= cutterY)
+                Bounds bounds = cellBounds[index];
+                if (bounds.min.y > cutterY + 0.08f || bounds.max.y < cutterY - 0.08f)
                     continue;
 
                 float width = Mathf.Max(.05f, bounds.size.x);

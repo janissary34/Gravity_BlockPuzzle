@@ -16,10 +16,8 @@ namespace GravityPuzzle.Editor
     {
         private const string ConfigPath = "Assets/Config/Presentation/BoardPresentation_Navy.asset";
         private const string MapAtlasPath = "Assets/Art/map.png";
-        private const string EnvironmentFrameMaterialPath = "Assets/Materials/Folder/M_Environment_Frame.mat";
         private const string EnvironmentBackdropMaterialPath = "Assets/Materials/Folder/M_BlueEnvironment 2.mat";
-        private const string GridDarkMaterialPath = "Assets/Materials/Folder/M_GridDark.mat";
-        private const string GridLightMaterialPath = "Assets/Materials/Folder/M_GridLight.mat";
+        private const string SceneTunaGridMaterialPath = "Assets/Materials/M_Ice.mat";
 
         [MenuItem("Gravity Puzzle/Art/Apply Navy Board Presentation To Active Scene")]
         private static void ApplyToActiveScene()
@@ -64,42 +62,61 @@ namespace GravityPuzzle.Editor
             }
 
             SerializedObject serializedConfig = new SerializedObject(config);
-            SetSprite(serializedConfig, "topEdge", "Map2_9");
-            SetSprite(serializedConfig, "bottomEdge", "Map2_8");
-            SetSprite(serializedConfig, "leftEdge", "Map2_7");
-            SetSprite(serializedConfig, "rightEdge", "Map2_6");
-            SetSprite(serializedConfig, "topLeftCorner", "Map2_4");
-            SetSprite(serializedConfig, "topRightCorner", "Map2_3");
+            serializedConfig.FindProperty("topEdge").objectReferenceValue = null;
+            SetSprite(serializedConfig, "bottomEdge", "Edge_Bottom");
+            serializedConfig.FindProperty("leftEdge").objectReferenceValue = null;
+            serializedConfig.FindProperty("rightEdge").objectReferenceValue = null;
+            serializedConfig.FindProperty("topLeftCorner").objectReferenceValue = null;
+            serializedConfig.FindProperty("topRightCorner").objectReferenceValue = null;
             serializedConfig.FindProperty("bottomLeftCorner").objectReferenceValue = null;
             serializedConfig.FindProperty("bottomRightCorner").objectReferenceValue = null;
             serializedConfig.FindProperty("renderBottomEdgeSegments").boolValue = false;
-            Material environmentFrameMaterial = AssetDatabase.LoadAssetAtPath<Material>(EnvironmentFrameMaterialPath);
-            serializedConfig.FindProperty("frameMaterial").objectReferenceValue = environmentFrameMaterial;
-            serializedConfig.FindProperty("environmentBackdropMaterial").objectReferenceValue =
+            Material environmentMaterial =
                 AssetDatabase.LoadAssetAtPath<Material>(EnvironmentBackdropMaterialPath);
+            serializedConfig.FindProperty("frameMaterial").objectReferenceValue =
+                AssetDatabase.GetBuiltinExtraResource<Material>("Sprites-Default.mat");
+            serializedConfig.FindProperty("environmentBackdropMaterial").objectReferenceValue =
+                environmentMaterial;
             // The frame shader is opaque and exposes hidden atlas colours in
             // transparent obstacle corners. Obstacles use the default sprite
             // material so their authored alpha remains intact.
             serializedConfig.FindProperty("boardBlockMaterial").objectReferenceValue =
                 AssetDatabase.GetBuiltinExtraResource<Material>("Sprites-Default.mat");
+            Material sceneTunaGridMaterial =
+                AssetDatabase.LoadAssetAtPath<Material>(SceneTunaGridMaterialPath);
+            serializedConfig.FindProperty("boardInteriorMaterial").objectReferenceValue =
+                AssetDatabase.GetBuiltinExtraResource<Material>("Sprites-Default.mat");
+            SetSprite(serializedConfig, "boardInteriorSprite", "BG");
+            serializedConfig.FindProperty("boardInteriorPadding").floatValue = 0f;
+            serializedConfig.FindProperty("boardEdgeGlowColor").colorValue =
+                new Color(.28f, .24f, .68f, .32f);
+            serializedConfig.FindProperty("boardEdgeGlowWidth").floatValue = .16f;
             serializedConfig.FindProperty("gridDarkMaterial").objectReferenceValue =
-                AssetDatabase.LoadAssetAtPath<Material>(GridDarkMaterialPath);
+                sceneTunaGridMaterial;
             serializedConfig.FindProperty("gridLightMaterial").objectReferenceValue =
-                AssetDatabase.LoadAssetAtPath<Material>(GridLightMaterialPath);
+                sceneTunaGridMaterial;
             SetSprite(serializedConfig, "gridSprite", "BG2");
             serializedConfig.FindProperty("overrideLevelBackground").boolValue = true;
             Color environmentColor = new Color(.22f, .18f, .5f, 1f);
             serializedConfig.FindProperty("backgroundColor").colorValue = environmentColor;
             serializedConfig.FindProperty("alternateBackgroundColor").colorValue = environmentColor;
-            serializedConfig.FindProperty("environmentTint").colorValue = new Color(.78f, .78f, .78f, 1f);
+            Color sharedEnvironmentTint = new Color(.78f, .78f, .78f, 1f);
+            serializedConfig.FindProperty("environmentTint").colorValue = sharedEnvironmentTint;
+            serializedConfig.FindProperty("exteriorColor").colorValue =
+                new Color(.22941178f, .19576471f, .52305883f, 1f);
             serializedConfig.FindProperty("staticBlockTint").colorValue =
                 new Color(.16777663f, .15045391f, .46226418f, 1f);
-            serializedConfig.FindProperty("gridDarkTint").colorValue = new Color(.72f, .72f, .78f, 1f);
-            serializedConfig.FindProperty("gridLightTint").colorValue = new Color(.82f, .82f, .88f, 1f);
+            serializedConfig.FindProperty("gridDarkTint").colorValue =
+                new Color(.15024416f, .11814703f, .4245283f, 1f);
+            serializedConfig.FindProperty("gridLightTint").colorValue =
+                new Color(.19590934f, .16273585f, .5f, 1f);
             serializedConfig.FindProperty("extendPresentationToViewportBottom").boolValue = true;
             serializedConfig.FindProperty("viewportBottomPadding").floatValue = .35f;
             serializedConfig.FindProperty("cameraSizeMultiplier").floatValue = 1.2f;
-            serializedConfig.FindProperty("frameTint").colorValue = Color.white;
+            serializedConfig.FindProperty("frameTint").colorValue =
+                new Color(.29411766f, .2509804f, .67058825f, 1f);
+            serializedConfig.FindProperty("frameVisualThicknessMultiplier").floatValue = 1f;
+            serializedConfig.FindProperty("topEdgeVisualThicknessMultiplier").floatValue = 1f;
             serializedConfig.FindProperty("cornerOutset").vector2Value = Vector2.zero;
             serializedConfig.FindProperty("topCornerHorizontalInset").floatValue = .25f;
             serializedConfig.FindProperty("topCornerVerticalInset").floatValue = .25f;

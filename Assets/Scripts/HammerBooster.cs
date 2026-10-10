@@ -64,6 +64,14 @@ namespace GravityPuzzle
             if (boosterButton == null)
                 boosterButton = GetComponent<Button>();
 
+            if (buttonCanvasGroup == null)
+            {
+                if (boosterButton != null)
+                    buttonCanvasGroup = boosterButton.GetComponent<CanvasGroup>();
+                if (buttonCanvasGroup == null)
+                    buttonCanvasGroup = GetComponent<CanvasGroup>();
+            }
+
             boosterButtonRef = GetComponent<BoosterButton>();
             remainingCount = initialCount;
             InitializeHammerVisualPool();
@@ -90,6 +98,8 @@ namespace GravityPuzzle
             if (boosterButton != null)
                 boosterButton.onClick.AddListener(ActivateHammerBooster);
 
+            BoosterInventoryRuntime.Current.CountChanged += HandleInventoryCountChanged;
+
             SynchronizeLevel();
             RefreshButtonState();
         }
@@ -110,10 +120,20 @@ namespace GravityPuzzle
             if (boosterButton != null)
                 boosterButton.onClick.RemoveListener(ActivateHammerBooster);
 
+            BoosterInventoryRuntime.Current.CountChanged -= HandleInventoryCountChanged;
+
             if (boundBoard != null)
                 boundBoard.GameStateChanged -= HandleGameStateChanged;
 
             CancelHammerSelection();
+        }
+
+        private void HandleInventoryCountChanged(BoosterRewardType changedType, int count)
+        {
+            if (changedType != BoosterRewardType.Hammer)
+                return;
+
+            RefreshButtonState();
         }
 
         /// <summary>
@@ -241,18 +261,24 @@ namespace GravityPuzzle
 
             IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
             if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target) &&
-                (tutorialGate == null || tutorialGate.AllowsTarget(BoosterRewardType.Hammer, target)) &&
-                TryStartHammerImpact(target.Piece, target.WorldPosition))
+                (tutorialGate == null || tutorialGate.AllowsTarget(BoosterRewardType.Hammer, target)))
             {
-                boundBoard.StartTimer();
-                activeBooster = null;
-                BoosterTargetingPresentation.Hide();
-                // Update order between UI/booster/drag components is not fixed.
-                // Suppress the rest of this frame so the target tap cannot also
-                // begin dragging the newly modified piece.
-                suppressGameplayThroughFrame = Time.frameCount;
-                RefreshButtonState();
-                return;
+                Vector2 impactPosition = target.WorldPosition;
+                if (target.Piece != null && target.Piece.TryGetTargetableCellAt(target.WorldPosition, out PuzzlePiece.TargetableCell targetableCell))
+                    impactPosition = targetableCell.Center;
+
+                if (TryStartHammerImpact(target.Piece, impactPosition))
+                {
+                    boundBoard.StartTimer();
+                    activeBooster = null;
+                    BoosterTargetingPresentation.Hide();
+                    // Update order between UI/booster/drag components is not fixed.
+                    // Suppress the rest of this frame so the target tap cannot also
+                    // begin dragging the newly modified piece.
+                    suppressGameplayThroughFrame = Time.frameCount;
+                    RefreshButtonState();
+                    return;
+                }
             }
 
             if (tutorialGate != null && tutorialGate.BlocksBoardDrag)
@@ -397,6 +423,24 @@ namespace GravityPuzzle
 
         private void ConsumeHammerUse()
         {
+            if (!impactSucceeded)
+            {
+                Debug.LogWarning("[HammerBooster] Hammer impact did not remove a cell; restoring targeting state.", this);
+                IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
+                if (gate != null && gate.BlocksBoardDrag)
+                {
+                    activeBooster = this;
+                    BoosterTargetingPresentation.Show(BoosterTargetingPresentation.Mode.Hammer);
+                    gate.NotifyBoosterActivated(BoosterRewardType.Hammer);
+                }
+                else
+                {
+                    CancelHammerSelection();
+                }
+                RefreshButtonState();
+                return;
+            }
+
             bool consumed;
             if (boosterButtonRef != null)
             {
@@ -407,7 +451,7 @@ namespace GravityPuzzle
                 consumed = BoosterInventoryRuntime.Current.TryConsume(BoosterRewardType.Hammer);
             }
 
-            if (consumed && impactSucceeded)
+            if (consumed)
                 BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.Hammer);
         }
 
@@ -548,6 +592,24 @@ namespace GravityPuzzle
                 return;
 
             bool hasUses = GetRemainingUseCount() > 0;
+            bool isIntroduced = boosterButtonRef != null
+                ? boosterButtonRef.IsIntroduced
+                : (GravityLevelRuntime.CurrentLevelNumber >= BoosterButton.GetIntroductionLevel(BoosterRewardType.Hammer) &&
+                   (BoosterInventoryRuntime.Current.IsUnlocked(BoosterRewardType.Hammer) || hasUses));
+
+            if (!isIntroduced)
+            {
+                if (buttonCanvasGroup != null)
+                {
+                    buttonCanvasGroup.alpha = 0f;
+                    buttonCanvasGroup.interactable = false;
+                    buttonCanvasGroup.blocksRaycasts = false;
+                }
+
+                boosterButton.interactable = false;
+                return;
+            }
+
             if (buttonCanvasGroup != null)
             {
                 buttonCanvasGroup.alpha = hasUses ? 1f : 0.55f;

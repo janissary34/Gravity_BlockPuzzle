@@ -30,6 +30,14 @@ namespace GravityPuzzle.Config
         [SerializeField, Range(0f, .5f)] private float exteriorEdgeDarkeningAlpha = .16f;
         [Tooltip("Dedicated material behind playable grid cells. Keeping this separate from the exterior environment reproduces Scene Tuna's dark board interior without coupling the board to an ice material.")]
         [SerializeField] private Material boardInteriorMaterial;
+        [Tooltip("Scalable Scene Tuna panel sprite drawn behind the complete grid. Its rounded corners provide one continuous board contour without assembling decorative edge fragments.")]
+        [SerializeField] private Sprite boardInteriorSprite;
+        [Tooltip("Presentation-only size added around the grid so the rounded panel remains visible behind the outer cells.")]
+        [SerializeField, Min(0f)] private float boardInteriorPadding = .3f;
+        [Tooltip("Soft same-hue highlight that fades from the board boundary into the exterior, matching Scene Tuna without introducing a second solid rail colour.")]
+        [SerializeField] private Color boardEdgeGlowColor = new Color(.28f, .24f, .68f, .32f);
+        [Tooltip("World-space distance over which the board-edge highlight fades into the exterior.")]
+        [SerializeField, Range(.02f, .5f)] private float boardEdgeGlowWidth = .16f;
         [Tooltip("Tint applied to the board-interior material behind the checker grid.")]
         [SerializeField] private Color boardInteriorTint = new Color(.07f, .056f, .34f, 1f);
         [Tooltip("Material used by static board modules such as authored obstacles.")]
@@ -39,11 +47,11 @@ namespace GravityPuzzle.Config
         [Tooltip("Shared tint for static gameplay obstacles. This keeps them in the same palette as the frame instead of retaining per-level placeholder colours.")]
         [SerializeField] private Color staticBlockTint = Color.white;
         [Tooltip("Presentation-only overlap used by merged obstacle strips when no exact connected silhouette exists. Values above one close transparent sprite gutters without changing collision geometry.")]
-        [SerializeField, Min(1f)] private float modularStaticBlockScale = 1.1f;
+        [SerializeField, Min(1f)] private float modularStaticBlockScale = 1.03f;
         [Tooltip("Inset from the ends of a shared edge when filling the join between fallback obstacle rectangles. This preserves the authored outer bevel while hiding internal rounded caps.")]
-        [SerializeField, Range(0f, .45f)] private float modularStaticBlockJoinInset = .12f;
+        [SerializeField, Range(0f, .45f)] private float modularStaticBlockJoinInset = .2f;
         [Tooltip("Depth of the presentation-only fill centred across a shared edge between fallback obstacle rectangles.")]
-        [SerializeField, Range(.1f, 1f)] private float modularStaticBlockJoinDepth = .42f;
+        [SerializeField, Range(.05f, 1f)] private float modularStaticBlockJoinDepth = .14f;
         [Tooltip("Whole map-atlas silhouettes keyed by normalized occupied board cells. Adjacent obstacle cells use these instead of rendering separate 1x1 modules.")]
         [SerializeField] private List<BoardShapeVisualDefinition> staticBlockShapes = new List<BoardShapeVisualDefinition>();
         [Tooltip("Material used by the darker checker-grid cells.")]
@@ -118,13 +126,17 @@ namespace GravityPuzzle.Config
         public float ExteriorEdgeDarkeningWidth => Mathf.Max(.1f, exteriorEdgeDarkeningWidth);
         public float ExteriorEdgeDarkeningAlpha => Mathf.Clamp(exteriorEdgeDarkeningAlpha, 0f, .5f);
         public Material BoardInteriorMaterial => boardInteriorMaterial;
+        public Sprite BoardInteriorSprite => boardInteriorSprite;
+        public float BoardInteriorPadding => Mathf.Max(0f, boardInteriorPadding);
+        public Color BoardEdgeGlowColor => boardEdgeGlowColor;
+        public float BoardEdgeGlowWidth => Mathf.Clamp(boardEdgeGlowWidth, .02f, .5f);
         public Color BoardInteriorTint => boardInteriorTint;
         public Material BoardBlockMaterial => boardBlockMaterial;
         public Sprite StaticBlockSprite => staticBlockSprite;
         public Color StaticBlockTint => staticBlockTint;
         public float ModularStaticBlockScale => Mathf.Max(1f, modularStaticBlockScale);
         public float ModularStaticBlockJoinInset => Mathf.Clamp(modularStaticBlockJoinInset, 0f, .45f);
-        public float ModularStaticBlockJoinDepth => Mathf.Clamp(modularStaticBlockJoinDepth, .1f, 1f);
+        public float ModularStaticBlockJoinDepth => Mathf.Clamp(modularStaticBlockJoinDepth, .05f, 1f);
         public Sprite GridSprite => gridSprite;
         public Color GridDarkTint => gridDarkTint;
         public Color GridLightTint => gridLightTint;

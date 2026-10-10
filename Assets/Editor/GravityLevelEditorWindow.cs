@@ -2257,7 +2257,6 @@ namespace GravityPuzzle.Editor
                     boardY * subdivisions - minimum.y * subdivisions),
                 color = Color.HSVToRGB((level.pieces.Count * .19f) % 1f, .7f, 1f)
             };
-
             foreach (Vector2Int boardCell in template.Cells)
             {
                 Vector2Int fineOrigin = boardCell * subdivisions;

@@ -142,6 +142,13 @@ namespace GravityPuzzle.Gameplay.Tutorial
                     return false;
                 }
 
+                if (state == BoosterFirstUseTutorialState.ResolvingEffect &&
+                    activeConfig != null &&
+                    activeConfig.BoosterType == BoosterRewardType.FreezeTimer)
+                {
+                    return false;
+                }
+
                 return state == BoosterFirstUseTutorialState.AwaitingBoosterTap ||
                        state == BoosterFirstUseTutorialState.AwaitingExactTarget ||
                        state == BoosterFirstUseTutorialState.ResolvingEffect;

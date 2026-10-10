@@ -49,7 +49,13 @@ namespace GravityPuzzle
         private void Awake()
         {
             EnsureReferences();
-            buttonCanvasGroup = boosterButton != null ? boosterButton.GetComponent<CanvasGroup>() : null;
+            if (buttonCanvasGroup == null)
+            {
+                if (boosterButton != null)
+                    buttonCanvasGroup = boosterButton.GetComponent<CanvasGroup>();
+                if (buttonCanvasGroup == null)
+                    buttonCanvasGroup = GetComponent<CanvasGroup>();
+            }
             presentationSequenceOwner = GetComponent<TimerBooster>();
         }
 
@@ -59,6 +65,8 @@ namespace GravityPuzzle
 
             if (boosterButton != null && presentationSequenceOwner == null)
                 boosterButton.onClick.AddListener(ActivateFreezeBooster);
+
+            BoosterInventoryRuntime.Current.CountChanged += HandleInventoryCountChanged;
 
             SynchronizeLevel();
             RefreshButtonState();
@@ -88,7 +96,17 @@ namespace GravityPuzzle
             if (boosterButton != null && presentationSequenceOwner == null)
                 boosterButton.onClick.RemoveListener(ActivateFreezeBooster);
 
+            BoosterInventoryRuntime.Current.CountChanged -= HandleInventoryCountChanged;
+
             CancelOwnedFreeze();
+        }
+
+        private void HandleInventoryCountChanged(BoosterRewardType changedType, int count)
+        {
+            if (changedType != BoosterRewardType.FreezeTimer)
+                return;
+
+            RefreshButtonState();
         }
 
         /// <summary>
@@ -228,6 +246,24 @@ namespace GravityPuzzle
 
             if (BoosterTargetingPresentation.IsBoosterButtonSuppressed(buttonCanvasGroup))
                 return;
+
+            bool isIntroduced = boosterButtonRef != null
+                ? boosterButtonRef.IsIntroduced
+                : (GravityLevelRuntime.CurrentLevelNumber >= BoosterButton.GetIntroductionLevel(BoosterRewardType.FreezeTimer) &&
+                   (BoosterInventoryRuntime.Current.IsUnlocked(BoosterRewardType.FreezeTimer) || HasUses));
+
+            if (!isIntroduced)
+            {
+                if (buttonCanvasGroup != null)
+                {
+                    buttonCanvasGroup.alpha = 0f;
+                    buttonCanvasGroup.interactable = false;
+                    buttonCanvasGroup.blocksRaycasts = false;
+                }
+
+                boosterButton.interactable = false;
+                return;
+            }
 
             // Keep unavailable boosters visible as a subdued option instead of
             // removing them from the HUD. The whole button is also locked while
