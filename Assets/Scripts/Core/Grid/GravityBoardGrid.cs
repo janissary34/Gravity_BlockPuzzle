@@ -313,6 +313,46 @@ namespace GravityPuzzle.Core.Grid
             return true;
         }
 
+        /// <summary>
+        /// Checks that every currently authored cell of a piece is still owned
+        /// by that piece as a shredder reservation. This is used only by the
+        /// atomic handoff rollback path; normal gameplay never infers state
+        /// from collider contacts.
+        /// </summary>
+        public bool IsFullyReservedBy(PieceModel piece)
+        {
+            if (piece == null)
+                return false;
+
+            for (int index = 0; index < piece.LocalCells.Count; index++)
+            {
+                GridCoordinate coordinate = piece.GetWorldCell(index);
+                if (!IsInside(coordinate) ||
+                    cellStates[coordinate.X, coordinate.Y] != GridCellState.Reserved ||
+                    occupantIds[coordinate.X, coordinate.Y] != piece.Id)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Reverts a not-yet-activated shredder reservation to its original
+        /// occupied footprint. Callers must pair this with the explicit
+        /// HandoffToPhysics-to-Placed transaction recovery transition.
+        /// </summary>
+        public bool TryRestoreReservedPiece(PieceModel piece)
+        {
+            if (!IsFullyReservedBy(piece))
+                return false;
+
+            SetPieceCells(piece, GridCellState.Occupied);
+            piece.MarkOnBoard();
+            return true;
+        }
+
         public void ClearPiece(PieceModel piece)
         {
             ClearPieceCells(piece);

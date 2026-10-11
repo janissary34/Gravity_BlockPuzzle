@@ -53,7 +53,7 @@ namespace GravityPuzzle.Gameplay.Input
             for (int index = 0; index < pieces.Count; index++)
             {
                 PuzzlePiece piece = pieces[index];
-                if (piece == null || piece.IsBeingShredded || !piece.ContainsVisibleCellAt(worldPosition))
+                if (piece == null || piece.IsShredderInteractionLocked || !piece.ContainsVisibleCellAt(worldPosition))
                     continue;
 
                 target = new Target(piece, cell, worldPosition);
@@ -67,7 +67,7 @@ namespace GravityPuzzle.Gameplay.Input
                 for (int index = 0; index < pieces.Count; index++)
                 {
                     PuzzlePiece piece = pieces[index];
-                    if (piece == null || piece.IsBeingShredded || piece.SourcePieceId != occupantId)
+                    if (piece == null || piece.IsShredderInteractionLocked || piece.SourcePieceId != occupantId)
                         continue;
 
                     target = new Target(
@@ -86,7 +86,7 @@ namespace GravityPuzzle.Gameplay.Input
             for (int index = 0; index < pieces.Count; index++)
             {
                 PuzzlePiece piece = pieces[index];
-                if (piece == null || piece.IsBeingShredded ||
+                if (piece == null || piece.IsShredderInteractionLocked ||
                     !board.TryGetPieceModel(piece, out PieceModel model) ||
                     !ModelOwnsCell(model, cell))
                     continue;

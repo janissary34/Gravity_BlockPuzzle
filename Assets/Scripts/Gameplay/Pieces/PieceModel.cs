@@ -113,6 +113,10 @@ namespace GravityPuzzle.Gameplay.Pieces
             yield return new StateTransition<PieceState>(PieceState.Falling, PieceState.Despawned);
 
             yield return new StateTransition<PieceState>(PieceState.HandoffToPhysics, PieceState.Shredding);
+            // This is a transaction-only recovery edge. It is used before a
+            // physics island has activated any Rigidbody or presentation, if
+            // its all-or-nothing reservation cannot be completed.
+            yield return new StateTransition<PieceState>(PieceState.HandoffToPhysics, PieceState.Placed);
             yield return new StateTransition<PieceState>(PieceState.HandoffToPhysics, PieceState.Despawned);
 
             yield return new StateTransition<PieceState>(PieceState.Shredding, PieceState.Despawned);

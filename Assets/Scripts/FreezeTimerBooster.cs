@@ -256,7 +256,7 @@ namespace GravityPuzzle
             {
                 if (buttonCanvasGroup != null)
                 {
-                    buttonCanvasGroup.alpha = 0f;
+                    buttonCanvasGroup.alpha = 1f;
                     buttonCanvasGroup.interactable = false;
                     buttonCanvasGroup.blocksRaycasts = false;
                 }

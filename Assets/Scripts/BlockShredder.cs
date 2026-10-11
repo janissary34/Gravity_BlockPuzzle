@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GravityPuzzle.Config;
+using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Presentation.VFX;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ namespace GravityPuzzle
     public class BlockShredder : MonoBehaviour
     {
         private static readonly SpriteRenderer[] EmptyRenderers = new SpriteRenderer[0];
+        private static readonly WaitForFixedUpdate FeedPhysicsStep = new WaitForFixedUpdate();
 
         [Header("Configuration")]
         [Tooltip("Authoring asset used for both this feed behaviour and runtime-created shredder wheels.")]
@@ -37,14 +39,27 @@ namespace GravityPuzzle
 
         private ShredderFeedMask activeFeedMask;
         private int activeFeedCount;
-        private readonly Dictionary<float, int> activeFeedsByShredderLine =
-            new Dictionary<float, int>();
+        // A physical mouth has one motorized throat. This gate is keyed by
+        // the authored catch zone rather than Y so two independent mouths at
+        // the same height never share mutable feed state.
+        private readonly HashSet<ShredderCatchZone> activeFeedZones =
+            new HashSet<ShredderCatchZone>();
         private static readonly Comparison<BoxCollider2D> CompareCellsByCenterX = (a, b) =>
         {
             if (a == null || b == null) return 0;
             return a.bounds.center.x.CompareTo(b.bounds.center.x);
         };
         private float nextParticleShredSoundTime;
+        private readonly List<ShredderPhysicsIsland> activePhysicsIslands =
+            new List<ShredderPhysicsIsland>();
+        private readonly List<PuzzlePiece> physicsIslandMemberBuffer =
+            new List<PuzzlePiece>(8);
+        // One pooled mouth is owned by each authored catch zone while its
+        // support island or its final feed is still alive. A mouth must never
+        // be silently reused at a different world-space cutter.
+        private readonly Dictionary<ShredderCatchZone, ShredderPhysicsMouth> activePhysicsMouths =
+            new Dictionary<ShredderCatchZone, ShredderPhysicsMouth>();
+        private bool physicsIslandAvailable;
 
         private readonly struct CutterContactSegment
         {
@@ -87,12 +102,55 @@ namespace GravityPuzzle
                     shredderConfig.CatchZonePrefab,
                     transform,
                     shredderConfig.CatchZonePoolCapacity);
+            physicsIslandAvailable = shredderConfig != null &&
+                                     shredderConfig.EnablePhysicsIsland &&
+                                     ShredderPhysicsLayers.Configure();
+            if (physicsIslandAvailable && shredderConfig.PhysicsMouthPrefab == null)
+            {
+                physicsIslandAvailable = false;
+                Debug.LogWarning(
+                    "[ShredderPhysicsIsland] Physics Mouth prefab is not assigned; using the legacy single-piece feed.",
+                    this);
+            }
+            else if (physicsIslandAvailable)
+            {
+                ShredderPhysicsMouthPool.Configure(
+                    shredderConfig.PhysicsMouthPrefab,
+                    transform,
+                    shredderConfig.PhysicsMouthPoolCapacity);
+            }
             if (shredderConfig != null && shredderConfig.FeedMaskPrefab != null)
                 ShredderFeedMaskPool.Configure(shredderConfig.FeedMaskPrefab, transform);
         }
 
+        private void FixedUpdate()
+        {
+            for (int index = activePhysicsIslands.Count - 1; index >= 0; index--)
+            {
+                ShredderPhysicsIsland island = activePhysicsIslands[index];
+                island.FixedTick();
+                if (!island.IsComplete)
+                    continue;
+
+                activePhysicsIslands.RemoveAt(index);
+                ReleasePhysicsMouthIfIdle(island.Zone);
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (particleShredAudioSource != null && particleShredAudioSource.isPlaying)
+                particleShredAudioSource.Stop();
+            activeShredSoundCount = 0;
+        }
+
         private void OnDestroy()
         {
+            if (particleShredAudioSource != null && particleShredAudioSource.isPlaying)
+                particleShredAudioSource.Stop();
+            activeShredSoundCount = 0;
+
+            ReturnAllPhysicsMouths();
             if (Instance == this)
             {
                 Instance = null;
@@ -106,46 +164,240 @@ namespace GravityPuzzle
         public bool TryCapturePiece(PuzzlePiece piece, ShredderCatchZone zone)
         {
             if (piece == null || zone == null ||
-                !zone.ContainsCaptureFootprint(piece))
+                !zone.ContainsCaptureFootprint(piece) ||
+                HasActivePhysicsIslandForZone(zone))
                 return false;
 
-            float shredderY = zone.ShredY;
-            if (!TryAcquireFeedLane(shredderY, out int feedDepth))
+            if (!TryAcquireFeedGate(zone))
                 return false;
+
+            if (TryStartPhysicsIsland(piece, zone))
+                return true;
 
             if (!piece.TryBeginShredderHandoff())
             {
-                ReleaseFeedLane(shredderY);
+                ReleaseFeedGate(zone);
                 return false;
             }
 
-            StartCoroutine(FeedPieceIntoShredder(piece, shredderY, feedDepth));
+            StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
         }
 
-        private bool TryAcquireFeedLane(float shredderY, out int feedDepth)
+        private bool TryStartPhysicsIsland(
+            PuzzlePiece root,
+            ShredderCatchZone zone)
         {
-            activeFeedsByShredderLine.TryGetValue(shredderY, out int activeInLane);
-            feedDepth = activeInLane;
-            int laneCapacity = shredderConfig != null
-                ? shredderConfig.FeedQueueCapacity
-                : 16;
-            if (activeInLane >= laneCapacity)
+            if (!physicsIslandAvailable || root == null || zone == null || shredderConfig == null)
                 return false;
 
-            activeFeedsByShredderLine[shredderY] = activeInLane + 1;
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board == null ||
+                !ShredderPhysicsIslandPlanner.TryBuild(
+                    board,
+                    root,
+                    zone,
+                    physicsIslandMemberBuffer) ||
+                physicsIslandMemberBuffer.Count <= 1)
+                return false;
+
+            if (!EnsurePhysicsMouth(zone, physicsIslandMemberBuffer))
+                return false;
+
+            if (!board.TryReserveShredderPhysicsIsland(physicsIslandMemberBuffer))
+                return false;
+
+            for (int index = 0; index < physicsIslandMemberBuffer.Count; index++)
+            {
+                if (physicsIslandMemberBuffer[index].TryEnterShredderPhysicsIslandHandoff())
+                    continue;
+
+                // This should be unreachable after the board transaction above.
+                // Do not launch a partial visual island if an invariant was broken.
+                Debug.LogError(
+                    "[ShredderPhysicsIsland] A reserved member rejected its handoff; the feed was not started.",
+                    this);
+                AbortPhysicsIslandStart(board, physicsIslandMemberBuffer);
+                return false;
+            }
+
+            if (!root.TryBeginShredderFeedFromPhysicsIsland())
+            {
+                // The board reservation and per-member handoff were
+                // prevalidated above, so this represents a broken lifecycle
+                // invariant rather than a condition that can safely fall back.
+                Debug.LogError(
+                    "[ShredderPhysicsIsland] Reserved root rejected its feed promotion; the reservation was rolled back.",
+                    this);
+                AbortPhysicsIslandStart(board, physicsIslandMemberBuffer);
+                return false;
+            }
+
+            StartCoroutine(FeedPieceIntoShredder(root, zone));
+            activePhysicsIslands.Add(new ShredderPhysicsIsland(
+                this,
+                shredderConfig,
+                zone,
+                physicsIslandMemberBuffer));
             return true;
         }
 
-        private void ReleaseFeedLane(float shredderY)
+        private bool EnsurePhysicsMouth(
+            ShredderCatchZone zone,
+            IReadOnlyList<PuzzlePiece> members)
         {
-            if (!activeFeedsByShredderLine.TryGetValue(shredderY, out int activeInLane))
+            if (zone == null || members == null)
+                return false;
+
+            if (activePhysicsMouths.ContainsKey(zone))
+                return true;
+
+            if (!ShredderPhysicsMouthPool.TryRent(out ShredderPhysicsMouth mouth))
+            {
+                Debug.LogWarning(
+                    "[ShredderPhysicsIsland] Physics-mouth pool is unavailable; using the legacy single-piece feed.",
+                    this);
+                return false;
+            }
+
+            if (!mouth.Configure(
+                    zone.LeftX,
+                    zone.RightX,
+                    zone.ShredY,
+                    shredderConfig,
+                    CalculateRequiredGuideDepth(zone, members)))
+            {
+                ShredderPhysicsMouthPool.Return(mouth);
+                Debug.LogError(
+                    "[ShredderPhysicsIsland] Physics-mouth prefab is missing required guides or its throat shelf; using the legacy single-piece feed.",
+                    this);
+                return false;
+            }
+
+            activePhysicsMouths.Add(zone, mouth);
+            return true;
+        }
+
+        private float CalculateRequiredGuideDepth(
+            ShredderCatchZone zone,
+            IReadOnlyList<PuzzlePiece> members)
+        {
+            float highestPoint = zone.ShredY;
+            for (int index = 0; index < members.Count; index++)
+            {
+                PuzzlePiece member = members[index];
+                if (member != null)
+                    highestPoint = Mathf.Max(highestPoint, member.CollisionBounds.max.y);
+            }
+
+            // Include one guide thickness above the top-most initial body so
+            // a tall contact chain cannot rotate around an uncovered edge.
+            return Mathf.Max(0f, highestPoint - zone.ShredY) +
+                   shredderConfig.PhysicsIslandGuideThickness;
+        }
+
+        private bool HasActivePhysicsIslandForZone(ShredderCatchZone zone)
+        {
+            for (int index = 0; index < activePhysicsIslands.Count; index++)
+            {
+                if (activePhysicsIslands[index].Zone == zone)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void ReleasePhysicsMouthIfIdle(ShredderCatchZone zone)
+        {
+            if (zone == null || activeFeedZones.Contains(zone) ||
+                HasActivePhysicsIslandForZone(zone) ||
+                !activePhysicsMouths.TryGetValue(zone, out ShredderPhysicsMouth mouth))
+            {
+                return;
+            }
+
+            activePhysicsMouths.Remove(zone);
+            ShredderPhysicsMouthPool.Return(mouth);
+        }
+
+        private void ReturnAllPhysicsMouths()
+        {
+            foreach (KeyValuePair<ShredderCatchZone, ShredderPhysicsMouth> pair in activePhysicsMouths)
+            {
+                if (pair.Value != null)
+                    ShredderPhysicsMouthPool.Return(pair.Value);
+            }
+
+            activePhysicsMouths.Clear();
+        }
+
+        private void AbortPhysicsIslandStart(
+            PrototypeBoard board,
+            IReadOnlyList<PuzzlePiece> members)
+        {
+            if (board == null || !board.TryAbortShredderPhysicsIsland(members))
+            {
+                Debug.LogError(
+                    "[ShredderPhysicsIsland] Could not roll back a failed handoff reservation.",
+                    this);
+                return;
+            }
+
+            for (int index = 0; index < members.Count; index++)
+            {
+                if (members[index] != null)
+                    members[index].CancelShredderPhysicsIslandHandoff();
+            }
+        }
+
+        /// <summary>
+        /// The physics island reaches the cutter through a coordinate capture
+        /// plane, not a trigger. From this point the established feed owns the
+        /// piece as a kinematic motor and presentation pipeline.
+        /// </summary>
+        internal bool TryCapturePhysicsIslandMember(
+            PuzzlePiece piece,
+            ShredderCatchZone zone)
+        {
+            if (piece == null || zone == null ||
+                !piece.IsInShredderPhysicsHandoff ||
+                !zone.ContainsPhysicsIslandCaptureFootprint(
+                    piece,
+                    shredderConfig != null ? shredderConfig.PhysicsIslandCaptureDistance : 0f))
+                return false;
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board == null || !board.TryGetPieceModel(piece, out PieceModel model) ||
+                model.State != PieceState.HandoffToPhysics ||
+                !TryAcquireFeedGate(zone))
+                return false;
+
+            if (!piece.TryBeginShredderFeedFromPhysicsIsland())
+            {
+                ReleaseFeedGate(zone);
+                return false;
+            }
+
+            StartCoroutine(FeedPieceIntoShredder(piece, zone));
+            return true;
+        }
+
+        private bool TryAcquireFeedGate(ShredderCatchZone zone)
+        {
+            if (zone == null || activeFeedZones.Contains(zone))
+                return false;
+
+            activeFeedZones.Add(zone);
+            return true;
+        }
+
+        private void ReleaseFeedGate(ShredderCatchZone zone)
+        {
+            if (zone == null)
                 return;
 
-            if (activeInLane <= 1)
-                activeFeedsByShredderLine.Remove(shredderY);
-            else
-                activeFeedsByShredderLine[shredderY] = activeInLane - 1;
+            activeFeedZones.Remove(zone);
+            ReleasePhysicsMouthIfIdle(zone);
         }
 
         private void AcquireFeedMask(float shredderY)
@@ -180,10 +432,15 @@ namespace GravityPuzzle
 
         private System.Collections.IEnumerator FeedPieceIntoShredder(
             PuzzlePiece piece,
-            float shredderY,
-            int feedDepth)
+            ShredderCatchZone zone)
         {
-            if (piece == null) yield break;
+            if (piece == null || zone == null)
+            {
+                ReleaseFeedGate(zone);
+                yield break;
+            }
+
+            float shredderY = zone.ShredY;
 
             AcquireFeedMask(shredderY);
 
@@ -198,11 +455,6 @@ namespace GravityPuzzle
                 : null);
             Rigidbody2D rb = piece.Body;
 
-            // Artist-atlas pieces do not contain the legacy per-voxel objects
-            // that used to trigger this sound. The feed itself is the common
-            // logical shred event, so always provide its first audible beat.
-            PlayParticleShredSound();
-
             // 2. Capture the current presentation before the feed mask begins
             // clipping the piece beneath the cutter.
             // An intact atlas is a single large SpriteRenderer and can only
@@ -213,7 +465,7 @@ namespace GravityPuzzle
             SpriteRenderer[] pieceRenderers = piece.ConfiguredShredderRenderers ?? EmptyRenderers;
             piece.BeginShredderPresentation(pieceRenderers, shredderY, shredderConfig);
             piece.ApplyShredderPresentationClipping();
-            piece.SetShredderPresentationDepth(feedDepth > 0 ? -10 : 0);
+            piece.SetShredderPresentationDepth(0);
             // Always use the authored PuzzlePiece colour for debris and UI voxels.
             // Renderer colours can be temporarily changed by selection or masking.
             Color tileColor = Opaque(piece.VisualColor);
@@ -283,12 +535,17 @@ namespace GravityPuzzle
             bool contactPresentationStarted = false;
             Vector2 lastContactCenter = Vector2.zero;
             float lastContactWidth = 0f;
+            bool isShreddingSoundActive = false;
 
-            // 3. The kinematic feed owns the descent while this coroutine watches
-            // the crossing cells and converts them to shred effects.
-            while (piece != null && elapsed < maxTime)
+            try
             {
-                elapsed += Time.deltaTime;
+                // 3. The kinematic feed owns the descent while this coroutine watches
+                // the crossing cells and converts them to shred effects.
+                while (piece != null && elapsed < maxTime)
+            {
+                yield return FeedPhysicsStep;
+                float feedDeltaTime = Time.fixedDeltaTime;
+                elapsed += feedDeltaTime;
 
                 if (rb != null)
                 {
@@ -300,19 +557,23 @@ namespace GravityPuzzle
                     // the same cutter crossing as the presentation; otherwise
                     // pieces above keep treating already-shredded cells as solid
                     // until the whole root is returned to its pool.
-                    rb.position += new Vector2(
+                    rb.MovePosition(rb.position + new Vector2(
                         shakeOffsetX - previousShakeOffsetX,
-                        -feedSpeed * Time.deltaTime);
+                        -feedSpeed * feedDeltaTime));
                     previousShakeOffsetX = shakeOffsetX;
-                    rb.velocity = Vector2.zero;
 
-                    // Keep the feed visually stable while it enters the cutter.
+                    // Kinematic bodies do not integrate torque. Advance the
+                    // authored feed angular velocity explicitly so a dynamic
+                    // support above reacts to the same tilted collider the
+                    // player sees.
                     float currentAngle = Mathf.DeltaAngle(0f, rb.rotation);
-                    if (Mathf.Abs(currentAngle) > maxTiltAngle)
+                    float nextAngle = currentAngle + rb.angularVelocity * feedDeltaTime;
+                    if (Mathf.Abs(nextAngle) > maxTiltAngle)
                     {
-                        rb.angularVelocity *= 0.5f;
-                        rb.rotation = Mathf.Clamp(currentAngle, -maxTiltAngle, maxTiltAngle);
+                        nextAngle = Mathf.Clamp(nextAngle, -maxTiltAngle, maxTiltAngle);
+                        rb.angularVelocity = -rb.angularVelocity * 0.5f;
                     }
+                    rb.MoveRotation(nextAngle);
                 }
 
                 // Sample active block cells directly so concave/notched pieces (L, U, etc.)
@@ -328,6 +589,12 @@ namespace GravityPuzzle
                 {
                     lastContactWidth = contactWidth;
                     lastContactCenter = currentContactCenter;
+
+                    if (!isShreddingSoundActive)
+                    {
+                        isShreddingSoundActive = true;
+                        StartContinuousShredSound();
+                    }
                 }
 
                 // Release cells that have reached the cutter mouth for physics clearance.
@@ -340,7 +607,7 @@ namespace GravityPuzzle
                 // Continuous voxel stream: distribute voxels smoothly every frame while contacting cutter
                 if (hasContactSurface && contactWidth > 0f && remainingFlightsToEmit > 0)
                 {
-                    float dy = feedSpeed * Time.deltaTime;
+                    float dy = feedSpeed * feedDeltaTime;
                     float frameArea = contactWidth * dy;
                     float frameFraction = frameArea / totalRendererArea;
 
@@ -412,8 +679,6 @@ namespace GravityPuzzle
                                     }
                                 }
                             }
-
-                            PlayParticleShredSound();
                         }
                     }
                 }
@@ -437,7 +702,7 @@ namespace GravityPuzzle
                             entryBurstCount);
                     }
 
-                    debrisAccumulator += Time.deltaTime *
+                    debrisAccumulator += feedDeltaTime *
                                        shredderConfig.DebrisPerSecondPerWorldUnit * contactWidth;
                     int debrisCount = Mathf.Min(
                         shredderConfig.MaxDebrisPerFrame,
@@ -509,8 +774,6 @@ namespace GravityPuzzle
                                 tileColor,
                                 shredderConfig.DebrisBurstPerCrossedCell);
                         }
-
-                        PlayParticleShredSound();
                     }
                     else
                     {
@@ -553,10 +816,22 @@ namespace GravityPuzzle
                     }
 
                     EmitFinalDebrisBurst(lastContactCenter, lastContactWidth, tileColor);
+                    if (isShreddingSoundActive)
+                    {
+                        isShreddingSoundActive = false;
+                        StopContinuousShredSound();
+                    }
                     break;
                 }
-
-                yield return null;
+            }
+            }
+            finally
+            {
+                if (isShreddingSoundActive)
+                {
+                    isShreddingSoundActive = false;
+                    StopContinuousShredSound();
+                }
             }
 
             if (piece != null)
@@ -596,7 +871,7 @@ namespace GravityPuzzle
             }
 
             ReleaseFeedMask();
-            ReleaseFeedLane(shredderY);
+            ReleaseFeedGate(zone);
         }
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);
@@ -789,14 +1064,29 @@ namespace GravityPuzzle
             debrisParticleSystem.EmitAtCutter(contactCenter, contactWidth, color, count);
         }
 
-        private void PlayParticleShredSound()
-        {
-            if (particleShredClip == null || particleShredAudioSource == null ||
-                Time.time < nextParticleShredSoundTime)
-                return;
+        private int activeShredSoundCount;
 
-            particleShredAudioSource.PlayOneShot(particleShredClip);
-            nextParticleShredSoundTime = Time.time + particleShredSoundMinInterval;
+        private void StartContinuousShredSound()
+        {
+            activeShredSoundCount++;
+            if (particleShredAudioSource != null && particleShredClip != null)
+            {
+                particleShredAudioSource.clip = particleShredClip;
+                particleShredAudioSource.loop = true;
+                if (!particleShredAudioSource.isPlaying)
+                {
+                    particleShredAudioSource.Play();
+                }
+            }
+        }
+
+        private void StopContinuousShredSound()
+        {
+            activeShredSoundCount = Mathf.Max(0, activeShredSoundCount - 1);
+            if (activeShredSoundCount == 0 && particleShredAudioSource != null && particleShredAudioSource.isPlaying)
+            {
+                particleShredAudioSource.Stop();
+            }
         }
     }
 }

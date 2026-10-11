@@ -66,7 +66,17 @@ namespace GravityPuzzle
         public CompositeCollider2D CompositeCollider => compositeCollider;
         public LineRenderer Outline => rootOutline;
         public bool IsSelected => isSelected;
-        public bool IsBeingShredded => beingShredded;
+        /// <summary>
+        /// True only after this piece has won a physical shredder-mouth feed.
+        /// A support piece inside a temporary physics island is deliberately
+        /// not yet shredding: it remains visible, collidable and has not
+        /// reported gameplay destruction.
+        /// </summary>
+        public bool IsBeingShredded => shredderHandoffMode == ShredderHandoffMode.Feeding;
+        public bool IsInShredderPhysicsHandoff =>
+            shredderHandoffMode == ShredderHandoffMode.PhysicsIsland;
+        public bool IsShredderInteractionLocked =>
+            shredderHandoffMode != ShredderHandoffMode.None;
         public bool IsFrozen { get; private set; }
         public bool IsBomb { get; private set; }
         public bool IsBombDefused { get; private set; }
@@ -169,6 +179,8 @@ namespace GravityPuzzle
         private SpriteRenderer[] configuredShredderRenderers;
         private Collider2D[] solidColliders;
         private PhysicsMaterial2D[] defaultSolidColliderMaterials;
+        private int[] defaultSolidColliderLayers;
+        private int defaultPhysicsLayer;
         private SpriteRenderer[] shredderPresentationRenderers;
         private ShredderDissolvePresentation shredderDissolvePresentation;
         private float restingOutlineWidth = 0.05f;
@@ -181,7 +193,14 @@ namespace GravityPuzzle
         private SpriteMaskInteraction[] shredderPresentationMaskStates;
         private int[] shredderPresentationSortingOrders;
         private int shredderPresentationOutlineSortingOrder;
-        private bool beingShredded;
+        private enum ShredderHandoffMode
+        {
+            None,
+            PhysicsIsland,
+            Feeding
+        }
+
+        private ShredderHandoffMode shredderHandoffMode;
         private bool gridDespawned;
         private bool useFullCollisionGeometry;
         private bool isSelected;
@@ -257,6 +276,7 @@ namespace GravityPuzzle
 
         private void Awake()
         {
+            defaultPhysicsLayer = gameObject.layer;
             Body = GetComponent<Rigidbody2D>();
             GridFallView = GetComponent<PieceGridFallView>();
             shredderDissolvePresentation = GetComponent<ShredderDissolvePresentation>();
@@ -346,7 +366,8 @@ namespace GravityPuzzle
         public void OnSpawn()
         {
             RestoreShredderPresentation();
-            beingShredded = false;
+            RestoreDefaultPhysicsLayers();
+            shredderHandoffMode = ShredderHandoffMode.None;
             keepShredderGridReservationUntilDespawn = false;
             gridDespawned = false;
             destructionReported = false;
@@ -373,7 +394,7 @@ namespace GravityPuzzle
             // Pool instances must not expose their previous shredder
             // presentation state between lifetimes. Gameplay lifecycle is
             // owned by the board, never by this presentation flag.
-            beingShredded = false;
+            shredderHandoffMode = ShredderHandoffMode.None;
             keepShredderGridReservationUntilDespawn = false;
             isSelected = false;
             isBoosterTargeted = false;
@@ -384,6 +405,7 @@ namespace GravityPuzzle
             ClearIceVisuals();
             ClearWholePiecePresentation();
             RestoreShredderPresentation();
+            RestoreDefaultPhysicsLayers();
             RestoreDefaultCollisionMaterials();
             RuntimePieceFactory.ResetPooledPiece(this);
             InvalidateVoxelCache();
@@ -453,6 +475,7 @@ namespace GravityPuzzle
             RefreshWholePiecePresentation();
             PrototypeBoard board = PrototypeBoard.Active;
             RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+            RefreshBombState();
         }
 
         /// <summary>
@@ -603,6 +626,7 @@ namespace GravityPuzzle
             RefreshWholePiecePresentation();
             PrototypeBoard board = PrototypeBoard.Active;
             RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
+            RefreshBombState();
         }
 
         public void ClearWholePiecePresentation()
@@ -818,7 +842,7 @@ namespace GravityPuzzle
             if (board == null)
                 return;
 
-            bool releasedShredderReservation = beingShredded;
+            bool releasedShredderReservation = IsBeingShredded;
             if (!board.TryDespawnPieceFromGrid(this))
                 return;
 
@@ -930,7 +954,7 @@ namespace GravityPuzzle
         {
             // A piece is committed to the shredder as soon as it enters the
             // catch zone. It must not regain drag selection during the feed.
-            if (isSelected && (IsFrozen || IsBeingShredded))
+            if (isSelected && (IsFrozen || IsShredderInteractionLocked))
                 return;
 
             this.isSelected = isSelected;
@@ -1048,7 +1072,7 @@ namespace GravityPuzzle
         /// </summary>
         public void CollectTargetableCells(List<TargetableCell> results)
         {
-            if (results == null || IsFrozen || IsBeingShredded || collisionCells == null ||
+            if (results == null || IsFrozen || IsShredderInteractionLocked || collisionCells == null ||
                 fullCollisionCellSizes == null)
                 return;
 
@@ -1195,8 +1219,9 @@ namespace GravityPuzzle
             shredderReservationCells.Clear();
             shredderCellsReadyToRelease.Clear();
             shredderReservationStartBodyY = 0f;
-            beingShredded = false;
+            shredderHandoffMode = ShredderHandoffMode.None;
             keepShredderGridReservationUntilDespawn = false;
+            RestoreDefaultPhysicsLayers();
             destructionReported = false;
             useFullCollisionGeometry = false;
             isSelected = false;
@@ -1380,6 +1405,7 @@ namespace GravityPuzzle
         /// </summary>
         public void ResetToPooledPhysics()
         {
+            RestoreDefaultPhysicsLayers();
             if (Body == null)
                 return;
 
@@ -1407,6 +1433,7 @@ namespace GravityPuzzle
                 return;
 
             PrepareForShredderPhysics();
+            ApplyShredderPhysicsLayer();
             if (Body == null)
                 return;
 
@@ -1422,11 +1449,8 @@ namespace GravityPuzzle
             Body.velocity = Vector2.zero;
             Body.angularDrag = config.FeedAngularDrag;
             Body.angularVelocity = UnityEngine.Random.Range(
-                -config.MaxFeedTiltAngle,
-                config.MaxFeedTiltAngle);
-            Body.AddTorque(
-                UnityEngine.Random.Range(-1f, 1f) * config.TumbleTorque,
-                ForceMode2D.Impulse);
+                -config.TumbleTorque,
+                config.TumbleTorque);
         }
 
         /// <summary>
@@ -1441,6 +1465,7 @@ namespace GravityPuzzle
                 return;
 
             PrepareForShredderPhysics();
+            ApplyShredderPhysicsLayer();
             if (Body == null)
                 return;
 
@@ -1640,7 +1665,7 @@ namespace GravityPuzzle
             // The shredder releases collision cells before their individual
             // voxel visuals finish crossing the cutter. Do not rebuild the
             // root outline from that intermediate collision geometry.
-            if (!beingShredded)
+            if (!IsBeingShredded)
                 RuntimePieceFactory.RefreshOutline(this);
             InvalidateVoxelCache();
             Physics2D.SyncTransforms();
@@ -1765,18 +1790,29 @@ namespace GravityPuzzle
 
             if (IsBomb)
             {
-                BuildBombVisuals();
-                RefreshBombTimer(BombTimerSeconds);
+                RefreshBombState();
             }
+        }
+
+        public void RefreshBombState()
+        {
+            if (!IsBomb || IsShredderInteractionLocked || IsBombDefused)
+                return;
+
+            if (bombOverlayRenderer == null && bombOverlaySprite != null)
+                BuildBombVisuals();
+
+            previousBombRemaining = -1;
+            UpdateBombCounter(Mathf.CeilToInt(BombTimerSeconds));
         }
 
         public void RefreshBombTimer(float secondsRemaining)
         {
-            if (!IsBomb || beingShredded)
+            if (!IsBomb || IsShredderInteractionLocked || IsBombDefused)
                 return;
 
             int remainingSeconds = Mathf.CeilToInt(Mathf.Max(0f, secondsRemaining));
-            if (remainingSeconds == previousBombRemaining)
+            if (remainingSeconds == previousBombRemaining && iceCounterText != null && iceCounterText.enabled)
                 return;
 
             previousBombRemaining = remainingSeconds;
@@ -1788,7 +1824,7 @@ namespace GravityPuzzle
             bool shouldBeFrozen =
                 frozenUntilDestroyedCount > 0 &&
                 destroyedPieceCount < frozenUntilDestroyedCount &&
-                !beingShredded;
+                !IsShredderInteractionLocked;
 
             bool wasFrozen = IsFrozen;
             if (wasFrozen && !shouldBeFrozen)
@@ -1870,7 +1906,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool ContainsVisibleCellAt(Vector2 worldPosition)
         {
-            return !beingShredded && TryGetCellIndexAt(worldPosition, out _);
+            return !IsShredderInteractionLocked && TryGetCellIndexAt(worldPosition, out _);
         }
 
         /// <summary>
@@ -2034,7 +2070,7 @@ namespace GravityPuzzle
         public bool TryRemoveCellAt(Vector2 worldPosition, out RemovedCell removedCell)
         {
             removedCell = default;
-            if (beingShredded || collisionCells == null || collisionCellVisuals == null)
+            if (IsShredderInteractionLocked || collisionCells == null || collisionCellVisuals == null)
                 return false;
 
             if (!TryGetCellIndexAt(worldPosition, out int targetIndex))
@@ -2051,7 +2087,7 @@ namespace GravityPuzzle
         public bool TryRemoveCellWithHammer(Vector2 worldPosition, out RemovedCell removedCell)
         {
             removedCell = default;
-            if (beingShredded || collisionCells == null || collisionCellVisuals == null)
+            if (IsShredderInteractionLocked || collisionCells == null || collisionCellVisuals == null)
                 return false;
 
             if (!TryGetCellIndexAt(worldPosition, out int targetIndex))
@@ -2484,7 +2520,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryBeginShredderHandoff(bool reportDestructionImmediately = true)
         {
-            if (beingShredded)
+            if (IsShredderInteractionLocked)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
@@ -2494,21 +2530,20 @@ namespace GravityPuzzle
                     return false;
             }
 
-            return TryCompleteShredderHandoffAfterReservation(
+            return TryBeginShredderFeedAfterReservation(
                 reportDestructionImmediately,
                 keepReservationUntilDespawn: false);
         }
 
         /// <summary>
-        /// Completes one member's handoff after PrototypeBoard atomically
-        /// reserved an entire contact chain. Keeping the reservation until
-        /// despawn prevents grid gravity from competing with the temporary
-        /// physics island.
+        /// Locks a member in the short-lived physical support island after
+        /// the board atomically reserves the full support chain. This is not a
+        /// shred: the member remains visible and has no destruction/progress
+        /// side effects until it physically reaches the mouth gate.
         /// </summary>
-        public bool TryBeginShredderPhysicsIslandHandoff(
-            bool reportDestructionImmediately)
+        public bool TryEnterShredderPhysicsIslandHandoff()
         {
-            if (beingShredded)
+            if (IsShredderInteractionLocked)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
@@ -2519,20 +2554,65 @@ namespace GravityPuzzle
                 return false;
             }
 
-            return TryCompleteShredderHandoffAfterReservation(
-                reportDestructionImmediately,
+            // An island must start from a grid-synchronised pose. The planner
+            // rejects falling pieces, but cancel a stale visual handle here as
+            // a defensive last line before Unity physics owns this body.
+            GridFallView?.Cancel();
+            shredderHandoffMode = ShredderHandoffMode.PhysicsIsland;
+            keepShredderGridReservationUntilDespawn = true;
+            SetSelected(false);
+            return true;
+        }
+
+        /// <summary>
+        /// Cancels a transaction that reserved an island before any Dynamic
+        /// physics body or shred presentation was started. The board performs
+        /// the matching Reserved-to-Occupied rollback first; this method only
+        /// releases the local interaction lock.
+        /// </summary>
+        internal void CancelShredderPhysicsIslandHandoff()
+        {
+            if (!IsInShredderPhysicsHandoff)
+                return;
+
+            shredderHandoffMode = ShredderHandoffMode.None;
+            keepShredderGridReservationUntilDespawn = false;
+        }
+
+        /// <summary>
+        /// Promotes an already handoff-locked physical member to the actual
+        /// shredder feed. This is the sole point where destruction, progress,
+        /// clipping and cell-frontier release become eligible.
+        /// </summary>
+        public bool TryBeginShredderFeedFromPhysicsIsland()
+        {
+            if (!IsInShredderPhysicsHandoff)
+                return false;
+
+            return TryBeginShredderFeedAfterReservation(
+                reportDestructionImmediately: true,
                 keepReservationUntilDespawn: true);
         }
 
-        private bool TryCompleteShredderHandoffAfterReservation(
+        private bool TryBeginShredderFeedAfterReservation(
             bool reportDestructionImmediately,
             bool keepReservationUntilDespawn)
         {
+            if (IsBeingShredded)
+                return false;
+
+            ShredderHandoffMode previousMode = shredderHandoffMode;
+            if (previousMode != ShredderHandoffMode.None &&
+                previousMode != ShredderHandoffMode.PhysicsIsland)
+            {
+                return false;
+            }
+
             // The catch zone accepts only a settled anchor, but cancel any
             // stale presentation handle defensively before the feed becomes
             // the sole movement owner of the Rigidbody.
             GridFallView?.Cancel();
-            beingShredded = true;
+            shredderHandoffMode = ShredderHandoffMode.Feeding;
             keepShredderGridReservationUntilDespawn = keepReservationUntilDespawn;
             SetSelected(false);
 
@@ -2541,8 +2621,9 @@ namespace GravityPuzzle
             {
                 if (!board.TryGetPieceModel(this, out PieceModel model))
                 {
-                    beingShredded = false;
-                    keepShredderGridReservationUntilDespawn = false;
+                    shredderHandoffMode = previousMode;
+                    keepShredderGridReservationUntilDespawn =
+                        previousMode == ShredderHandoffMode.PhysicsIsland;
                     return false;
                 }
 
@@ -3316,11 +3397,50 @@ namespace GravityPuzzle
                 return;
 
             defaultSolidColliderMaterials = new PhysicsMaterial2D[solidColliders.Length];
+            defaultSolidColliderLayers = new int[solidColliders.Length];
             for (int index = 0; index < solidColliders.Length; index++)
             {
                 defaultSolidColliderMaterials[index] = solidColliders[index] != null
                     ? solidColliders[index].sharedMaterial
                     : null;
+                defaultSolidColliderLayers[index] = solidColliders[index] != null
+                    ? solidColliders[index].gameObject.layer
+                    : defaultPhysicsLayer;
+            }
+        }
+
+        private void ApplyShredderPhysicsLayer()
+        {
+            if (!ShredderPhysicsLayers.IsAvailable)
+                return;
+
+            gameObject.layer = ShredderPhysicsLayers.PieceLayer;
+            if (solidColliders == null)
+                return;
+
+            for (int index = 0; index < solidColliders.Length; index++)
+            {
+                if (solidColliders[index] != null)
+                    solidColliders[index].gameObject.layer = ShredderPhysicsLayers.PieceLayer;
+            }
+        }
+
+        private void RestoreDefaultPhysicsLayers()
+        {
+            gameObject.layer = defaultPhysicsLayer;
+            if (solidColliders == null)
+                return;
+
+            for (int index = 0; index < solidColliders.Length; index++)
+            {
+                Collider2D collider = solidColliders[index];
+                if (collider == null)
+                    continue;
+
+                collider.gameObject.layer = defaultSolidColliderLayers != null &&
+                                            index < defaultSolidColliderLayers.Length
+                    ? defaultSolidColliderLayers[index]
+                    : defaultPhysicsLayer;
             }
         }
     }

@@ -294,7 +294,16 @@ namespace GravityPuzzle.Presentation.Views
             }
 
             if (boosterType == BoosterRewardType.Hammer)
-                tutorialTargetIndicator?.Show(hammerCellCenter, hammerCellSize, tutorialDimSortingOrder + 1);
+            {
+                if (expectedPiece != null)
+                {
+                    expectedPiece.SetBoosterTargeted(true);
+                    expectedPiece.SetTutorialTargeted(true, tutorialDimSortingOrder + 2);
+                    ShowHammerCellOutlineForTutorial(expectedPiece, hammerCellCenter, hammerCellSize, tutorialDimSortingOrder + 2);
+                }
+                tutorialTargetIndicator?.Hide();
+                return;
+            }
         }
 
         private void SetVisible(bool visible)
@@ -357,7 +366,7 @@ namespace GravityPuzzle.Presentation.Views
                     if (child == null || child.gameObject == targetingUi)
                         continue;
 
-                    if (IsBoosterButtonHierarchy(child))
+                    if (IsBoosterButtonHierarchy(child) || IsTutorialElement(child))
                         continue;
 
                     CanvasGroup cg = child.GetComponent<CanvasGroup>();
@@ -438,7 +447,7 @@ namespace GravityPuzzle.Presentation.Views
                 if (child == null || child.gameObject == targetingUi)
                     continue;
 
-                if (IsBoosterButtonHierarchy(child))
+                if (IsBoosterButtonHierarchy(child) || IsTutorialElement(child))
                     continue;
 
                 CanvasGroup cg = child.GetComponent<CanvasGroup>();
@@ -448,6 +457,20 @@ namespace GravityPuzzle.Presentation.Views
 
             if (groups.Count > 0)
                 gameplayHudGroups = groups.ToArray();
+        }
+
+        private bool IsTutorialElement(Transform t)
+        {
+            if (t == null)
+                return false;
+
+            if (t.GetComponent<TutorialHandView>() != null || t.GetComponentInChildren<TutorialHandView>(true) != null)
+                return true;
+
+            if (t.name.IndexOf("Tutorial", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+
+            return false;
         }
 
         private bool IsBoosterButtonHierarchy(Transform t)
@@ -631,7 +654,7 @@ namespace GravityPuzzle.Presentation.Views
 
                 // Rocket explicitly breaks ice before carrying the underlying
                 // piece, so frozen pieces are valid rocket targets.
-                bool isValidTarget = !piece.IsBeingShredded;
+                bool isValidTarget = !piece.IsShredderInteractionLocked;
                 piece.SetBoosterTargeted(isValidTarget);
             }
         }
@@ -669,7 +692,7 @@ namespace GravityPuzzle.Presentation.Views
             for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
             {
                 PuzzlePiece piece = pieces[pieceIndex];
-                if (piece == null || piece.IsFrozen || piece.IsBeingShredded)
+                if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked)
                     continue;
 
                 targetableCellBuffer.Clear();
@@ -692,6 +715,30 @@ namespace GravityPuzzle.Presentation.Views
                     activeHammerOutlines.Add(outline);
                 }
             }
+        }
+
+        private void ShowHammerCellOutlineForTutorial(
+            PuzzlePiece piece,
+            Vector2 hammerCellCenter,
+            Vector2 hammerCellSize,
+            int sortingOrder)
+        {
+            if (availableHammerOutlines.Count == 0 || hammerCellOutlinePrefab == null)
+                return;
+
+            LineRenderer sourceOutline = piece != null ? piece.Outline : null;
+            Material material = sourceOutline != null ? sourceOutline.sharedMaterial : null;
+            if (material == null && hammerCellOutlinePrefab != null)
+            {
+                LineRenderer prefabLine = hammerCellOutlinePrefab.GetComponent<LineRenderer>();
+                if (prefabLine != null)
+                    material = prefabLine.sharedMaterial;
+            }
+
+            PuzzlePiece.TargetableCell cell = new PuzzlePiece.TargetableCell(hammerCellCenter, hammerCellSize);
+            HammerTargetCellOutlineView outline = availableHammerOutlines.Pop();
+            outline.Show(cell, material, sortingOrder);
+            activeHammerOutlines.Add(outline);
         }
 
         private void ReturnHammerCellOutlines()

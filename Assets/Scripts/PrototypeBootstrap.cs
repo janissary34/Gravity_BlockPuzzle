@@ -27,6 +27,11 @@ namespace GravityPuzzle
         private static Camera sceneCamera;
         private static bool sceneStartupHandled;
         private static readonly List<Collider2D> authoredObstacleColliders = new List<Collider2D>();
+        // Only static colliders whose occupied space is already represented by
+        // blocked grid cells may constrain a temporary shredder physics island.
+        // Pins remain outside this list because they have no blocked-grid model.
+        private static readonly List<Collider2D> physicsIslandGridBlockerColliders =
+            new List<Collider2D>();
         // This material gives casts/contact resolution a stable, non-bouncy surface.
         private static PhysicsMaterial2D puzzleContactMaterial;
 
@@ -63,6 +68,7 @@ namespace GravityPuzzle
             sceneCamera = camera;
             sceneStartupHandled = false;
             authoredObstacleColliders.Clear();
+            physicsIslandGridBlockerColliders.Clear();
         }
 
         internal static void StartAuthoredLevel(GravityLevelDefinition level)
@@ -75,6 +81,7 @@ namespace GravityPuzzle
         {
             EnsurePhysicsMaterials();
             EnsurePuzzleObstacleCollisionLayers();
+            ConfigurePhysicsIslandGridBlockers();
             Physics2D.velocityIterations = Mathf.Max(Physics2D.velocityIterations, 10);
             Physics2D.positionIterations = Mathf.Max(Physics2D.positionIterations, 10);
 
@@ -147,6 +154,40 @@ namespace GravityPuzzle
             }
         }
 
+        /// <summary>
+        /// Registers a static collider whose geometry is backed by the board's
+        /// blocked-cell model. GravityLevelRuntime calls this explicitly for
+        /// its composite topology boundary; CreateStaticBlock registers authored
+        /// grid obstacles on the same path.
+        /// </summary>
+        internal static void RegisterPhysicsIslandGridBlocker(Collider2D collider)
+        {
+            if (collider != null && !physicsIslandGridBlockerColliders.Contains(collider))
+                physicsIslandGridBlockerColliders.Add(collider);
+        }
+
+        private static void ConfigurePhysicsIslandGridBlockers()
+        {
+            int blockerLayer = LayerMask.NameToLayer(ShredderPhysicsLayers.BlockerLayerName);
+            if (blockerLayer < 0)
+            {
+                Debug.LogError(
+                    $"[ShredderPhysicsIsland] Required layer '{ShredderPhysicsLayers.BlockerLayerName}' is missing. " +
+                    "Grid-backed obstacle collision is unavailable for the temporary physics island.");
+                return;
+            }
+
+            for (int index = 0; index < physicsIslandGridBlockerColliders.Count; index++)
+            {
+                Collider2D collider = physicsIslandGridBlockerColliders[index];
+                if (collider == null)
+                    continue;
+
+                SetLayerRecursively(collider.gameObject, blockerLayer);
+                collider.sharedMaterial = puzzleContactMaterial;
+            }
+        }
+
         private static void SetLayerRecursively(GameObject target, int layer)
         {
             target.layer = layer;
@@ -203,6 +244,7 @@ namespace GravityPuzzle
             if (roundCorners)
                 RoundColliderCorners(collider, size);
             authoredObstacleColliders.Add(collider);
+            RegisterPhysicsIslandGridBlocker(collider);
         }
 
         internal static void CreateStaticCircle(string obstacleName, Vector2 position, float radius, Color color)
@@ -666,6 +708,11 @@ namespace GravityPuzzle
         [Tooltip("Win Panel içindeki, tamamlanan campaign levelini gösteren TMP metni.")]
         [SerializeField] private TMP_Text completedLevelText;
 
+        [Header("Win Audio")]
+        [Tooltip("Audio clip played when the win panel opens (e.g. Level Up Fanfare).")]
+        [SerializeField] private AudioClip winFanfareAudioClip;
+        [SerializeField] private AudioSource winAudioSource;
+
         [Header("Booster Reward Unlock UI")]
         [SerializeField] private NewBoosterPanelView newBoosterPanel;
         [SerializeField] private BoosterRewardConfig[] boosterRewardConfigs;
@@ -746,6 +793,24 @@ namespace GravityPuzzle
             revealAreaCoordinator?.Initialize(this, level);
         }
 
+        /// <summary>
+        /// Ensures all authored bomb pieces have their countdown visuals and overlay
+        /// rendered immediately on level open before any player action.
+        /// </summary>
+        public void RefreshInitialBombTimers()
+        {
+            IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                PuzzlePiece piece = pieces[i];
+                if (piece != null && piece.IsBomb && !piece.IsBombDefused &&
+                    !piece.IsShredderInteractionLocked)
+                {
+                    piece.RefreshBombState();
+                }
+            }
+        }
+
         private void Awake()
         {
             if (winPanel != null)
@@ -763,6 +828,12 @@ namespace GravityPuzzle
 
             if (nextLevelButton != null)
                 nextLevelButton.onClick.AddListener(LoadNextLevelFromWinPanel);
+            if (winAudioSource == null)
+                winAudioSource = GetComponent<AudioSource>();
+#if UNITY_EDITOR
+            if (winFanfareAudioClip == null)
+                winFanfareAudioClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/Level Up Fanfare.mp3");
+#endif
             boosterFirstUseTutorial = new BoosterFirstUseTutorialCoordinator(this);
             BoosterFirstUseTutorialRuntime.Configure(boosterFirstUseTutorial);
             if (newBoosterPanel != null)
@@ -899,10 +970,154 @@ namespace GravityPuzzle
             if (!TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
+            bool wasAlreadyReserved = BoardSnapshot.Grid.IsFullyReservedBy(model);
             if (!BoardSnapshot.Grid.TryReserve(model))
                 return false;
 
-            return TryTransitionPieceState(model, state);
+            if (TryTransitionPieceState(model, state))
+                return true;
+
+            // A rejected lifecycle transition must not leave an otherwise
+            // playable piece behind as a permanent Reserved grid footprint.
+            if (!wasAlreadyReserved)
+                BoardSnapshot.Grid.TryRestoreReservedPiece(model);
+            return false;
+        }
+
+        /// <summary>
+        /// Atomically reserves a root and its board-derived support chain for
+        /// the temporary shredder physics island. The grid remains authoritative:
+        /// every footprint stays Reserved while Unity physics renders only the
+        /// short contact reaction between these pieces.
+        /// </summary>
+        public bool TryReserveShredderPhysicsIsland(IReadOnlyList<PuzzlePiece> pieces)
+        {
+            if (BoardSnapshot == null || pieces == null || pieces.Count == 0)
+                return false;
+
+            List<PieceModel> models = new List<PieceModel>(pieces.Count);
+            HashSet<int> ids = new HashSet<int>();
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                PuzzlePiece piece = pieces[index];
+                if (piece == null ||
+                    !TryGetPieceModel(piece, out PieceModel model) ||
+                    !ids.Add(model.Id) ||
+                    !CanEnterPhysicsIsland(model.State))
+                {
+                    return false;
+                }
+
+                for (int cellIndex = 0; cellIndex < model.LocalCells.Count; cellIndex++)
+                {
+                    GridCoordinate coordinate = model.GetWorldCell(cellIndex);
+                    if (!BoardSnapshot.Grid.TryGetOccupantId(coordinate, out int occupantId) ||
+                        occupantId != model.Id)
+                    {
+                        return false;
+                    }
+                }
+
+                models.Add(model);
+            }
+
+            // Prevalidation above makes these mutations all-or-nothing for a
+            // stable board snapshot; no visual code is allowed between them.
+            for (int index = 0; index < models.Count; index++)
+            {
+                if (!BoardSnapshot.Grid.TryReserve(models[index]) ||
+                    !TryTransitionPieceState(models[index], PieceState.HandoffToPhysics))
+                {
+                    RollBackPartialShredderPhysicsIslandReservation(models);
+                    Debug.LogError(
+                        "[ShredderPhysicsIsland] Reservation transaction changed unexpectedly after prevalidation.",
+                        this);
+                    return false;
+                }
+            }
+
+            BoardOccupancyChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// Reverts a physics-island reservation before any member becomes a
+        /// Dynamic Rigidbody or starts shred presentation. This explicit
+        /// transaction recovery keeps board occupancy and lifecycle state in
+        /// sync if an invariant is broken after preflight.
+        /// </summary>
+        public bool TryAbortShredderPhysicsIsland(IReadOnlyList<PuzzlePiece> pieces)
+        {
+            if (BoardSnapshot == null || pieces == null || pieces.Count == 0)
+                return false;
+
+            List<PieceModel> models = new List<PieceModel>(pieces.Count);
+            HashSet<int> ids = new HashSet<int>();
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                PuzzlePiece piece = pieces[index];
+                if (piece == null ||
+                    !TryGetPieceModel(piece, out PieceModel model) ||
+                    !ids.Add(model.Id) ||
+                    model.State != PieceState.HandoffToPhysics ||
+                    !BoardSnapshot.Grid.IsFullyReservedBy(model))
+                {
+                    return false;
+                }
+
+                models.Add(model);
+            }
+
+            if (!RollBackPartialShredderPhysicsIslandReservation(models))
+                return false;
+
+            BoardOccupancyChanged?.Invoke();
+            PuzzleDragController.WakeUpGravity();
+            return true;
+        }
+
+        private bool RollBackPartialShredderPhysicsIslandReservation(
+            IReadOnlyList<PieceModel> models)
+        {
+            if (models == null)
+                return false;
+
+            for (int index = 0; index < models.Count; index++)
+            {
+                PieceModel model = models[index];
+                if (model == null)
+                    return false;
+
+                bool isReserved = BoardSnapshot.Grid.IsFullyReservedBy(model);
+                if (!isReserved && model.State != PieceState.Placed)
+                    return false;
+            }
+
+            for (int index = models.Count - 1; index >= 0; index--)
+            {
+                PieceModel model = models[index];
+                if (!BoardSnapshot.Grid.IsFullyReservedBy(model))
+                    continue;
+
+                if (!BoardSnapshot.Grid.TryRestoreReservedPiece(model))
+                    return false;
+
+                if (model.State == PieceState.HandoffToPhysics &&
+                    !TryTransitionPieceState(model, PieceState.Placed))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool CanEnterPhysicsIsland(PieceState state)
+        {
+            // A grid gravity move commits its target before its view tween
+            // reaches that target. Only a settled Placed model is therefore
+            // safe to mirror into a temporary Dynamic Rigidbody.
+            return state == PieceState.Placed;
         }
 
         /// <summary>
@@ -1548,7 +1763,7 @@ namespace GravityPuzzle
 
                 // A shredder feed owns its own completion and pooled release.
                 // The generic off-board cleanup must not race that coroutine.
-                if (piece.IsBeingShredded)
+                if (piece.IsShredderInteractionLocked)
                     continue;
 
                 if (piece.transform.position.y < removalHeight)
@@ -1660,7 +1875,8 @@ namespace GravityPuzzle
             for (int i = 0; i < pieces.Count; i++)
             {
                 PuzzlePiece piece = pieces[i];
-                if (piece == null || !piece.IsBomb || piece.IsBombDefused || piece.IsBeingShredded)
+                if (piece == null || !piece.IsBomb || piece.IsBombDefused ||
+                    piece.IsShredderInteractionLocked)
                     continue;
 
                 float remainingSeconds = piece.BombTimerSeconds - bombElapsedSeconds;
@@ -1723,6 +1939,25 @@ namespace GravityPuzzle
 
             winPanel.SetActive(true);
             RestartWinParticleEffects();
+            PlayWinFanfare();
+        }
+
+        private void PlayWinFanfare()
+        {
+            if (winFanfareAudioClip == null)
+                return;
+
+            if (winAudioSource == null)
+                winAudioSource = GetComponent<AudioSource>();
+
+            if (winAudioSource != null)
+                winAudioSource.PlayOneShot(winFanfareAudioClip);
+            else
+                AudioSource.PlayClipAtPoint(
+                    winFanfareAudioClip,
+                    PrototypeBootstrap.SceneCamera != null
+                        ? PrototypeBootstrap.SceneCamera.transform.position
+                        : Vector3.zero);
         }
 
         private bool nextLevelTransitionPending;

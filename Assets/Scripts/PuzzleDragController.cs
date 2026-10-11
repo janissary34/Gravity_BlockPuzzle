@@ -171,7 +171,7 @@ namespace GravityPuzzle
             // The shredder can capture a piece while it is still held. Drop the
             // drag controller's reference immediately so it cannot move the
             // piece again or queue a release snap during the shred animation.
-            if (selectedPiece != null && selectedPiece.IsBeingShredded)
+            if (selectedPiece != null && selectedPiece.IsShredderInteractionLocked)
             {
                 selectedPiece = null;
                 activeFingerId = -1;
@@ -208,7 +208,7 @@ namespace GravityPuzzle
             // The grid validates the complete fresh pointer delta before the
             // body pose changes, so this remains collision-safe without
             // inheriting FixedUpdate or Rigidbody interpolation latency.
-            if (selectedPiece != null && !selectedPiece.IsBeingShredded)
+            if (selectedPiece != null && !selectedPiece.IsShredderInteractionLocked)
                 TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent());
         }
 
@@ -284,7 +284,7 @@ namespace GravityPuzzle
             for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
             {
                 PuzzlePiece piece = pieces[pieceIndex];
-                if (piece == null || piece.IsBeingShredded || piece.IsFrozen)
+                if (piece == null || piece.IsShredderInteractionLocked || piece.IsFrozen)
                     continue;
 
                 for (int zoneIndex = 0; zoneIndex < zones.Count; zoneIndex++)
@@ -389,7 +389,7 @@ namespace GravityPuzzle
             for (int index = 0; index < retargetableGridFalls.Count; index++)
             {
                 PuzzlePiece piece = retargetableGridFalls[index];
-                if (piece.IsFrozen || piece.IsBeingShredded ||
+                if (piece.IsFrozen || piece.IsShredderInteractionLocked ||
                     !snapshot.TryGetPiece(piece.SourcePieceId, out PieceModel model) ||
                     model.State != PieceState.Falling ||
                     !snapshot.Grid.TryGetFallTarget(model, out GridCoordinate targetAnchor) ||
@@ -426,7 +426,7 @@ namespace GravityPuzzle
                 return false;
 
             PuzzlePiece piece = FindActivePiece(move.PieceId);
-            if (piece == null || piece.IsFrozen || piece.IsBeingShredded ||
+            if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
                 piece.GridFallView == null || !piece.GridFallView.CanPlay ||
                 !activeBoard.TryCommitGridGravityMove(move, out _))
             {
@@ -442,7 +442,7 @@ namespace GravityPuzzle
             PuzzlePiece piece = FindActivePiece(model.Id);
             return piece != null &&
                    !piece.IsFrozen &&
-                   !piece.IsBeingShredded &&
+                   !piece.IsShredderInteractionLocked &&
                    model.State == PieceState.Placed &&
                    (Instance == null ||
                     Instance.gridReleasePresentationPiece == null ||
@@ -467,7 +467,7 @@ namespace GravityPuzzle
 
             GridGravityMove move = pendingGridGravityMoves.Dequeue();
             PuzzlePiece piece = FindActivePiece(move.PieceId);
-            if (piece == null || piece.IsFrozen || piece.IsBeingShredded ||
+            if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
                 piece.GridFallView == null || !piece.GridFallView.CanPlay ||
                 !snapshot.TryGetPiece(move.PieceId, out PieceModel model))
             {
@@ -840,7 +840,7 @@ namespace GravityPuzzle
             {
                 Collider2D hit = selectionHits[i];
                 piece = hit.GetComponentInParent<PuzzlePiece>();
-                if (piece != null && !piece.IsFrozen && !piece.IsBeingShredded &&
+                if (piece != null && !piece.IsFrozen && !piece.IsShredderInteractionLocked &&
                     (piece.GridFallView == null || !piece.GridFallView.IsAnimating))
                     break;
                 piece = null;
@@ -854,7 +854,7 @@ namespace GravityPuzzle
                 {
                     Collider2D hit = selectionHits[i];
                     PuzzlePiece candidate = hit.GetComponentInParent<PuzzlePiece>();
-                    if (candidate == null || candidate.IsFrozen || candidate.IsBeingShredded ||
+                    if (candidate == null || candidate.IsFrozen || candidate.IsShredderInteractionLocked ||
                         (candidate.GridFallView != null && candidate.GridFallView.IsAnimating))
                         continue;
 

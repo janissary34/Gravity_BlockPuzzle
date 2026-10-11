@@ -7111,6 +7111,8 @@ MonoBehaviour:
   nextLevelButtonLabel: {fileID: 0}
   winPanelCoinAmountText: {fileID: 1511792431}
   completedLevelText: {fileID: 51213633}
+  winFanfareAudioClip: {fileID: 8300000, guid: 6c1965c0ce57145888c107feaf373868, type: 3}
+  winAudioSource: {fileID: 0}
   newBoosterPanel: {fileID: 1749646599}
   boosterRewardConfigs:
   - {fileID: 11400000, guid: b0d8f1e70966145a49123a9878dc7431, type: 2}

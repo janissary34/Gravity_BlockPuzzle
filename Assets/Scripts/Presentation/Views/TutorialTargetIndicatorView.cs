@@ -16,6 +16,8 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField, Min(.01f)] private float sightWidth = .055f;
         [Tooltip("Keeps a fine-grid Hammer target readable on phone screens without changing its actual tap area.")]
         [SerializeField, Min(.05f)] private float minimumVisualTargetSize = .72f;
+        [SerializeField] private bool showCrosshair = false;
+        [SerializeField] private bool showBrightnessOverlay = false;
 
         public void Show(Vector2 center, Vector2 size, int sortingOrder)
         {
@@ -26,9 +28,24 @@ namespace GravityPuzzle.Presentation.Views
             transform.position = new Vector3(center.x, center.y, 0f);
             transform.localScale = Vector3.one;
 
-            SetRenderer(brightnessOverlay, new Vector2(safeWidth, safeHeight), sortingOrder);
-            SetRenderer(horizontalSight, new Vector2(diameter, sightWidth), sortingOrder + 1);
-            SetRenderer(verticalSight, new Vector2(sightWidth, diameter), sortingOrder + 1);
+            if (showBrightnessOverlay)
+                SetRenderer(brightnessOverlay, new Vector2(safeWidth, safeHeight), sortingOrder);
+            else if (brightnessOverlay != null)
+                brightnessOverlay.enabled = false;
+
+            if (showCrosshair)
+            {
+                SetRenderer(horizontalSight, new Vector2(diameter, sightWidth), sortingOrder + 1);
+                SetRenderer(verticalSight, new Vector2(sightWidth, diameter), sortingOrder + 1);
+            }
+            else
+            {
+                if (horizontalSight != null)
+                    horizontalSight.enabled = false;
+                if (verticalSight != null)
+                    verticalSight.enabled = false;
+            }
+
             gameObject.SetActive(true);
         }
 

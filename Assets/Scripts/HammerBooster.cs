@@ -47,6 +47,11 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Fallback count when no BoosterButton is present.")]
         private int initialCount = 3;
 
+        [Header("Audio")]
+        [Tooltip("Audio clip played when hammer strikes a target (e.g. HitRock).")]
+        [SerializeField] private AudioClip impactAudioClip;
+        [SerializeField] private AudioSource impactAudioSource;
+
         // Testing override: the hammer can be used repeatedly without waiting
         // for a new level.
         public bool HasBeenUsedThisLevel => false;
@@ -99,6 +104,14 @@ namespace GravityPuzzle
                 }
             }
             SetSelectionGlowVisible(false);
+
+            if (impactAudioSource == null)
+                impactAudioSource = GetComponent<AudioSource>();
+
+#if UNITY_EDITOR
+            if (impactAudioClip == null)
+                impactAudioClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/HitRock 6095_59_1.wav");
+#endif
 
             remainingCount = initialCount;
             InitializeHammerVisualPool();
@@ -509,6 +522,8 @@ namespace GravityPuzzle
 
         private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)
         {
+            PlayImpactSound(impactPosition);
+
             if (TopologyEditingEnabled &&
                 piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
@@ -534,6 +549,20 @@ namespace GravityPuzzle
                         true)
                     .SetLink(camera.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
+        }
+
+        private void PlayImpactSound(Vector2 position)
+        {
+            if (impactAudioClip == null)
+                return;
+
+            if (impactAudioSource == null)
+                impactAudioSource = GetComponent<AudioSource>();
+
+            if (impactAudioSource != null)
+                impactAudioSource.PlayOneShot(impactAudioClip);
+            else
+                AudioSource.PlayClipAtPoint(impactAudioClip, position);
         }
 
         private static Vector3 GetViewportWorldPoint(Camera camera, float x, float y, float z)
@@ -653,7 +682,7 @@ namespace GravityPuzzle
             {
                 if (buttonCanvasGroup != null)
                 {
-                    buttonCanvasGroup.alpha = 0f;
+                    buttonCanvasGroup.alpha = 1f;
                     buttonCanvasGroup.interactable = false;
                     buttonCanvasGroup.blocksRaycasts = false;
                 }

@@ -62,8 +62,28 @@ namespace GravityPuzzle.Config
         [Min(1)] [SerializeField] private int wheelPoolCapacity = 16;
         [SerializeField] private ShredderCatchZone catchZonePrefab;
         [Min(1)] [SerializeField] private int catchZonePoolCapacity = 1;
+        [SerializeField] private ShredderPhysicsMouth physicsMouthPrefab;
+        [Min(1)] [SerializeField] private int physicsMouthPoolCapacity = 1;
         [SerializeField] private ShredderFeedMask feedMaskPrefab;
         [SerializeField] private PhysicsMaterial2D feedPhysicsMaterial;
+
+        [Header("Temporary Physics Island")]
+        [Tooltip("Lets only a contact-connected stack above a shredder feed use Unity physics briefly. Normal board gravity remains grid-owned.")]
+        [SerializeField] private bool enablePhysicsIsland = true;
+        [Tooltip("Gravity applied to a temporary dynamic support piece inside the shredder mouth.")]
+        [Range(0f, 5f)] [SerializeField] private float physicsIslandGravityScale = 1f;
+        [Tooltip("Angular damping used by a temporary dynamic support piece.")]
+        [Min(0f)] [SerializeField] private float physicsIslandAngularDrag = 4f;
+        [Tooltip("Distance above the cutter at which a dynamic island member is captured by the motorized feed.")]
+        [Range(0.01f, 1f)] [SerializeField] private float physicsIslandCaptureDistance = .12f;
+        [Tooltip("Observation window after which a physically blocked island emits one diagnostic warning. It never forces a member into the feed.")]
+        [Range(.1f, 10f)] [SerializeField] private float physicsIslandMaximumDuration = 3f;
+        [Tooltip("Extra horizontal room between the board edge and each invisible containment guide.")]
+        [Range(0f, 2f)] [SerializeField] private float physicsIslandGuideClearance = .25f;
+        [Tooltip("Thickness of each static containment guide.")]
+        [Range(.01f, 1f)] [SerializeField] private float physicsIslandGuideThickness = .12f;
+        [Tooltip("How far upward from the cutter the temporary containment guides extend.")]
+        [Range(.5f, 20f)] [SerializeField] private float physicsIslandGuideDepth = 6f;
 
         [Header("Feed Mask Presentation")]
         [Tooltip("World-space offset from the shredder line to the center of the pooled feed clipping mask.")]
@@ -96,13 +116,12 @@ namespace GravityPuzzle.Config
 
         [Header("Piece Feed")]
         [Min(0.01f)] [SerializeField] private float feedSpeed = 3.8f;
-        [Tooltip("Maximum number of pieces that have reached one shredder mouth and may feed concurrently.")]
-        [Min(1)] [SerializeField] private int feedQueueCapacity = 16;
         [Min(0f)] [SerializeField] private float tremorIntensity = .045f;
         [Min(0f)] [SerializeField] private float tremorFrequency = 55f;
         [FormerlySerializedAs("tremorVelocityMultiplier")]
         [Min(0f)] [SerializeField] private float feedShakeAmplitude = 2.5f;
         [Min(0f)] [SerializeField] private float feedAngularDrag = 6f;
+        [Tooltip("Angular speed range used by the kinematic feed's bounded physical tilt.")]
         [Min(0f)] [SerializeField] private float tumbleTorque = .35f;
         [Range(0f, 20f)] [SerializeField] private float maxFeedTiltAngle = 5f;
 
@@ -115,11 +134,21 @@ namespace GravityPuzzle.Config
         public int WheelPoolCapacity => wheelPoolCapacity;
         public ShredderCatchZone CatchZonePrefab => catchZonePrefab;
         public int CatchZonePoolCapacity => catchZonePoolCapacity;
+        public ShredderPhysicsMouth PhysicsMouthPrefab => physicsMouthPrefab;
+        public int PhysicsMouthPoolCapacity => physicsMouthPoolCapacity;
         public ShredderFeedMask FeedMaskPrefab => feedMaskPrefab;
         public float FeedMaskVerticalOffset => feedMaskVerticalOffset;
         public Vector2 FeedMaskScale => feedMaskScale;
         /// <summary>Authored low-friction material used only during a shredder feed.</summary>
         public PhysicsMaterial2D FeedPhysicsMaterial => feedPhysicsMaterial;
+        public bool EnablePhysicsIsland => enablePhysicsIsland;
+        public float PhysicsIslandGravityScale => physicsIslandGravityScale;
+        public float PhysicsIslandAngularDrag => physicsIslandAngularDrag;
+        public float PhysicsIslandCaptureDistance => physicsIslandCaptureDistance;
+        public float PhysicsIslandMaximumDuration => physicsIslandMaximumDuration;
+        public float PhysicsIslandGuideClearance => physicsIslandGuideClearance;
+        public float PhysicsIslandGuideThickness => physicsIslandGuideThickness;
+        public float PhysicsIslandGuideDepth => physicsIslandGuideDepth;
         public float WheelRotationSpeedMultiplier => wheelRotationSpeedMultiplier;
         public float CaptureApproachDistance => captureApproachDistance;
         public float WheelArtScale => wheelArtScale;
@@ -157,7 +186,6 @@ namespace GravityPuzzle.Config
         public float CutterEdgeSoftness => cutterEdgeSoftness;
         public float CutterNoiseFrequency => cutterNoiseFrequency;
         public float FeedSpeed => feedSpeed;
-        public int FeedQueueCapacity => feedQueueCapacity;
         public float TremorIntensity => tremorIntensity;
         public float TremorFrequency => tremorFrequency;
         public float FeedShakeAmplitude => feedShakeAmplitude;

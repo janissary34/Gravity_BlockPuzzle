@@ -14,11 +14,14 @@ namespace GravityPuzzle
         private BoxCollider2D trigger;
         public static IReadOnlyList<ShredderCatchZone> ActiveZones => activeZones;
         public float ShredY { get; private set; }
+        public float LeftX => leftX;
+        public float RightX => rightX;
         private float leftX;
         private float rightX;
         private float captureTopY;
         private float captureApproachDistance;
         private static readonly GridCoordinate Down = new GridCoordinate(0, -1);
+        private const float CorridorEpsilon = .0001f;
 
         private void Awake()
         {
@@ -46,14 +49,18 @@ namespace GravityPuzzle
         /// </summary>
         public bool ContainsCaptureFootprint(PuzzlePiece piece)
         {
-            if (piece == null || piece.IsBeingShredded)
+            if (piece == null || piece.IsShredderInteractionLocked)
                 return false;
 
             if (piece.GridFallView != null && piece.GridFallView.IsAnimating)
                 return false;
 
             Bounds bounds = piece.CollisionBounds;
-            if (bounds.max.x < leftX || bounds.min.x > rightX ||
+            // A partial overlap used to allow a neighbouring or over-wide
+            // piece to enter the feed even though some of its cells were
+            // outside the real cutter opening. A feed owns a complete body.
+            if (bounds.min.x < leftX - CorridorEpsilon ||
+                bounds.max.x > rightX + CorridorEpsilon ||
                 bounds.min.y > captureTopY + captureApproachDistance)
                 return false;
 
@@ -97,6 +104,56 @@ namespace GravityPuzzle
             }
 
             return hasShredderEntryCell;
+        }
+
+        /// <summary>
+        /// Preflights a grid-owned support-chain member before it is handed to
+        /// Unity physics. The full authored footprint must fit the real mouth
+        /// corridor; the visual body's transform is not used as rule authority.
+        /// </summary>
+        public bool ContainsPhysicsIslandFootprint(
+            PrototypeBoard board,
+            PieceModel model)
+        {
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (board == null || board.BoardSnapshot == null || model == null || level == null)
+                return false;
+
+            float halfFineCell = .5f / Mathf.Max(1, level.subdivisions);
+            for (int index = 0; index < model.LocalCells.Count; index++)
+            {
+                Vector2 center = GravityLevelGridCoordinates.FineCellToWorld(
+                    level,
+                    model.GetWorldCell(index));
+                if (center.x - halfFineCell < leftX - CorridorEpsilon ||
+                    center.x + halfFineCell > rightX + CorridorEpsilon)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The dynamic island may enter the feed only when the real collider
+        /// lies fully inside the mouth and intersects the authored capture band.
+        /// This is a coordinate gate, not a trigger callback.
+        /// </summary>
+        public bool ContainsPhysicsIslandCaptureFootprint(
+            PuzzlePiece piece,
+            float captureDistance)
+        {
+            if (piece == null || !piece.IsInShredderPhysicsHandoff)
+                return false;
+
+            Bounds bounds = piece.CollisionBounds;
+            float captureTop = ShredY + Mathf.Max(0f, captureDistance);
+            float escapeBottom = ShredY - Mathf.Max(0f, captureDistance);
+            return bounds.min.x >= leftX - CorridorEpsilon &&
+                   bounds.max.x <= rightX + CorridorEpsilon &&
+                   bounds.min.y <= captureTop &&
+                   bounds.max.y >= escapeBottom;
         }
 
         private bool IsInsideShredderLane(GravityLevelDefinition level, GridCoordinate coordinate)

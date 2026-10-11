@@ -235,8 +235,12 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 if (config == null || !Supports(config.BoosterType))
                     continue;
 
-                if (BoosterFirstUseTutorialProgress.GetState(config) !=
-                    BoosterFirstUseTutorialState.PendingRequiredUse)
+                BoosterFirstUseTutorialState persistedState = BoosterFirstUseTutorialProgress.GetState(config);
+                bool isPending = persistedState == BoosterFirstUseTutorialState.PendingRequiredUse;
+                bool isInitialLevelNotStarted = persistedState == BoosterFirstUseTutorialState.NotStarted &&
+                    config.PresentationLevel == GravityLevelRuntime.CurrentLevelNumber;
+
+                if (!isPending && !isInitialLevelNotStarted)
                     continue;
 
                 // A pending targeted lesson may survive a level restart or a
@@ -248,6 +252,13 @@ namespace GravityPuzzle.Gameplay.Tutorial
                     continue;
 
                 BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
+                if (isInitialLevelNotStarted)
+                {
+                    int currentCount = BoosterInventoryRuntime.Current.GetCount(config.BoosterType);
+                    if (currentCount < config.GrantAmount)
+                        BoosterInventoryRuntime.Current.Grant(config.BoosterType, config.GrantAmount - currentCount);
+                    BoosterFirstUseTutorialProgress.SetState(config, BoosterFirstUseTutorialState.PendingRequiredUse);
+                }
                 StartPending(config);
                 return;
             }

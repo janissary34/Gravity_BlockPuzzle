@@ -40,7 +40,7 @@ MonoBehaviour:
     visualId: 
     paletteId: Red
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
-    origin: {x: 16, y: 4}
+    origin: {x: 20, y: 4}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -157,7 +157,7 @@ MonoBehaviour:
     visualId: 
     paletteId: GreenLight
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
-    origin: {x: 20, y: 12}
+    origin: {x: 24, y: 12}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0

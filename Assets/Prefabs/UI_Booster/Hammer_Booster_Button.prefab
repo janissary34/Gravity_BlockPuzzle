@@ -585,6 +585,8 @@ MonoBehaviour:
   hammerSortingOrder: 100
   hammerHoverHeightOffset: 0.85
   initialCount: 3
+  impactAudioClip: {fileID: 8300000, guid: 004987eaeea064c77a8523b2e279b85c, type: 3}
+  impactAudioSource: {fileID: 0}
 --- !u!114 &7008116714117451324
 MonoBehaviour:
   m_ObjectHideFlags: 0

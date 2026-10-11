@@ -39,8 +39,18 @@ MonoBehaviour:
   wheelPoolCapacity: 32
   catchZonePrefab: {fileID: 1348796746018862400, guid: 38977ea9b7627446fb5feb095e7ae1d6, type: 3}
   catchZonePoolCapacity: 1
+  physicsMouthPrefab: {fileID: 4211400000000000004, guid: 9a26f3929b0e4e82bb42cc482ec6e622, type: 3}
+  physicsMouthPoolCapacity: 1
   feedMaskPrefab: {fileID: 7388911840364374829, guid: bce66f74d48164638a9b3d050d7db5c3, type: 3}
   feedPhysicsMaterial: {fileID: 6200000, guid: 9eb6102580d2f4baa88e6b9e2ee5187f, type: 2}
+  enablePhysicsIsland: 1
+  physicsIslandGravityScale: 1
+  physicsIslandAngularDrag: 4
+  physicsIslandCaptureDistance: 0.12
+  physicsIslandMaximumDuration: 3
+  physicsIslandGuideClearance: 0.25
+  physicsIslandGuideThickness: 0.12
+  physicsIslandGuideDepth: 6
   feedMaskVerticalOffset: -15
   feedMaskScale: {x: 60, y: 30}
   wheelRadiusMultiplier: 1
@@ -58,7 +68,6 @@ MonoBehaviour:
   voxelEjectionDirection: {x: 0, y: -1.2}
   voxelEjectionSpreadAngle: 40
   feedSpeed: 2
-  feedQueueCapacity: 16
   tremorIntensity: 0.045
   tremorFrequency: 55
   feedShakeAmplitude: 1

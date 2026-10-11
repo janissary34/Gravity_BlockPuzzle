@@ -24,8 +24,27 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Text component displaying count (Legacy UI Text). Auto-found if null.")]
         private Text countUiText;
 
-        [SerializeField, Tooltip("Optional CanvasGroup to hide the button when not introduced. Auto-found if null.")]
+        [SerializeField, Tooltip("Optional CanvasGroup to manage button appearance. Auto-found if null.")]
         private CanvasGroup buttonCanvasGroup;
+
+        [Header("Locked State UI")]
+        [SerializeField, Tooltip("GameObject enabled when the booster is locked (e.g. lock icon, lock overlay). Auto-found if null.")]
+        private GameObject lockRoot;
+
+        [SerializeField, Tooltip("Optional Image for lock icon. Auto-found if null.")]
+        private Image lockImage;
+
+        [SerializeField, Tooltip("Text displaying the level at which this booster unlocks. Auto-found if null.")]
+        private TextMeshProUGUI unlockLevelTmpText;
+
+        [SerializeField, Tooltip("Legacy Text displaying the unlock level. Auto-found if null.")]
+        private Text unlockLevelUiText;
+
+        [SerializeField, Tooltip("Format string for unlock level text (e.g. 'Level {0}' or 'Lv.{0}' or '{0}').")]
+        private string unlockLevelFormat = "Level {0}";
+
+        [SerializeField, Tooltip("Optional GameObject containing count badge/text to hide while locked. Auto-found if null.")]
+        private GameObject countRoot;
 
         [Header("Selection Glow")]
         [SerializeField, Tooltip("Scene/prefab authored glow shown when introduced or selected. Auto-found if null.")]
@@ -96,7 +115,8 @@ namespace GravityPuzzle
                     return true;
 
                 if (BoosterFirstUseTutorialRuntime.Gate != null &&
-                    BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(boosterType))
+                    (BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(boosterType) ||
+                     BoosterFirstUseTutorialRuntime.Gate.IsFirstUseActive(boosterType)))
                     return true;
 
                 int introLevel = GetIntroductionLevel(boosterType);
@@ -126,6 +146,7 @@ namespace GravityPuzzle
             hasBoosterType = TryResolveBoosterType(out boosterType);
             FindCountTextReferences();
             FindSelectionGlowReferences();
+            FindLockReferences();
         }
 
         private void OnEnable()
@@ -250,6 +271,10 @@ namespace GravityPuzzle
             {
                 timerBooster.PlayTimerBoosterSequence();
             }
+            else if (freezeTimerBooster != null)
+            {
+                freezeTimerBooster.ActivateFreezeBooster();
+            }
 
             onBoosterClicked?.Invoke();
         }
@@ -333,6 +358,80 @@ namespace GravityPuzzle
                 selectionGlow = child.gameObject;
         }
 
+        private void FindLockReferences()
+        {
+            if (lockRoot == null)
+            {
+                Transform child = transform.Find("Lock") ??
+                                  transform.Find("lock") ??
+                                  transform.Find("LockRoot") ??
+                                  transform.Find("lockRoot") ??
+                                  transform.Find("Lock_img") ??
+                                  transform.Find("lock_img") ??
+                                  transform.Find("LockedOverlay") ??
+                                  transform.Find("lockedOverlay");
+                if (child == null)
+                {
+                    for (int i = 0; i < transform.childCount; i++)
+                    {
+                        Transform candidate = transform.GetChild(i);
+                        if (candidate.name.IndexOf("lock", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            child = candidate;
+                            break;
+                        }
+                    }
+                }
+                if (child != null)
+                    lockRoot = child.gameObject;
+            }
+
+            if (lockImage == null && lockRoot != null)
+            {
+                lockImage = lockRoot.GetComponent<Image>() ?? lockRoot.GetComponentInChildren<Image>(true);
+            }
+
+            if (unlockLevelTmpText == null && unlockLevelUiText == null)
+            {
+                var allTmps = GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var tmp in allTmps)
+                {
+                    if (tmp != null && (tmp.gameObject.name.IndexOf("unlock", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                        tmp.gameObject.name.IndexOf("level", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                        tmp.gameObject.name.IndexOf("lock_txt", System.StringComparison.OrdinalIgnoreCase) >= 0))
+                    {
+                        unlockLevelTmpText = tmp;
+                        break;
+                    }
+                }
+
+                if (unlockLevelTmpText == null)
+                {
+                    var allTexts = GetComponentsInChildren<Text>(true);
+                    foreach (var txt in allTexts)
+                    {
+                        if (txt != null && (txt.gameObject.name.IndexOf("unlock", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                            txt.gameObject.name.IndexOf("level", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                            txt.gameObject.name.IndexOf("lock_txt", System.StringComparison.OrdinalIgnoreCase) >= 0))
+                        {
+                            unlockLevelUiText = txt;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (countRoot == null)
+            {
+                Transform banner = transform.Find("Banner_img") ??
+                                   transform.Find("banner_img") ??
+                                   transform.Find("CountBadge") ??
+                                   transform.Find("countBadge");
+                if (banner != null)
+                    countRoot = banner.gameObject;
+            }
+        }
+
         public void UpdateCountUI()
         {
             string str = RemainingCount.ToString();
@@ -359,9 +458,11 @@ namespace GravityPuzzle
             {
                 SetSelectionGlowVisible(false);
 
+                // Keep booster button visible on HUD from level 1.
+                // It remains non-interactable with locked visuals displayed.
                 if (buttonCanvasGroup != null)
                 {
-                    buttonCanvasGroup.alpha = 0f;
+                    buttonCanvasGroup.alpha = 1f;
                     buttonCanvasGroup.interactable = false;
                     buttonCanvasGroup.blocksRaycasts = false;
                 }
@@ -370,8 +471,55 @@ namespace GravityPuzzle
                 {
                     button.interactable = false;
                 }
+
+                int introLevel = GetIntroductionLevel(boosterType);
+                string unlockStr = string.Format(unlockLevelFormat, introLevel);
+
+                if (lockRoot != null)
+                    lockRoot.SetActive(true);
+                if (lockImage != null)
+                    lockImage.gameObject.SetActive(true);
+
+                if (unlockLevelTmpText != null)
+                {
+                    unlockLevelTmpText.text = unlockStr;
+                    unlockLevelTmpText.gameObject.SetActive(true);
+                }
+                if (unlockLevelUiText != null)
+                {
+                    unlockLevelUiText.text = unlockStr;
+                    unlockLevelUiText.gameObject.SetActive(true);
+                }
+
+                if (countRoot != null)
+                    countRoot.SetActive(false);
+                else
+                {
+                    if (countTmpText != null)
+                        countTmpText.gameObject.SetActive(false);
+                    if (countUiText != null)
+                        countUiText.gameObject.SetActive(false);
+                }
+
                 return;
             }
+
+            // Unlocked state: hide lock visuals, show count visuals.
+            if (lockRoot != null)
+                lockRoot.SetActive(false);
+            if (lockImage != null)
+                lockImage.gameObject.SetActive(false);
+            if (unlockLevelTmpText != null)
+                unlockLevelTmpText.gameObject.SetActive(false);
+            if (unlockLevelUiText != null)
+                unlockLevelUiText.gameObject.SetActive(false);
+
+            if (countRoot != null)
+                countRoot.SetActive(true);
+            if (countTmpText != null)
+                countTmpText.gameObject.SetActive(true);
+            if (countUiText != null)
+                countUiText.gameObject.SetActive(true);
 
             if (!HasUses)
             {

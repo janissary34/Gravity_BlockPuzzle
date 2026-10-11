@@ -296,6 +296,8 @@ namespace GravityPuzzle
             for (int pieceIndex = 0; pieceIndex < runtimePieces.Count; pieceIndex++)
                 boardState.TrySynchronizeRuntimePieceGeometry(runtimePieces[pieceIndex]);
 
+            boardState.RefreshInitialBombTimers();
+
             ValidateLevelSnapshotRuntimeState(level, boardState);
 
             boardState.InitializeRevealAreas(level);
@@ -1025,6 +1027,7 @@ namespace GravityPuzzle
             composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
             composite.generationType = CompositeCollider2D.GenerationType.Synchronous;
             composite.edgeRadius = 0f;
+            PrototypeBootstrap.RegisterPhysicsIslandGridBlocker(composite);
 
             HashSet<Vector2Int> blockingCells = new HashSet<Vector2Int>();
             Vector2Int[] neighbours =

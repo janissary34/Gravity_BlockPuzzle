@@ -58,6 +58,8 @@ namespace GravityPuzzle.Presentation.Views
 
         public static void ShowForButton(BoosterButton button)
         {
+            if (Active == null)
+                Active = Object.FindFirstObjectByType<TutorialHandView>(FindObjectsInactive.Include);
             if (Active == null || button == null || button.ButtonComponent == null)
                 return;
 
@@ -66,6 +68,8 @@ namespace GravityPuzzle.Presentation.Views
 
         public static void ShowForBoardTarget(Vector2 worldPosition, Camera gameplayCamera)
         {
+            if (Active == null)
+                Active = Object.FindFirstObjectByType<TutorialHandView>(FindObjectsInactive.Include);
             if (Active == null || gameplayCamera == null)
                 return;
 
@@ -163,7 +167,11 @@ namespace GravityPuzzle.Presentation.Views
             }
 
             if (handRoot != null)
+            {
+                if (visible)
+                    handRoot.SetAsLastSibling();
                 handRoot.gameObject.SetActive(visible);
+            }
         }
 
         private void SetEffectsVisible(bool visible)

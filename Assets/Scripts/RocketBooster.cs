@@ -347,7 +347,7 @@ namespace GravityPuzzle
         private bool TryStartRocketImpact(PuzzlePiece piece)
         {
             int currentUses = RemainingCount;
-            if (piece == null || piece.IsBeingShredded || launchInProgress || currentUses <= 0)
+            if (piece == null || piece.IsShredderInteractionLocked || launchInProgress || currentUses <= 0)
                 return false;
 
             // Prevent an in-flight grid presentation tween from continuing to
@@ -715,7 +715,7 @@ namespace GravityPuzzle
             {
                 if (buttonCanvasGroup != null)
                 {
-                    buttonCanvasGroup.alpha = 0f;
+                    buttonCanvasGroup.alpha = 1f;
                     buttonCanvasGroup.interactable = false;
                     buttonCanvasGroup.blocksRaycasts = false;
                 }
