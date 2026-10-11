@@ -44,9 +44,24 @@ namespace GravityPuzzle
         private bool hasBoosterType;
         private int lastDispatchFrame = -1;
 
-        public int RemainingCount => hasBoosterType
-            ? BoosterInventoryRuntime.Current.GetCount(boosterType)
-            : 0;
+        public int RemainingCount
+        {
+            get
+            {
+                if (!hasBoosterType)
+                    return 0;
+
+                int count = BoosterInventoryRuntime.Current.GetCount(boosterType);
+                if (count <= 0 && BoosterFirstUseTutorialRuntime.Gate != null &&
+                    (BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(boosterType) ||
+                     BoosterFirstUseTutorialRuntime.Gate.IsFirstUseActive(boosterType)))
+                {
+                    return 1;
+                }
+
+                return count;
+            }
+        }
         public bool HasUses => RemainingCount > 0;
         public Button ButtonComponent => button;
         public bool HasBoosterType => hasBoosterType;

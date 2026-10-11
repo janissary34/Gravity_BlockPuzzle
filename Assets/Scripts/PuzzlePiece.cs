@@ -187,6 +187,10 @@ namespace GravityPuzzle
         // changing piece state or normal booster targeting presentation.
         private bool isTutorialTargeted;
         private int tutorialTargetSortingOrder;
+        private SpriteRenderer[] tutorialTargetRenderers;
+        private int[] tutorialTargetOriginalSortingOrders;
+        private TextMeshPro[] tutorialTargetTexts;
+        private int[] tutorialTargetTextOriginalSortingOrders;
         private bool destructionReported;
         private bool iceReleaseAnimating;
         private int frozenUntilDestroyedCount;
@@ -367,6 +371,7 @@ namespace GravityPuzzle
             isSelected = false;
             isBoosterTargeted = false;
             isTutorialTargeted = false;
+            RestoreTutorialTargetSorting();
             ApplyOutlinePresentation();
             returnToPool = null;
             ClearIceVisuals();
@@ -940,12 +945,93 @@ namespace GravityPuzzle
         /// Raises the already-authored contour of one piece above a tutorial
         /// dimmer. This preserves the real, possibly irregular piece outline
         /// instead of drawing an approximate filled rectangle over it.
+        /// Also elevates child SpriteRenderers above the dimmer backdrop so the
+        /// piece appears colorful and unobstructed by the dark backdrop.
         /// </summary>
         public void SetTutorialTargeted(bool isTargeted, int sortingOrder = 0)
         {
+            if (isTutorialTargeted == isTargeted && tutorialTargetSortingOrder == sortingOrder)
+                return;
+
             isTutorialTargeted = isTargeted;
             tutorialTargetSortingOrder = sortingOrder;
+
+            if (isTargeted)
+                ApplyTutorialTargetSorting(sortingOrder);
+            else
+                RestoreTutorialTargetSorting();
+
             ApplyOutlinePresentation();
+        }
+
+        private void ApplyTutorialTargetSorting(int sortingOrder)
+        {
+            RestoreTutorialTargetSorting();
+
+            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            if (renderers != null && renderers.Length > 0)
+            {
+                tutorialTargetRenderers = renderers;
+                tutorialTargetOriginalSortingOrders = new int[renderers.Length];
+                int targetOrder = Mathf.Max(0, sortingOrder - 1);
+                for (int i = 0; i < renderers.Length; i++)
+                {
+                    SpriteRenderer r = renderers[i];
+                    if (r != null)
+                    {
+                        tutorialTargetOriginalSortingOrders[i] = r.sortingOrder;
+                        r.sortingOrder = targetOrder;
+                    }
+                }
+            }
+
+            TextMeshPro[] texts = GetComponentsInChildren<TextMeshPro>(true);
+            if (texts != null && texts.Length > 0)
+            {
+                tutorialTargetTexts = texts;
+                tutorialTargetTextOriginalSortingOrders = new int[texts.Length];
+                int targetOrder = Mathf.Max(0, sortingOrder - 1);
+                for (int i = 0; i < texts.Length; i++)
+                {
+                    TextMeshPro t = texts[i];
+                    if (t != null && t.renderer != null)
+                    {
+                        tutorialTargetTextOriginalSortingOrders[i] = t.renderer.sortingOrder;
+                        t.renderer.sortingOrder = targetOrder;
+                    }
+                }
+            }
+        }
+
+        private void RestoreTutorialTargetSorting()
+        {
+            if (tutorialTargetRenderers != null && tutorialTargetOriginalSortingOrders != null)
+            {
+                for (int i = 0; i < tutorialTargetRenderers.Length; i++)
+                {
+                    SpriteRenderer r = tutorialTargetRenderers[i];
+                    if (r != null && r.transform.IsChildOf(transform))
+                    {
+                        r.sortingOrder = tutorialTargetOriginalSortingOrders[i];
+                    }
+                }
+                tutorialTargetRenderers = null;
+                tutorialTargetOriginalSortingOrders = null;
+            }
+
+            if (tutorialTargetTexts != null && tutorialTargetTextOriginalSortingOrders != null)
+            {
+                for (int i = 0; i < tutorialTargetTexts.Length; i++)
+                {
+                    TextMeshPro t = tutorialTargetTexts[i];
+                    if (t != null && t.renderer != null && t.transform.IsChildOf(transform))
+                    {
+                        t.renderer.sortingOrder = tutorialTargetTextOriginalSortingOrders[i];
+                    }
+                }
+                tutorialTargetTexts = null;
+                tutorialTargetTextOriginalSortingOrders = null;
+            }
         }
 
         /// <summary>
@@ -1108,6 +1194,7 @@ namespace GravityPuzzle
             isSelected = false;
             isBoosterTargeted = false;
             isTutorialTargeted = false;
+            RestoreTutorialTargetSorting();
             IsFrozen = false;
             IsBomb = false;
             IsBombDefused = false;

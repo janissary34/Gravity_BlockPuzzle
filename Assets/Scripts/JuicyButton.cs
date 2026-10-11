@@ -16,21 +16,21 @@ namespace GravityPuzzle
         [SerializeField] private TweenConfig tweenConfig;
 
         [Header("Press Animation Settings")]
-        [SerializeField, Tooltip("Target scale multiplier when the pointer presses down (e.g. 0.9 for 90%).")]
-        private float pressScale = 0.9f;
+        [SerializeField, Tooltip("Target scale multiplier when the pointer presses down (e.g. 0.95 for 95%).")]
+        private float pressScale = 0.95f;
 
         [Header("Release & Bounce Settings")]
         [SerializeField, Tooltip("If true, uses DOPunchScale for an elastic click bounce; otherwise uses the shared TweenConfig release ease.")]
         private bool usePunchBounce = true;
 
         [SerializeField, Tooltip("Punch scale vector added to original scale on release/click.")]
-        private Vector3 punchScaleStrength = new Vector3(0.15f, 0.15f, 0f);
+        private Vector3 punchScaleStrength = new Vector3(0.08f, 0.08f, 0f);
 
         [SerializeField, Tooltip("Vibrato count for scale punch bounce.")]
-        private int punchVibrato = 10;
+        private int punchVibrato = 4;
 
         [SerializeField, Tooltip("Elasticity factor for scale punch bounce.")]
-        private float punchElasticity = 1f;
+        private float punchElasticity = 0.8f;
 
         [Header("Rotation Punch Settings")]
         [SerializeField, Tooltip("Add a subtle, random rotational punch on click/release.")]

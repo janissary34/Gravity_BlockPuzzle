@@ -1725,10 +1725,25 @@ namespace GravityPuzzle
             RestartWinParticleEffects();
         }
 
+        private bool nextLevelTransitionPending;
+
         private void LoadNextLevelFromWinPanel()
         {
-            if (!boardCleared)
+            if (!boardCleared || nextLevelTransitionPending)
                 return;
+
+            nextLevelTransitionPending = true;
+            if (nextLevelButton != null)
+                nextLevelButton.interactable = false;
+
+            StartCoroutine(ExecuteNextLevelFromWinPanel());
+        }
+
+        private IEnumerator ExecuteNextLevelFromWinPanel()
+        {
+            // Give a crisp, brief window (0.12s) so the button's click feedback
+            // completes naturally rather than killing tweens abruptly on frame 0.
+            yield return new WaitForSecondsRealtime(0.12f);
 
             if (TryQueueBoosterRewardForCompletedLevel())
             {
@@ -1739,6 +1754,7 @@ namespace GravityPuzzle
             }
 
             LoadNextLevelAfterWinPanel();
+            nextLevelTransitionPending = false;
         }
 
         private bool TryQueueBoosterRewardForCompletedLevel()
@@ -1779,6 +1795,13 @@ namespace GravityPuzzle
             {
                 awaitingBoosterRewardDismissal = true;
                 pendingBoosterRewardConfig = rewardConfig;
+
+                int grant = rewardConfig.GrantAmount > 0 ? rewardConfig.GrantAmount : 1;
+                if (BoosterInventoryRuntime.Current.GetCount(rewardConfig.BoosterType) < grant)
+                {
+                    BoosterInventoryRuntime.Current.Grant(rewardConfig.BoosterType, grant - BoosterInventoryRuntime.Current.GetCount(rewardConfig.BoosterType));
+                }
+
                 newBoosterPanel.Show(rewardConfig);
                 return;
             }

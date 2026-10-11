@@ -215,7 +215,9 @@ namespace GravityPuzzle.Gameplay.Tutorial
 
             if (persisted == BoosterFirstUseTutorialState.NotStarted)
             {
-                BoosterInventoryRuntime.Current.Grant(config.BoosterType, config.GrantAmount);
+                int currentCount = BoosterInventoryRuntime.Current.GetCount(config.BoosterType);
+                if (currentCount < config.GrantAmount)
+                    BoosterInventoryRuntime.Current.Grant(config.BoosterType, config.GrantAmount - currentCount);
                 BoosterFirstUseTutorialProgress.SetState(config, BoosterFirstUseTutorialState.PendingRequiredUse);
             }
 
