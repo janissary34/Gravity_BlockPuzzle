@@ -72,10 +72,25 @@ namespace GravityPuzzle
             rectTransform.offsetMax = Vector2.zero;
         }
 
+        private Canvas targetCanvas;
+
         private void CacheReferences()
         {
             if (rectTransform == null)
                 rectTransform = GetComponent<RectTransform>();
+            if (targetCanvas == null)
+                targetCanvas = GetComponent<Canvas>();
+            EnsureCanvasCamera();
+        }
+
+        private void EnsureCanvasCamera()
+        {
+            if (targetCanvas != null && targetCanvas.renderMode == RenderMode.ScreenSpaceCamera && targetCanvas.worldCamera == null)
+            {
+                Camera cam = PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main;
+                if (cam != null)
+                    targetCanvas.worldCamera = cam;
+            }
         }
     }
 }

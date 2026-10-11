@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using GravityPuzzle.Config;
 using GravityPuzzle.Infrastructure.Services;
+using GravityPuzzle.Gameplay.Tutorial;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -77,6 +78,8 @@ namespace GravityPuzzle.Presentation.Views
             new List<PuzzlePiece.TargetableCell>();
         private readonly List<HudGroupState> hiddenHudGroupStates =
             new List<HudGroupState>();
+        private readonly List<GameObjectState> hiddenHudObjectStates =
+            new List<GameObjectState>();
         private readonly List<HudGroupState> hiddenBoosterButtonStates =
             new List<HudGroupState>();
         private readonly struct HudGroupState
@@ -95,6 +98,18 @@ namespace GravityPuzzle.Presentation.Views
             }
         }
 
+        private readonly struct GameObjectState
+        {
+            public readonly GameObject Target;
+            public readonly bool WasActive;
+
+            public GameObjectState(GameObject target)
+            {
+                Target = target;
+                WasActive = target != null && target.activeSelf;
+            }
+        }
+
         private void Awake()
         {
             Active = this;
@@ -103,6 +118,8 @@ namespace GravityPuzzle.Presentation.Views
             if (boardDimRenderer != null)
                 boardDimRenderer.sortingOrder = tutorialDimSortingOrder;
             PrewarmHammerOutlines();
+            ResolveButtonGlowReferences();
+            ResolveSparkleReferences();
             SetVisible(false);
             RefreshBoosterAvailability();
         }
@@ -217,11 +234,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private void ShowInternal(Mode mode)
         {
-            // Normal targeting is an optional board action, not a modal
-            // tutorial. Keep the Scene_Tuna HUD visible so the armed button
-            // remains available for a second-press cancellation and the player
-            // retains timer, settings and inventory context. First-use lessons
-            // deliberately continue to use HideGameplayHud below.
+            HideGameplayHud();
             HideInactiveBoosterButtons(mode);
             SetVisible(true);
 
@@ -268,6 +281,7 @@ namespace GravityPuzzle.Presentation.Views
             Vector2 hammerCellCenter,
             Vector2 hammerCellSize)
         {
+            HideGameplayHud();
             ClearPieceHighlights();
             ReturnHammerCellOutlines();
             tutorialTargetIndicator?.Hide();
@@ -293,7 +307,17 @@ namespace GravityPuzzle.Presentation.Views
             if (!visible)
             {
                 tutorialTargetIndicator?.Hide();
-                SetSelectionGlow(null);
+                IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
+                bool hammerFirstUse = gate != null && gate.IsFirstUseActive(BoosterRewardType.Hammer);
+                bool rocketFirstUse = gate != null && gate.IsFirstUseActive(BoosterRewardType.Rocket);
+
+                if (!hammerFirstUse && !rocketFirstUse)
+                    SetSelectionGlow(null);
+                else
+                {
+                    bool? focus = rocketFirstUse ? true : hammerFirstUse ? false : (bool?)null;
+                    SetSelectionGlow(focus);
+                }
                 StopSelectionSparkles();
                 ClearPieceHighlights();
                 ReturnHammerCellOutlines();
@@ -304,19 +328,55 @@ namespace GravityPuzzle.Presentation.Views
 
         private void HideGameplayHud()
         {
-            if (hiddenHudGroupStates.Count > 0 || gameplayHudGroups == null)
+            if (hiddenHudGroupStates.Count > 0 || hiddenHudObjectStates.Count > 0)
                 return;
 
-            for (int index = 0; index < gameplayHudGroups.Length; index++)
-            {
-                CanvasGroup group = gameplayHudGroups[index];
-                if (group == null || ContainsHiddenHudGroup(group))
-                    continue;
+            ResolveGameplayHudReferences();
 
-                hiddenHudGroupStates.Add(new HudGroupState(group));
-                group.alpha = 0f;
-                group.interactable = false;
-                group.blocksRaycasts = false;
+            if (gameplayHudGroups != null)
+            {
+                for (int index = 0; index < gameplayHudGroups.Length; index++)
+                {
+                    CanvasGroup group = gameplayHudGroups[index];
+                    if (group == null || ContainsHiddenHudGroup(group))
+                        continue;
+
+                    hiddenHudGroupStates.Add(new HudGroupState(group));
+                    group.alpha = 0f;
+                    group.interactable = false;
+                    group.blocksRaycasts = false;
+                }
+            }
+
+            Transform uiRoot = targetingUi != null ? targetingUi.transform.parent : null;
+            if (uiRoot != null)
+            {
+                for (int i = 0; i < uiRoot.childCount; i++)
+                {
+                    Transform child = uiRoot.GetChild(i);
+                    if (child == null || child.gameObject == targetingUi)
+                        continue;
+
+                    if (IsBoosterButtonHierarchy(child))
+                        continue;
+
+                    CanvasGroup cg = child.GetComponent<CanvasGroup>();
+                    if (cg != null)
+                    {
+                        if (!ContainsHiddenHudGroup(cg))
+                        {
+                            hiddenHudGroupStates.Add(new HudGroupState(cg));
+                            cg.alpha = 0f;
+                            cg.interactable = false;
+                            cg.blocksRaycasts = false;
+                        }
+                    }
+                    else if (child.gameObject.activeSelf)
+                    {
+                        hiddenHudObjectStates.Add(new GameObjectState(child.gameObject));
+                        child.gameObject.SetActive(false);
+                    }
+                }
             }
         }
 
@@ -343,8 +403,77 @@ namespace GravityPuzzle.Presentation.Views
                 state.Group.interactable = state.Interactable;
                 state.Group.blocksRaycasts = state.BlocksRaycasts;
             }
-
             hiddenHudGroupStates.Clear();
+
+            for (int index = 0; index < hiddenHudObjectStates.Count; index++)
+            {
+                GameObjectState state = hiddenHudObjectStates[index];
+                if (state.Target == null)
+                    continue;
+
+                state.Target.SetActive(state.WasActive);
+            }
+            hiddenHudObjectStates.Clear();
+        }
+
+        private void ResolveGameplayHudReferences()
+        {
+            Transform uiRoot = targetingUi != null ? targetingUi.transform.parent : null;
+            if (uiRoot == null)
+                return;
+
+            List<CanvasGroup> groups = new List<CanvasGroup>();
+            if (gameplayHudGroups != null)
+            {
+                for (int i = 0; i < gameplayHudGroups.Length; i++)
+                {
+                    if (gameplayHudGroups[i] != null && !groups.Contains(gameplayHudGroups[i]))
+                        groups.Add(gameplayHudGroups[i]);
+                }
+            }
+
+            for (int i = 0; i < uiRoot.childCount; i++)
+            {
+                Transform child = uiRoot.GetChild(i);
+                if (child == null || child.gameObject == targetingUi)
+                    continue;
+
+                if (IsBoosterButtonHierarchy(child))
+                    continue;
+
+                CanvasGroup cg = child.GetComponent<CanvasGroup>();
+                if (cg != null && !groups.Contains(cg))
+                    groups.Add(cg);
+            }
+
+            if (groups.Count > 0)
+                gameplayHudGroups = groups.ToArray();
+        }
+
+        private bool IsBoosterButtonHierarchy(Transform t)
+        {
+            if (rocketBoosterButtonGroup != null && (t == rocketBoosterButtonGroup.transform || rocketBoosterButtonGroup.transform.IsChildOf(t)))
+                return true;
+            if (hammerBoosterButtonGroup != null && (t == hammerBoosterButtonGroup.transform || hammerBoosterButtonGroup.transform.IsChildOf(t)))
+                return true;
+            if (timerBoosterButtonGroup != null && (t == timerBoosterButtonGroup.transform || timerBoosterButtonGroup.transform.IsChildOf(t)))
+                return true;
+            return false;
+        }
+
+        private void ResolveSparkleReferences()
+        {
+            if (rocketButtonSparkles == null && rocketBoosterButtonGroup != null)
+                rocketButtonSparkles = rocketBoosterButtonGroup.GetComponentInChildren<ParticleSystem>(true);
+
+            if (hammerButtonSparkles == null && hammerBoosterButtonGroup != null)
+                hammerButtonSparkles = hammerBoosterButtonGroup.GetComponentInChildren<ParticleSystem>(true);
+
+            if (rocketIconSparkles == null && rocketIcon != null)
+                rocketIconSparkles = rocketIcon.GetComponentInChildren<ParticleSystem>(true);
+
+            if (hammerIconSparkles == null && hammerIcon != null)
+                hammerIconSparkles = hammerIcon.GetComponentInChildren<ParticleSystem>(true);
         }
 
         private void HideInactiveBoosterButtons(Mode mode)
@@ -429,12 +558,43 @@ namespace GravityPuzzle.Presentation.Views
             PlaySparkles(hammerIconSparkles);
         }
 
+        private void ResolveButtonGlowReferences()
+        {
+            if (rocketButtonGlow == null && rocketBoosterButtonGroup != null)
+            {
+                BoosterButton button = rocketBoosterButtonGroup.GetComponent<BoosterButton>();
+                if (button != null && button.SelectionGlow != null)
+                    rocketButtonGlow = button.SelectionGlow;
+            }
+
+            if (hammerButtonGlow == null && hammerBoosterButtonGroup != null)
+            {
+                BoosterButton button = hammerBoosterButtonGroup.GetComponent<BoosterButton>();
+                if (button != null && button.SelectionGlow != null)
+                    hammerButtonGlow = button.SelectionGlow;
+            }
+        }
+
         private void SetSelectionGlow(bool? isRocket)
         {
+            bool rocketActive = isRocket.HasValue && isRocket.Value;
+            bool hammerActive = isRocket.HasValue && !isRocket.Value;
+
             if (rocketButtonGlow != null)
-                rocketButtonGlow.SetActive(isRocket.HasValue && isRocket.Value);
+                rocketButtonGlow.SetActive(rocketActive);
+            if (rocketBoosterButtonGroup != null)
+            {
+                BoosterButton button = rocketBoosterButtonGroup.GetComponent<BoosterButton>();
+                button?.SetSelectionGlowVisible(rocketActive);
+            }
+
             if (hammerButtonGlow != null)
-                hammerButtonGlow.SetActive(isRocket.HasValue && !isRocket.Value);
+                hammerButtonGlow.SetActive(hammerActive);
+            if (hammerBoosterButtonGroup != null)
+            {
+                BoosterButton button = hammerBoosterButtonGroup.GetComponent<BoosterButton>();
+                button?.SetSelectionGlowVisible(hammerActive);
+            }
         }
 
         private void StopSelectionSparkles()

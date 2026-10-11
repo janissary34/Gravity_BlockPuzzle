@@ -919,6 +919,7 @@ namespace GravityPuzzle
                 return false;
 
             PuzzleDragController.WakeUpGravity();
+            BoardOccupancyChanged?.Invoke();
             return true;
         }
 

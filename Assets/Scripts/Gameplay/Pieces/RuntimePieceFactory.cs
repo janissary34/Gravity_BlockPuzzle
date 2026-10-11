@@ -338,11 +338,107 @@ namespace GravityPuzzle.Gameplay.Pieces
                 piece.ConfigureSolidCellPresentation(cellVisuals);
             piece.ConfigureRemainingProgress(remainingProgress);
             ConfigureOutlinePresentation(piece);
-            // A hammer split can create an arbitrary partial topology. Even
-            // when that topology happens to resemble an atlas silhouette, the
-            // original art's baked shadow/pivot no longer belongs to the
-            // retained cells. Keep every fragment on the modular artist-brick
-            // path; this makes its geometry, outline and shading deterministic.
+            ConfigureFragmentJoinedPresentation(piece, cells);
+        }
+
+        /// <summary>
+        /// Rebuilds the joined modular skin after a hammer edit. Fragment
+        /// colliders remain independent grid cells; only their presentation is
+        /// replaced by pooled horizontal/vertical bars so internal rounded caps
+        /// cannot create a visible seam between retained neighbours.
+        /// </summary>
+        private static void ConfigureFragmentJoinedPresentation(
+            PuzzlePiece piece,
+            IReadOnlyList<RuntimePieceFragmentCell> cells)
+        {
+            if (piece == null || pieceVisualConfig == null || cells == null || cells.Count < 2)
+                return;
+
+            Vector2 moduleSize = cells[0].Size;
+            if (moduleSize.x <= Mathf.Epsilon || moduleSize.y <= Mathf.Epsilon)
+                return;
+
+            Vector2 minimumEdge = cells[0].LocalPosition - moduleSize * .5f;
+            for (int index = 1; index < cells.Count; index++)
+            {
+                RuntimePieceFragmentCell cell = cells[index];
+                if (!Mathf.Approximately(cell.Size.x, moduleSize.x) ||
+                    !Mathf.Approximately(cell.Size.y, moduleSize.y))
+                    return;
+
+                minimumEdge = Vector2.Min(minimumEdge, cell.LocalPosition - moduleSize * .5f);
+            }
+
+            List<Vector2Int> moduleCells = new List<Vector2Int>(cells.Count);
+            HashSet<Vector2Int> occupied = new HashSet<Vector2Int>();
+            const float alignmentTolerance = .01f;
+            for (int index = 0; index < cells.Count; index++)
+            {
+                Vector2 relativeCenter = cells[index].LocalPosition - minimumEdge;
+                float moduleX = relativeCenter.x / moduleSize.x - .5f;
+                float moduleY = relativeCenter.y / moduleSize.y - .5f;
+                int x = Mathf.RoundToInt(moduleX);
+                int y = Mathf.RoundToInt(moduleY);
+                if (Mathf.Abs(moduleX - x) > alignmentTolerance ||
+                    Mathf.Abs(moduleY - y) > alignmentTolerance)
+                    return;
+
+                Vector2Int coordinate = new Vector2Int(x, y);
+                if (!occupied.Add(coordinate))
+                    return;
+
+                moduleCells.Add(coordinate);
+            }
+
+            string shapeKey = BuildNormalizedModuleShapeKey(occupied);
+            if (pieceVisualConfig.TryGetShapePresentation(
+                    shapeKey,
+                    out PieceShapeVisualDefinition visual,
+                    out PieceShapeVisualTransform transform) &&
+                visual.NormalSprite != null)
+            {
+                // Prefer the exact atlas silhouette when one exists. In
+                // particular, the authored 1x2/2x1 sprites preserve the right
+                // stud count; resizing the generated 1x3/3x1 bar would squeeze
+                // three modules of artwork into a two-module fragment.
+                piece.ConfigureWholePiecePresentation(
+                    visual.NormalSprite,
+                    visual.IceSprite,
+                    transform,
+                    false,
+                    false,
+                    visual.TileNormalSpriteToBounds);
+                return;
+            }
+
+            piece.ConfigureJoinedModulePresentation(
+                moduleCells,
+                pieceVisualConfig.NormalFallbackSprite,
+                pieceVisualConfig.HorizontalJoinedFallbackSprite,
+                pieceVisualConfig.VerticalJoinedFallbackSprite);
+        }
+
+        private static string BuildNormalizedModuleShapeKey(HashSet<Vector2Int> occupied)
+        {
+            int maximumX = 0;
+            int maximumY = 0;
+            foreach (Vector2Int cell in occupied)
+            {
+                maximumX = Mathf.Max(maximumX, cell.x);
+                maximumY = Mathf.Max(maximumY, cell.y);
+            }
+
+            List<string> keys = new List<string>(occupied.Count);
+            for (int y = 0; y <= maximumY; y++)
+            {
+                for (int x = 0; x <= maximumX; x++)
+                {
+                    if (occupied.Contains(new Vector2Int(x, y)))
+                        keys.Add(x + "," + y);
+                }
+            }
+
+            return string.Join(";", keys);
         }
 
         private static void ConfigureComposite(CompositeCollider2D pieceComposite)

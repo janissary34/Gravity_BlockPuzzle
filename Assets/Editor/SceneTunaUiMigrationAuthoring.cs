@@ -238,12 +238,24 @@ namespace GravityPuzzle.Editor
             SetReference(serialized, "hammerBoosterButtonGroup", hammer != null ? hammer.GetComponent<CanvasGroup>() : null);
             SetReference(serialized, "timerBoosterButtonGroup", freeze != null ? freeze.GetComponent<CanvasGroup>() : null);
 
-            // Keep the selected button clickable so a second press deliberately
-            // cancels targeting. Non-selected buttons are hidden by the
-            // presentation itself; the rest of the new HUD remains visible.
+            // Populate gameplayHudGroups with non-booster HUD groups so they are suppressed during targeting.
             SerializedProperty hudGroups = serialized.FindProperty("gameplayHudGroups");
             if (hudGroups != null)
-                hudGroups.arraySize = 0;
+            {
+                System.Collections.Generic.List<CanvasGroup> foundGroups = new System.Collections.Generic.List<CanvasGroup>();
+                for (int i = 0; i < uiRoot.childCount; i++)
+                {
+                    Transform child = uiRoot.GetChild(i);
+                    if (child.name == "Booster Targeting UI" || child.name == "Boosters" || child.name.StartsWith("New_Booster_Panel"))
+                        continue;
+                    CanvasGroup cg = child.GetComponent<CanvasGroup>();
+                    if (cg != null && !foundGroups.Contains(cg))
+                        foundGroups.Add(cg);
+                }
+                hudGroups.arraySize = foundGroups.Count;
+                for (int i = 0; i < foundGroups.Count; i++)
+                    hudGroups.GetArrayElementAtIndex(i).objectReferenceValue = foundGroups[i];
+            }
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(presentation);
         }

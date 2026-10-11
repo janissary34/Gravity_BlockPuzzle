@@ -31,6 +31,9 @@ namespace GravityPuzzle
         [Tooltip("Canvas group used to control the Hammer Booster button visibility and input.")]
         [SerializeField] private CanvasGroup buttonCanvasGroup;
 
+        [Tooltip("Scene-authored selection glow shown while Hammer is introduced or targeting.")]
+        [SerializeField] private GameObject selectionGlow;
+
         [Tooltip("Optional authored hammer visual prefab. Add BoosterVisualView to its root to enable pooled presentation.")]
         [SerializeField] private GameObject hammerVisualPrefab;
         [SerializeField] private TweenConfig tweenConfig;
@@ -59,6 +62,15 @@ namespace GravityPuzzle
         private BoosterVisualView hammerVisualPrefabView;
         private GameObjectPool<BoosterVisualView> hammerVisualPool;
 
+        public void SetSelectionGlowVisible(bool visible)
+        {
+            if (selectionGlow != null && selectionGlow.activeSelf != visible)
+                selectionGlow.SetActive(visible);
+
+            if (boosterButtonRef != null)
+                boosterButtonRef.SetSelectionGlowVisible(visible);
+        }
+
         private void Awake()
         {
             if (boosterButton == null)
@@ -73,6 +85,21 @@ namespace GravityPuzzle
             }
 
             boosterButtonRef = GetComponent<BoosterButton>();
+            if (selectionGlow == null)
+            {
+                if (boosterButtonRef != null && boosterButtonRef.SelectionGlow != null)
+                    selectionGlow = boosterButtonRef.SelectionGlow;
+                else
+                {
+                    Transform glowChild = transform.Find("HammerSelectionGlow")
+                        ?? transform.Find("selectionGlow")
+                        ?? transform.Find("SelectionGlow");
+                    if (glowChild != null)
+                        selectionGlow = glowChild.gameObject;
+                }
+            }
+            SetSelectionGlowVisible(false);
+
             remainingCount = initialCount;
             InitializeHammerVisualPool();
         }
@@ -112,6 +139,20 @@ namespace GravityPuzzle
             if (activeBooster == this)
                 ProcessTargetInput();
 
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
+            bool isFirstUse = tutorialGate != null &&
+                (tutorialGate.IsBoosterHighlighted(BoosterRewardType.Hammer) ||
+                 tutorialGate.IsFirstUseActive(BoosterRewardType.Hammer));
+
+            if (isFirstUse)
+            {
+                SetSelectionGlowVisible(true);
+            }
+            else if (activeBooster != this)
+            {
+                SetSelectionGlowVisible(false);
+            }
+
             RefreshButtonState();
         }
 
@@ -125,6 +166,7 @@ namespace GravityPuzzle
             if (boundBoard != null)
                 boundBoard.GameStateChanged -= HandleGameStateChanged;
 
+            SetSelectionGlowVisible(false);
             CancelHammerSelection();
         }
 
@@ -174,6 +216,7 @@ namespace GravityPuzzle
             }
 
             activeBooster = this;
+            SetSelectionGlowVisible(true);
             BoosterTargetingPresentation.Show(BoosterTargetingPresentation.Mode.Hammer);
             tutorialGate?.NotifyBoosterActivated(BoosterRewardType.Hammer);
             Debug.Log("[HammerBooster] Targeting enabled.", this);
@@ -189,6 +232,12 @@ namespace GravityPuzzle
 
             if (ownedSelection)
                 BoosterTargetingPresentation.Hide();
+
+            IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
+            bool isFirstUseActive = gate != null && gate.IsFirstUseActive(BoosterRewardType.Hammer);
+            if (!isFirstUseActive)
+                SetSelectionGlowVisible(false);
+
             RefreshButtonState();
         }
 
@@ -452,7 +501,10 @@ namespace GravityPuzzle
             }
 
             if (consumed)
+            {
+                SetSelectionGlowVisible(false);
                 BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.Hammer);
+            }
         }
 
         private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)

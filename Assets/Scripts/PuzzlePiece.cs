@@ -360,6 +360,10 @@ namespace GravityPuzzle
 
         public void OnDespawn()
         {
+            // Pool instances must not expose their previous shredder
+            // presentation state between lifetimes. Gameplay lifecycle is
+            // owned by the board, never by this presentation flag.
+            beingShredded = false;
             isSelected = false;
             isBoosterTargeted = false;
             isTutorialTargeted = false;
@@ -1563,9 +1567,14 @@ namespace GravityPuzzle
             }
 
             if (shredderCellsReadyToRelease.Count > 0)
+            {
+                // Releasing a reserved row wakes the grid gravity owner. The
+                // grid then selects and commits the next legal fall before
+                // presentation moves any intact piece.
                 PrototypeBoard.Active?.TryReleaseShredderGridCells(
                     this,
                     shredderCellsReadyToRelease);
+            }
         }
 
         private void ConfigureCollisionGeometry(
@@ -2346,8 +2355,8 @@ namespace GravityPuzzle
             if (beingShredded)
                 return false;
 
-            // A grid fall tween can still be in flight when the coordinate
-            // catch zone captures this piece. Stop it before the feed becomes
+            // The catch zone accepts only a settled anchor, but cancel any
+            // stale presentation handle defensively before the feed becomes
             // the sole movement owner of the Rigidbody.
             GridFallView?.Cancel();
             beingShredded = true;
@@ -2367,9 +2376,8 @@ namespace GravityPuzzle
                 board.TryLockFinalShredderOutcome(this);
 
                 // The reservation replaces this piece's occupied footprint as
-                // soon as the feed takes ownership. Replan immediately so a
-                // piece above can start its legal approach to the shrinking
-                // reservation without waiting for a later feed-frame release.
+                // soon as the feed takes ownership. Replan from the grid so a
+                // piece above moves only when the cutter releases a legal row.
                 PuzzleDragController.WakeUpGravity();
             }
 

@@ -401,6 +401,15 @@ namespace GravityPuzzle
 
             ApplyFreezeVfxSorting();
 
+            if (selectionGlow == null)
+            {
+                Transform glowChild = transform.Find("TimerSelectionGlow")
+                    ?? transform.Find("selectionGlow")
+                    ?? transform.Find("SelectionGlow");
+                if (glowChild != null)
+                    selectionGlow = glowChild.gameObject;
+            }
+
             SetUrgencyPresentationVisible(false, true);
             SetTimerFreezeGlowVisible(false, true);
             SetTimerImpactImageVisible(false);
@@ -495,8 +504,12 @@ namespace GravityPuzzle
             RefreshButtonInteractable();
 
             IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
-            if (tutorialGate != null && tutorialGate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer))
+            if (tutorialGate != null &&
+                (tutorialGate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer) ||
+                 tutorialGate.IsFirstUseActive(BoosterRewardType.FreezeTimer)))
+            {
                 SetSelectionGlowVisible(true);
+            }
         }
 
         private void RefreshButtonInteractable()
@@ -797,6 +810,8 @@ namespace GravityPuzzle
         {
             if (selectionGlow != null)
                 selectionGlow.SetActive(visible);
+            if (boosterButtonRef != null)
+                boosterButtonRef.SetSelectionGlowVisible(visible);
         }
 
         private Vector3 GetTargetWorldPosition(Transform target, Transform mover)

@@ -100,10 +100,8 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Starts the coordinate-authorized handoff into the shredder. The
-        /// catch zone is both the selected mouth and the authoritative
-        /// proximity check: a piece cannot join a feed merely because another
-        /// piece in the same lane is already being shredded.
+        /// Starts the coordinate-authorized handoff for a piece that has
+        /// reached the shredder mouth itself.
         /// </summary>
         public bool TryCapturePiece(PuzzlePiece piece, ShredderCatchZone zone)
         {
@@ -215,9 +213,6 @@ namespace GravityPuzzle
             SpriteRenderer[] pieceRenderers = piece.ConfiguredShredderRenderers ?? EmptyRenderers;
             piece.BeginShredderPresentation(pieceRenderers, shredderY, shredderConfig);
             piece.ApplyShredderPresentationClipping();
-            // The lead piece stays in front. Followers preserve their vertical
-            // spacing and use one shared rear layer, so a deep valid queue
-            // cannot disappear behind the board background.
             piece.SetShredderPresentationDepth(feedDepth > 0 ? -10 : 0);
             // Always use the authored PuzzlePiece colour for debris and UI voxels.
             // Renderer colours can be temporarily changed by selection or masking.
@@ -259,10 +254,10 @@ namespace GravityPuzzle
             int flightsPerBlock = Mathf.Clamp(BaseFlightsPerBlock * multiplier, 20, 60);
             int progressFlightCount = blockCount * flightsPerBlock;
 
+            float feedSpeed = shredderConfig != null ? shredderConfig.FeedSpeed : 3.8f;
             float maxTime = 6.0f;
             float elapsed = 0f;
             float previousShakeOffsetX = 0f;
-            float feedSpeed = shredderConfig != null ? shredderConfig.FeedSpeed : 3.8f;
             float tremorIntensity = shredderConfig != null ? shredderConfig.TremorIntensity : .045f;
             float tremorFrequency = shredderConfig != null ? shredderConfig.TremorFrequency : 55f;
             float shakeAmplitude = shredderConfig != null ? shredderConfig.FeedShakeAmplitude : 2.5f;
@@ -298,8 +293,7 @@ namespace GravityPuzzle
                 if (rb != null)
                 {
                     // Apply continuous high-frequency horizontal tremor
-                    float shakeOffsetX = Mathf.Sin(Time.time * tremorFrequency) *
-                                         tremorIntensity * shakeAmplitude;
+                    float shakeOffsetX = Mathf.Sin(Time.time * tremorFrequency) * tremorIntensity * shakeAmplitude;
                     // The feed is kinematic, so commit its position here rather
                     // than waiting for a later physics step to integrate a
                     // velocity.  The grid release immediately below must see

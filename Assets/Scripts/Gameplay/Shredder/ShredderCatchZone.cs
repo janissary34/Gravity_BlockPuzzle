@@ -63,6 +63,14 @@ namespace GravityPuzzle
                 !board.TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
+            // A gravity destination is committed before its tween reaches the
+            // destination. Capture only a settled board piece (or a piece the
+            // player is actively dragging), never that in-flight projection.
+            // This prevents the cutter from taking ownership of a body whose
+            // visual position and authoritative anchor have not converged.
+            if (model.State != PieceState.Placed && model.State != PieceState.Dragging)
+                return false;
+
             bool hasShredderEntryCell = false;
             for (int index = 0; index < model.LocalCells.Count; index++)
             {

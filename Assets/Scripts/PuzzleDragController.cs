@@ -479,6 +479,7 @@ namespace GravityPuzzle
                 move.ToAnchor.X - model.PivotOffset.X,
                 move.ToAnchor.Y - model.PivotOffset.Y);
             PrepareKinematicBody(piece.Body);
+
             // The grid owns both endpoints of a gravity move. A release tween,
             // Rigidbody interpolation, or a pooled body's previous pose can
             // leave the visual root fractionally (or even one fine cell)

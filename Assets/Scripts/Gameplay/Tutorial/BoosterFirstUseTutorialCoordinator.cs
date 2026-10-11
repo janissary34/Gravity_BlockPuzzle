@@ -24,6 +24,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
     {
         bool BlocksBoardDrag { get; }
         bool IsBoosterHighlighted(BoosterRewardType boosterType);
+        bool IsFirstUseActive(BoosterRewardType boosterType);
         bool AllowsBoosterActivation(BoosterRewardType boosterType);
         bool AllowsTarget(BoosterRewardType boosterType, BoardTargetResolver.Target target);
         void NotifyBoosterActivated(BoosterRewardType boosterType);
@@ -161,6 +162,14 @@ namespace GravityPuzzle.Gameplay.Tutorial
                    activeConfig != null && activeConfig.BoosterType == boosterType;
         }
 
+        public bool IsFirstUseActive(BoosterRewardType boosterType)
+        {
+            return activeConfig != null &&
+                   activeConfig.BoosterType == boosterType &&
+                   state != BoosterFirstUseTutorialState.Completed &&
+                   state != BoosterFirstUseTutorialState.NotStarted;
+        }
+
         public static bool Supports(BoosterRewardType boosterType)
         {
             return boosterType == BoosterRewardType.Rocket ||
@@ -174,6 +183,10 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 return;
 
             buttons[button.BoosterType] = button;
+            if (IsFirstUseActive(button.BoosterType))
+            {
+                button.SetSelectionGlowVisible(true);
+            }
             if (state == BoosterFirstUseTutorialState.AwaitingBoosterTap &&
                 activeConfig != null && activeConfig.BoosterType == button.BoosterType)
             {
@@ -290,6 +303,8 @@ namespace GravityPuzzle.Gameplay.Tutorial
             state = BoosterFirstUseTutorialState.Completed;
             BoosterFirstUseTutorialProgress.SetState(activeConfig, state);
             TutorialHandView.Hide();
+            if (buttons.TryGetValue(boosterType, out BoosterButton button))
+                button.SetSelectionGlowVisible(false);
             if (boosterType != BoosterRewardType.FreezeTimer)
                 board?.ResumeTimer(this);
             activeConfig = null;
@@ -326,7 +341,10 @@ namespace GravityPuzzle.Gameplay.Tutorial
             BoosterTargetingPresentation.ShowFirstUseBoosterFocus(config.BoosterType);
 
             if (buttons.TryGetValue(config.BoosterType, out BoosterButton button))
+            {
+                button.SetSelectionGlowVisible(true);
                 TutorialHandView.ShowForButton(button);
+            }
         }
 
         private bool IsExpectedPiece(PuzzlePiece piece)

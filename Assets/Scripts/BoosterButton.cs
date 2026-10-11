@@ -27,6 +27,10 @@ namespace GravityPuzzle
         [SerializeField, Tooltip("Optional CanvasGroup to hide the button when not introduced. Auto-found if null.")]
         private CanvasGroup buttonCanvasGroup;
 
+        [Header("Selection Glow")]
+        [SerializeField, Tooltip("Scene/prefab authored glow shown when introduced or selected. Auto-found if null.")]
+        private GameObject selectionGlow;
+
         [Header("Events")]
         [Tooltip("Event fired when the booster button is clicked and has remaining uses.")]
         public UnityEvent onBoosterClicked;
@@ -47,6 +51,13 @@ namespace GravityPuzzle
         public Button ButtonComponent => button;
         public bool HasBoosterType => hasBoosterType;
         public BoosterRewardType BoosterType => boosterType;
+        public GameObject SelectionGlow => selectionGlow;
+
+        public void SetSelectionGlowVisible(bool visible)
+        {
+            if (selectionGlow != null && selectionGlow.activeSelf != visible)
+                selectionGlow.SetActive(visible);
+        }
 
         public static int GetIntroductionLevel(BoosterRewardType type)
         {
@@ -99,6 +110,7 @@ namespace GravityPuzzle
             freezeTimerBooster = GetComponent<FreezeTimerBooster>();
             hasBoosterType = TryResolveBoosterType(out boosterType);
             FindCountTextReferences();
+            FindSelectionGlowReferences();
         }
 
         private void OnEnable()
@@ -117,6 +129,10 @@ namespace GravityPuzzle
             if (hasBoosterType)
                 BoosterInventoryRuntime.Current.CountChanged += HandleInventoryCountChanged;
             BoosterFirstUseTutorialRuntime.RegisterButton(this);
+            IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
+            bool shouldGlow = hasBoosterType && gate != null &&
+                (gate.IsBoosterHighlighted(boosterType) || gate.IsFirstUseActive(boosterType));
+            SetSelectionGlowVisible(shouldGlow);
             UpdateCountUI();
             RefreshButtonState();
         }
@@ -274,6 +290,34 @@ namespace GravityPuzzle
             else if (allTexts.Length > 0) countUiText = allTexts[0];
         }
 
+        private void FindSelectionGlowReferences()
+        {
+            if (selectionGlow != null)
+                return;
+
+            Transform child = transform.Find("HammerSelectionGlow")
+                ?? transform.Find("RocketSelectionGlow")
+                ?? transform.Find("TimerSelectionGlow")
+                ?? transform.Find("selectionGlow")
+                ?? transform.Find("SelectionGlow");
+
+            if (child == null)
+            {
+                for (int i = 0; i < transform.childCount; i++)
+                {
+                    Transform candidate = transform.GetChild(i);
+                    if (candidate.name.IndexOf("glow", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        child = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (child != null)
+                selectionGlow = child.gameObject;
+        }
+
         public void UpdateCountUI()
         {
             string str = RemainingCount.ToString();
@@ -298,6 +342,8 @@ namespace GravityPuzzle
 
             if (!isIntroduced)
             {
+                SetSelectionGlowVisible(false);
+
                 if (buttonCanvasGroup != null)
                 {
                     buttonCanvasGroup.alpha = 0f;
@@ -310,6 +356,11 @@ namespace GravityPuzzle
                     button.interactable = false;
                 }
                 return;
+            }
+
+            if (!HasUses)
+            {
+                SetSelectionGlowVisible(false);
             }
 
             if (buttonCanvasGroup != null)

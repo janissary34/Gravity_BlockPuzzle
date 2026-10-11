@@ -34,6 +34,9 @@ namespace GravityPuzzle
         [Tooltip("Canvas group used to control the Rocket Booster button visibility and input.")]
         [SerializeField] private CanvasGroup buttonCanvasGroup;
 
+        [Tooltip("Scene-authored selection glow shown while Rocket is introduced or targeting.")]
+        [SerializeField] private GameObject selectionGlow;
+
         [Tooltip("Text component displaying remaining booster count (TextMeshPro).")]
         [SerializeField] private TextMeshProUGUI countTmpText;
 
@@ -70,10 +73,20 @@ namespace GravityPuzzle
             ? boosterButtonRef.RemainingCount
             : BoosterInventoryRuntime.Current.GetCount(BoosterRewardType.Rocket);
 
+        public void SetSelectionGlowVisible(bool visible)
+        {
+            if (selectionGlow != null && selectionGlow.activeSelf != visible)
+                selectionGlow.SetActive(visible);
+
+            if (boosterButtonRef != null)
+                boosterButtonRef.SetSelectionGlowVisible(visible);
+        }
+
         private void Awake()
         {
             remainingCount = initialCount;
             EnsureReferences();
+            SetSelectionGlowVisible(false);
             InitializeRocketVisualPool();
         }
 
@@ -119,6 +132,20 @@ namespace GravityPuzzle
                 ProcessTargetInput();
             }
 
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
+            bool isFirstUse = tutorialGate != null &&
+                (tutorialGate.IsBoosterHighlighted(BoosterRewardType.Rocket) ||
+                 tutorialGate.IsFirstUseActive(BoosterRewardType.Rocket));
+
+            if (isFirstUse)
+            {
+                SetSelectionGlowVisible(true);
+            }
+            else if (activeBooster != this)
+            {
+                SetSelectionGlowVisible(false);
+            }
+
             RefreshButtonState();
         }
 
@@ -138,6 +165,7 @@ namespace GravityPuzzle
             if (boundBoard != null)
                 boundBoard.GameStateChanged -= HandleGameStateChanged;
 
+            SetSelectionGlowVisible(false);
             CancelRocketSelection();
         }
 
@@ -184,6 +212,7 @@ namespace GravityPuzzle
             }
 
             activeBooster = this;
+            SetSelectionGlowVisible(true);
             BoosterTargetingPresentation.Show(BoosterTargetingPresentation.Mode.Rocket);
             tutorialGate?.NotifyBoosterActivated(BoosterRewardType.Rocket);
             Debug.Log($"[RocketBooster] Targeting enabled. remainingUses={currentUses}.", this);
@@ -200,6 +229,12 @@ namespace GravityPuzzle
 
             if (ownedSelection)
                 BoosterTargetingPresentation.Hide();
+
+            IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
+            bool isFirstUseActive = gate != null && gate.IsFirstUseActive(BoosterRewardType.Rocket);
+            if (!isFirstUseActive)
+                SetSelectionGlowVisible(false);
+
             RefreshButtonState();
         }
 
@@ -472,7 +507,10 @@ namespace GravityPuzzle
             }
 
             if (consumed)
+            {
+                SetSelectionGlowVisible(false);
                 BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.Rocket);
+            }
 
             activeBooster = null;
             launchInProgress = false;
@@ -583,6 +621,20 @@ namespace GravityPuzzle
                     buttonCanvasGroup = boosterButton.GetComponent<CanvasGroup>();
                 if (buttonCanvasGroup == null)
                     buttonCanvasGroup = GetComponent<CanvasGroup>();
+            }
+
+            if (selectionGlow == null)
+            {
+                if (boosterButtonRef != null && boosterButtonRef.SelectionGlow != null)
+                    selectionGlow = boosterButtonRef.SelectionGlow;
+                else
+                {
+                    Transform glowChild = transform.Find("RocketSelectionGlow")
+                        ?? transform.Find("selectionGlow")
+                        ?? transform.Find("SelectionGlow");
+                    if (glowChild != null)
+                        selectionGlow = glowChild.gameObject;
+                }
             }
         }
 

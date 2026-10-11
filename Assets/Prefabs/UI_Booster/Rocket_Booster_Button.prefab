@@ -657,7 +657,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 736956269694007144, guid: 43b23fbba6d41488783061bf025a45d6, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 501.5939
+      value: -2
       objectReference: {fileID: 0}
     - target: {fileID: 736956269694007144, guid: 43b23fbba6d41488783061bf025a45d6, type: 3}
       propertyPath: m_LocalRotation.w
@@ -697,7 +697,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 736956269711866376, guid: 43b23fbba6d41488783061bf025a45d6, type: 3}
       propertyPath: m_SortingOrder
-      value: 3000
+      value: 32767
       objectReference: {fileID: 0}
     - target: {fileID: 736956269712251742, guid: 43b23fbba6d41488783061bf025a45d6, type: 3}
       propertyPath: playOnAwake
