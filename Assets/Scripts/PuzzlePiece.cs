@@ -160,6 +160,11 @@ namespace GravityPuzzle
         private readonly List<GridCoordinate> shredderCellsReadyToRelease =
             new List<GridCoordinate>();
         private float shredderReservationStartBodyY;
+        // A contact-connected stack that enters the shredder together becomes
+        // a short-lived physics island. Its original grid cells stay reserved
+        // until every island member despawns, so normal grid gravity cannot
+        // enter the same space while physics owns the contact response.
+        private bool keepShredderGridReservationUntilDespawn;
         private readonly List<VoxelShard> configuredVoxelShards = new List<VoxelShard>();
         private SpriteRenderer[] configuredShredderRenderers;
         private Collider2D[] solidColliders;
@@ -342,6 +347,7 @@ namespace GravityPuzzle
         {
             RestoreShredderPresentation();
             beingShredded = false;
+            keepShredderGridReservationUntilDespawn = false;
             gridDespawned = false;
             destructionReported = false;
             iceReleaseAnimating = false;
@@ -368,6 +374,7 @@ namespace GravityPuzzle
             // presentation state between lifetimes. Gameplay lifecycle is
             // owned by the board, never by this presentation flag.
             beingShredded = false;
+            keepShredderGridReservationUntilDespawn = false;
             isSelected = false;
             isBoosterTargeted = false;
             isTutorialTargeted = false;
@@ -1189,6 +1196,7 @@ namespace GravityPuzzle
             shredderCellsReadyToRelease.Clear();
             shredderReservationStartBodyY = 0f;
             beingShredded = false;
+            keepShredderGridReservationUntilDespawn = false;
             destructionReported = false;
             useFullCollisionGeometry = false;
             isSelected = false;
@@ -1406,7 +1414,12 @@ namespace GravityPuzzle
             Body.bodyType = RigidbodyType2D.Kinematic;
             Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             Body.constraints = RigidbodyConstraints2D.None;
-            Body.velocity = Vector2.down * config.FeedSpeed;
+            Body.gravityScale = 0f;
+            // The kinematic feed remains a real contact surface for a
+            // temporary dynamic support chain. This flag also makes its
+            // collision policy explicit instead of relying on a prefab default.
+            Body.useFullKinematicContacts = true;
+            Body.velocity = Vector2.zero;
             Body.angularDrag = config.FeedAngularDrag;
             Body.angularVelocity = UnityEngine.Random.Range(
                 -config.MaxFeedTiltAngle,
@@ -1414,6 +1427,35 @@ namespace GravityPuzzle
             Body.AddTorque(
                 UnityEngine.Random.Range(-1f, 1f) * config.TumbleTorque,
                 ForceMode2D.Impulse);
+        }
+
+        /// <summary>
+        /// Enables the temporary Dynamic profile used only for pieces that are
+        /// physically supported by a root already entering the shredder. The
+        /// board has reserved these pieces first; this method owns only the
+        /// Unity contact response inside that isolated handoff corridor.
+        /// </summary>
+        public void EnterShredderSupportPhysics(ShredderConfig config)
+        {
+            if (config == null)
+                return;
+
+            PrepareForShredderPhysics();
+            if (Body == null)
+                return;
+
+            Body.simulated = true;
+            Body.bodyType = RigidbodyType2D.Dynamic;
+            Body.gravityScale = config.PhysicsIslandGravityScale;
+            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            Body.constraints = RigidbodyConstraints2D.None;
+            Body.useFullKinematicContacts = false;
+            Body.velocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+            Body.angularDrag = config.PhysicsIslandAngularDrag;
+            Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+            ApplyShredderCollisionMaterial(config.FeedPhysicsMaterial);
+            Body.WakeUp();
         }
 
         /// <summary>
@@ -1635,6 +1677,9 @@ namespace GravityPuzzle
         /// </summary>
         private void AdvanceShredderGridReleaseFrontier(float shredderY)
         {
+            if (keepShredderGridReservationUntilDespawn)
+                return;
+
             if (shredderReservationCells.Count == 0)
                 return;
 
@@ -2442,30 +2487,68 @@ namespace GravityPuzzle
             if (beingShredded)
                 return false;
 
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board != null)
+            {
+                if (!board.TryReservePieceInGrid(this, PieceState.HandoffToPhysics))
+                    return false;
+            }
+
+            return TryCompleteShredderHandoffAfterReservation(
+                reportDestructionImmediately,
+                keepReservationUntilDespawn: false);
+        }
+
+        /// <summary>
+        /// Completes one member's handoff after PrototypeBoard atomically
+        /// reserved an entire contact chain. Keeping the reservation until
+        /// despawn prevents grid gravity from competing with the temporary
+        /// physics island.
+        /// </summary>
+        public bool TryBeginShredderPhysicsIslandHandoff(
+            bool reportDestructionImmediately)
+        {
+            if (beingShredded)
+                return false;
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board != null &&
+                (!board.TryGetPieceModel(this, out PieceModel model) ||
+                 model.State != PieceState.HandoffToPhysics))
+            {
+                return false;
+            }
+
+            return TryCompleteShredderHandoffAfterReservation(
+                reportDestructionImmediately,
+                keepReservationUntilDespawn: true);
+        }
+
+        private bool TryCompleteShredderHandoffAfterReservation(
+            bool reportDestructionImmediately,
+            bool keepReservationUntilDespawn)
+        {
             // The catch zone accepts only a settled anchor, but cancel any
             // stale presentation handle defensively before the feed becomes
             // the sole movement owner of the Rigidbody.
             GridFallView?.Cancel();
             beingShredded = true;
+            keepShredderGridReservationUntilDespawn = keepReservationUntilDespawn;
             SetSelected(false);
+
             PrototypeBoard board = PrototypeBoard.Active;
             if (board != null)
             {
-                if (!board.TryReservePieceInGrid(this, PieceState.HandoffToPhysics))
+                if (!board.TryGetPieceModel(this, out PieceModel model))
                 {
                     beingShredded = false;
+                    keepShredderGridReservationUntilDespawn = false;
                     return false;
                 }
 
-                if (board.TryGetPieceModel(this, out PieceModel model))
-                    CaptureShredderReservationCells(model);
-
-                board.TryLockFinalShredderOutcome(this);
-
-                // The reservation replaces this piece's occupied footprint as
-                // soon as the feed takes ownership. Replan from the grid so a
-                // piece above moves only when the cutter releases a legal row.
-                PuzzleDragController.WakeUpGravity();
+                CaptureShredderReservationCells(model);
+                if (reportDestructionImmediately)
+                    board.TryLockFinalShredderOutcome(this);
             }
 
             // The normal shredder owns destruction at handoff time. Rocket
@@ -2474,6 +2557,12 @@ namespace GravityPuzzle
             // screen, so frozen-piece counters stay visually in sync.
             if (reportDestructionImmediately)
                 ReportDestroyed();
+
+            // A normal feed releases its grid frontier progressively. An
+            // island keeps the whole chain reserved instead, but both modes
+            // should let unrelated settled grid pieces reconsider their state
+            // after the handoff is complete.
+            PuzzleDragController.WakeUpGravity();
             return true;
         }
 
