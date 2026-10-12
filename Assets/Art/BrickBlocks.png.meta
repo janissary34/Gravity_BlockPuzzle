@@ -504,8 +504,8 @@ TextureImporter:
       name: BB_2x3_L_B
       rect:
         serializedVersion: 2
-        x: 1614
-        y: 560
+        x: 1555
+        y: 561
         width: 310
         height: 465
       alignment: 0
@@ -651,8 +651,8 @@ TextureImporter:
       name: BB_2X1_I
       rect:
         serializedVersion: 2
-        x: 471
-        y: 32
+        x: 469
+        y: 28
         width: 310
         height: 155
       alignment: 0
@@ -664,6 +664,48 @@ TextureImporter:
       bones: []
       spriteID: a49e583219f3e4e709a984a25a1c5680
       internalID: -1771628578
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BB_3x1_I
+      rect:
+        serializedVersion: 2
+        x: 884
+        y: 367
+        width: 465
+        height: 155
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 25499770ae08344f5abf9c495177b5b7
+      internalID: -1879458636
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BB_1x3_I
+      rect:
+        serializedVersion: 2
+        x: 1877
+        y: 703
+        width: 155
+        height: 465
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3637f723cc686407c8b01ec469971f4c
+      internalID: 603892465
       vertices: []
       indices: 
       edges: []
@@ -683,6 +725,7 @@ TextureImporter:
     nameFileIdTable:
       BB_1X1: -1313627307
       BB_1X2_I: -632471582
+      BB_1x3_I: 603892465
       BB_2X1_I: -1771628578
       BB_2X2_O: 1399951306
       BB_2x2_A: 2062867630
@@ -691,6 +734,7 @@ TextureImporter:
       BB_2x2_D: -1618421186
       BB_2x3_L_A: -1861986604
       BB_2x3_L_B: 1849407850
+      BB_3x1_I: -1879458636
       BB_3x2_L_A: -1548598488
       BB_3x2_L_B: -1464756288
       BB_3x2_L_C: 1904418460
