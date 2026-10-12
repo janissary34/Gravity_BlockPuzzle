@@ -987,7 +987,7 @@ TextureImporter:
       name: Panel_Blue_Square
       rect:
         serializedVersion: 2
-        x: 765
+        x: 763
         y: 1547
         width: 335
         height: 324
@@ -1008,13 +1008,13 @@ TextureImporter:
       name: Panel_Blue_Tall
       rect:
         serializedVersion: 2
-        x: 759
-        y: 1223
-        width: 335
-        height: 332
+        x: 781
+        y: 1240
+        width: 295
+        height: 301
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      border: {x: 20, y: 34, z: 20, w: 26}
       outline: []
       physicsShape: []
       tessellationDetail: 0
@@ -1613,6 +1613,27 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Banner2
+      rect:
+        serializedVersion: 2
+        x: 781
+        y: 1275
+        width: 295
+        height: 266
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 20, y: 34, z: 20, w: 26}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 31e08fc0abe7448c19937e0c2e4eab59
+      internalID: 1892878842
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -1627,6 +1648,7 @@ TextureImporter:
       BGBanner: -463528828
       BGCream: 2138322886
       Banner: -832982349
+      Banner2: 1892878842
       BannerBG: 306987690
       Bg: -1391059064
       Booster: 1150928089
