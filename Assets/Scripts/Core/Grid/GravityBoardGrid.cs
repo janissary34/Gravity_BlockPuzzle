@@ -276,6 +276,114 @@ namespace GravityPuzzle.Core.Grid
         }
 
         /// <summary>
+        /// Atomically moves a connected piece group. During validation every
+        /// current group footprint is ignored, which permits members to move
+        /// through one another's old cells while still rejecting all external
+        /// occupancy, bounds and duplicate-target failures.
+        /// </summary>
+        public bool TryMoveGroupIgnoringMembers(
+            IReadOnlyList<PieceModel> pieces,
+            IReadOnlyList<GridCoordinate> targetAnchors,
+            out GridPlacementResult result)
+        {
+            result = CheckGroupPlacementIgnoringMembers(pieces, targetAnchors);
+            if (!result.IsSuccess)
+                return false;
+
+            for (int index = 0; index < pieces.Count; index++)
+                ClearPieceCells(pieces[index]);
+
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                PieceModel piece = pieces[index];
+                piece.SetAnchor(targetAnchors[index]);
+                SetPieceCells(piece, GridCellState.Occupied);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Validates a simultaneous group move without mutating board state.
+        /// The caller owns the supplied buffers, keeping the gravity hot path
+        /// allocation-free.
+        /// </summary>
+        public GridPlacementResult CheckGroupPlacementIgnoringMembers(
+            IReadOnlyList<PieceModel> pieces,
+            IReadOnlyList<GridCoordinate> targetAnchors)
+        {
+            if (pieces == null || targetAnchors == null || pieces.Count == 0 ||
+                pieces.Count != targetAnchors.Count)
+            {
+                return GridPlacementResult.Failure(
+                    GridPlacementFailureReason.EmptyPiece,
+                    default,
+                    GridCellState.Empty,
+                    default);
+            }
+
+            for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
+            {
+                PieceModel piece = pieces[pieceIndex];
+                if (piece == null || !piece.IsOnBoard || piece.LocalCells.Count == 0 ||
+                    IsDuplicateGroupMember(pieces, pieceIndex))
+                {
+                    return GridPlacementResult.Failure(
+                        GridPlacementFailureReason.EmptyPiece,
+                        targetAnchors[pieceIndex],
+                        GridCellState.Empty,
+                        default);
+                }
+
+                for (int localIndex = 0; localIndex < piece.LocalCells.Count; localIndex++)
+                {
+                    GridCoordinate coordinate = targetAnchors[pieceIndex].Offset(piece.LocalCells[localIndex]);
+                    if (!IsInside(coordinate))
+                    {
+                        return GridPlacementResult.Failure(
+                            GridPlacementFailureReason.OutOfBounds,
+                            coordinate,
+                            GridCellState.Blocked,
+                            default);
+                    }
+
+                    if (TargetCoordinateIsDuplicated(
+                            pieces,
+                            targetAnchors,
+                            pieceIndex,
+                            localIndex,
+                            coordinate))
+                    {
+                        return GridPlacementResult.Failure(
+                            GridPlacementFailureReason.DuplicateCell,
+                            coordinate,
+                            GridCellState.Empty,
+                            default);
+                    }
+
+                    GridCellState state = cellStates[coordinate.X, coordinate.Y];
+                    if (state == GridCellState.Empty)
+                        continue;
+
+                    int occupantId = occupantIds[coordinate.X, coordinate.Y];
+                    if ((state == GridCellState.Occupied || state == GridCellState.Reserved) &&
+                        ContainsGroupMember(pieces, occupantId))
+                    {
+                        continue;
+                    }
+
+                    return GridPlacementResult.Failure(
+                        FailureReasonFor(state),
+                        coordinate,
+                        state,
+                        occupantId);
+                }
+            }
+
+            return GridPlacementResult.Success();
+        }
+
+        /// <summary>
         /// Calculates the lowest legal anchor for an on-board piece without
         /// mutating the grid or the piece model. The piece's current cells are
         /// ignored while checking each candidate so its own geometry never
@@ -295,6 +403,112 @@ namespace GravityPuzzle.Core.Grid
             }
 
             return !targetAnchor.Equals(piece.Anchor);
+        }
+
+        /// <summary>
+        /// Returns the common lowest legal anchors for a piece group. Every
+        /// member moves by the same vertical delta, so a support under any one
+        /// member stops the full group.
+        /// </summary>
+        public bool TryGetGroupFallTarget(
+            IReadOnlyList<PieceModel> pieces,
+            List<GridCoordinate> targetAnchors)
+        {
+            if (pieces == null || targetAnchors == null || pieces.Count == 0)
+                return false;
+
+            targetAnchors.Clear();
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                if (pieces[index] == null)
+                {
+                    targetAnchors.Clear();
+                    return false;
+                }
+
+                targetAnchors.Add(pieces[index].Anchor);
+            }
+
+            bool moved = false;
+            while (true)
+            {
+                for (int index = 0; index < targetAnchors.Count; index++)
+                    targetAnchors[index] = targetAnchors[index].Offset(Down);
+
+                if (!CheckGroupPlacementIgnoringMembers(pieces, targetAnchors).IsSuccess)
+                {
+                    for (int index = 0; index < targetAnchors.Count; index++)
+                        targetAnchors[index] = targetAnchors[index].Offset(new GridCoordinate(0, 1));
+                    return moved;
+                }
+
+                moved = true;
+            }
+        }
+
+        private static bool IsDuplicateGroupMember(IReadOnlyList<PieceModel> pieces, int pieceIndex)
+        {
+            PieceModel piece = pieces[pieceIndex];
+            for (int previousIndex = 0; previousIndex < pieceIndex; previousIndex++)
+            {
+                if (pieces[previousIndex] != null && pieces[previousIndex].Id == piece.Id)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool ContainsGroupMember(IReadOnlyList<PieceModel> pieces, int memberId)
+        {
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                if (pieces[index] != null && pieces[index].Id == memberId)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool TargetCoordinateIsDuplicated(
+            IReadOnlyList<PieceModel> pieces,
+            IReadOnlyList<GridCoordinate> targetAnchors,
+            int pieceIndex,
+            int localIndex,
+            GridCoordinate coordinate)
+        {
+            for (int previousPieceIndex = 0; previousPieceIndex <= pieceIndex; previousPieceIndex++)
+            {
+                PieceModel previousPiece = pieces[previousPieceIndex];
+                int localCellCount = previousPiece.LocalCells.Count;
+                if (previousPieceIndex == pieceIndex)
+                    localCellCount = localIndex;
+
+                for (int previousLocalIndex = 0; previousLocalIndex < localCellCount; previousLocalIndex++)
+                {
+                    if (coordinate.Equals(targetAnchors[previousPieceIndex].Offset(
+                            previousPiece.LocalCells[previousLocalIndex])))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static GridPlacementFailureReason FailureReasonFor(GridCellState state)
+        {
+            switch (state)
+            {
+                case GridCellState.Blocked:
+                    return GridPlacementFailureReason.BlockedCell;
+                case GridCellState.Occupied:
+                    return GridPlacementFailureReason.OccupiedCell;
+                case GridCellState.Reserved:
+                    return GridPlacementFailureReason.ReservedCell;
+                default:
+                    return GridPlacementFailureReason.None;
+            }
         }
 
         public bool TryReserve(PieceModel piece)

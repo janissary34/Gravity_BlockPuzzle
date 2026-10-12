@@ -183,6 +183,8 @@ namespace GravityPuzzle.Editor
             }
 
             GUILayout.Space(8f);
+            DrawJointAuthoring();
+            GUILayout.Space(8f);
             DrawSelectedInspector();
             GUILayout.Space(12f);
             DrawRevealAreas();
@@ -734,6 +736,7 @@ namespace GravityPuzzle.Editor
                 if (GUILayout.Button("Delete Piece"))
                 {
                     Undo.RecordObject(level, "Delete puzzle piece");
+                    RemoveJointsForPiece(piece.pieceId);
                     level.pieces.RemoveAt(selectedPiece);
                     ClearSelection();
                     MarkDirty();
@@ -893,6 +896,311 @@ namespace GravityPuzzle.Editor
             EditorGUILayout.HelpBox("Select a piece, pin, obstacle, shredder, Box, or Elevator to edit its properties.", MessageType.None);
         }
 
+        private void DrawJointAuthoring()
+        {
+            GUILayout.Label("Combined Joints", EditorStyles.boldLabel);
+            bool canCombine = CanCombineSelectedPieces();
+            bool hasSelectedJoints = SelectionContainsJointMember();
+            GUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(!canCombine))
+            {
+                if (GUILayout.Button("Combine Selected"))
+                    CombineSelectedPieces();
+            }
+
+            using (new EditorGUI.DisabledScope(!hasSelectedJoints))
+            {
+                if (GUILayout.Button("Uncombine"))
+                    UncombineSelectedPieces();
+            }
+            GUILayout.EndHorizontal();
+
+            EditorGUILayout.HelpBox(
+                "Combine adds a joint for every touching full block edge. A hammer hit removes joints attached to its block; the group separates only when no graph path remains.",
+                MessageType.None);
+
+            if (level.joints == null || level.joints.Count == 0)
+                return;
+
+            for (int index = level.joints.Count - 1; index >= 0; index--)
+            {
+                JointDefinition joint = level.joints[index];
+                string label = JointLabel(joint, index);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(label, EditorStyles.miniLabel);
+                if (GUILayout.Button("Remove", GUILayout.Width(62f)))
+                {
+                    Undo.RecordObject(level, "Remove combined joint");
+                    level.joints.RemoveAt(index);
+                    MarkDirty();
+                }
+                GUILayout.EndHorizontal();
+            }
+        }
+
+        private bool CanCombineSelectedPieces()
+        {
+            if (selectedPieceIndices.Count < 2)
+                return false;
+
+            foreach (int index in selectedPieceIndices)
+            {
+                if (index < 0 || index >= level.pieces.Count)
+                    return false;
+            }
+
+            return CountCandidateJoints() > 0;
+        }
+
+        private bool SelectionContainsJointMember()
+        {
+            if (selectedPieceIndices.Count == 0 || level.joints == null)
+                return false;
+
+            for (int jointIndex = 0; jointIndex < level.joints.Count; jointIndex++)
+            {
+                JointDefinition joint = level.joints[jointIndex];
+                if (joint == null || joint.endpointA == null || joint.endpointB == null)
+                    continue;
+
+                if (SelectedPieceIdMatches(joint.endpointA.pieceId) ||
+                    SelectedPieceIdMatches(joint.endpointB.pieceId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool SelectedPieceIdMatches(string pieceId)
+        {
+            foreach (int index in selectedPieceIndices)
+            {
+                if (index >= 0 && index < level.pieces.Count && level.pieces[index].pieceId == pieceId)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void CombineSelectedPieces()
+        {
+            Undo.RecordObject(level, "Combine puzzle pieces");
+            EnsurePieceIds();
+            if (level.joints == null)
+                level.joints = new List<JointDefinition>();
+
+            int added = AddCandidateJoints();
+            if (added == 0)
+            {
+                ShowNotification(new GUIContent("Selected pieces do not share a complete block edge."));
+                return;
+            }
+
+            MarkDirty();
+            ShowNotification(new GUIContent($"Added {added} combined joint{(added == 1 ? string.Empty : "s")}."));
+        }
+
+        private void UncombineSelectedPieces()
+        {
+            Undo.RecordObject(level, "Uncombine puzzle pieces");
+            int removed = 0;
+            for (int index = level.joints.Count - 1; index >= 0; index--)
+            {
+                JointDefinition joint = level.joints[index];
+                if (joint == null || joint.endpointA == null || joint.endpointB == null ||
+                    !SelectedPieceIdMatches(joint.endpointA.pieceId) &&
+                    !SelectedPieceIdMatches(joint.endpointB.pieceId))
+                {
+                    continue;
+                }
+
+                level.joints.RemoveAt(index);
+                removed++;
+            }
+
+            if (removed > 0)
+            {
+                MarkDirty();
+                ShowNotification(new GUIContent($"Removed {removed} combined joint{(removed == 1 ? string.Empty : "s")}."));
+            }
+        }
+
+        private int CountCandidateJoints()
+        {
+            int count = 0;
+            for (int firstIndex = 0; firstIndex < level.pieces.Count; firstIndex++)
+            {
+                if (!selectedPieceIndices.Contains(firstIndex))
+                    continue;
+
+                for (int secondIndex = firstIndex + 1; secondIndex < level.pieces.Count; secondIndex++)
+                {
+                    if (!selectedPieceIndices.Contains(secondIndex))
+                        continue;
+
+                    count += CountCandidateJoints(level.pieces[firstIndex], level.pieces[secondIndex]);
+                }
+            }
+
+            return count;
+        }
+
+        private int AddCandidateJoints()
+        {
+            int added = 0;
+            for (int firstIndex = 0; firstIndex < level.pieces.Count; firstIndex++)
+            {
+                if (!selectedPieceIndices.Contains(firstIndex))
+                    continue;
+
+                for (int secondIndex = firstIndex + 1; secondIndex < level.pieces.Count; secondIndex++)
+                {
+                    if (!selectedPieceIndices.Contains(secondIndex))
+                        continue;
+
+                    added += AddCandidateJoints(level.pieces[firstIndex], level.pieces[secondIndex]);
+                }
+            }
+
+            return added;
+        }
+
+        private int CountCandidateJoints(PieceDefinition first, PieceDefinition second)
+        {
+            List<BlockModule> firstModules = CollectBlockModules(first);
+            List<BlockModule> secondModules = CollectBlockModules(second);
+            int count = 0;
+            for (int firstModuleIndex = 0; firstModuleIndex < firstModules.Count; firstModuleIndex++)
+            for (int secondModuleIndex = 0; secondModuleIndex < secondModules.Count; secondModuleIndex++)
+            {
+                if (AreAdjacent(firstModules[firstModuleIndex].GridCell, secondModules[secondModuleIndex].GridCell) &&
+                    !JointExists(first, firstModules[firstModuleIndex], second, secondModules[secondModuleIndex]))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private int AddCandidateJoints(PieceDefinition first, PieceDefinition second)
+        {
+            List<BlockModule> firstModules = CollectBlockModules(first);
+            List<BlockModule> secondModules = CollectBlockModules(second);
+            int added = 0;
+            for (int firstModuleIndex = 0; firstModuleIndex < firstModules.Count; firstModuleIndex++)
+            for (int secondModuleIndex = 0; secondModuleIndex < secondModules.Count; secondModuleIndex++)
+            {
+                BlockModule firstModule = firstModules[firstModuleIndex];
+                BlockModule secondModule = secondModules[secondModuleIndex];
+                if (!AreAdjacent(firstModule.GridCell, secondModule.GridCell) ||
+                    JointExists(first, firstModule, second, secondModule))
+                {
+                    continue;
+                }
+
+                level.joints.Add(new JointDefinition
+                {
+                    jointId = System.Guid.NewGuid().ToString("N"),
+                    endpointA = new JointEndpointDefinition
+                    {
+                        pieceId = first.pieceId,
+                        localBlockOrigin = firstModule.LocalOrigin
+                    },
+                    endpointB = new JointEndpointDefinition
+                    {
+                        pieceId = second.pieceId,
+                        localBlockOrigin = secondModule.LocalOrigin
+                    }
+                });
+                added++;
+            }
+
+            return added;
+        }
+
+        private bool JointExists(
+            PieceDefinition first,
+            BlockModule firstModule,
+            PieceDefinition second,
+            BlockModule secondModule)
+        {
+            if (level.joints == null)
+                return false;
+
+            for (int index = 0; index < level.joints.Count; index++)
+            {
+                JointDefinition joint = level.joints[index];
+                if (joint == null || joint.endpointA == null || joint.endpointB == null)
+                    continue;
+
+                bool direct = joint.endpointA.pieceId == first.pieceId &&
+                              joint.endpointA.localBlockOrigin == firstModule.LocalOrigin &&
+                              joint.endpointB.pieceId == second.pieceId &&
+                              joint.endpointB.localBlockOrigin == secondModule.LocalOrigin;
+                bool inverse = joint.endpointB.pieceId == first.pieceId &&
+                               joint.endpointB.localBlockOrigin == firstModule.LocalOrigin &&
+                               joint.endpointA.pieceId == second.pieceId &&
+                               joint.endpointA.localBlockOrigin == secondModule.LocalOrigin;
+                if (direct || inverse)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void RemoveJointsForPiece(string pieceId)
+        {
+            if (string.IsNullOrEmpty(pieceId) || level.joints == null)
+                return;
+
+            for (int index = level.joints.Count - 1; index >= 0; index--)
+            {
+                JointDefinition joint = level.joints[index];
+                if (joint != null && ((joint.endpointA != null && joint.endpointA.pieceId == pieceId) ||
+                                      (joint.endpointB != null && joint.endpointB.pieceId == pieceId)))
+                {
+                    level.joints.RemoveAt(index);
+                }
+            }
+        }
+
+        private void RemoveInvalidJoints()
+        {
+            if (level.joints == null)
+                return;
+
+            for (int index = level.joints.Count - 1; index >= 0; index--)
+            {
+                JointDefinition joint = level.joints[index];
+                if (joint == null || joint.endpointA == null || joint.endpointB == null ||
+                    !TryGetActivePiece(joint.endpointA.pieceId, out PieceDefinition pieceA) ||
+                    !TryGetActivePiece(joint.endpointB.pieceId, out PieceDefinition pieceB) ||
+                    pieceA == pieceB ||
+                    !TryGetBlockModule(pieceA, joint.endpointA.localBlockOrigin, out BlockModule moduleA) ||
+                    !TryGetBlockModule(pieceB, joint.endpointB.localBlockOrigin, out BlockModule moduleB) ||
+                    !AreAdjacent(moduleA.GridCell, moduleB.GridCell))
+                {
+                    level.joints.RemoveAt(index);
+                }
+            }
+        }
+
+        private string JointLabel(JointDefinition joint, int index)
+        {
+            if (joint == null || joint.endpointA == null || joint.endpointB == null)
+                return $"Joint {index + 1} (invalid)";
+
+            return $"{PieceNameForId(joint.endpointA.pieceId)} ↔ {PieceNameForId(joint.endpointB.pieceId)}";
+        }
+
+        private string PieceNameForId(string pieceId)
+        {
+            return TryGetActivePiece(pieceId, out PieceDefinition piece) ? piece.name : "Missing piece";
+        }
+
         private void DrawValidation()
         {
             GUILayout.Label("Modular Validation", EditorStyles.boldLabel);
@@ -962,6 +1270,41 @@ namespace GravityPuzzle.Editor
                 if (!HasExitPath(piece, 0))
                 {
                     validationMessages.Add($"{piece.name} has no collision-free route to the bottom exit.");
+                }
+            }
+
+            ValidateJoints();
+        }
+
+        private void ValidateJoints()
+        {
+            if (level.joints == null)
+                return;
+
+            HashSet<string> jointIds = new HashSet<string>();
+            for (int index = 0; index < level.joints.Count; index++)
+            {
+                JointDefinition joint = level.joints[index];
+                if (joint == null || joint.endpointA == null || joint.endpointB == null ||
+                    string.IsNullOrEmpty(joint.jointId) || !jointIds.Add(joint.jointId))
+                {
+                    validationMessages.Add($"Joint #{index + 1} has a missing or duplicate identity.");
+                    continue;
+                }
+
+                if (!TryGetActivePiece(joint.endpointA.pieceId, out PieceDefinition pieceA) ||
+                    !TryGetActivePiece(joint.endpointB.pieceId, out PieceDefinition pieceB) ||
+                    pieceA == pieceB)
+                {
+                    validationMessages.Add($"Joint #{index + 1} must connect two different pieces in the active level area.");
+                    continue;
+                }
+
+                if (!TryGetBlockModule(pieceA, joint.endpointA.localBlockOrigin, out BlockModule moduleA) ||
+                    !TryGetBlockModule(pieceB, joint.endpointB.localBlockOrigin, out BlockModule moduleB) ||
+                    !AreAdjacent(moduleA.GridCell, moduleB.GridCell))
+                {
+                    validationMessages.Add($"Joint #{index + 1} no longer joins two adjacent complete block modules.");
                 }
             }
         }
@@ -1039,6 +1382,7 @@ namespace GravityPuzzle.Editor
             DrawPins(board, cellSize);
             DrawShredders(board, cellSize);
             DrawPieces(board, cellSize);
+            DrawJoints(board, cellSize);
             DrawLockedRevealAreaForeground(board, cellSize);
             DrawGrid(board, cellSize);
             DrawSelectionBox();
@@ -1323,6 +1667,34 @@ namespace GravityPuzzle.Editor
                     EditorGUI.DrawRect(new Rect(origin.center.x - 3f, origin.center.y - 3f, 6f, 6f), Color.white);
                 }
             }
+        }
+
+        private void DrawJoints(Rect board, float cellSize)
+        {
+            if (level.joints == null)
+                return;
+
+            Handles.BeginGUI();
+            for (int index = 0; index < level.joints.Count; index++)
+            {
+                JointDefinition joint = level.joints[index];
+                if (joint == null || joint.endpointA == null || joint.endpointB == null ||
+                    !TryGetActivePiece(joint.endpointA.pieceId, out PieceDefinition pieceA) ||
+                    !TryGetActivePiece(joint.endpointB.pieceId, out PieceDefinition pieceB) ||
+                    !TryGetBlockModule(pieceA, joint.endpointA.localBlockOrigin, out BlockModule moduleA) ||
+                    !TryGetBlockModule(pieceB, joint.endpointB.localBlockOrigin, out BlockModule moduleB))
+                {
+                    continue;
+                }
+
+                Rect a = GridRect(board, cellSize, moduleA.GridCell, Vector2Int.one);
+                Rect b = GridRect(board, cellSize, moduleB.GridCell, Vector2Int.one);
+                Vector3 midpoint = (a.center + b.center) * .5f;
+                Handles.color = new Color(1f, .82f, .18f, 1f);
+                Handles.DrawAAPolyLine(3f, a.center, b.center);
+                Handles.DrawSolidDisc(midpoint, Vector3.forward, Mathf.Max(3f, cellSize * .23f));
+            }
+            Handles.EndGUI();
         }
 
         private static void DrawIceCounterPreview(
@@ -1807,6 +2179,7 @@ namespace GravityPuzzle.Editor
                 }
                 if (removed > 0)
                 {
+                    RemoveInvalidJoints();
                     SelectPiece(i);
                     MarkDirty();
                     return;
@@ -2230,6 +2603,7 @@ namespace GravityPuzzle.Editor
             Undo.RecordObject(level, "Add puzzle piece");
             PieceDefinition piece = new PieceDefinition
             {
+                pieceId = System.Guid.NewGuid().ToString("N"),
                 name = $"Piece {level.pieces.Count + 1}",
                 origin = new Vector2Int(level.FineColumns / 2, level.FineRows / 2),
                 color = Color.HSVToRGB((level.pieces.Count * .19f) % 1f, .7f, 1f)
@@ -2251,6 +2625,7 @@ namespace GravityPuzzle.Editor
 
             PieceDefinition piece = new PieceDefinition
             {
+                pieceId = System.Guid.NewGuid().ToString("N"),
                 name = $"{template.Name} {level.pieces.Count + 1}",
                 origin = new Vector2Int(
                     boardX * subdivisions - minimum.x * subdivisions,
@@ -2323,6 +2698,7 @@ namespace GravityPuzzle.Editor
             piece.cells = rotatedCells;
             piece.origin = snappedMinimum;
             piece.quarterTurns = 0;
+            RemoveInvalidJoints();
             MarkDirty();
         }
 
@@ -2845,6 +3221,183 @@ namespace GravityPuzzle.Editor
                 minimum = Vector2Int.Min(minimum, absolute);
                 maximum = Vector2Int.Max(maximum, absolute);
             }
+        }
+
+        private bool TryGetActivePiece(string pieceId, out PieceDefinition piece)
+        {
+            piece = null;
+            if (string.IsNullOrEmpty(pieceId))
+                return false;
+
+            for (int index = 0; index < level.pieces.Count; index++)
+            {
+                PieceDefinition candidate = level.pieces[index];
+                if (candidate != null && candidate.pieceId == pieceId)
+                {
+                    piece = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private List<BlockModule> CollectBlockModules(PieceDefinition piece)
+        {
+            List<BlockModule> modules = new List<BlockModule>();
+            if (piece == null || piece.cells == null)
+                return modules;
+
+            int subdivisions = Mathf.Max(1, level.subdivisions);
+            HashSet<Vector2Int> candidates = new HashSet<Vector2Int>();
+            for (int index = 0; index < piece.cells.Count; index++)
+            {
+                PieceCellDefinition cell = piece.cells[index];
+                if (cell.type != PieceCellType.Block)
+                    continue;
+
+                candidates.Add(new Vector2Int(
+                    FloorToMultiple(cell.localCell.x, subdivisions),
+                    FloorToMultiple(cell.localCell.y, subdivisions)));
+            }
+
+            foreach (Vector2Int localOrigin in candidates)
+            {
+                if (!ContainsCompleteBlockModule(piece, localOrigin, subdivisions))
+                    continue;
+
+                Vector2Int absoluteMinimum = GetAbsoluteBlockMinimum(piece, localOrigin, subdivisions);
+                modules.Add(new BlockModule(
+                    localOrigin,
+                    new Vector2Int(absoluteMinimum.x / subdivisions, absoluteMinimum.y / subdivisions)));
+            }
+
+            return modules;
+        }
+
+        private bool TryGetBlockModule(
+            PieceDefinition piece,
+            Vector2Int localOrigin,
+            out BlockModule module)
+        {
+            List<BlockModule> modules = CollectBlockModules(piece);
+            for (int index = 0; index < modules.Count; index++)
+            {
+                if (modules[index].LocalOrigin == localOrigin)
+                {
+                    module = modules[index];
+                    return true;
+                }
+            }
+
+            module = default;
+            return false;
+        }
+
+        private static bool ContainsCompleteBlockModule(
+            PieceDefinition piece,
+            Vector2Int localOrigin,
+            int subdivisions)
+        {
+            for (int y = 0; y < subdivisions; y++)
+            for (int x = 0; x < subdivisions; x++)
+            {
+                Vector2Int expected = localOrigin + new Vector2Int(x, y);
+                bool found = false;
+                for (int index = 0; index < piece.cells.Count; index++)
+                {
+                    PieceCellDefinition cell = piece.cells[index];
+                    if (cell.type == PieceCellType.Block && cell.localCell == expected)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static Vector2Int GetAbsoluteBlockMinimum(
+            PieceDefinition piece,
+            Vector2Int localOrigin,
+            int subdivisions)
+        {
+            Vector2Int minimum = new Vector2Int(int.MaxValue, int.MaxValue);
+            for (int y = 0; y < subdivisions; y++)
+            for (int x = 0; x < subdivisions; x++)
+            {
+                Vector2Int absolute = piece.origin + QuarterTurnUtility.Rotate(
+                    localOrigin + new Vector2Int(x, y),
+                    piece.quarterTurns);
+                minimum = Vector2Int.Min(minimum, absolute);
+            }
+
+            return minimum;
+        }
+
+        private static bool AreAdjacent(Vector2Int first, Vector2Int second)
+        {
+            int distance = Mathf.Abs(first.x - second.x) + Mathf.Abs(first.y - second.y);
+            return distance == 1;
+        }
+
+        private static int FloorToMultiple(int value, int multiple)
+        {
+            int remainder = value % multiple;
+            if (remainder < 0)
+                remainder += multiple;
+            return value - remainder;
+        }
+
+        private bool EnsurePieceIds()
+        {
+            string assetPath = AssetDatabase.GetAssetPath(level);
+            string assetGuid = string.IsNullOrEmpty(assetPath)
+                ? level.name
+                : AssetDatabase.AssetPathToGUID(assetPath);
+            HashSet<string> assigned = new HashSet<string>();
+            int ordinal = 0;
+            bool changed = false;
+            foreach (PieceDefinition piece in level.EnumerateAllPieceDefinitions())
+            {
+                if (piece == null)
+                    continue;
+
+                if (string.IsNullOrEmpty(piece.pieceId) || !assigned.Add(piece.pieceId))
+                {
+                    string candidate;
+                    int duplicate = 0;
+                    do
+                    {
+                        candidate = $"piece-{assetGuid}-{ordinal:x4}-{duplicate:x2}";
+                        duplicate++;
+                    }
+                    while (!assigned.Add(candidate));
+
+                    piece.pieceId = candidate;
+                    changed = true;
+                }
+
+                ordinal++;
+            }
+
+            return changed;
+        }
+
+        private readonly struct BlockModule
+        {
+            public BlockModule(Vector2Int localOrigin, Vector2Int gridCell)
+            {
+                LocalOrigin = localOrigin;
+                GridCell = gridCell;
+            }
+
+            public Vector2Int LocalOrigin { get; }
+            public Vector2Int GridCell { get; }
         }
 
         private static Vector2Int[] CreateLCells(int armLength)

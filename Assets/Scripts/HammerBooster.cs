@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 using GravityPuzzle.Config;
+using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Gameplay.Input;
 using GravityPuzzle.Gameplay.Tutorial;
@@ -524,9 +525,15 @@ namespace GravityPuzzle
         {
             PlayImpactSound(impactPosition);
 
+            int sourcePieceId = piece != null ? piece.SourcePieceId : -1;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            GridCoordinate targetCell = level != null
+                ? GravityLevelGridCoordinates.WorldToFineCell(level, impactPosition)
+                : default;
             if (TopologyEditingEnabled &&
                 piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
+                PrototypeBoard.Active?.BreakJointsAtPieceCell(sourcePieceId, targetCell);
                 impactSucceeded = true;
                 Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
                 LevelProgressManager manager = LevelProgressManager.Instance;

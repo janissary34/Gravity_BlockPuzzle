@@ -180,6 +180,10 @@ namespace GravityPuzzle
                 return false;
             }
 
+            // A combined member leaves its graph component only once the
+            // shredder handoff has been accepted. Failed capture attempts
+            // must leave the authoritative topology untouched.
+            PrototypeBoard.Active?.BreakJointsForPiece(piece);
             StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
         }
@@ -233,6 +237,9 @@ namespace GravityPuzzle
                 return false;
             }
 
+            // The root is now committed to the feed. Split it from its
+            // combined graph before the presentation-only island continues.
+            board.BreakJointsForPiece(root);
             StartCoroutine(FeedPieceIntoShredder(root, zone));
             activePhysicsIslands.Add(new ShredderPhysicsIsland(
                 this,
@@ -378,6 +385,7 @@ namespace GravityPuzzle
                 return false;
             }
 
+            board.BreakJointsForPiece(piece);
             StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
         }

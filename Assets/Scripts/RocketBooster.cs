@@ -365,6 +365,8 @@ namespace GravityPuzzle
                 return false;
             }
 
+            PrototypeBoard.Active?.BreakJointsForPiece(piece);
+
             launchInProgress = true;
             StartCoroutine(PlayRocketLaunchSequence(piece));
             return true;

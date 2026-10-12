@@ -676,6 +676,15 @@ namespace GravityPuzzle
         private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
         private readonly Dictionary<string, IRevealAreaPresentation> revealPresentations =
             new Dictionary<string, IRevealAreaPresentation>();
+        // Board-owned runtime state for combined-piece edges. The serialized
+        // level only provides joints; movement groups are derived here.
+        private readonly PieceJointGraph pieceJointGraph = new PieceJointGraph();
+        private readonly List<int> jointGroupMemberIds = new List<int>();
+        private readonly List<PieceModel> jointGroupModels = new List<PieceModel>();
+        private readonly List<GridCoordinate> jointGroupTargetAnchors = new List<GridCoordinate>();
+        private readonly List<PuzzlePiece> jointGroupPieceBuffer = new List<PuzzlePiece>();
+        private readonly List<PieceJointGraph.Joint> jointBuffer = new List<PieceJointGraph.Joint>();
+        private int jointBlockSize = GravityGridMetrics.FineCellsPerGridCell;
         private RevealAreaCoordinator revealAreaCoordinator;
         private readonly StateMachine<GameState> gameStateMachine = new StateMachine<GameState>(
             GameState.Initialize,
@@ -912,6 +921,69 @@ namespace GravityPuzzle
             TryTransitionGameState(GameState.Ready);
         }
 
+        /// <summary>
+        /// Resolves authored joint endpoints to the initial board model ids.
+        /// Only active level pieces participate; editor validation prevents
+        /// joints from crossing reveal-area ownership boundaries.
+        /// </summary>
+        public void ConfigurePieceJoints(GravityLevelDefinition level)
+        {
+            List<int> memberIds = new List<int>();
+            List<PieceJointGraph.Joint> runtimeJoints = new List<PieceJointGraph.Joint>();
+            if (level == null || BoardSnapshot == null || level.pieces == null)
+            {
+                pieceJointGraph.Configure(memberIds, runtimeJoints);
+                return;
+            }
+
+            Dictionary<string, int> sourceIdByPieceId = new Dictionary<string, int>();
+            Dictionary<string, PieceDefinition> definitionByPieceId = new Dictionary<string, PieceDefinition>();
+            jointBlockSize = Mathf.Max(1, level.subdivisions);
+            for (int index = 0; index < level.pieces.Count; index++)
+            {
+                if (!BoardSnapshot.TryGetPiece(index, out _) ||
+                    level.pieces[index] == null ||
+                    string.IsNullOrEmpty(level.pieces[index].pieceId))
+                {
+                    continue;
+                }
+
+                sourceIdByPieceId[level.pieces[index].pieceId] = index;
+                definitionByPieceId[level.pieces[index].pieceId] = level.pieces[index];
+                memberIds.Add(index);
+            }
+
+            if (level.joints != null)
+            {
+                for (int index = 0; index < level.joints.Count; index++)
+                {
+                    JointDefinition joint = level.joints[index];
+                    if (joint == null || joint.endpointA == null || joint.endpointB == null ||
+                        !sourceIdByPieceId.TryGetValue(joint.endpointA.pieceId, out int memberA) ||
+                        !sourceIdByPieceId.TryGetValue(joint.endpointB.pieceId, out int memberB) ||
+                        !definitionByPieceId.TryGetValue(joint.endpointA.pieceId, out PieceDefinition definitionA) ||
+                        !definitionByPieceId.TryGetValue(joint.endpointB.pieceId, out PieceDefinition definitionB) ||
+                        !BoardSnapshot.TryGetPiece(memberA, out PieceModel modelA) ||
+                        !BoardSnapshot.TryGetPiece(memberB, out PieceModel modelB) ||
+                        !TryResolveJointLocalBlock(definitionA, modelA, joint.endpointA.localBlockOrigin, out GridCoordinate blockA) ||
+                        !TryResolveJointLocalBlock(definitionB, modelB, joint.endpointB.localBlockOrigin, out GridCoordinate blockB) ||
+                        memberA == memberB)
+                    {
+                        continue;
+                    }
+
+                    runtimeJoints.Add(new PieceJointGraph.Joint(
+                        index,
+                        memberA,
+                        memberB,
+                        blockA,
+                        blockB));
+                }
+            }
+
+            pieceJointGraph.Configure(memberIds, runtimeJoints);
+        }
+
         public bool TryGetPieceModel(PuzzlePiece piece, out PieceModel model)
         {
             model = null;
@@ -957,7 +1029,25 @@ namespace GravityPuzzle
             if (!TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
-            return TryTransitionPieceState(model, PieceState.Dragging);
+            if (!TryCollectJointGroupModels(model.Id, jointGroupModels))
+                return false;
+
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                if (jointGroupModels[index].State != PieceState.Placed &&
+                    jointGroupModels[index].State != PieceState.Dragging)
+                {
+                    return false;
+                }
+            }
+
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                if (!TryTransitionPieceState(jointGroupModels[index], PieceState.Dragging))
+                    return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -1254,7 +1344,12 @@ namespace GravityPuzzle
             }
 
             for (int index = 0; index < fragmentModels.Count; index++)
+            {
                 fragments[index].ConfigureSourcePieceId(fragmentModels[index].Id);
+                pieceJointGraph.RegisterMember(fragmentModels[index].Id);
+            }
+
+            TransferJointsToHammerFragments(sourceModel, fragmentModels);
 
             BoardOccupancyChanged?.Invoke();
             return true;
@@ -1420,6 +1515,9 @@ namespace GravityPuzzle
                 createdModels.Add(model);
             }
 
+            for (int index = 0; index < createdModels.Count; index++)
+                pieceJointGraph.RegisterMember(createdModels[index].Id);
+
             BoardOccupancyChanged?.Invoke();
             return true;
         }
@@ -1476,26 +1574,7 @@ namespace GravityPuzzle
                 GridCellState.Empty,
                 default);
 
-            if (!TryGetPieceModel(piece, out PieceModel model))
-                return false;
-
-            if (revealAreaCoordinator != null &&
-                !revealAreaCoordinator.CanMovePiece(model, targetAnchor))
-                return false;
-
-            bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
-                model,
-                targetAnchor,
-                piece.SourcePieceId,
-                out result);
-
-            if (moved)
-            {
-                TryTransitionPieceState(model, PieceState.Placed);
-                BoardOccupancyChanged?.Invoke();
-            }
-
-            return moved;
+            return TryMovePieceGroupOnGrid(piece, targetAnchor, true, out result);
         }
 
         /// <summary>
@@ -1514,28 +1593,448 @@ namespace GravityPuzzle
                 GridCellState.Empty,
                 default);
 
-            if (!TryGetPieceModel(piece, out PieceModel model) ||
-                (revealAreaCoordinator != null &&
-                 !revealAreaCoordinator.CanMovePiece(model, targetAnchor)))
-            {
-                return false;
-            }
-
-            bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
-                model,
-                targetAnchor,
-                piece.SourcePieceId,
-                out result);
-            if (moved)
-                BoardOccupancyChanged?.Invoke();
-
-            return moved;
+            return TryMovePieceGroupOnGrid(piece, targetAnchor, false, out result);
         }
 
         public bool CanBeginPieceInteraction(PuzzlePiece piece)
         {
-            return TryGetPieceModel(piece, out PieceModel model) &&
-                   (revealAreaCoordinator == null || revealAreaCoordinator.CanBeginInteraction(model));
+            if (!TryGetPieceModel(piece, out PieceModel model) ||
+                !TryCollectJointGroupModels(model.Id, jointGroupModels))
+            {
+                return false;
+            }
+
+            CollectJointGroupPieces(piece, jointGroupPieceBuffer);
+            if (jointGroupPieceBuffer.Count != jointGroupModels.Count)
+                return false;
+
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                if (jointGroupPieceBuffer[index].IsFrozen ||
+                    jointGroupPieceBuffer[index].IsShredderInteractionLocked ||
+                    (revealAreaCoordinator != null &&
+                     !revealAreaCoordinator.CanBeginInteraction(jointGroupModels[index])))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public void CollectJointGroupPieces(PuzzlePiece piece, List<PuzzlePiece> results)
+        {
+            if (results == null)
+                return;
+
+            results.Clear();
+            if (!TryGetPieceModel(piece, out PieceModel model))
+                return;
+
+            pieceJointGraph.CollectGroupMembers(model.Id, jointGroupMemberIds);
+            if (jointGroupMemberIds.Count == 0)
+            {
+                // A board can be interacted with during an editor domain
+                // reload before its level graph has been reconfigured. A
+                // missing graph must never make an otherwise valid normal
+                // piece undraggable.
+                results.Add(piece);
+                return;
+            }
+
+            bool containsSelectedPiece = false;
+            for (int memberIndex = 0; memberIndex < jointGroupMemberIds.Count; memberIndex++)
+            {
+                PuzzlePiece runtimePiece = FindActivePiece(jointGroupMemberIds[memberIndex]);
+                if (runtimePiece != null)
+                {
+                    results.Add(runtimePiece);
+                    containsSelectedPiece |= runtimePiece == piece;
+                }
+            }
+
+            // The caller already holds a valid live reference to this root.
+            // Keep a transient static-registry miss from invalidating normal
+            // drag selection; a missing *other* combined member still fails
+            // the group-count validation in CanBeginPieceInteraction.
+            if (!containsSelectedPiece)
+            {
+                int selectedMemberIndex = 0;
+                for (; selectedMemberIndex < jointGroupMemberIds.Count; selectedMemberIndex++)
+                {
+                    if (jointGroupMemberIds[selectedMemberIndex] == model.Id)
+                        break;
+                }
+
+                results.Insert(Mathf.Min(selectedMemberIndex, results.Count), piece);
+            }
+        }
+
+        public int BreakJointsForPiece(PuzzlePiece piece)
+        {
+            return TryGetPieceModel(piece, out PieceModel model)
+                ? pieceJointGraph.RemoveJointsForMember(model.Id)
+                : 0;
+        }
+
+        /// <summary>
+        /// Commits the joint portion of a successful hammer hit. The grid cell
+        /// is resolved before presentation mutates the modular piece, so only
+        /// edges attached to the struck complete block are removed.
+        /// </summary>
+        public int BreakJointsAtPieceCell(int sourcePieceId, GridCoordinate worldCell)
+        {
+            if (BoardSnapshot == null || !BoardSnapshot.TryGetPiece(sourcePieceId, out PieceModel model))
+                return 0;
+
+            GridCoordinate localCell = new GridCoordinate(
+                worldCell.X - model.Anchor.X,
+                worldCell.Y - model.Anchor.Y);
+            pieceJointGraph.CollectJoints(jointBuffer);
+            int removed = 0;
+            for (int index = 0; index < jointBuffer.Count; index++)
+            {
+                PieceJointGraph.Joint joint = jointBuffer[index];
+                if (joint.MemberA == sourcePieceId && IsInsideJointBlock(localCell, joint.BlockA))
+                    removed += pieceJointGraph.RemoveJointsAtEndpoint(sourcePieceId, joint.BlockA);
+                if (joint.MemberB == sourcePieceId && IsInsideJointBlock(localCell, joint.BlockB))
+                    removed += pieceJointGraph.RemoveJointsAtEndpoint(sourcePieceId, joint.BlockB);
+            }
+
+            return removed;
+        }
+
+        public bool TryPlanJointGroupGravityMove(
+            int sourcePieceId,
+            List<GridGravityMove> moves)
+        {
+            if (moves == null || !TryCollectJointGroupModels(sourcePieceId, jointGroupModels))
+                return false;
+
+            moves.Clear();
+            if (!BoardSnapshot.Grid.TryGetGroupFallTarget(jointGroupModels, jointGroupTargetAnchors))
+                return false;
+
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                PieceModel member = jointGroupModels[index];
+                moves.Add(new GridGravityMove(member.Id, member.Anchor, jointGroupTargetAnchors[index]));
+            }
+
+            return moves.Count > 0;
+        }
+
+        public bool TryCommitJointGroupGravityMove(
+            IReadOnlyList<GridGravityMove> moves,
+            out GridPlacementResult result)
+        {
+            result = GridPlacementResult.Failure(
+                GridPlacementFailureReason.EmptyPiece,
+                default,
+                GridCellState.Empty,
+                default);
+            if (moves == null || moves.Count == 0 ||
+                !TryCollectJointGroupModels(moves[0].PieceId, jointGroupModels) ||
+                jointGroupModels.Count != moves.Count)
+            {
+                return false;
+            }
+
+            jointGroupTargetAnchors.Clear();
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                PieceModel member = jointGroupModels[index];
+                GridGravityMove move = moves[index];
+                if (member.Id != move.PieceId || !member.Anchor.Equals(move.FromAnchor) ||
+                    member.State != PieceState.Placed ||
+                    (revealAreaCoordinator != null &&
+                     !revealAreaCoordinator.CanMovePiece(member, move.ToAnchor)))
+                {
+                    return false;
+                }
+
+                jointGroupTargetAnchors.Add(move.ToAnchor);
+            }
+
+            if (!BoardSnapshot.Grid.TryMoveGroupIgnoringMembers(
+                    jointGroupModels,
+                    jointGroupTargetAnchors,
+                    out result))
+            {
+                return false;
+            }
+
+            for (int index = 0; index < jointGroupModels.Count; index++)
+                TryTransitionPieceState(jointGroupModels[index], PieceState.Falling);
+
+            BoardOccupancyChanged?.Invoke();
+            return true;
+        }
+
+        public void CollectJointGroupPieces(int sourcePieceId, List<PuzzlePiece> results)
+        {
+            if (results == null)
+                return;
+
+            results.Clear();
+            pieceJointGraph.CollectGroupMembers(sourcePieceId, jointGroupMemberIds);
+            for (int memberIndex = 0; memberIndex < jointGroupMemberIds.Count; memberIndex++)
+            {
+                PuzzlePiece runtimePiece = FindActivePiece(jointGroupMemberIds[memberIndex]);
+                if (runtimePiece != null)
+                    results.Add(runtimePiece);
+            }
+        }
+
+        private bool TryMovePieceGroupOnGrid(
+            PuzzlePiece piece,
+            GridCoordinate targetAnchor,
+            bool transitionToPlaced,
+            out GridPlacementResult result)
+        {
+            result = GridPlacementResult.Failure(
+                GridPlacementFailureReason.EmptyPiece,
+                targetAnchor,
+                GridCellState.Empty,
+                default);
+            if (!TryGetPieceModel(piece, out PieceModel source) ||
+                !TryCollectJointGroupModels(source.Id, jointGroupModels))
+            {
+                return false;
+            }
+
+            GridCoordinate delta = new GridCoordinate(
+                targetAnchor.X - source.Anchor.X,
+                targetAnchor.Y - source.Anchor.Y);
+
+            // Preserve the established single-piece movement contract. Only
+            // an actual joint group needs the simultaneous-footprint path;
+            // routing every ordinary drag through that new path made normal
+            // drag behaviour depend on combined-block setup.
+            if (jointGroupModels.Count == 1)
+            {
+                if (revealAreaCoordinator != null &&
+                    !revealAreaCoordinator.CanMovePiece(source, targetAnchor))
+                {
+                    return false;
+                }
+
+                if (!BoardSnapshot.Grid.TryMoveIgnoringPiece(
+                        source,
+                        targetAnchor,
+                        source.Id,
+                        out result))
+                {
+                    return false;
+                }
+
+                if (transitionToPlaced)
+                    TryTransitionPieceState(source, PieceState.Placed);
+
+                BoardOccupancyChanged?.Invoke();
+                return true;
+            }
+
+            jointGroupTargetAnchors.Clear();
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                PieceModel member = jointGroupModels[index];
+                GridCoordinate memberTarget = member.Anchor.Offset(delta);
+                if (revealAreaCoordinator != null &&
+                    !revealAreaCoordinator.CanMovePiece(member, memberTarget))
+                {
+                    return false;
+                }
+
+                jointGroupTargetAnchors.Add(memberTarget);
+            }
+
+            bool moved = BoardSnapshot.Grid.TryMoveGroupIgnoringMembers(
+                jointGroupModels,
+                jointGroupTargetAnchors,
+                out result);
+            if (!moved)
+                return false;
+
+            if (transitionToPlaced)
+            {
+                for (int index = 0; index < jointGroupModels.Count; index++)
+                    TryTransitionPieceState(jointGroupModels[index], PieceState.Placed);
+            }
+
+            BoardOccupancyChanged?.Invoke();
+            return true;
+        }
+
+        private bool TryCollectJointGroupModels(int sourceId, List<PieceModel> results)
+        {
+            results.Clear();
+            if (BoardSnapshot == null)
+                return false;
+
+            pieceJointGraph.CollectGroupMembers(sourceId, jointGroupMemberIds);
+            if (jointGroupMemberIds.Count == 0)
+            {
+                if (!BoardSnapshot.TryGetPiece(sourceId, out PieceModel source))
+                    return false;
+
+                results.Add(source);
+                return true;
+            }
+
+            for (int index = 0; index < jointGroupMemberIds.Count; index++)
+            {
+                if (!BoardSnapshot.TryGetPiece(jointGroupMemberIds[index], out PieceModel member))
+                {
+                    results.Clear();
+                    return false;
+                }
+
+                results.Add(member);
+            }
+
+            return results.Count > 0;
+        }
+
+        private static PuzzlePiece FindActivePiece(int sourcePieceId)
+        {
+            IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                PuzzlePiece piece = pieces[index];
+                if (piece != null && piece.SourcePieceId == sourcePieceId)
+                    return piece;
+            }
+
+            return null;
+        }
+
+        private void TransferJointsToHammerFragments(
+            PieceModel sourceModel,
+            IReadOnlyList<PieceModel> fragments)
+        {
+            if (sourceModel == null || fragments == null)
+                return;
+
+            pieceJointGraph.CollectJoints(jointBuffer);
+            for (int jointIndex = 0; jointIndex < jointBuffer.Count; jointIndex++)
+            {
+                PieceJointGraph.Joint joint = jointBuffer[jointIndex];
+                TransferJointEndpointToHammerFragment(
+                    sourceModel,
+                    fragments,
+                    joint.MemberA,
+                    joint.BlockA);
+                TransferJointEndpointToHammerFragment(
+                    sourceModel,
+                    fragments,
+                    joint.MemberB,
+                    joint.BlockB);
+            }
+        }
+
+        private void TransferJointEndpointToHammerFragment(
+            PieceModel sourceModel,
+            IReadOnlyList<PieceModel> fragments,
+            int endpointMemberId,
+            GridCoordinate endpointBlock)
+        {
+            if (endpointMemberId != sourceModel.Id)
+                return;
+
+            GridCoordinate worldBlock = sourceModel.Anchor.Offset(endpointBlock);
+            for (int fragmentIndex = 0; fragmentIndex < fragments.Count; fragmentIndex++)
+            {
+                PieceModel fragment = fragments[fragmentIndex];
+                if (!ContainsCompleteJointBlock(fragment, worldBlock))
+                    continue;
+
+                GridCoordinate fragmentBlock = new GridCoordinate(
+                    worldBlock.X - fragment.Anchor.X,
+                    worldBlock.Y - fragment.Anchor.Y);
+                pieceJointGraph.TransferEndpoint(
+                    endpointMemberId,
+                    endpointBlock,
+                    fragment.Id,
+                    fragmentBlock,
+                    true);
+                return;
+            }
+
+            pieceJointGraph.TransferEndpoint(
+                endpointMemberId,
+                endpointBlock,
+                endpointMemberId,
+                endpointBlock,
+                false);
+        }
+
+        private bool ContainsCompleteJointBlock(PieceModel model, GridCoordinate worldBlock)
+        {
+            if (model == null)
+                return false;
+
+            for (int y = 0; y < jointBlockSize; y++)
+            for (int x = 0; x < jointBlockSize; x++)
+            {
+                GridCoordinate expected = new GridCoordinate(worldBlock.X + x, worldBlock.Y + y);
+                bool contains = false;
+                for (int localIndex = 0; localIndex < model.LocalCells.Count; localIndex++)
+                {
+                    if (model.GetWorldCell(localIndex).Equals(expected))
+                    {
+                        contains = true;
+                        break;
+                    }
+                }
+
+                if (!contains)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool IsInsideJointBlock(GridCoordinate localCell, GridCoordinate blockOrigin)
+        {
+            return localCell.X >= blockOrigin.X && localCell.X < blockOrigin.X + jointBlockSize &&
+                   localCell.Y >= blockOrigin.Y && localCell.Y < blockOrigin.Y + jointBlockSize;
+        }
+
+        private static bool TryResolveJointLocalBlock(
+            PieceDefinition definition,
+            PieceModel model,
+            Vector2Int localBlockOrigin,
+            out GridCoordinate resolvedBlock)
+        {
+            resolvedBlock = default;
+            if (definition == null || definition.cells == null || definition.cells.Count == 0 || model == null)
+                return false;
+
+            Vector2Int pieceMinimum = new Vector2Int(int.MaxValue, int.MaxValue);
+            for (int index = 0; index < definition.cells.Count; index++)
+            {
+                Vector2Int rotated = QuarterTurnUtility.Rotate(
+                    definition.cells[index].localCell,
+                    definition.quarterTurns);
+                pieceMinimum = Vector2Int.Min(pieceMinimum, rotated);
+            }
+
+            Vector2Int blockMinimum = new Vector2Int(int.MaxValue, int.MaxValue);
+            int subdivisions = GravityGridMetrics.FineCellsPerGridCell;
+            for (int y = 0; y < subdivisions; y++)
+            for (int x = 0; x < subdivisions; x++)
+            {
+                Vector2Int rotated = QuarterTurnUtility.Rotate(
+                    localBlockOrigin + new Vector2Int(x, y),
+                    definition.quarterTurns);
+                blockMinimum = Vector2Int.Min(blockMinimum, rotated);
+            }
+
+            resolvedBlock = new GridCoordinate(
+                blockMinimum.x - pieceMinimum.x,
+                blockMinimum.y - pieceMinimum.y);
+            return true;
         }
 
         public bool TryCommitGridGravityMove(
@@ -1551,6 +2050,16 @@ namespace GravityPuzzle
             if (BoardSnapshot == null ||
                 !BoardSnapshot.TryGetPiece(move.PieceId, out PieceModel piece))
                 return false;
+
+            // Group gravity is committed exclusively through
+            // TryCommitJointGroupGravityMove. Retargeting one member during a
+            // presentation tween would otherwise split its authoritative
+            // footprint away from the rest of the connected component.
+            if (TryCollectJointGroupModels(piece.Id, jointGroupModels) &&
+                jointGroupModels.Count > 1)
+            {
+                return false;
+            }
 
             if (revealAreaCoordinator != null &&
                 !revealAreaCoordinator.CanMovePiece(piece, move.ToAnchor))

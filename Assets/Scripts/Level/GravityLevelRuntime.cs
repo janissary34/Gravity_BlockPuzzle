@@ -262,6 +262,7 @@ namespace GravityPuzzle
             boardState.SetTimeLimit(level.timeLimit);
             boardState.EnableSequentialLevels();
             boardState.InitializeBoardSnapshot(LevelBoardSnapshotBuilder.Build(level));
+            boardState.ConfigurePieceJoints(level);
             boardState.ConfigureRevealAreas(new RevealAreaCoordinator());
 
             float frameThickness = level.frameThickness;

@@ -20,8 +20,12 @@ namespace GravityPuzzle
         private readonly HashSet<PuzzlePiece> gridFallingPieces = new HashSet<PuzzlePiece>();
         private readonly List<PuzzlePiece> finishedGridFalls = new List<PuzzlePiece>();
         private readonly List<PuzzlePiece> retargetableGridFalls = new List<PuzzlePiece>();
+        private readonly List<PuzzlePiece> selectedJointGroupPieces = new List<PuzzlePiece>();
         private readonly Queue<GridGravityMove> pendingGridGravityMoves =
             new Queue<GridGravityMove>();
+        private readonly List<GridGravityMove> candidateJointGravityMoves = new List<GridGravityMove>();
+        private readonly List<GridGravityMove> selectedJointGravityMoves = new List<GridGravityMove>();
+        private readonly List<PuzzlePiece> gravityGroupPieces = new List<PuzzlePiece>();
         private GridCoordinate selectedPieceStartAnchor;
         private bool hasSelectedPieceStartAnchor;
         private Vector2 grabOffset;
@@ -265,6 +269,10 @@ namespace GravityPuzzle
 
         private void ClearInputSelection()
         {
+            PrototypeBoard.Active?.CollectJointGroupPieces(selectedPiece, selectedJointGroupPieces);
+            for (int index = 0; index < selectedJointGroupPieces.Count; index++)
+                selectedJointGroupPieces[index]?.SetSelected(false);
+
             selectedPiece = null;
             activeFingerId = -1;
             pendingDragIntent = Vector2.zero;
@@ -419,22 +427,80 @@ namespace GravityPuzzle
             PrototypeBoard activeBoard,
             LevelBoardSnapshot snapshot)
         {
-            if (!GridGravityPlanner.TryPlanNextMove(
-                    snapshot,
-                    IsEligibleForGridGravity,
-                    out GridGravityMove move))
-                return false;
+            selectedJointGravityMoves.Clear();
+            int selectedLandingY = int.MaxValue;
+            int selectedSourceId = int.MaxValue;
+            IReadOnlyList<PieceModel> models = snapshot.Pieces;
+            for (int index = 0; index < models.Count; index++)
+            {
+                PieceModel model = models[index];
+                if (!IsEligibleForGridGravity(model))
+                    continue;
 
-            PuzzlePiece piece = FindActivePiece(move.PieceId);
-            if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
-                piece.GridFallView == null || !piece.GridFallView.CanPlay ||
-                !activeBoard.TryCommitGridGravityMove(move, out _))
+                activeBoard.CollectJointGroupPieces(model.Id, gravityGroupPieces);
+                if (!IsEligibleJointGravityGroup(gravityGroupPieces, model.Id))
+                    continue;
+
+                candidateJointGravityMoves.Clear();
+                if (!activeBoard.TryPlanJointGroupGravityMove(model.Id, candidateJointGravityMoves))
+                    continue;
+
+                int groupLandingY = int.MaxValue;
+                int groupSourceId = int.MaxValue;
+                for (int moveIndex = 0; moveIndex < candidateJointGravityMoves.Count; moveIndex++)
+                {
+                    GridGravityMove candidate = candidateJointGravityMoves[moveIndex];
+                    groupLandingY = Mathf.Min(groupLandingY, candidate.ToAnchor.Y);
+                    groupSourceId = Mathf.Min(groupSourceId, candidate.PieceId);
+                }
+
+                if (groupLandingY > selectedLandingY ||
+                    groupLandingY == selectedLandingY && groupSourceId >= selectedSourceId)
+                {
+                    continue;
+                }
+
+                selectedJointGravityMoves.Clear();
+                selectedJointGravityMoves.AddRange(candidateJointGravityMoves);
+                selectedLandingY = groupLandingY;
+                selectedSourceId = groupSourceId;
+            }
+
+            if (selectedJointGravityMoves.Count == 0 ||
+                !activeBoard.TryCommitJointGroupGravityMove(selectedJointGravityMoves, out _))
             {
                 return false;
             }
 
-            pendingGridGravityMoves.Enqueue(move);
+            for (int index = 0; index < selectedJointGravityMoves.Count; index++)
+                pendingGridGravityMoves.Enqueue(selectedJointGravityMoves[index]);
             return true;
+        }
+
+        private static bool IsEligibleJointGravityGroup(
+            IReadOnlyList<PuzzlePiece> pieces,
+            int expectedMemberId)
+        {
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (pieces == null || pieces.Count == 0 || board == null)
+                return false;
+
+            bool containsExpectedMember = false;
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                PuzzlePiece piece = pieces[index];
+                if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
+                    piece.GridFallView == null || !piece.GridFallView.CanPlay ||
+                    !board.TryGetPieceModel(piece, out PieceModel model) ||
+                    model.State != PieceState.Placed)
+                {
+                    return false;
+                }
+
+                containsExpectedMember |= piece.SourcePieceId == expectedMemberId;
+            }
+
+            return containsExpectedMember;
         }
 
         private static bool IsEligibleForGridGravity(PieceModel model)
@@ -465,49 +531,50 @@ namespace GravityPuzzle
             if (pendingGridGravityMoves.Count == 0)
                 return false;
 
-            GridGravityMove move = pendingGridGravityMoves.Dequeue();
-            PuzzlePiece piece = FindActivePiece(move.PieceId);
-            if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
-                piece.GridFallView == null || !piece.GridFallView.CanPlay ||
-                !snapshot.TryGetPiece(move.PieceId, out PieceModel model))
+            bool playedAny = false;
+            while (pendingGridGravityMoves.Count > 0)
             {
-                pendingGridGravityMoves.Clear();
-                return false;
+                GridGravityMove move = pendingGridGravityMoves.Dequeue();
+                PuzzlePiece piece = FindActivePiece(move.PieceId);
+                if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
+                    piece.GridFallView == null || !piece.GridFallView.CanPlay ||
+                    !snapshot.TryGetPiece(move.PieceId, out PieceModel model))
+                {
+                    pendingGridGravityMoves.Clear();
+                    return playedAny;
+                }
+
+                GridCoordinate targetPivot = new GridCoordinate(
+                    move.ToAnchor.X - model.PivotOffset.X,
+                    move.ToAnchor.Y - model.PivotOffset.Y);
+                PrepareKinematicBody(piece.Body);
+                GridCoordinate sourcePivot = new GridCoordinate(
+                    move.FromAnchor.X - model.PivotOffset.X,
+                    move.FromAnchor.Y - model.PivotOffset.Y);
+                MoveBody(
+                    piece.Body,
+                    GravityLevelGridCoordinates.FineCellToWorld(level, sourcePivot));
+                Vector2 targetPosition = GravityLevelGridCoordinates.FineCellToWorld(level, targetPivot);
+                gridFallingPieces.Add(piece);
+                bool settlesAboveShredder = IsSettlingAboveShredderReservation(snapshot, model);
+                bool played = settlesAboveShredder
+                    ? piece.GridFallView.PlayReleaseTo(
+                        targetPosition,
+                        () => CompleteGridGravityPresentation(piece))
+                    : piece.GridFallView.PlayFallTo(
+                        targetPosition,
+                        () => CompleteGridGravityPresentation(piece));
+                if (played)
+                {
+                    playedAny = true;
+                    continue;
+                }
+
+                gridFallingPieces.Remove(piece);
+                activeBoard.TrySetPieceState(piece, PieceState.Placed);
             }
 
-            GridCoordinate targetPivot = new GridCoordinate(
-                move.ToAnchor.X - model.PivotOffset.X,
-                move.ToAnchor.Y - model.PivotOffset.Y);
-            PrepareKinematicBody(piece.Body);
-
-            // The grid owns both endpoints of a gravity move. A release tween,
-            // Rigidbody interpolation, or a pooled body's previous pose can
-            // leave the visual root fractionally (or even one fine cell)
-            // sideways from move.FromAnchor. Start every fall from the exact
-            // committed source pivot so a vertical grid move never sweeps a
-            // shifted silhouette through a neighbour or an obstacle.
-            GridCoordinate sourcePivot = new GridCoordinate(
-                move.FromAnchor.X - model.PivotOffset.X,
-                move.FromAnchor.Y - model.PivotOffset.Y);
-            MoveBody(
-                piece.Body,
-                GravityLevelGridCoordinates.FineCellToWorld(level, sourcePivot));
-            Vector2 targetPosition = GravityLevelGridCoordinates.FineCellToWorld(level, targetPivot);
-            gridFallingPieces.Add(piece);
-            bool settlesAboveShredder = IsSettlingAboveShredderReservation(snapshot, model);
-            bool played = settlesAboveShredder
-                ? piece.GridFallView.PlayReleaseTo(
-                    targetPosition,
-                    () => CompleteGridGravityPresentation(piece))
-                : piece.GridFallView.PlayFallTo(
-                    targetPosition,
-                    () => CompleteGridGravityPresentation(piece));
-            if (played)
-                return true;
-
-            gridFallingPieces.Remove(piece);
-            activeBoard.TrySetPieceState(piece, PieceState.Placed);
-            return false;
+            return playedAny;
         }
 
         private static bool IsSettlingAboveShredderReservation(
@@ -627,17 +694,56 @@ namespace GravityPuzzle
                     fineDragRemainder.y -= step.Y;
             }
 
-            GridCoordinate pivot = new GridCoordinate(
+            PrototypeBoard board = PrototypeBoard.Active;
+            board?.CollectJointGroupPieces(piece, selectedJointGroupPieces);
+            bool isCombined = selectedJointGroupPieces.Count > 1;
+
+            // The selected root is already known to be alive because it owns
+            // this input operation. Do not make its live presentation depend
+            // on resolving it again through the active-piece registry: during
+            // a pool/domain lifecycle edge that lookup can be briefly empty,
+            // leaving the grid to move while the held visual stays behind
+            // until release snaps it into place.
+            GridCoordinate selectedPivot = new GridCoordinate(
                 model.Anchor.X - model.PivotOffset.X,
                 model.Anchor.Y - model.PivotOffset.Y);
-            Vector2 anchorPosition = GravityLevelGridCoordinates.FineCellToWorld(level, pivot);
-            lastResolvedDragPosition = anchorPosition;
-            hasLastResolvedDragPosition = true;
-            piece.Body.position = anchorPosition + GetContinuousDragPresentationOffset(
-                snapshot.Grid,
-                model,
+            Vector2 selectedGridPosition = GravityLevelGridCoordinates.FineCellToWorld(
                 level,
-                fineDragRemainder);
+                selectedPivot);
+            Vector2 selectedPresentationOffset = isCombined
+                ? Vector2.zero
+                : GetContinuousDragPresentationOffset(
+                    snapshot.Grid,
+                    model,
+                    level,
+                    fineDragRemainder);
+            piece.Body.position = selectedGridPosition + selectedPresentationOffset;
+            PrepareKinematicBody(piece.Body, interpolate: false);
+
+            for (int groupIndex = 0; groupIndex < selectedJointGroupPieces.Count; groupIndex++)
+            {
+                PuzzlePiece groupPiece = selectedJointGroupPieces[groupIndex];
+                if (groupPiece == null || groupPiece == piece || groupPiece.Body == null ||
+                    !snapshot.TryGetPiece(groupPiece.SourcePieceId, out PieceModel groupModel))
+                {
+                    continue;
+                }
+
+                GridCoordinate groupPivot = new GridCoordinate(
+                    groupModel.Anchor.X - groupModel.PivotOffset.X,
+                    groupModel.Anchor.Y - groupModel.PivotOffset.Y);
+                Vector2 groupPosition = GravityLevelGridCoordinates.FineCellToWorld(level, groupPivot);
+                groupPiece.Body.position = groupPosition;
+                PrepareKinematicBody(groupPiece.Body, interpolate: false);
+            }
+
+            // Release snapping must use what the player was actually holding,
+            // including the sub-cell presentation remainder. Using only the
+            // last committed grid cell made a normal drag snap from an old
+            // position instead of the release position.
+            lastResolvedDragPosition = selectedGridPosition + selectedPresentationOffset;
+            hasLastResolvedDragPosition = true;
+            Physics2D.SyncTransforms();
             return true;
         }
 
@@ -897,7 +1003,7 @@ namespace GravityPuzzle
 
             // A grid-owned selection is only valid after its transition to
             // Dragging succeeds. Keep the piece logically on the board and occupied.
-            if (PrototypeBoard.Active == null || !PrototypeBoard.Active.TrySetPieceState(piece, PieceState.Dragging))
+            if (PrototypeBoard.Active == null || !PrototypeBoard.Active.TryBeginPieceDrag(piece))
             {
                 hasSelectedPieceStartAnchor = false;
                 return;
@@ -905,8 +1011,16 @@ namespace GravityPuzzle
 
             Rigidbody2D body = piece.Body;
             selectedPiece = piece;
-            PrepareKinematicBody(body, interpolate: false);
-            selectedPiece.SetSelected(true);
+            PrototypeBoard.Active.CollectJointGroupPieces(piece, selectedJointGroupPieces);
+            for (int groupIndex = 0; groupIndex < selectedJointGroupPieces.Count; groupIndex++)
+            {
+                PuzzlePiece groupPiece = selectedJointGroupPieces[groupIndex];
+                if (groupPiece == null || groupPiece.Body == null)
+                    continue;
+
+                PrepareKinematicBody(groupPiece.Body, interpolate: false);
+                groupPiece.SetSelected(true);
+            }
             Physics2D.SyncTransforms();
 
             grabOffset = body.position - pointerPosition;
@@ -922,9 +1036,38 @@ namespace GravityPuzzle
             Rigidbody2D body = selectedPiece.Body;
             TryMoveSelectedPieceOnGrid(selectedPiece, ConsumeDragIntent());
 
-            selectedPiece.SetSelected(false);
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            activeBoard?.CollectJointGroupPieces(selectedPiece, selectedJointGroupPieces);
+            bool isCombined = selectedJointGroupPieces.Count > 1;
+            for (int groupIndex = 0; groupIndex < selectedJointGroupPieces.Count; groupIndex++)
+            {
+                PuzzlePiece groupPiece = selectedJointGroupPieces[groupIndex];
+                if (groupPiece == null || groupPiece.Body == null)
+                    continue;
+
+                groupPiece.SetSelected(false);
+                PrepareKinematicBody(groupPiece.Body);
+            }
             Physics2D.SyncTransforms();
             PrepareKinematicBody(body);
+
+            // Combined members must never each run an independent release
+            // tween: their next drag or gravity evaluation would observe
+            // diverging visuals despite one authoritative group anchor delta.
+            if (isCombined)
+            {
+                if (TryCommitCurrentGridRelease(selectedPiece, out _))
+                {
+                    for (int groupIndex = 0; groupIndex < selectedJointGroupPieces.Count; groupIndex++)
+                        SnapPieceToCommittedGridPosition(selectedJointGroupPieces[groupIndex]);
+                }
+
+                selectedPiece = null;
+                hasSelectedPieceStartAnchor = false;
+                hasLastResolvedDragPosition = false;
+                return;
+            }
+
             if (TryCommitSafeSnapRelease(selectedPiece, out Vector2 releasePosition))
             {
                 PuzzlePiece releasePiece = selectedPiece;

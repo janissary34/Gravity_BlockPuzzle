@@ -107,6 +107,9 @@ namespace GravityPuzzle
         [Min(0f)] public float shredderRotationSpeed = 220f;
 
         public List<PieceDefinition> pieces = new List<PieceDefinition>();
+        [Header("Combined Piece Joints")]
+        [Tooltip("Edges that join authored pieces into one runtime movement group. A group is derived from the connected joint graph.")]
+        public List<JointDefinition> joints = new List<JointDefinition>();
         [Header("Reveal Areas")]
         [Tooltip("Closed boxes whose hidden contents are released after their shred target is met.")]
         public List<BoxRevealDefinition> boxes = new List<BoxRevealDefinition>();
@@ -180,6 +183,8 @@ namespace GravityPuzzle
     [Serializable]
     public sealed class PieceDefinition
     {
+        [Tooltip("Stable level-local identity used by combined-piece joints. Do not reuse this value for another piece.")]
+        public string pieceId;
         public string name = "Puzzle Piece";
         [Tooltip("Stable authoring key used only by a first-use booster tutorial. Keep unique within this level.")]
         public string tutorialTargetId;
@@ -207,6 +212,31 @@ namespace GravityPuzzle
         [Range(0f, 1f)] public float bombCounterOutlineWidth = .18f;
         public Vector2 bombCounterOffset = Vector2.zero;
         public List<PieceCellDefinition> cells = new List<PieceCellDefinition>();
+    }
+
+    /// <summary>
+    /// Identifies one complete authored block module. The local origin always
+    /// refers to the unrotated piece definition; runtime resolves its current
+    /// world position from the owning piece model.
+    /// </summary>
+    [Serializable]
+    public sealed class JointEndpointDefinition
+    {
+        public string pieceId;
+        public Vector2Int localBlockOrigin;
+    }
+
+    /// <summary>
+    /// A removable edge between two adjacent complete block modules. Combined
+    /// groups are deliberately not serialized: they are the connected
+    /// components of the current joint graph.
+    /// </summary>
+    [Serializable]
+    public sealed class JointDefinition
+    {
+        public string jointId;
+        public JointEndpointDefinition endpointA = new JointEndpointDefinition();
+        public JointEndpointDefinition endpointB = new JointEndpointDefinition();
     }
 
     [Serializable]
