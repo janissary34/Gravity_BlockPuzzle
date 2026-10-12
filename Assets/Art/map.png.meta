@@ -815,6 +815,27 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Bomb
+      rect:
+        serializedVersion: 2
+        x: 1808
+        y: 1265
+        width: 211
+        height: 211
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a8ed91c1c314d4128ae91e1c91317528
+      internalID: 1513006127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -830,6 +851,7 @@ TextureImporter:
     nameFileIdTable:
       BG: -1950294464
       BG2: -1994115321
+      Bomb: 1513006127
       Corner_Bottom_Left: 907948875
       Corner_Bottom_Right: -2049558506
       Corner_Top_Left: 1180291467
