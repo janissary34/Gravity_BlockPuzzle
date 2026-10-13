@@ -11,6 +11,8 @@ namespace GravityPuzzle.Config
         [SerializeField] private List<PieceVisualDefinition> definitions = new List<PieceVisualDefinition>();
 
         [Header("Material Palette")]
+        [Tooltip("Valid SpriteRenderer material used when a prefab or palette material is missing or unsupported. It preserves the level-authored renderer tint.")]
+        [SerializeField] private Material fallbackSpriteMaterial;
         [Tooltip("Shared ice material used while an ice silhouette or frost layer is visible.")]
         [SerializeField] private Material iceMaterial;
         [Tooltip("Named palette entries used by level piece definitions. The material owns the brick colour; level definitions do not need a renderer tint.")]
@@ -60,6 +62,7 @@ namespace GravityPuzzle.Config
         [SerializeField, Range(0, 8)] private int outlineCapVertices = 4;
 
         public IReadOnlyList<PieceVisualDefinition> Definitions => definitions;
+        public Material FallbackSpriteMaterial => fallbackSpriteMaterial;
         public Material IceMaterial => iceMaterial;
         public IReadOnlyList<PiecePaletteDefinition> PaletteDefinitions => paletteDefinitions;
         public bool UseUnifiedModularIce => useUnifiedModularIce;

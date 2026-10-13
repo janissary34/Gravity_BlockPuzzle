@@ -3249,27 +3249,49 @@ namespace GravityPuzzle.Editor
                 return modules;
 
             int subdivisions = Mathf.Max(1, level.subdivisions);
-            HashSet<Vector2Int> candidates = new HashSet<Vector2Int>();
+            // A piece's local origin is not required to be aligned with a
+            // standard block. Derive modules from absolute fine-grid cells so
+            // a complete 4x4 world block is recognised even when its local
+            // coordinates straddle zero (or the piece is rotated).
+            Dictionary<Vector2Int, Vector2Int> localCellByWorldCell =
+                new Dictionary<Vector2Int, Vector2Int>();
+            HashSet<Vector2Int> candidateSet = new HashSet<Vector2Int>();
+            List<Vector2Int> candidateWorldOrigins = new List<Vector2Int>();
             for (int index = 0; index < piece.cells.Count; index++)
             {
                 PieceCellDefinition cell = piece.cells[index];
                 if (cell.type != PieceCellType.Block)
                     continue;
 
-                candidates.Add(new Vector2Int(
-                    FloorToMultiple(cell.localCell.x, subdivisions),
-                    FloorToMultiple(cell.localCell.y, subdivisions)));
+                Vector2Int worldCell = piece.origin + QuarterTurnUtility.Rotate(
+                    cell.localCell,
+                    piece.quarterTurns);
+                localCellByWorldCell[worldCell] = cell.localCell;
+                Vector2Int worldBlockOrigin = new Vector2Int(
+                    FloorToMultiple(worldCell.x, subdivisions),
+                    FloorToMultiple(worldCell.y, subdivisions));
+                if (candidateSet.Add(worldBlockOrigin))
+                    candidateWorldOrigins.Add(worldBlockOrigin);
             }
 
-            foreach (Vector2Int localOrigin in candidates)
+            candidateWorldOrigins.Sort(CompareGridCoordinates);
+            for (int candidateIndex = 0; candidateIndex < candidateWorldOrigins.Count; candidateIndex++)
             {
-                if (!ContainsCompleteBlockModule(piece, localOrigin, subdivisions))
+                Vector2Int worldBlockOrigin = candidateWorldOrigins[candidateIndex];
+                if (!TryGetCompleteBlockModuleLocalOrigin(
+                        localCellByWorldCell,
+                        worldBlockOrigin,
+                        subdivisions,
+                        out Vector2Int localOrigin))
+                {
                     continue;
+                }
 
-                Vector2Int absoluteMinimum = GetAbsoluteBlockMinimum(piece, localOrigin, subdivisions);
                 modules.Add(new BlockModule(
                     localOrigin,
-                    new Vector2Int(absoluteMinimum.x / subdivisions, absoluteMinimum.y / subdivisions)));
+                    new Vector2Int(
+                        worldBlockOrigin.x / subdivisions,
+                        worldBlockOrigin.y / subdivisions)));
             }
 
             return modules;
@@ -3294,49 +3316,30 @@ namespace GravityPuzzle.Editor
             return false;
         }
 
-        private static bool ContainsCompleteBlockModule(
-            PieceDefinition piece,
-            Vector2Int localOrigin,
-            int subdivisions)
+        private static bool TryGetCompleteBlockModuleLocalOrigin(
+            Dictionary<Vector2Int, Vector2Int> localCellByWorldCell,
+            Vector2Int worldBlockOrigin,
+            int subdivisions,
+            out Vector2Int localOrigin)
         {
+            localOrigin = new Vector2Int(int.MaxValue, int.MaxValue);
             for (int y = 0; y < subdivisions; y++)
             for (int x = 0; x < subdivisions; x++)
             {
-                Vector2Int expected = localOrigin + new Vector2Int(x, y);
-                bool found = false;
-                for (int index = 0; index < piece.cells.Count; index++)
-                {
-                    PieceCellDefinition cell = piece.cells[index];
-                    if (cell.type == PieceCellType.Block && cell.localCell == expected)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
+                Vector2Int worldCell = worldBlockOrigin + new Vector2Int(x, y);
+                if (!localCellByWorldCell.TryGetValue(worldCell, out Vector2Int localCell))
                     return false;
+
+                localOrigin = Vector2Int.Min(localOrigin, localCell);
             }
 
-            return true;
+            return localOrigin.x != int.MaxValue && localOrigin.y != int.MaxValue;
         }
 
-        private static Vector2Int GetAbsoluteBlockMinimum(
-            PieceDefinition piece,
-            Vector2Int localOrigin,
-            int subdivisions)
+        private static int CompareGridCoordinates(Vector2Int first, Vector2Int second)
         {
-            Vector2Int minimum = new Vector2Int(int.MaxValue, int.MaxValue);
-            for (int y = 0; y < subdivisions; y++)
-            for (int x = 0; x < subdivisions; x++)
-            {
-                Vector2Int absolute = piece.origin + QuarterTurnUtility.Rotate(
-                    localOrigin + new Vector2Int(x, y),
-                    piece.quarterTurns);
-                minimum = Vector2Int.Min(minimum, absolute);
-            }
-
-            return minimum;
+            int xComparison = first.x.CompareTo(second.x);
+            return xComparison != 0 ? xComparison : first.y.CompareTo(second.y);
         }
 
         private static bool AreAdjacent(Vector2Int first, Vector2Int second)

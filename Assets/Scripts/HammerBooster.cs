@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -67,6 +68,7 @@ namespace GravityPuzzle
         private int lastActivationFrame = -1;
         private BoosterVisualView hammerVisualPrefabView;
         private GameObjectPool<BoosterVisualView> hammerVisualPool;
+        private readonly List<int> hammerJointIds = new List<int>();
 
         public void SetSelectionGlowVisible(bool visible)
         {
@@ -530,10 +532,15 @@ namespace GravityPuzzle
             GridCoordinate targetCell = level != null
                 ? GravityLevelGridCoordinates.WorldToFineCell(level, impactPosition)
                 : default;
+            PrototypeBoard board = PrototypeBoard.Active;
+            hammerJointIds.Clear();
+            if (piece != null && level != null)
+                board?.CollectJointIdsAtPieceCell(sourcePieceId, targetCell, hammerJointIds);
             if (TopologyEditingEnabled &&
                 piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
-                PrototypeBoard.Active?.BreakJointsAtPieceCell(sourcePieceId, targetCell);
+                if (board?.BreakJointsById(hammerJointIds) > 0)
+                    PuzzleDragController.WakeUpGravity();
                 impactSucceeded = true;
                 Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
                 LevelProgressManager manager = LevelProgressManager.Instance;

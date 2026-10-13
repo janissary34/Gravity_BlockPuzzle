@@ -35,6 +35,27 @@ namespace GravityPuzzle.Tests.Editor
         }
 
         [Test]
+        public void RemovingCapturedJointIdSeparatesMembersAfterEndpointIdentityChanges()
+        {
+            PieceJointGraph graph = CreateGraph(
+                new PieceJointGraph.Joint(77, 10, 20, new GridCoordinate(0, 0), new GridCoordinate(1, 0)));
+
+            // Hammer records stable joint ids before it rebuilds the struck
+            // piece's topology. The endpoint may be transferred to a fragment
+            // in between, but the original edge must still be removable.
+            graph.TransferEndpoint(
+                10,
+                new GridCoordinate(0, 0),
+                30,
+                new GridCoordinate(0, 0),
+                true);
+
+            Assert.That(graph.RemoveJointsById(new[] { 77 }), Is.EqualTo(1));
+            Assert.That(graph.AreInSameGroup(30, 20), Is.False);
+            Assert.That(graph.JointCount, Is.EqualTo(0));
+        }
+
+        [Test]
         public void RemovingMiddleMemberJointsSplitsAChain()
         {
             PieceJointGraph graph = CreateGraph(

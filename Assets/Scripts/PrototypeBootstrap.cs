@@ -1596,6 +1596,128 @@ namespace GravityPuzzle
             return TryMovePieceGroupOnGrid(piece, targetAnchor, false, out result);
         }
 
+        /// <summary>
+        /// Checks a translation without committing it. Drag presentation uses
+        /// this for its sub-cell cursor offset so every member of a combined
+        /// group follows the pointer together without visually entering a
+        /// blocked footprint.
+        /// </summary>
+        public bool CanMovePieceGroupBy(PuzzlePiece piece, GridCoordinate delta)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel source) ||
+                !TryCollectJointGroupModels(source.Id, jointGroupModels))
+                return false;
+
+            jointGroupTargetAnchors.Clear();
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                PieceModel member = jointGroupModels[index];
+                GridCoordinate targetAnchor = member.Anchor.Offset(delta);
+                if (revealAreaCoordinator != null &&
+                    !revealAreaCoordinator.CanMovePiece(member, targetAnchor))
+                {
+                    return false;
+                }
+
+                jointGroupTargetAnchors.Add(targetAnchor);
+            }
+
+            return BoardSnapshot.Grid.CheckGroupPlacementIgnoringMembers(
+                jointGroupModels,
+                jointGroupTargetAnchors).IsSuccess;
+        }
+
+        /// <summary>
+        /// Supplies one stable pivot for an entire joint graph component. Input
+        /// uses it only to preserve relative presentation and snap offsets;
+        /// grid ownership remains on each member model.
+        /// </summary>
+        public bool TryGetJointGroupDragReference(
+            PuzzlePiece piece,
+            out GridCoordinate groupPivot,
+            out GridCoordinate sourcePivotOffset)
+        {
+            groupPivot = default;
+            sourcePivotOffset = default;
+            if (!TryGetPieceModel(piece, out PieceModel source) ||
+                !TryCollectJointGroupModels(source.Id, jointGroupModels) ||
+                jointGroupModels.Count == 0)
+            {
+                return false;
+            }
+
+            PieceModel reference = jointGroupModels[0];
+            for (int index = 1; index < jointGroupModels.Count; index++)
+            {
+                PieceModel candidate = jointGroupModels[index];
+                if (candidate.Id < reference.Id)
+                    reference = candidate;
+            }
+
+            groupPivot = new GridCoordinate(
+                reference.Anchor.X - reference.PivotOffset.X,
+                reference.Anchor.Y - reference.PivotOffset.Y);
+            GridCoordinate sourcePivot = new GridCoordinate(
+                source.Anchor.X - source.PivotOffset.X,
+                source.Anchor.Y - source.PivotOffset.Y);
+            sourcePivotOffset = new GridCoordinate(
+                sourcePivot.X - groupPivot.X,
+                sourcePivot.Y - groupPivot.Y);
+            return true;
+        }
+
+        /// <summary>
+        /// Validates the orthogonal route used by release snapping. It mirrors
+        /// single-piece snap safety but checks each intermediate footprint as
+        /// one graph-derived group.
+        /// </summary>
+        public bool CanTraversePieceGroupTo(PuzzlePiece piece, GridCoordinate targetAnchor)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel source) ||
+                !TryCollectJointGroupModels(source.Id, jointGroupModels))
+            {
+                return false;
+            }
+
+            jointGroupTargetAnchors.Clear();
+            for (int index = 0; index < jointGroupModels.Count; index++)
+                jointGroupTargetAnchors.Add(jointGroupModels[index].Anchor);
+
+            GridCoordinate sourceAnchor = source.Anchor;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            int traversalBudget = level != null
+                ? Mathf.Max(1, level.FineColumns + level.FineRows)
+                : int.MaxValue;
+            for (int stepIndex = 0; stepIndex < traversalBudget; stepIndex++)
+            {
+                if (!FineGridDragStepper.TryGetTraversalSteps(
+                        sourceAnchor,
+                        targetAnchor,
+                        out GridCoordinate primaryDelta,
+                        out GridCoordinate fallbackDelta))
+                {
+                    return true;
+                }
+
+                if (TryAdvanceJointGroupTraversal(primaryDelta))
+                {
+                    sourceAnchor = sourceAnchor.Offset(primaryDelta);
+                    continue;
+                }
+
+                if ((fallbackDelta.X != 0 || fallbackDelta.Y != 0) &&
+                    TryAdvanceJointGroupTraversal(fallbackDelta))
+                {
+                    sourceAnchor = sourceAnchor.Offset(fallbackDelta);
+                    continue;
+                }
+
+                return false;
+            }
+
+            return sourceAnchor.Equals(targetAnchor);
+        }
+
         public bool CanBeginPieceInteraction(PuzzlePiece piece)
         {
             if (!TryGetPieceModel(piece, out PieceModel model) ||
@@ -1684,24 +1806,47 @@ namespace GravityPuzzle
         /// </summary>
         public int BreakJointsAtPieceCell(int sourcePieceId, GridCoordinate worldCell)
         {
+            jointGroupMemberIds.Clear();
+            CollectJointIdsAtPieceCell(sourcePieceId, worldCell, jointGroupMemberIds);
+            return BreakJointsById(jointGroupMemberIds);
+        }
+
+        /// <summary>
+        /// Resolves joint ids against the unmodified grid model. Callers that
+        /// change a piece's topology must capture this before the edit and
+        /// commit it only after the edit succeeds, because a split can move an
+        /// endpoint to a fragment with a different runtime identity.
+        /// </summary>
+        public void CollectJointIdsAtPieceCell(
+            int sourcePieceId,
+            GridCoordinate worldCell,
+            List<int> results)
+        {
+            if (results == null)
+                return;
+
+            results.Clear();
             if (BoardSnapshot == null || !BoardSnapshot.TryGetPiece(sourcePieceId, out PieceModel model))
-                return 0;
+                return;
 
             GridCoordinate localCell = new GridCoordinate(
                 worldCell.X - model.Anchor.X,
                 worldCell.Y - model.Anchor.Y);
             pieceJointGraph.CollectJoints(jointBuffer);
-            int removed = 0;
             for (int index = 0; index < jointBuffer.Count; index++)
             {
                 PieceJointGraph.Joint joint = jointBuffer[index];
-                if (joint.MemberA == sourcePieceId && IsInsideJointBlock(localCell, joint.BlockA))
-                    removed += pieceJointGraph.RemoveJointsAtEndpoint(sourcePieceId, joint.BlockA);
-                if (joint.MemberB == sourcePieceId && IsInsideJointBlock(localCell, joint.BlockB))
-                    removed += pieceJointGraph.RemoveJointsAtEndpoint(sourcePieceId, joint.BlockB);
+                if ((joint.MemberA == sourcePieceId && IsInsideJointBlock(localCell, joint.BlockA)) ||
+                    (joint.MemberB == sourcePieceId && IsInsideJointBlock(localCell, joint.BlockB)))
+                {
+                    results.Add(joint.Id);
+                }
             }
+        }
 
-            return removed;
+        public int BreakJointsById(IReadOnlyList<int> jointIds)
+        {
+            return pieceJointGraph.RemoveJointsById(jointIds);
         }
 
         public bool TryPlanJointGroupGravityMove(
@@ -1813,9 +1958,16 @@ namespace GravityPuzzle
             // drag behaviour depend on combined-block setup.
             if (jointGroupModels.Count == 1)
             {
-                if (revealAreaCoordinator != null &&
-                    !revealAreaCoordinator.CanMovePiece(source, targetAnchor))
+                bool revealOk = revealAreaCoordinator == null ||
+                                revealAreaCoordinator.CanMovePiece(source, targetAnchor);
+                if (!revealOk)
                 {
+                    result = GridPlacementResult.Failure(
+                        GridPlacementFailureReason.EmptyPiece,
+                        targetAnchor,
+                        GridCellState.Empty,
+                        default);
+                    LogGroupMoveFailure(delta, source, false, result);
                     return false;
                 }
 
@@ -1825,6 +1977,7 @@ namespace GravityPuzzle
                         source.Id,
                         out result))
                 {
+                    LogGroupMoveFailure(delta, source, true, result);
                     return false;
                 }
 
@@ -1840,9 +1993,16 @@ namespace GravityPuzzle
             {
                 PieceModel member = jointGroupModels[index];
                 GridCoordinate memberTarget = member.Anchor.Offset(delta);
-                if (revealAreaCoordinator != null &&
-                    !revealAreaCoordinator.CanMovePiece(member, memberTarget))
+                bool revealOk = revealAreaCoordinator == null ||
+                                revealAreaCoordinator.CanMovePiece(member, memberTarget);
+                if (!revealOk)
                 {
+                    result = GridPlacementResult.Failure(
+                        GridPlacementFailureReason.EmptyPiece,
+                        memberTarget,
+                        GridCellState.Empty,
+                        default);
+                    LogGroupMoveFailure(delta, member, false, result);
                     return false;
                 }
 
@@ -1854,7 +2014,14 @@ namespace GravityPuzzle
                 jointGroupTargetAnchors,
                 out result);
             if (!moved)
+            {
+                LogGroupMoveFailure(
+                    delta,
+                    FindGroupMemberAtTargetCoordinate(result.Coordinate, jointGroupTargetAnchors),
+                    true,
+                    result);
                 return false;
+            }
 
             if (transitionToPlaced)
             {
@@ -1864,6 +2031,86 @@ namespace GravityPuzzle
 
             BoardOccupancyChanged?.Invoke();
             return true;
+        }
+
+        private bool TryAdvanceJointGroupTraversal(GridCoordinate delta)
+        {
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                GridCoordinate nextAnchor = jointGroupTargetAnchors[index].Offset(delta);
+                PieceModel member = jointGroupModels[index];
+                bool revealOk = revealAreaCoordinator == null ||
+                                revealAreaCoordinator.CanMovePiece(member, nextAnchor);
+                if (!revealOk)
+                {
+                    GridPlacementResult revealFailure = GridPlacementResult.Failure(
+                        GridPlacementFailureReason.EmptyPiece,
+                        nextAnchor,
+                        GridCellState.Empty,
+                        default);
+                    LogGroupMoveFailure(delta, member, false, revealFailure);
+                    return false;
+                }
+            }
+
+            for (int index = 0; index < jointGroupTargetAnchors.Count; index++)
+                jointGroupTargetAnchors[index] = jointGroupTargetAnchors[index].Offset(delta);
+
+            GridPlacementResult result = BoardSnapshot.Grid.CheckGroupPlacementIgnoringMembers(
+                jointGroupModels,
+                jointGroupTargetAnchors);
+            if (!result.IsSuccess)
+            {
+                LogGroupMoveFailure(
+                    delta,
+                    FindGroupMemberAtTargetCoordinate(result.Coordinate, jointGroupTargetAnchors),
+                    true,
+                    result);
+                // A rejected candidate must not become the basis for the
+                // orthogonal slide fallback. Keep traversal state equal to the
+                // last confirmed anchor for every group member.
+                for (int index = 0; index < jointGroupTargetAnchors.Count; index++)
+                    jointGroupTargetAnchors[index] = jointGroupTargetAnchors[index].Offset(
+                        new GridCoordinate(-delta.X, -delta.Y));
+                return false;
+            }
+
+            return true;
+        }
+
+        private PieceModel FindGroupMemberAtTargetCoordinate(
+            GridCoordinate coordinate,
+            IReadOnlyList<GridCoordinate> targetAnchors)
+        {
+            for (int memberIndex = 0; memberIndex < jointGroupModels.Count; memberIndex++)
+            {
+                PieceModel member = jointGroupModels[memberIndex];
+                if (member == null || memberIndex >= targetAnchors.Count)
+                    continue;
+
+                GridCoordinate memberAnchor = targetAnchors[memberIndex];
+                for (int cellIndex = 0; cellIndex < member.LocalCells.Count; cellIndex++)
+                {
+                    if (memberAnchor.Offset(member.LocalCells[cellIndex]).Equals(coordinate))
+                        return member;
+                }
+            }
+
+            return jointGroupModels.Count > 0 ? jointGroupModels[0] : null;
+        }
+
+        private void LogGroupMoveFailure(
+            GridCoordinate delta,
+            PieceModel member,
+            bool revealOk,
+            GridPlacementResult result)
+        {
+            int memberId = member != null ? member.Id : default;
+            Debug.Log(
+                $"[GroupMove] FAIL delta={delta} member={memberId} " +
+                $"reveal={revealOk} reason={result.Reason} cell={result.Coordinate} " +
+                $"cellState={result.CellState} occupant={result.OccupantId} " +
+                $"groupIds=[{string.Join(",", jointGroupModels.ConvertAll(model => model.Id))}]");
         }
 
         private bool TryCollectJointGroupModels(int sourceId, List<PieceModel> results)

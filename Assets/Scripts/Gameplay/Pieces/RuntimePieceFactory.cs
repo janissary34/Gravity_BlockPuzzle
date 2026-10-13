@@ -31,6 +31,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static bool useVoxelShardGrid = false;
         private static readonly HashSet<string> warnedMissingVisualIds = new HashSet<string>();
         private static readonly HashSet<string> warnedMissingPaletteIds = new HashSet<string>();
+        private static readonly HashSet<string> warnedUnsupportedPaletteIds = new HashSet<string>();
 
         public static void SetRootProvider(IRuntimePieceRootProvider provider)
         {
@@ -62,6 +63,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             iceParticleVfx = null;
             warnedMissingVisualIds.Clear();
             warnedMissingPaletteIds.Clear();
+            warnedUnsupportedPaletteIds.Clear();
         }
 
         public static PuzzlePiece Create(
@@ -168,7 +170,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             root.Transform.localScale = scale;
             root.Piece.ConfigurePresentationMaterials(
                 presentationMaterial,
-                pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null);
+                pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null,
+                GetFallbackSpriteMaterial());
             ConfigureFragment(root.Piece, root.Body, root.CompositeCollider, root.Outline,
                 level, cells, color, presentationMaterial, remainingProgress);
             // A pooled Rigidbody2D can retain its previous physics pose until
@@ -313,6 +316,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                     color,
                     GetCellPresentationSprite(GetFallbackSprite(false), fragmentCell.Size),
                     presentationMaterial,
+                    GetFallbackSpriteMaterial(),
                     out SpriteRenderer visual,
                     voxelShards);
                 collisionCells.Add(collider);
@@ -330,7 +334,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             piece.ConfigureVisualColor(color);
             piece.ConfigurePresentationMaterials(
                 presentationMaterial,
-                pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null);
+                pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null,
+                GetFallbackSpriteMaterial());
             piece.ConfigureCollisionGeometry(composite, collisionCells, cellVisuals);
             if (voxelShards.Count > 0)
                 piece.ConfigureVoxelPresentation(voxelShards);
@@ -461,7 +466,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             puzzlePiece.ConfigureIceParticleVfx(iceParticleVfx);
             puzzlePiece.ConfigurePresentationMaterials(
                 presentationMaterial,
-                pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null);
+                pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null,
+                GetFallbackSpriteMaterial());
             puzzlePiece.Configure(new PieceRuntimeSetup(
                 sourcePieceId,
                 Mathf.Max(1, content.ProgressUnits),
@@ -531,6 +537,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                     visualColor,
                     GetCellPresentationSprite(voxelSprite, parts[index].Size),
                     presentationMaterial,
+                    GetFallbackSpriteMaterial(),
                     out SpriteRenderer cellVisual,
                     voxelShards,
                     presentationScaleMultiplier);
@@ -744,6 +751,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             Color color,
             Sprite voxelSprite,
             Material presentationMaterial,
+            Material fallbackSpriteMaterial,
             out SpriteRenderer cellVisual,
             List<VoxelShard> voxelShards = null,
             float presentationScaleMultiplier = 1f)
@@ -764,7 +772,9 @@ namespace GravityPuzzle.Gameplay.Pieces
                 : PrototypeBootstrap.GetSquareSprite();
             cellVisual.sprite = presentationSprite;
             cellVisual.color = presentationMaterial != null ? Color.white : color;
-            cellVisual.sharedMaterial = presentationMaterial;
+            cellVisual.sharedMaterial = presentationMaterial != null
+                ? presentationMaterial
+                : fallbackSpriteMaterial;
             cellVisual.flipX = false;
             cellVisual.flipY = false;
             cellVisual.sortingOrder = 5;
@@ -838,8 +848,18 @@ namespace GravityPuzzle.Gameplay.Pieces
                                definition.frozenMoveCount > 0;
             color = definition.color;
             presentationMaterial = ResolvePaletteMaterial(definition.paletteId);
-            if (presentationMaterial != null)
+            if (presentationMaterial != null && IsSupportedSpriteMaterial(presentationMaterial))
+            {
                 color = presentationMaterial.color;
+            }
+            else if (presentationMaterial != null)
+            {
+                WarnUnsupportedPaletteMaterial(definition.paletteId, presentationMaterial);
+                // An unresolved Shader Graph renders Unity's solid magenta
+                // error colour. Keep the authored palette tint and allow the
+                // SpriteRenderer default material to render the brick sprite.
+                presentationMaterial = null;
+            }
             voxelSprite = GetFallbackSprite(isFrozenIce);
             if (string.IsNullOrWhiteSpace(definition.visualId))
                 return;
@@ -881,6 +901,35 @@ namespace GravityPuzzle.Gameplay.Pieces
             }
 
             return null;
+        }
+
+        private static bool IsSupportedSpriteMaterial(Material material)
+        {
+            return material != null &&
+                   material.shader != null &&
+                   material.shader.isSupported &&
+                   material.shader.name != "Hidden/InternalErrorShader";
+        }
+
+        private static Material GetFallbackSpriteMaterial()
+        {
+            Material fallback = pieceVisualConfig != null
+                ? pieceVisualConfig.FallbackSpriteMaterial
+                : null;
+            return IsSupportedSpriteMaterial(fallback) ? fallback : null;
+        }
+
+        private static void WarnUnsupportedPaletteMaterial(string paletteId, Material material)
+        {
+            string warningKey = string.IsNullOrWhiteSpace(paletteId)
+                ? material.name
+                : paletteId;
+            if (!warnedUnsupportedPaletteIds.Add(warningKey))
+                return;
+
+            Debug.LogWarning(
+                $"[PieceVisualConfig] Palette '{warningKey}' uses unsupported material " +
+                $"'{material.name}'. Rendering with the SpriteRenderer default material and the authored colour instead.");
         }
 
         private static Sprite GetFallbackSprite(bool isIce)

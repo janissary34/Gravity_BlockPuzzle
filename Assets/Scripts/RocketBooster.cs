@@ -365,8 +365,6 @@ namespace GravityPuzzle
                 return false;
             }
 
-            PrototypeBoard.Active?.BreakJointsForPiece(piece);
-
             launchInProgress = true;
             StartCoroutine(PlayRocketLaunchSequence(piece));
             return true;
@@ -405,9 +403,9 @@ namespace GravityPuzzle
                 if (piece != null && piece.IsFrozen)
                     piece.BreakIceForRocket();
 
-                yield return new WaitForSeconds(
-                    tweenConfig.RocketTargetPauseDuration +
-                    tweenConfig.RocketLaunchDuration);
+                yield return new WaitForSeconds(tweenConfig.RocketTargetPauseDuration);
+                BreakTargetJointsForLaunch(piece);
+                yield return new WaitForSeconds(tweenConfig.RocketLaunchDuration);
                 CompleteRocketImpact(piece, piecePos, camY + camOrtho + 7f);
                 yield break;
             }
@@ -466,6 +464,10 @@ namespace GravityPuzzle
                 yield break;
             }
 
+            // The piece remains connected while the rocket approaches and
+            // locks on. Its joints break only when the rocket takes it away.
+            BreakTargetJointsForLaunch(piece);
+
             // 6. BLAST OFF! Launch rocket + piece into the sky
             float targetY = camY + camOrtho + 7f;
 
@@ -479,6 +481,15 @@ namespace GravityPuzzle
             // 7. Rocket launch animation finished.
             CompleteRocketImpact(piece, piecePos, targetY);
             rocketVisualPool.Return(rocketView);
+        }
+
+        private static void BreakTargetJointsForLaunch(PuzzlePiece piece)
+        {
+            if (piece == null)
+                return;
+
+            if (PrototypeBoard.Active?.BreakJointsForPiece(piece) > 0)
+                PuzzleDragController.WakeUpGravity();
         }
 
         private void CompleteRocketImpact(PuzzlePiece piece, Vector3 piecePos, float targetY)

@@ -16,6 +16,7 @@ MonoBehaviour:
   - visualId: ice_block
     sprite: {fileID: 21300000, guid: 972694c4005d54ca49411a2a5a1b2d26, type: 3}
     tint: {r: 1, g: 1, b: 1, a: 1}
+  fallbackSpriteMaterial: {fileID: 2100000, guid: 1a7d65e7b0cf4df8a7da3ab0df35a7b4, type: 2}
   iceMaterial: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
   paletteDefinitions:
   - paletteId: Red

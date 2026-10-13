@@ -126,6 +126,42 @@ namespace GravityPuzzle.Core.Grid
         }
 
         /// <summary>
+        /// Removes previously resolved edges by their stable identity. Hammer
+        /// captures these ids before it changes a piece's topology, then
+        /// commits the removal only after that topology transaction succeeds.
+        /// </summary>
+        public int RemoveJointsById(IReadOnlyList<int> jointIds)
+        {
+            if (jointIds == null || jointIds.Count == 0)
+                return 0;
+
+            int removed = 0;
+            for (int index = joints.Count - 1; index >= 0; index--)
+            {
+                int jointId = joints[index].Id;
+                bool shouldRemove = false;
+                for (int idIndex = 0; idIndex < jointIds.Count; idIndex++)
+                {
+                    if (jointIds[idIndex] != jointId)
+                        continue;
+
+                    shouldRemove = true;
+                    break;
+                }
+
+                if (!shouldRemove)
+                    continue;
+
+                joints.RemoveAt(index);
+                removed++;
+            }
+
+            if (removed > 0)
+                groupsDirty = true;
+            return removed;
+        }
+
+        /// <summary>
         /// Transfers a surviving endpoint to a hammer-created fragment. If no
         /// fragment still owns the endpoint's complete block, the edge is
         /// removed instead. This preserves graph topology without giving a

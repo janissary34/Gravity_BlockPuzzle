@@ -101,6 +101,7 @@ namespace GravityPuzzle
         public Color VisualColor { get; private set; } = Color.white;
         /// <summary>Shared artist material used by the normal brick presentation.</summary>
         public Material PresentationMaterial { get; private set; }
+        private Material fallbackPresentationMaterial;
         public Bounds CollisionBounds
         {
             get
@@ -1369,10 +1370,14 @@ namespace GravityPuzzle
         /// Supplies shared materials for a pooled root. This is presentation
         /// data only: board occupancy and collider geometry remain unchanged.
         /// </summary>
-        public void ConfigurePresentationMaterials(Material normalMaterial, Material iceMaterial)
+        public void ConfigurePresentationMaterials(
+            Material normalMaterial,
+            Material iceMaterial,
+            Material fallbackMaterial)
         {
             PresentationMaterial = normalMaterial;
             icePresentationMaterial = iceMaterial;
+            fallbackPresentationMaterial = fallbackMaterial;
         }
 
         public void PrepareForShredderPhysics()
@@ -3214,7 +3219,7 @@ namespace GravityPuzzle
             }
             wholePieceRenderer.sharedMaterial = IsFrozen && wholePieceIceSprite != null
                 ? icePresentationMaterial
-                : PresentationMaterial;
+                : GetNormalPresentationMaterial();
             // Palette materials own normal-brick colour. SpriteRenderer tint
             // remains white there so material colour is never multiplied a
             // second time. VisualColor is still retained for voxel flights,
@@ -3279,7 +3284,7 @@ namespace GravityPuzzle
                         1f);
                 }
 
-                renderer.sharedMaterial = PresentationMaterial;
+                renderer.sharedMaterial = GetNormalPresentationMaterial();
                 renderer.color = PresentationMaterial != null ? Color.white : VisualColor;
                 renderer.sortingOrder = 5 + index;
                 renderer.enabled = true;
@@ -3296,6 +3301,13 @@ namespace GravityPuzzle
             wholePieceRenderer = joinedPieceRenderers[0];
             SetModularCellPresentationVisible(false);
             configuredShredderRenderers = joinedPieceRenderers.ToArray();
+        }
+
+        private Material GetNormalPresentationMaterial()
+        {
+            return PresentationMaterial != null
+                ? PresentationMaterial
+                : fallbackPresentationMaterial;
         }
 
         private void GetJoinedPresentationExtents(out int width, out int height)
