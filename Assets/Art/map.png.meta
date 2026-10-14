@@ -147,8 +147,8 @@ TextureImporter:
       name: M_T_C
       rect:
         serializedVersion: 2
-        x: 863
-        y: 1700
+        x: 661
+        y: 1720
         width: 455
         height: 310
       alignment: 0
@@ -567,8 +567,8 @@ TextureImporter:
       name: M_T_D
       rect:
         serializedVersion: 2
-        x: 413
-        y: 1518
+        x: 337
+        y: 1520
         width: 455
         height: 310
       alignment: 0
@@ -588,8 +588,8 @@ TextureImporter:
       name: Elevator_Door
       rect:
         serializedVersion: 2
-        x: 1553
-        y: 1041
+        x: 1231
+        y: 1556
         width: 229
         height: 443
       alignment: 0
@@ -606,32 +606,11 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: M_2x3_A
-      rect:
-        serializedVersion: 2
-        x: 1709
-        y: 1554
-        width: 310
-        height: 455
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 4372c29545704496090044b3f75718ea
-      internalID: 955120991
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
       name: M_2x1
       rect:
         serializedVersion: 2
-        x: 475
-        y: 1851
+        x: 325
+        y: 1872
         width: 310
         height: 155
       alignment: 0
@@ -648,32 +627,11 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: M_T_B
-      rect:
-        serializedVersion: 2
-        x: 1355
-        y: 1520
-        width: 310
-        height: 455
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: df724d88f2d914d91ba194f5893f680b
-      internalID: 395582235
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
       name: M_T_A
       rect:
         serializedVersion: 2
-        x: 55
-        y: 1540
+        x: 14
+        y: 1541
         width: 310
         height: 455
       alignment: 0
@@ -693,8 +651,8 @@ TextureImporter:
       name: BG
       rect:
         serializedVersion: 2
-        x: 1030
-        y: 1542
+        x: 907
+        y: 1544
         width: 80
         height: 80
       alignment: 0
@@ -777,8 +735,8 @@ TextureImporter:
       name: BG2
       rect:
         serializedVersion: 2
-        x: 934
-        y: 1540
+        x: 811
+        y: 1541
         width: 85
         height: 85
       alignment: 0
@@ -819,8 +777,8 @@ TextureImporter:
       name: Bomb
       rect:
         serializedVersion: 2
-        x: 1808
-        y: 1265
+        x: 1633
+        y: 696
         width: 211
         height: 211
       alignment: 0
@@ -832,6 +790,48 @@ TextureImporter:
       bones: []
       spriteID: a8ed91c1c314d4128ae91e1c91317528
       internalID: 1513006127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Tunnel
+      rect:
+        serializedVersion: 2
+        x: 1557
+        y: 933
+        width: 458
+        height: 467
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 55c1d16b3ac424ae4baff6f25c734d3d
+      internalID: 1117477795
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TunnelGate
+      rect:
+        serializedVersion: 2
+        x: 1555
+        y: 1431
+        width: 422
+        height: 389
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e42c75077071147b5998ac87003c1358
+      internalID: -776244728
       vertices: []
       indices: 
       edges: []
@@ -886,6 +886,8 @@ TextureImporter:
       M_T_D: -1067627346
       Map2_1: 693910638
       Map_2: 912074709
+      Tunnel: 1117477795
+      TunnelGate: -776244728
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
