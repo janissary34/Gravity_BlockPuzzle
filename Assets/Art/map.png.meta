@@ -588,8 +588,8 @@ TextureImporter:
       name: Elevator_Door
       rect:
         serializedVersion: 2
-        x: 1231
-        y: 1556
+        x: 1317
+        y: 1555
         width: 229
         height: 443
       alignment: 0
@@ -836,6 +836,27 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: SpiralSpring
+      rect:
+        serializedVersion: 2
+        x: 1587
+        y: 1841
+        width: 438
+        height: 204
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3f5b9c05b73f249cdad4a2fee86c5221
+      internalID: 897479123
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -886,6 +907,7 @@ TextureImporter:
       M_T_D: -1067627346
       Map2_1: 693910638
       Map_2: 912074709
+      SpiralSpring: 897479123
       Tunnel: 1117477795
       TunnelGate: -776244728
   mipmapLimitGroupName: 
