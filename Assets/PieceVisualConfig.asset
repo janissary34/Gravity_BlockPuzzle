@@ -150,7 +150,7 @@ MonoBehaviour:
   iceCounterTextColor: {r: 1, g: 1, b: 1, a: 1}
   iceCounterOutlineColor: {r: 0.055, g: 0.08, b: 0.28, a: 1}
   iceCounterOutlineWidth: 0.22
-  bombOverlaySprite: {fileID: 21300000, guid: 0055f32440cd446adb05ef4e4b9aafd7, type: 3}
+  bombOverlaySprite: {fileID: 1513006127, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bombOverlayFill: 1
   restingOutlineWidth: 0.001
   selectedOutlineWidth: 0.04

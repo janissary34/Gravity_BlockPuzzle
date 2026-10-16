@@ -62,14 +62,14 @@ namespace GravityPuzzle.Editor
             }
 
             SerializedObject serializedConfig = new SerializedObject(config);
-            serializedConfig.FindProperty("topEdge").objectReferenceValue = null;
+            SetSprite(serializedConfig, "topEdge", "Edge_Top");
             SetSprite(serializedConfig, "bottomEdge", "Edge_Bottom");
-            serializedConfig.FindProperty("leftEdge").objectReferenceValue = null;
-            serializedConfig.FindProperty("rightEdge").objectReferenceValue = null;
-            serializedConfig.FindProperty("topLeftCorner").objectReferenceValue = null;
-            serializedConfig.FindProperty("topRightCorner").objectReferenceValue = null;
-            serializedConfig.FindProperty("bottomLeftCorner").objectReferenceValue = null;
-            serializedConfig.FindProperty("bottomRightCorner").objectReferenceValue = null;
+            SetSprite(serializedConfig, "leftEdge", "Edge_Left");
+            SetSprite(serializedConfig, "rightEdge", "Edge_Right");
+            SetSprite(serializedConfig, "topLeftCorner", "Corner_Top_Left");
+            SetSprite(serializedConfig, "topRightCorner", "Corner_Top_Right");
+            SetSprite(serializedConfig, "bottomLeftCorner", "Corner_Bottom_Left");
+            SetSprite(serializedConfig, "bottomRightCorner", "Corner_Bottom_Right");
             serializedConfig.FindProperty("renderBottomEdgeSegments").boolValue = false;
             Material environmentMaterial =
                 AssetDatabase.LoadAssetAtPath<Material>(EnvironmentBackdropMaterialPath);
