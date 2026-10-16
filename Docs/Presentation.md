@@ -22,7 +22,7 @@ Presentation slots are pooled state. Every renter must receive reset sprite, mat
 
 Gameplay colliders and board cells remain unchanged when presentation switches between these paths:
 
-1. Use an exact artist-authored atlas silhouette when the normalized module shape has a configured match.
+1. Use an exact artist-authored atlas silhouette when the normalized module shape has a configured match. Straight `3x1` and `4x1` obstacle runs use their matching `map.png` sprites instead of sliced fallback rectangles.
 2. Otherwise compose contiguous horizontal and vertical runs from joined fallback sprites.
 3. Use individual 1x1 modules only for cells not covered by an exact or joined presentation.
 

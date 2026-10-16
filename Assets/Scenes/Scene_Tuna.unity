@@ -721,7 +721,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &65662446
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1523,6 +1523,10 @@ PrefabInstance:
     - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_Name
       value: ShredderWheel (6)
+      objectReference: {fileID: 0}
+    - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3361417700613041222, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_LocalScale.x
@@ -7262,6 +7266,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ShredderWheel (4)
       objectReference: {fileID: 0}
+    - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3361417700613041222, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.4
@@ -11597,6 +11605,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ShredderWheel (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3361417700613041222, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.40000004
@@ -11956,6 +11968,10 @@ PrefabInstance:
     - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_Name
       value: ShredderWheel
+      objectReference: {fileID: 0}
+    - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3361417700613041222, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_LocalScale.x
@@ -17018,11 +17034,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1203086583}
   m_CullTransparentMesh: 1
---- !u!198 &1210089770 stripped
-ParticleSystem:
-  m_CorrespondingSourceObject: {fileID: 6248398854346290769, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-  m_PrefabInstance: {fileID: 776154923872537146}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1216560913
 GameObject:
   m_ObjectHideFlags: 0
@@ -21107,6 +21118,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ShredderWheel (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3361417700613041222, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.40000004
@@ -21272,6 +21287,10 @@ PrefabInstance:
     - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_Name
       value: ShredderWheel (5)
+      objectReference: {fileID: 0}
+    - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3361417700613041222, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_LocalScale.x
@@ -24375,6 +24394,7 @@ MonoBehaviour:
   revealAreaPresentations: []
   revealPresentationConfig: {fileID: 0}
   boardPresentationConfig: {fileID: 0}
+  levelRuntimeRoot: {fileID: 0}
   levelDisplayText: {fileID: 1549372235}
   retryLevelText: {fileID: 1568810235}
   failedLevelText: {fileID: 1898433483}
@@ -24412,6 +24432,8 @@ MonoBehaviour:
   nextLevelButtonLabel: {fileID: 840764401}
   winPanelCoinAmountText: {fileID: 1103341402}
   completedLevelText: {fileID: 0}
+  winFanfareAudioClip: {fileID: 0}
+  winAudioSource: {fileID: 0}
   newBoosterPanel: {fileID: 2135202402}
   boosterRewardConfigs:
   - {fileID: 11400000, guid: b0d8f1e70966145a49123a9878dc7431, type: 2}
@@ -26338,6 +26360,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ShredderWheel (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 428321141412222276, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3361417700613041222, guid: 8fedd368f74f84ed097a6e1c0314ec73, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.4
@@ -27411,16 +27437,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 5371451733770572201, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
-    - targetCorrespondingSourceObject: {fileID: 8634187603197557653, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
-    - targetCorrespondingSourceObject: {fileID: 5427027648375492105, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
 --- !u!225 &7253743948391469675 stripped
 CanvasGroup:

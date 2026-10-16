@@ -40,6 +40,10 @@ MonoBehaviour:
     sprite: {fileID: 1655970616, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   - shapeKey: 0,0;1,0
     sprite: {fileID: 466977773, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;2,0
+    sprite: {fileID: -256541400, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  - shapeKey: 0,0;1,0;2,0;3,0
+    sprite: {fileID: -1028235672, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   - shapeKey: 0,0;1,0;0,1
     sprite: {fileID: 1305172143, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   - shapeKey: 0,0;0,1;1,1
