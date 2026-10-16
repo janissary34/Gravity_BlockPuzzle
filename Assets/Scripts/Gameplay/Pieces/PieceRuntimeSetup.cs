@@ -27,6 +27,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             Vector2 iceCounterOffset,
             PieceSpecialBlockType specialBlockType,
             float bombTimerSeconds,
+            TMP_FontAsset bombCounterFont,
             float bombCounterFontSize,
             Color bombCounterTextColor,
             Color bombCounterOutlineColor,
@@ -53,6 +54,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             IceCounterOffset = iceCounterOffset;
             SpecialBlockType = specialBlockType;
             BombTimerSeconds = bombTimerSeconds;
+            BombCounterFont = bombCounterFont;
             BombCounterFontSize = bombCounterFontSize;
             BombCounterTextColor = bombCounterTextColor;
             BombCounterOutlineColor = bombCounterOutlineColor;
@@ -80,6 +82,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         public Vector2 IceCounterOffset { get; }
         public PieceSpecialBlockType SpecialBlockType { get; }
         public float BombTimerSeconds { get; }
+        public TMP_FontAsset BombCounterFont { get; }
         public float BombCounterFontSize { get; }
         public Color BombCounterTextColor { get; }
         public Color BombCounterOutlineColor { get; }

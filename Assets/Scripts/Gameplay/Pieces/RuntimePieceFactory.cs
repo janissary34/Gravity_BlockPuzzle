@@ -468,6 +468,21 @@ namespace GravityPuzzle.Gameplay.Pieces
                 presentationMaterial,
                 pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null,
                 GetFallbackSpriteMaterial());
+
+            float baseIceFontSize = pieceVisualConfig != null ? pieceVisualConfig.IceCounterFontSize : 5f;
+            float resolvedIceFontSize = definition.iceCounterFontSize <= 0f
+                ? baseIceFontSize
+                : (definition.iceCounterFontSize <= 8f
+                    ? definition.iceCounterFontSize
+                    : (definition.iceCounterFontSize / 36f) * baseIceFontSize);
+
+            float baseBombFontSize = pieceVisualConfig != null ? pieceVisualConfig.BombCounterFontSize : 4f;
+            float resolvedBombFontSize = definition.bombCounterFontSize <= 0f
+                ? baseBombFontSize
+                : (definition.bombCounterFontSize <= 8f
+                    ? definition.bombCounterFontSize
+                    : (definition.bombCounterFontSize / 36f) * baseBombFontSize);
+
             puzzlePiece.Configure(new PieceRuntimeSetup(
                 sourcePieceId,
                 Mathf.Max(1, content.ProgressUnits),
@@ -482,14 +497,15 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.BombOverlayFill : .82f,
                 definition.frozenMoveCount,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterFont : null,
-                pieceVisualConfig != null ? pieceVisualConfig.IceCounterFontSize : definition.iceCounterFontSize,
+                resolvedIceFontSize,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterTextColor : definition.iceCounterTextColor,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineColor : definition.iceCounterOutlineColor,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineWidth : definition.iceCounterOutlineWidth,
                 pieceVisualConfig != null && pieceVisualConfig.IceCounterOffset != Vector2.zero ? pieceVisualConfig.IceCounterOffset : definition.iceCounterOffset,
                 definition.specialBlockType,
                 definition.bombTimerSeconds,
-                pieceVisualConfig != null ? pieceVisualConfig.BombCounterFontSize : definition.bombCounterFontSize,
+                pieceVisualConfig != null ? pieceVisualConfig.BombCounterFont : null,
+                resolvedBombFontSize,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterTextColor : definition.bombCounterTextColor,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineColor : definition.bombCounterOutlineColor,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineWidth : definition.bombCounterOutlineWidth,

@@ -224,6 +224,7 @@ namespace GravityPuzzle
         private TextMeshPro iceCounterText;
         private TextMeshPro bombCounterText;
         private TMP_FontAsset iceCounterFont;
+        private TMP_FontAsset bombCounterFont;
         private TMP_FontAsset defaultCounterFont;
         private Action<PuzzlePiece> returnToPool;
         private float iceCounterFontSize = 36f;
@@ -1208,7 +1209,8 @@ namespace GravityPuzzle
                 setup.BombCounterTextColor,
                 setup.BombCounterOutlineColor,
                 setup.BombCounterOutlineWidth,
-                setup.BombCounterOffset);
+                setup.BombCounterOffset,
+                setup.BombCounterFont);
         }
 
         public void ConfigureIceParticleVfx(IIceBlockParticleVfx particleVfx)
@@ -1789,16 +1791,18 @@ namespace GravityPuzzle
             Color counterTextColor,
             Color counterOutlineColor,
             float counterOutlineWidth,
-            Vector2 counterOffset)
+            Vector2 counterOffset,
+            TMP_FontAsset counterFont = null)
         {
             IsBomb = isBomb;
             IsBombDefused = false;
             BombTimerSeconds = isBomb ? Mathf.Max(1f, timerSeconds) : 0f;
-            bombCounterFontSize = Mathf.Max(1f, counterFontSize);
+            bombCounterFontSize = Mathf.Max(.1f, counterFontSize);
             bombCounterTextColor = counterTextColor;
             bombCounterOutlineColor = counterOutlineColor;
             bombCounterOutlineWidth = Mathf.Clamp01(counterOutlineWidth);
             bombCounterOffset = counterOffset;
+            bombCounterFont = counterFont;
             previousBombRemaining = -1;
 
             if (IsBomb)
@@ -2843,14 +2847,17 @@ namespace GravityPuzzle
                 ? bombOverlayRenderer.bounds
                 : combinedBounds;
 
-            if (defaultCounterFont != null)
+            if (bombCounterFont != null)
+                counterText.font = bombCounterFont;
+            else if (counterText.font == null && defaultCounterFont != null)
                 counterText.font = defaultCounterFont;
+
             counterText.color = bombCounterTextColor;
             counterText.enabled = true;
             counterText.enableAutoSizing = false;
             counterText.fontSize = bombCounterFontSize;
             counterText.outlineColor = bombCounterOutlineColor;
-            counterText.outlineWidth = bombCounterOutlineWidth * .1f;
+            counterText.outlineWidth = bombCounterOutlineWidth;
             counterText.renderer.sortingLayerID = collisionCellVisuals[0].sortingLayerID;
             counterText.renderer.sortingOrder = 50;
             counterText.text = Mathf.Max(0, remainingCount).ToString();
