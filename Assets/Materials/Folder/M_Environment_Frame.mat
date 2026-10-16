@@ -154,11 +154,11 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.0465924, g: 0.007843138, b: 0.36078432, a: 1}
+    - _Color: {r: 0.0734247, g: 0.13302965, b: 0.6226415, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _ShadowColor: {r: 0.14901961, g: 0.12156863, b: 0.42352942, a: 1}
-    - _ShineColor: {r: 0.24313726, g: 0.21568628, b: 0.54901963, a: 1}
+    - _ShineColor: {r: 0.18062478, g: 0.20299958, b: 0.38679248, a: 1}
     - _SpecColor: {r: 0.6981132, g: 0.6981132, b: 0.6981132, a: 1}
   m_BuildTextureStacks: []
