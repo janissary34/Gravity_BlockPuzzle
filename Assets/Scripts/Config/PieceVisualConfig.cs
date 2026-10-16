@@ -41,7 +41,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
         [Tooltip("Shared counter style for every frozen piece. Level assets own the remaining move count, while this config owns its visual language.")]
         [SerializeField] private TMP_FontAsset iceCounterFont;
-        [SerializeField] private float iceCounterFontSize = 36f;
+        [SerializeField] private float iceCounterFontSize = 0.55f;
         [SerializeField] private Color iceCounterTextColor = Color.white;
         [SerializeField] private Color iceCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
         [SerializeField, Range(0f, 1f)] private float iceCounterOutlineWidth = .22f;
@@ -53,7 +53,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite bombOverlaySprite;
         [SerializeField, Range(.1f, 1f)] private float bombOverlayFill = .82f;
         [SerializeField] private TMP_FontAsset bombCounterFont;
-        [SerializeField] private float bombCounterFontSize = 4f;
+        [SerializeField] private float bombCounterFontSize = 0.65f;
         [SerializeField] private Color bombCounterTextColor = Color.white;
         [SerializeField] private Color bombCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
         [SerializeField, Range(0f, 1f)] private float bombCounterOutlineWidth = .22f;
@@ -84,7 +84,7 @@ namespace GravityPuzzle.Config
         public Color IceOverlayTint => iceOverlayTint;
         public Color IceFrostTint => iceFrostTint;
         public TMP_FontAsset IceCounterFont => iceCounterFont;
-        public float IceCounterFontSize => Mathf.Max(1f, iceCounterFontSize);
+        public float IceCounterFontSize => Mathf.Max(0.1f, iceCounterFontSize);
         public Color IceCounterTextColor => iceCounterTextColor;
         public Color IceCounterOutlineColor => iceCounterOutlineColor;
         public float IceCounterOutlineWidth => Mathf.Clamp01(iceCounterOutlineWidth);
@@ -93,7 +93,7 @@ namespace GravityPuzzle.Config
         public Sprite BombOverlaySprite => bombOverlaySprite;
         public float BombOverlayFill => bombOverlayFill;
         public TMP_FontAsset BombCounterFont => bombCounterFont != null ? bombCounterFont : iceCounterFont;
-        public float BombCounterFontSize => Mathf.Max(1f, bombCounterFontSize);
+        public float BombCounterFontSize => Mathf.Max(0.1f, bombCounterFontSize);
         public Color BombCounterTextColor => bombCounterTextColor;
         public Color BombCounterOutlineColor => bombCounterOutlineColor;
         public float BombCounterOutlineWidth => Mathf.Clamp01(bombCounterOutlineWidth);

@@ -469,19 +469,15 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null,
                 GetFallbackSpriteMaterial());
 
-            float baseIceFontSize = pieceVisualConfig != null ? pieceVisualConfig.IceCounterFontSize : 5f;
+            float baseIceFontSize = pieceVisualConfig != null ? pieceVisualConfig.IceCounterFontSize : 0.55f;
             float resolvedIceFontSize = definition.iceCounterFontSize <= 0f
                 ? baseIceFontSize
-                : (definition.iceCounterFontSize <= 8f
-                    ? definition.iceCounterFontSize
-                    : (definition.iceCounterFontSize / 36f) * baseIceFontSize);
+                : baseIceFontSize * Mathf.Clamp(definition.iceCounterFontSize / 36f, 0.2f, 3.0f);
 
-            float baseBombFontSize = pieceVisualConfig != null ? pieceVisualConfig.BombCounterFontSize : 4f;
+            float baseBombFontSize = pieceVisualConfig != null ? pieceVisualConfig.BombCounterFontSize : 0.65f;
             float resolvedBombFontSize = definition.bombCounterFontSize <= 0f
                 ? baseBombFontSize
-                : (definition.bombCounterFontSize <= 8f
-                    ? definition.bombCounterFontSize
-                    : (definition.bombCounterFontSize / 36f) * baseBombFontSize);
+                : baseBombFontSize * Mathf.Clamp(definition.bombCounterFontSize / 36f, 0.2f, 3.0f);
 
             puzzlePiece.Configure(new PieceRuntimeSetup(
                 sourcePieceId,

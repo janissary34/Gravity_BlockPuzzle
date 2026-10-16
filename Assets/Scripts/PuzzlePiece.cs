@@ -1775,7 +1775,7 @@ namespace GravityPuzzle
         {
             frozenUntilDestroyedCount = Mathf.Max(0, requiredDestroyedPieces);
             iceCounterFont = counterFont;
-            iceCounterFontSize = Mathf.Max(1f, counterFontSize);
+            iceCounterFontSize = Mathf.Clamp(counterFontSize, 0.1f, 3.0f);
             iceCounterTextColor = counterTextColor;
             iceCounterOutlineColor = counterOutlineColor;
             iceCounterOutlineWidth = Mathf.Clamp01(counterOutlineWidth);
@@ -1797,7 +1797,7 @@ namespace GravityPuzzle
             IsBomb = isBomb;
             IsBombDefused = false;
             BombTimerSeconds = isBomb ? Mathf.Max(1f, timerSeconds) : 0f;
-            bombCounterFontSize = Mathf.Max(.1f, counterFontSize);
+            bombCounterFontSize = Mathf.Clamp(counterFontSize, 0.1f, 3.0f);
             bombCounterTextColor = counterTextColor;
             bombCounterOutlineColor = counterOutlineColor;
             bombCounterOutlineWidth = Mathf.Clamp01(counterOutlineWidth);

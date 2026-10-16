@@ -1330,7 +1330,7 @@ namespace GravityPuzzle
                     true,
                     false,
                     false,
-                    frameEdge == BoardFrameEdge.Top);
+                    false);
                 module.transform.SetParent(frameRoot, true);
             }
 
@@ -1373,26 +1373,30 @@ namespace GravityPuzzle
                 cornerSize,
                 BoardFrameEdge.TopRightCorner,
                 ref edgeIndex);
-            CreateFrameCorner(
-                frameRoot,
-                level,
-                Vector2Int.zero,
-                new Vector2(
-                    -halfWidth - thickness * .5f - cornerOutset.x,
-                    -halfHeight - thickness * .5f - cornerOutset.y),
-                cornerSize,
-                BoardFrameEdge.BottomLeftCorner,
-                ref edgeIndex);
-            CreateFrameCorner(
-                frameRoot,
-                level,
-                new Vector2Int(level.FineColumns - 1, 0),
-                new Vector2(
-                    halfWidth + thickness * .5f + cornerOutset.x,
-                    -halfHeight - thickness * .5f - cornerOutset.y),
-                cornerSize,
-                BoardFrameEdge.BottomRightCorner,
-                ref edgeIndex);
+
+            if (configuredBoardPresentationConfig.RenderBottomEdgeSegments)
+            {
+                CreateFrameCorner(
+                    frameRoot,
+                    level,
+                    Vector2Int.zero,
+                    new Vector2(
+                        -halfWidth - thickness * .5f - cornerOutset.x,
+                        -halfHeight - thickness * .5f - cornerOutset.y),
+                    cornerSize,
+                    BoardFrameEdge.BottomLeftCorner,
+                    ref edgeIndex);
+                CreateFrameCorner(
+                    frameRoot,
+                    level,
+                    new Vector2Int(level.FineColumns - 1, 0),
+                    new Vector2(
+                        halfWidth + thickness * .5f + cornerOutset.x,
+                        -halfHeight - thickness * .5f - cornerOutset.y),
+                    cornerSize,
+                    BoardFrameEdge.BottomRightCorner,
+                    ref edgeIndex);
+            }
         }
 
         private static void CreateFrameCorner(
@@ -1422,8 +1426,16 @@ namespace GravityPuzzle
             Vector2Int requiredCell,
             BoardFrameEdge corner)
         {
-            return configuredBoardPresentationConfig != null &&
-                   IsFineCellActive(level, requiredCell) &&
+            if (configuredBoardPresentationConfig == null)
+                return false;
+
+            if ((corner == BoardFrameEdge.BottomLeftCorner || corner == BoardFrameEdge.BottomRightCorner) &&
+                !configuredBoardPresentationConfig.RenderBottomEdgeSegments)
+            {
+                return false;
+            }
+
+            return IsFineCellActive(level, requiredCell) &&
                    configuredBoardPresentationConfig.GetEdgeSprite(corner) != null;
         }
 

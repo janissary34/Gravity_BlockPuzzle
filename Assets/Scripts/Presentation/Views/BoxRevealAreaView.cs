@@ -75,7 +75,17 @@ namespace GravityPuzzle.Presentation.Views
             {
                 boxCounter.gameObject.SetActive(true);
                 if (config != null)
-                    boxCounter.GetComponent<MeshRenderer>().sortingOrder = config.boxSortingOrder + 1;
+                {
+                    boxCounter.fontSize = config.boxCounterFontSize > 0f ? config.boxCounterFontSize : 0.55f;
+                    if (config.boxCounterFont != null)
+                        boxCounter.font = config.boxCounterFont;
+                    boxCounter.color = config.boxCounterTextColor;
+                    boxCounter.outlineColor = config.boxCounterOutlineColor;
+                    boxCounter.outlineWidth = config.boxCounterOutlineWidth;
+                    MeshRenderer mr = boxCounter.GetComponent<MeshRenderer>();
+                    if (mr != null)
+                        mr.sortingOrder = config.boxCounterSortingOrder;
+                }
             }
 
             if (boxBurstFragments != null)

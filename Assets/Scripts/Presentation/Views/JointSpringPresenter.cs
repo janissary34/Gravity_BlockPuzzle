@@ -14,11 +14,14 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private int sortingOrder = 5;
         [SerializeField] private float springScale = 0.14514376f;
 
+        [SerializeField] private float studOffset = 0.18f;
+
         private PrototypeBoard boardState;
         private PieceJointGraph jointGraph;
         private GravityLevelDefinition activeLevel;
         private readonly Dictionary<int, JointSpringView> activeSpringViews = new Dictionary<int, JointSpringView>();
         private readonly List<PieceJointGraph.Joint> jointBuffer = new List<PieceJointGraph.Joint>();
+        private readonly HashSet<int> currentSpringKeys = new HashSet<int>();
 
         public void Configure(
             PrototypeBoard board,
@@ -78,50 +81,32 @@ namespace GravityPuzzle.Presentation.Views
 
             jointBuffer.Clear();
             jointGraph.CollectJoints(jointBuffer);
-            HashSet<int> currentJointIds = new HashSet<int>();
+            currentSpringKeys.Clear();
 
             for (int i = 0; i < jointBuffer.Count; i++)
             {
                 PieceJointGraph.Joint joint = jointBuffer[i];
-                currentJointIds.Add(joint.Id);
-
                 if (!CalculateJointGeometry(joint, out Vector3 worldMidpoint, out bool isVertical, out PuzzlePiece pieceA))
                     continue;
 
-                if (!activeSpringViews.TryGetValue(joint.Id, out JointSpringView view))
-                {
-                    if (JointSpringPool.TryRent(out view))
-                    {
-                        view.Initialize(
-                            joint.Id,
-                            joint.MemberA,
-                            joint.MemberB,
-                            worldMidpoint,
-                            isVertical,
-                            springSprite,
-                            springMaterial,
-                            sortingOrder,
-                            springScale);
+                Vector3 studOffsetVec = isVertical
+                    ? new Vector3(studOffset, 0f, 0f)
+                    : new Vector3(0f, studOffset, 0f);
 
-                        if (pieceA != null)
-                            view.transform.SetParent(pieceA.transform, true);
+                int key1 = joint.Id * 2;
+                int key2 = joint.Id * 2 + 1;
+                currentSpringKeys.Add(key1);
+                currentSpringKeys.Add(key2);
 
-                        activeSpringViews[joint.Id] = view;
-                    }
-                }
-                else
-                {
-                    view.UpdateTransform(worldMidpoint, isVertical);
-                    if (pieceA != null && view.transform.parent != pieceA.transform)
-                        view.transform.SetParent(pieceA.transform, true);
-                }
+                UpdateOrSpawnSpring(key1, joint, worldMidpoint - studOffsetVec, isVertical, pieceA);
+                UpdateOrSpawnSpring(key2, joint, worldMidpoint + studOffsetVec, isVertical, pieceA);
             }
 
             // Return removed joints to pool
             List<int> toRemove = null;
             foreach (var kvp in activeSpringViews)
             {
-                if (!currentJointIds.Contains(kvp.Key))
+                if (!currentSpringKeys.Contains(kvp.Key))
                 {
                     if (toRemove == null)
                         toRemove = new List<int>();
@@ -143,27 +128,65 @@ namespace GravityPuzzle.Presentation.Views
             }
         }
 
+        private void UpdateOrSpawnSpring(
+            int key,
+            PieceJointGraph.Joint joint,
+            Vector3 position,
+            bool isVertical,
+            PuzzlePiece pieceA)
+        {
+            if (!activeSpringViews.TryGetValue(key, out JointSpringView view))
+            {
+                if (JointSpringPool.TryRent(out view))
+                {
+                    view.Initialize(
+                        key,
+                        joint.MemberA,
+                        joint.MemberB,
+                        position,
+                        isVertical,
+                        springSprite,
+                        springMaterial,
+                        sortingOrder,
+                        springScale);
+
+                    if (pieceA != null)
+                        view.transform.SetParent(pieceA.transform, true);
+
+                    activeSpringViews[key] = view;
+                }
+            }
+            else
+            {
+                view.UpdateTransform(position, isVertical);
+                if (pieceA != null && view.transform.parent != pieceA.transform)
+                    view.transform.SetParent(pieceA.transform, true);
+            }
+        }
+
         private void UpdateSpringPositions()
         {
             if (boardState == null || activeLevel == null)
                 return;
 
-            foreach (var kvp in activeSpringViews)
+            for (int i = 0; i < jointBuffer.Count; i++)
             {
-                JointSpringView view = kvp.Value;
-                if (view == null)
+                PieceJointGraph.Joint joint = jointBuffer[i];
+                if (!CalculateJointGeometry(joint, out Vector3 worldMidpoint, out bool isVertical, out _))
                     continue;
 
-                // Find the joint data
-                for (int i = 0; i < jointBuffer.Count; i++)
-                {
-                    if (jointBuffer[i].Id == view.JointId)
-                    {
-                        if (CalculateJointGeometry(jointBuffer[i], out Vector3 worldMidpoint, out bool isVertical, out _))
-                            view.UpdateTransform(worldMidpoint, isVertical);
-                        break;
-                    }
-                }
+                Vector3 studOffsetVec = isVertical
+                    ? new Vector3(studOffset, 0f, 0f)
+                    : new Vector3(0f, studOffset, 0f);
+
+                int key1 = joint.Id * 2;
+                int key2 = joint.Id * 2 + 1;
+
+                if (activeSpringViews.TryGetValue(key1, out JointSpringView view1))
+                    view1.UpdateTransform(worldMidpoint - studOffsetVec, isVertical);
+
+                if (activeSpringViews.TryGetValue(key2, out JointSpringView view2))
+                    view2.UpdateTransform(worldMidpoint + studOffsetVec, isVertical);
             }
         }
 
@@ -193,32 +216,30 @@ namespace GravityPuzzle.Presentation.Views
             float fineCellSize = 1f / subdivisions;
             int blockSize = subdivisions;
 
-            Vector2 studCenterA = new Vector2(
-                modelA.Anchor.X + joint.BlockA.X + blockSize * 0.5f,
-                modelA.Anchor.Y + joint.BlockA.Y + blockSize * 0.5f);
+            Vector3 localBlockCenterA = new Vector3(
+                (modelA.PivotOffset.X + joint.BlockA.X + (blockSize - 1) * 0.5f) * fineCellSize,
+                (modelA.PivotOffset.Y + joint.BlockA.Y + (blockSize - 1) * 0.5f) * fineCellSize,
+                0f);
 
-            Vector2 studCenterB = new Vector2(
-                modelB.Anchor.X + joint.BlockB.X + blockSize * 0.5f,
-                modelB.Anchor.Y + joint.BlockB.Y + blockSize * 0.5f);
+            Vector3 localBlockCenterB = new Vector3(
+                (modelB.PivotOffset.X + joint.BlockB.X + (blockSize - 1) * 0.5f) * fineCellSize,
+                (modelB.PivotOffset.Y + joint.BlockB.Y + (blockSize - 1) * 0.5f) * fineCellSize,
+                0f);
 
             Vector3 worldStudA = pieceA != null
-                ? pieceA.transform.position + new Vector3(
-                    (joint.BlockA.X + blockSize * 0.5f) * fineCellSize,
-                    (joint.BlockA.Y + blockSize * 0.5f) * fineCellSize,
-                    0f)
-                : ModelFineToWorld(studCenterA, fineCellSize);
+                ? pieceA.transform.TransformPoint(localBlockCenterA)
+                : (Vector3)GravityLevelGridCoordinates.FineCellToWorld(activeLevel, modelA.Anchor.Offset(joint.BlockA)) +
+                  new Vector3((blockSize - 1) * 0.5f * fineCellSize, (blockSize - 1) * 0.5f * fineCellSize, 0f);
 
             Vector3 worldStudB = pieceB != null
-                ? pieceB.transform.position + new Vector3(
-                    (joint.BlockB.X + blockSize * 0.5f) * fineCellSize,
-                    (joint.BlockB.Y + blockSize * 0.5f) * fineCellSize,
-                    0f)
-                : ModelFineToWorld(studCenterB, fineCellSize);
+                ? pieceB.transform.TransformPoint(localBlockCenterB)
+                : (Vector3)GravityLevelGridCoordinates.FineCellToWorld(activeLevel, modelB.Anchor.Offset(joint.BlockB)) +
+                  new Vector3((blockSize - 1) * 0.5f * fineCellSize, (blockSize - 1) * 0.5f * fineCellSize, 0f);
 
             worldMidpoint = (worldStudA + worldStudB) * 0.5f;
-            worldMidpoint.z = -0.05f;
+            worldMidpoint.z = -0.1f;
 
-            Vector2 delta = studCenterB - studCenterA;
+            Vector3 delta = worldStudB - worldStudA;
             isVertical = Mathf.Abs(delta.y) > Mathf.Abs(delta.x);
             return true;
         }

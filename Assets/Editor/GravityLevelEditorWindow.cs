@@ -665,8 +665,8 @@ namespace GravityPuzzle.Editor
                 if (newSpecialBlockType == PieceSpecialBlockType.Ice)
                 {
                     GUILayout.Label("Ice Counter Text", EditorStyles.boldLabel);
-                    newCounterFontSize = Mathf.Max(1f,
-                        EditorGUILayout.FloatField("Font Size", piece.iceCounterFontSize));
+                    newCounterFontSize = EditorGUILayout.Slider(
+                        "Font Size", piece.iceCounterFontSize <= 0f ? 36f : piece.iceCounterFontSize, 8f, 96f);
                     newCounterTextColor = EditorGUILayout.ColorField(
                         "Text Color", piece.iceCounterTextColor);
                     newCounterOutlineColor = EditorGUILayout.ColorField(
@@ -687,7 +687,8 @@ namespace GravityPuzzle.Editor
                 {
                     newBombTimerSeconds = Mathf.Max(1f, EditorGUILayout.FloatField("Bomb Timer (seconds)", piece.bombTimerSeconds));
                     GUILayout.Label("Bomb Counter Text", EditorStyles.boldLabel);
-                    newBombCounterFontSize = Mathf.Max(1f, EditorGUILayout.FloatField("Font Size", piece.bombCounterFontSize));
+                    newBombCounterFontSize = EditorGUILayout.Slider(
+                        "Font Size", piece.bombCounterFontSize <= 0f ? 36f : piece.bombCounterFontSize, 8f, 96f);
                     newBombCounterTextColor = EditorGUILayout.ColorField("Text Color", piece.bombCounterTextColor);
                     newBombCounterOutlineColor = EditorGUILayout.ColorField("Outline Color", piece.bombCounterOutlineColor);
                     newBombCounterOutlineWidth = EditorGUILayout.Slider("Outline Width", piece.bombCounterOutlineWidth, 0f, 1f);

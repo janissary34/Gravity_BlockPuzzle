@@ -18,7 +18,7 @@ namespace GravityPuzzle.Config
 
         [Header("Box Counter Presentation")]
         public TMP_FontAsset boxCounterFont;
-        public float boxCounterFontSize = 6f;
+        public float boxCounterFontSize = 0.55f;
         public Color boxCounterTextColor = Color.white;
         public Color boxCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
         [Range(0f, 1f)] public float boxCounterOutlineWidth = .22f;
