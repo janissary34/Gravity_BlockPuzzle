@@ -25,6 +25,7 @@ namespace GravityPuzzle
         private static PuzzleDragController configuredDragController;
         private static RevealPresentationConfig configuredRevealPresentationConfig;
         private static BoardPresentationConfig configuredBoardPresentationConfig;
+        private static LevelRuntimeRoot configuredLevelRuntimeRoot;
         private static RevealPresentationConfig fallbackRevealPresentationConfig;
         private static Sprite obstacleJoinSprite;
         private static Sprite obstacleJoinSpriteSource;
@@ -49,6 +50,7 @@ namespace GravityPuzzle
             configuredDragController = null;
             configuredRevealPresentationConfig = null;
             configuredBoardPresentationConfig = null;
+            configuredLevelRuntimeRoot = null;
             fallbackRevealPresentationConfig = null;
             obstacleJoinSprite = null;
             obstacleJoinSpriteSource = null;
@@ -115,6 +117,48 @@ namespace GravityPuzzle
         {
             configuredBoardPresentationConfig = config;
         }
+
+        /// <summary>
+        /// Supplies the scene-authored slots used by static level presentation
+        /// and collision. Runtime level construction only reconfigures these
+        /// components; it does not create their GameObjects or components.
+        /// </summary>
+        public static void ConfigureLevelRuntimeRoot(LevelRuntimeRoot root)
+        {
+            configuredLevelRuntimeRoot = root;
+        }
+
+#if UNITY_EDITOR
+        public static void BuildAuthoredGeometryPreview(
+            GravityLevelDefinition level,
+            BoardPresentationConfig presentationConfig,
+            LevelRuntimeRoot root)
+        {
+            if (level == null || root == null)
+                return;
+
+            BoardPresentationConfig previousConfig = configuredBoardPresentationConfig;
+            LevelRuntimeRoot previousRoot = configuredLevelRuntimeRoot;
+            configuredBoardPresentationConfig = presentationConfig;
+            configuredLevelRuntimeRoot = root;
+            try
+            {
+                float exitWidth = Mathf.Clamp(
+                    level.exitWidth,
+                    .75f,
+                    level.boardColumns - level.frameThickness * 2f);
+                root.BeginBuild();
+                CreateBoardBackground(level);
+                CreateBoardFrame(level, exitWidth);
+                CreateObstacles(level);
+            }
+            finally
+            {
+                configuredBoardPresentationConfig = previousConfig;
+                configuredLevelRuntimeRoot = previousRoot;
+            }
+        }
+#endif
 
         public static GravityLevelDefinition FindLevelToPlay()
         {
@@ -243,6 +287,13 @@ namespace GravityPuzzle
                 return;
             }
 
+            if (configuredLevelRuntimeRoot == null)
+            {
+                Debug.LogError(
+                    "[LevelRuntime] RuntimePieceFactoryBootstrap is missing its authored Level Runtime Root reference.");
+                return;
+            }
+
             if (!TryValidateShredderPools(level, BlockShredder.Instance != null
                     ? BlockShredder.Instance.Config
                     : null))
@@ -267,6 +318,7 @@ namespace GravityPuzzle
 
             float frameThickness = level.frameThickness;
             float exitWidth = Mathf.Clamp(level.exitWidth, .75f, level.boardColumns - frameThickness * 2f);
+            configuredLevelRuntimeRoot.BeginBuild();
             CreateBoardBackground(level);
             CreateBoardFrame(level, exitWidth);
             CreateGeneratedRevealPresentations(level, boardState);
@@ -407,7 +459,7 @@ namespace GravityPuzzle
 
         private static void CreateBoardBackground(GravityLevelDefinition level)
         {
-            GameObject background = new GameObject("Board Background");
+            Transform background = configuredLevelRuntimeRoot.BoardBackgroundRoot;
             // The board uses its own background palette. Frame colour is
             // reserved for the exterior border created below.
             // Background alpha is not a meaningful board-design setting: a
@@ -422,10 +474,10 @@ namespace GravityPuzzle
                 : Color.Lerp(baseColor, Color.white, .08f);
             float fineCellSize = 1f / level.subdivisions;
 
-            CreateViewportEnvironmentBackdrop(background.transform, level);
-            CreateBoardInteriorBackdrop(background.transform, level);
-            CreateBoardEdgeGlow(background.transform, level);
-            CreateLowerScreenBackground(background.transform, level);
+            CreateViewportEnvironmentBackdrop(background, level);
+            CreateBoardInteriorBackdrop(background, level);
+            CreateBoardEdgeGlow(background, level);
+            CreateLowerScreenBackground(background, level);
 
             for (int boardY = 0; boardY < level.boardRows; boardY++)
             {
@@ -443,7 +495,7 @@ namespace GravityPuzzle
 
                     if (IsBoardCellFullyActive(level, boardCell))
                     {
-                        GameObject square = PrototypeBootstrap.CreateVisualBlock(
+                        GameObject square = CreateAuthoredVisualBlock(
                             $"Background Grid Cell {boardX}, {boardY}",
                             GridCellWorldPosition(level, boardCell),
                             Vector2.one * ResolveGridCellVisualScale(),
@@ -454,7 +506,7 @@ namespace GravityPuzzle
                                 ? configuredBoardPresentationConfig.GridSprite
                                 : null,
                             true);
-                        square.transform.SetParent(background.transform, true);
+                        square.transform.SetParent(background, true);
                         continue;
                     }
 
@@ -466,7 +518,7 @@ namespace GravityPuzzle
                         if (!IsFineCellActive(level, fineCell))
                             continue;
 
-                        GameObject fragment = PrototypeBootstrap.CreateVisualBlock(
+                        GameObject fragment = CreateAuthoredVisualBlock(
                             $"Legacy Background Fragment {fineCell.x}, {fineCell.y}",
                             CellWorldPosition(level, fineCell),
                             Vector2.one * fineCellSize * ResolveGridCellVisualScale(),
@@ -477,7 +529,7 @@ namespace GravityPuzzle
                                 ? configuredBoardPresentationConfig.GridSprite
                                 : null,
                             true);
-                        fragment.transform.SetParent(background.transform, true);
+                        fragment.transform.SetParent(background, true);
                     }
                 }
             }
@@ -495,7 +547,7 @@ namespace GravityPuzzle
                                      configuredBoardPresentationConfig.ViewportBottomPadding;
             float height = cameraHalfHeight * 2f;
             float width = height * CameraAspect();
-            GameObject backdrop = PrototypeBootstrap.CreateVisualBlock(
+            GameObject backdrop = CreateAuthoredVisualBlock(
                 "Viewport Environment Backdrop",
                 Vector2.zero,
                 new Vector2(width, height),
@@ -568,7 +620,7 @@ namespace GravityPuzzle
             Material material,
             int sortingOrder = -19)
         {
-            GameObject strip = PrototypeBootstrap.CreateVisualBlock(
+            GameObject strip = CreateAuthoredVisualBlock(
                 name,
                 position,
                 size,
@@ -587,7 +639,7 @@ namespace GravityPuzzle
 
             float lowerExtension = ResolveLowerPresentationExtent(level);
             float panelPadding = configuredBoardPresentationConfig.BoardInteriorPadding;
-            GameObject backdrop = PrototypeBootstrap.CreateVisualBlock(
+            GameObject backdrop = CreateAuthoredVisualBlock(
                 "Board Environment Backdrop",
                 new Vector2(0f, -lowerExtension * .5f),
                 new Vector2(
@@ -651,7 +703,7 @@ namespace GravityPuzzle
                 return;
 
             float halfHeight = level.boardRows * .5f;
-            GameObject backdrop = PrototypeBootstrap.CreateVisualBlock(
+            GameObject backdrop = CreateAuthoredVisualBlock(
                 "Lower Environment Backdrop",
                 new Vector2(0f, -halfHeight - extension * .5f),
                 new Vector2(level.boardColumns, extension),
@@ -681,7 +733,7 @@ namespace GravityPuzzle
                             gridTint.g * depthTint.g,
                             gridTint.b * depthTint.b,
                             gridTint.a * (1f - smoothDepth));
-                        GameObject cell = PrototypeBootstrap.CreateVisualBlock(
+                        GameObject cell = CreateAuthoredVisualBlock(
                             $"Lower Grid Cell {column}, {-row - 1}",
                             new Vector2(-level.boardColumns * .5f + column + .5f, centreY),
                             Vector2.one * ResolveGridCellVisualScale(),
@@ -700,7 +752,7 @@ namespace GravityPuzzle
                 0f,
                 0f,
                 configuredBoardPresentationConfig.LowerGridBottomOverlayAlpha);
-            GameObject overlay = PrototypeBootstrap.CreateVisualBlock(
+            GameObject overlay = CreateAuthoredVisualBlock(
                 "Lower Grid Darkening Gradient",
                 new Vector2(0f, -halfHeight - extension * .5f),
                 new Vector2(level.boardColumns, extension + .02f),
@@ -729,7 +781,7 @@ namespace GravityPuzzle
             float fineCellSize = 1f / level.subdivisions;
             float thickness = level.frameThickness;
             int edgeIndex = 0;
-            GameObject frameRoot = new GameObject("Composite Board Frame");
+            Transform frameRoot = configuredLevelRuntimeRoot.BoardFrameRoot;
 
             // Map Shape defines playable board topology, not decorative walls.
             // Only the outside perimeter is rendered as a frame; cut-outs stay
@@ -773,14 +825,14 @@ namespace GravityPuzzle
                             (configuredBoardPresentationConfig == null ||
                              configuredBoardPresentationConfig.RenderBottomEdgeSegments))
                         {
-                            CreateBottomEdgeWithExit(frameRoot.transform, level, centre, fineCellSize, exitWidth, thickness, ref edgeIndex);
+                            CreateBottomEdgeWithExit(frameRoot, level, centre, fineCellSize, exitWidth, thickness, ref edgeIndex);
                         }
                     }
                 }
             }
 
             CreateHorizontalFrameRuns(
-                frameRoot.transform,
+                frameRoot,
                 level,
                 outerTopEdges,
                 fineCellSize,
@@ -789,7 +841,7 @@ namespace GravityPuzzle
                 BoardFrameEdge.Top,
                 ref edgeIndex);
             CreateVerticalFrameRuns(
-                frameRoot.transform,
+                frameRoot,
                 level,
                 outerLeftEdges,
                 fineCellSize,
@@ -798,7 +850,7 @@ namespace GravityPuzzle
                 BoardFrameEdge.Left,
                 ref edgeIndex);
             CreateVerticalFrameRuns(
-                frameRoot.transform,
+                frameRoot,
                 level,
                 outerRightEdges,
                 fineCellSize,
@@ -806,8 +858,8 @@ namespace GravityPuzzle
                 1f,
                 BoardFrameEdge.Right,
                 ref edgeIndex);
-            CreateOuterFrameCorners(frameRoot.transform, level, fineCellSize, thickness, ref edgeIndex);
-            CreateLowerFrameContinuation(frameRoot.transform, level, thickness, ref edgeIndex);
+            CreateOuterFrameCorners(frameRoot, level, fineCellSize, thickness, ref edgeIndex);
+            CreateLowerFrameContinuation(frameRoot, level, thickness, ref edgeIndex);
 
             CreateMapCollisionBlocks(level, exitWidth, fineCellSize);
         }
@@ -1021,15 +1073,6 @@ namespace GravityPuzzle
             float exitWidth,
             float fineCellSize)
         {
-            GameObject collisionRoot = new GameObject("Map Collision - Obstacle Boxes");
-            Rigidbody2D collisionBody = collisionRoot.AddComponent<Rigidbody2D>();
-            collisionBody.bodyType = RigidbodyType2D.Static;
-            CompositeCollider2D composite = collisionRoot.AddComponent<CompositeCollider2D>();
-            composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
-            composite.generationType = CompositeCollider2D.GenerationType.Synchronous;
-            composite.edgeRadius = 0f;
-            PrototypeBootstrap.RegisterPhysicsIslandGridBlocker(composite);
-
             HashSet<Vector2Int> blockingCells = new HashSet<Vector2Int>();
             Vector2Int[] neighbours =
             {
@@ -1063,19 +1106,15 @@ namespace GravityPuzzle
 
             foreach (Vector2Int cell in blockingCells)
             {
-                GameObject block = new GameObject($"Map Collision Cell {cell.x}, {cell.y}");
-                block.transform.SetParent(collisionRoot.transform, false);
-                block.transform.position = CellWorldPosition(level, cell);
-                block.transform.localScale = Vector3.one * fineCellSize;
-
-                BoxCollider2D collider = block.AddComponent<BoxCollider2D>();
-                collider.edgeRadius = 0f;
-                collider.usedByComposite = true;
+                configuredLevelRuntimeRoot.RentMapCollision(
+                    $"Map Collision Cell {cell.x}, {cell.y}",
+                    CellWorldPosition(level, cell),
+                    fineCellSize);
             }
 
             // One merged outline has no fine-cell seams for gravity to push
             // against. A visually flat grid shelf is now physically flat too.
-            composite.GenerateGeometry();
+            configuredLevelRuntimeRoot.CompleteMapCollision();
         }
 
         private static bool IsBottomExitCell(
@@ -1182,7 +1221,7 @@ namespace GravityPuzzle
                     frameEdge))
                 return;
 
-            GameObject frameObject = PrototypeBootstrap.CreateVisualBlock(name, position, size, color);
+            GameObject frameObject = CreateAuthoredVisualBlock(name, position, size, color);
             frameObject.transform.SetParent(frameRoot, true);
 
             ApplyFramePresentation(frameObject.GetComponent<SpriteRenderer>(), size, frameEdge);
@@ -1246,7 +1285,7 @@ namespace GravityPuzzle
                 Vector2 moduleSize = horizontal
                     ? new Vector2(moduleLength, visualThickness)
                     : new Vector2(visualThickness, moduleLength);
-                GameObject module = PrototypeBootstrap.CreateVisualBlock(
+                GameObject module = CreateAuthoredVisualBlock(
                     $"{name} Module {moduleIndex + 1}",
                     modulePosition,
                     moduleSize,
@@ -1609,7 +1648,7 @@ namespace GravityPuzzle
                 // path while presentation is rendered once per connected
                 // component below. The transparent renderer is presentation-
                 // inert and avoids creating a second collider authority.
-                PrototypeBootstrap.CreateStaticBlock(
+                CreateAuthoredStaticBlock(
                     obstacle.name + " Collision",
                     centre,
                     rotatedSize,
@@ -1727,7 +1766,7 @@ namespace GravityPuzzle
                 Vector2 centre = new Vector2(
                     -level.boardColumns * .5f + minimum.x + boundsSize.x * .5f,
                     -level.boardRows * .5f + minimum.y + boundsSize.y * .5f);
-                PrototypeBootstrap.CreateVisualBlock(
+                CreateAuthoredVisualBlock(
                     "Merged Obstacle Visual",
                     centre,
                     boundsSize,
@@ -1759,7 +1798,7 @@ namespace GravityPuzzle
                 : 1f;
             for (int index = 0; index < cells.Count; index++)
             {
-                PrototypeBootstrap.CreateVisualBlock(
+                CreateAuthoredVisualBlock(
                     "Obstacle Visual",
                     GridCellWorldPosition(level, cells[index]),
                     Vector2.one * modularScale,
@@ -1834,7 +1873,7 @@ namespace GravityPuzzle
                     -level.boardColumns * .5f + rectangle.x + rectangle.width * .5f,
                     -level.boardRows * .5f + rectangle.y + rectangle.height * .5f);
                 Vector2 visualSize = new Vector2(rectangle.width, rectangle.height) * overlapScale;
-                PrototypeBootstrap.CreateVisualBlock(
+                CreateAuthoredVisualBlock(
                     "Sliced Obstacle Visual",
                     centre,
                     visualSize,
@@ -1965,7 +2004,7 @@ namespace GravityPuzzle
             Vector2 worldPosition = new Vector2(
                 -level.boardColumns * .5f + boardPosition.x,
                 -level.boardRows * .5f + boardPosition.y);
-            PrototypeBootstrap.CreateVisualBlock(
+            CreateAuthoredVisualBlock(
                 "Obstacle Join Visual",
                 worldPosition,
                 size,
@@ -2032,7 +2071,7 @@ namespace GravityPuzzle
                 ? obstacle.sizeInFineCells
                 : new Vector2Int(obstacle.sizeInFineCells.y, obstacle.sizeInFineCells.x);
             Vector2 worldSize = (Vector2)fineSize / level.subdivisions;
-            PrototypeBootstrap.CreateStaticBlock(
+            CreateAuthoredStaticBlock(
                 obstacle.name,
                 CellWorldPosition(level, obstacle.centreCell),
                 worldSize,
@@ -2044,6 +2083,65 @@ namespace GravityPuzzle
                 configuredBoardPresentationConfig != null
                     ? configuredBoardPresentationConfig.StaticBlockSprite
                     : null);
+        }
+
+        private static void CreateAuthoredStaticBlock(
+            string blockName,
+            Vector2 position,
+            Vector2 size,
+            Color color,
+            bool roundCorners = true,
+            Material presentationMaterial = null,
+            Sprite presentationSprite = null,
+            bool renderVisual = true)
+        {
+            if (renderVisual)
+            {
+                CreateAuthoredVisualBlock(
+                    blockName,
+                    position,
+                    size,
+                    color,
+                    presentationMaterial,
+                    0,
+                    presentationSprite,
+                    presentationSprite != null);
+            }
+
+            configuredLevelRuntimeRoot.RentObstacleCollision(
+                renderVisual ? blockName + " Collision" : blockName,
+                position,
+                size,
+                roundCorners);
+        }
+
+        private static GameObject CreateAuthoredVisualBlock(
+            string blockName,
+            Vector2 position,
+            Vector2 size,
+            Color color,
+            Material presentationMaterial = null,
+            int sortingOrder = 0,
+            Sprite presentationSprite = null,
+            bool fitSpriteToSize = false,
+            bool renderVisual = true,
+            bool sliceSpriteToSize = false,
+            bool flipX = false,
+            bool flipY = false)
+        {
+            return configuredLevelRuntimeRoot.RentVisual(
+                blockName,
+                position,
+                size,
+                color,
+                presentationMaterial,
+                sortingOrder,
+                presentationSprite,
+                fitSpriteToSize,
+                renderVisual,
+                sliceSpriteToSize,
+                flipX,
+                flipY);
         }
 
         private static Color ResolveStaticBlockColor(Color authoredColor)

@@ -52,6 +52,9 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Shared Scene_Tuna board skin used by every authored level in this scene.")]
         [SerializeField] private BoardPresentationConfig boardPresentationConfig;
 
+        [Tooltip("Scene-authored, preallocated board/frame/obstacle presentation and collision slots.")]
+        [SerializeField] private LevelRuntimeRoot levelRuntimeRoot;
+
         [Header("Gameplay HUD")]
         [Tooltip("Text that displays the active campaign level number.")]
         [SerializeField] private TMP_Text levelDisplayText;
@@ -98,6 +101,7 @@ namespace GravityPuzzle.Bootstrap
                 puzzleDragController);
             GravityLevelRuntime.ConfigureRevealPresentationConfig(revealPresentationConfig);
             GravityLevelRuntime.ConfigureBoardPresentationConfig(boardPresentationConfig);
+            GravityLevelRuntime.ConfigureLevelRuntimeRoot(levelRuntimeRoot);
             RegisterRevealPresentations();
             GravityLevelDefinition selectedLevel = GravityLevelRuntime.FindLevelToPlay();
             if (selectedLevel == null)

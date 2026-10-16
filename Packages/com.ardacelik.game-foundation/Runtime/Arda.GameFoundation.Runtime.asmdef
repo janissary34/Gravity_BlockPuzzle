@@ -1,0 +1,14 @@
+{
+  "name": "Arda.GameFoundation.Runtime",
+  "rootNamespace": "Arda.GameFoundation",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

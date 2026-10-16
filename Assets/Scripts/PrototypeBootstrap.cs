@@ -271,6 +271,12 @@ namespace GravityPuzzle
                 Mathf.Min(size.x, size.y) * .25f);
         }
 
+        internal static void RegisterAuthoredObstacleCollider(Collider2D collider)
+        {
+            if (collider != null && !authoredObstacleColliders.Contains(collider))
+                authoredObstacleColliders.Add(collider);
+        }
+
         internal static GameObject CreateVisualBlock(
             string blockName,
             Vector2 position,

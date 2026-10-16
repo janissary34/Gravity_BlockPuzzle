@@ -35,6 +35,16 @@ All production code must be modular, structured, scalable, clean, maintainable, 
 7. Every completed development step must leave the project in a compilable state and preserve unrelated gameplay behaviour.
 8. Report only meaningful implementation completions unless a technical decision, architectural conflict, or permission is required.
 
+## Documentation workflow
+
+* `AGENTS.md` owns mandatory engineering rules. Files under `Docs/` record durable project knowledge and must not override this contract.
+* Before changing a system, read the relevant documents under `Docs/` when they exist.
+* Update the relevant document in the same change when implementation alters system ownership, lifecycle, state flow, pooling, configuration ownership, public contracts, asset-authoring workflow, or a non-obvious presentation invariant.
+* Record a verified but unresolved defect in `Docs/KnownIssues.md` when its root cause or reliable reproduction is known. Remove or revise the entry when the defect is fixed.
+* Record consequential architectural choices and their rationale under `Docs/Decisions/`.
+* Do not use documentation as a work log. Pixel nudges, colour tuning, temporary experiments, obvious code details, and unverified hypotheses do not require documentation updates.
+* Keep documentation synchronized with production code. If code and descriptive documentation disagree, investigate and correct the stale source; `AGENTS.md` remains authoritative for engineering policy.
+
 ## Runtime restrictions
 
 * Do not use runtime `Instantiate` or `Destroy`; use the pooling system. Prewarm is the sole instantiation exception.

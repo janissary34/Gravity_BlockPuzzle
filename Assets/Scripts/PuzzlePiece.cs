@@ -2727,13 +2727,12 @@ namespace GravityPuzzle
             SpriteRenderer sortingSource,
             Bounds combinedBounds)
         {
-            if (iceRenderers.Count >= iceSlots.Count)
+            if (!TryGetAvailableIceSlot(out SpriteRenderer renderer))
             {
-                Debug.LogWarning("[PuzzlePiece] Ice presentation slot capacity exceeded.", this);
+                Debug.LogWarning("[PuzzlePiece] Bomb presentation slot capacity exceeded.", this);
                 return;
             }
 
-            SpriteRenderer renderer = iceSlots[iceRenderers.Count];
             renderer.transform.SetParent(transform, false);
             renderer.transform.position = new Vector3(
                 combinedBounds.center.x,
