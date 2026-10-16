@@ -7,8 +7,8 @@ namespace GravityPuzzle
     /// <summary>
     /// Pooled static guides plus a hidden throat shelf for the short-lived
     /// shredder physics island. The shelf sits inside the cutter artwork, so
-    /// a member waiting for the single feed gate rests on a real mechanism
-    /// instead of falling below the mouth or hovering in board space.
+    /// a member waiting for a conflicting feed footprint rests on a real
+    /// mechanism instead of falling below the mouth or hovering in board space.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody2D))]
@@ -18,6 +18,8 @@ namespace GravityPuzzle
         [SerializeField] private BoxCollider2D leftGuide;
         [SerializeField] private BoxCollider2D rightGuide;
         [SerializeField] private BoxCollider2D throatShelf;
+
+        public float GuideDepth { get; private set; }
 
         private void Awake()
         {
@@ -76,6 +78,7 @@ namespace GravityPuzzle
                 Mathf.Max(.01f, rightEdge - leftEdge + clearance * 2f),
                 thickness,
                 config.FeedPhysicsMaterial);
+            GuideDepth = depth;
             Physics2D.SyncTransforms();
             return true;
         }
@@ -103,6 +106,7 @@ namespace GravityPuzzle
 
         public void OnSpawn()
         {
+            GuideDepth = 0f;
             if (leftGuide != null)
                 leftGuide.enabled = false;
             if (rightGuide != null)
@@ -113,6 +117,7 @@ namespace GravityPuzzle
 
         public void OnDespawn()
         {
+            GuideDepth = 0f;
             if (leftGuide != null)
                 leftGuide.enabled = false;
             if (rightGuide != null)

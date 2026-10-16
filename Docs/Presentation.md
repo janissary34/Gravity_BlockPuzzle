@@ -56,18 +56,21 @@ A presentation refresh may rewrite sprites, materials, visibility, sorting, and 
 
 ## Directional Board Frame
 
-Board frames use 8 artist-authored directional atlas sprites (4 corners and 4 edges) from `BoardPresentationConfig`. The old solid quad fallback panel is suppressed when authored frame sprites are available. Edges are composed of repeated 1x1 modules to maintain consistent stud scale and visual density without stretching.
+Board frames use 8 artist-authored directional atlas sprites (4 corners and 4 edges) from `BoardPresentationConfig`. The old solid quad fallback panel is suppressed when authored frame sprites are available. Each continuous outer run uses one fitted edge sprite so the highlight and shadow pixels at atlas-strip ends cannot form visible module seams; corners remain separate authored sprites.
 
 ## Counters and Piece Overlays
 
 * Ice counters and Bomb counters have separate presentation ownership. `BlockPiece` provides dedicated TextMeshPro child slots (`Ice Counter Presentation` and `Bomb Counter Presentation`) so that active bomb pieces do not mutate or overwrite ice counter styling.
-* Ice counters and bomb counters derive their world-space font sizes from `PieceVisualConfig` (defaults 6.0 and 4.5 points respectively) scaled proportionally by level-definition font size properties (where 36 represents standard 1.0x scale).
-* Box reveal covers use a dedicated TextMeshPro counter rendered at sorting order 201 with navy outline.
+* Ice counters and bomb counters derive their world-space font sizes from `PieceVisualConfig` (defaults 0.55 and 0.65 respectively) scaled proportionally by level-definition font size properties (where 36 represents standard 1.0x scale).
+* Ice locks player input and shredder capture until its counter is cleared, but does not make a piece a gravity support. A frozen piece, including a member of a connected group, still follows a legal grid fall.
+* Box reveal covers use the `Tunnel` sprite from `map.png` with 9-slice border configuration, accompanied by a dedicated TextMeshPro counter rendered at sorting order 201 with navy outline.
 * Elevator mechanics do not have a countdown state in the gameplay contract; elevators feature animated sliding doors rather than a number counter.
 
 ## Joint Springs
 
 * Piece joints are visualized using `JointSpringView` pooled instances managed by `JointSpringPresenter`.
-* Springs strictly observe `PieceJointGraph.JointsChanged` events and never dictate board connections or physics handoff.
-* Connecting springs are oriented horizontally across vertical boundaries and vertically across horizontal boundaries, positioned exactly at opposing stud centers (one spring per connected stud pair).
+* Springs observe `PieceJointGraph.JointsChanged` events and are parented to an endpoint piece (`anchorPiece`), so they follow normal board movement, dragging, and gravity falls without per-frame polling. They never dictate board connections or physics handoff.
+* Connecting springs are oriented horizontally across vertical boundaries and vertically across horizontal boundaries, positioned exactly at opposing stud centers (one spring per connected stud pair, spaced at `±0.25f` along the seam).
+* The spiral sprite scale is calibrated to `0.1495036f` to match the exact 0.50 world-unit stud distance between 2x2 modular block studs, with a vertical hole offset of `0.099f` ensuring the spiral holes sit dead-center on top of the studs at sorting order 20.
+* **Inspector Alignment & Tuning**: `JointSpringPresenter` (and `PieceVisualConfig`) exposes serialized tuning fields (`springScale`, `studOffset`, `holeDepthOffset`, `positionOffset`, `horizontalJointOffset`, `verticalJointOffset`). In Unity Editor Play Mode, modifying any of these fields triggers `OnValidate()` to reconcile active views in real time for immediate visual alignment feedback.
 

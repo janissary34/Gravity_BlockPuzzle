@@ -35,7 +35,8 @@ MonoBehaviour:
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
-  - name: Piece 1
+  - pieceId: 
+    name: Piece 1
     tutorialTargetId: 
     visualId: 
     paletteId: Red
@@ -152,7 +153,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 1, y: -3}
       type: 0
-  - name: Piece 2
+  - pieceId: 
+    name: Piece 2
     tutorialTargetId: 
     visualId: 
     paletteId: Yellow
@@ -269,7 +271,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -13, y: -9}
       type: 0
-  - name: Piece 3
+  - pieceId: 
+    name: Piece 3
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -386,7 +389,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -17, y: 7}
       type: 0
-  - name: Piece 4
+  - pieceId: 
+    name: Piece 4
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -503,7 +507,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -9, y: 3}
       type: 0
-  - name: Piece 5
+  - pieceId: 
+    name: Piece 5
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
@@ -620,7 +625,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -9, y: -5}
       type: 0
-  - name: Piece 6
+  - pieceId: 
+    name: Piece 6
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -737,7 +743,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -1, y: 3}
       type: 0
-  - name: Piece 7
+  - pieceId: 
+    name: Piece 7
     tutorialTargetId: 
     visualId: 
     paletteId: Orange
@@ -822,7 +829,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -17, y: 11}
       type: 0
-  - name: Piece 8
+  - pieceId: 
+    name: Piece 8
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -939,7 +947,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -9, y: 15}
       type: 0
-  - name: Piece 9
+  - pieceId: 
+    name: Piece 9
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -1056,7 +1065,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -1, y: 19}
       type: 0
-  - name: Piece 10
+  - pieceId: 
+    name: Piece 10
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
@@ -1173,7 +1183,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 19}
       type: 0
-  - name: Piece 11
+  - pieceId: 
+    name: Piece 11
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -1322,7 +1333,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 15}
       type: 0
-  - name: Piece 12
+  - pieceId: 
+    name: Piece 12
     tutorialTargetId: 
     visualId: 
     paletteId: Orange
@@ -1471,7 +1483,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 7}
       type: 0
-  - name: Piece 13
+  - pieceId: 
+    name: Piece 13
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -1492,7 +1505,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 14
+  - pieceId: 
+    name: Piece 14
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -1577,7 +1591,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -19, y: -13}
       type: 0
-  - name: Piece 15
+  - pieceId: 
+    name: Piece 15
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
@@ -1662,7 +1677,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -19, y: 15}
       type: 0
-  - name: Piece 16
+  - pieceId: 
+    name: Piece 16
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -1779,7 +1795,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 1, y: -13}
       type: 0
-  - name: Piece 17
+  - pieceId: 
+    name: Piece 17
     tutorialTargetId: 
     visualId: 
     paletteId: Orange
@@ -1832,7 +1849,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -3, y: -5}
       type: 0
-  - name: Piece 18
+  - pieceId: 
+    name: Piece 18
     tutorialTargetId: 
     visualId: 
     paletteId: Yellow
@@ -1853,7 +1871,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 19
+  - pieceId: 
+    name: Piece 19
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -1874,7 +1893,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 20
+  - pieceId: 
+    name: Piece 20
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -1895,7 +1915,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 21
+  - pieceId: 
+    name: Piece 21
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
@@ -1916,7 +1937,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 22
+  - pieceId: 
+    name: Piece 22
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -1937,7 +1959,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 23
+  - pieceId: 
+    name: Piece 23
     tutorialTargetId: 
     visualId: 
     paletteId: Yellow
@@ -1958,7 +1981,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 24
+  - pieceId: 
+    name: Piece 24
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -1979,7 +2003,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 25
+  - pieceId: 
+    name: Piece 25
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -2000,7 +2025,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 26
+  - pieceId: 
+    name: Piece 26
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
@@ -2021,7 +2047,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 27
+  - pieceId: 
+    name: Piece 27
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -2042,7 +2069,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 28
+  - pieceId: 
+    name: Piece 28
     tutorialTargetId: 
     visualId: 
     paletteId: Orange
@@ -2063,7 +2091,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 29
+  - pieceId: 
+    name: Piece 29
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -2116,6 +2145,7 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
+  joints: []
   boxes: []
   elevators: []
   pins: []

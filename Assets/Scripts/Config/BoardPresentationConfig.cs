@@ -100,7 +100,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool renderBottomEdgeSegments;
         [SerializeField] private Material frameMaterial;
         [SerializeField] private Color frameTint = Color.white;
-        [Tooltip("Native Scene Tuna scale for repeatable straight frame atlas modules. Modules repeat along long edges instead of stretching one sprite across the board.")]
+        [Tooltip("Native Scene Tuna scale used to derive the visual thickness of the frame atlas. Each long edge is rendered as one fitted run so adjacent modules cannot leave seams.")]
         [SerializeField, Min(.1f)] private float frameModuleScale = .5f;
         [Tooltip("Presentation-only thickness of straight frame modules relative to gameplay frame thickness. Collision geometry is unaffected.")]
         [SerializeField, Range(.2f, 1f)] private float frameVisualThicknessMultiplier = .55f;

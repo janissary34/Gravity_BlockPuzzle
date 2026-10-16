@@ -146,12 +146,14 @@ MonoBehaviour:
   iceOverlayTint: {r: 1, g: 1, b: 1, a: 0.82}
   iceFrostTint: {r: 0.9, g: 0.98, b: 1, a: 0.32}
   iceCounterFont: {fileID: 11400000, guid: 0e1847d847368439f88be6c09b488ce3, type: 2}
-  iceCounterFontSize: 6
+  iceCounterFontSize: 0.55
   iceCounterTextColor: {r: 1, g: 1, b: 1, a: 1}
   iceCounterOutlineColor: {r: 0.055, g: 0.08, b: 0.28, a: 1}
   iceCounterOutlineWidth: 0.22
+  iceCounterOffset: {x: 0, y: 0}
+  iceCounterSortingOrder: 50
   bombCounterFont: {fileID: 11400000, guid: 0e1847d847368439f88be6c09b488ce3, type: 2}
-  bombCounterFontSize: 4.5
+  bombCounterFontSize: 0.65
   bombCounterTextColor: {r: 1, g: 1, b: 1, a: 1}
   bombCounterOutlineColor: {r: 0.055, g: 0.08, b: 0.28, a: 1}
   bombCounterOutlineWidth: 0.22
@@ -167,3 +169,9 @@ MonoBehaviour:
   selectedOutlineSortingOrder: 20
   outlineCornerVertices: 4
   outlineCapVertices: 4
+  springScale: 0.1495036
+  springStudOffset: 0.25
+  springHoleDepthOffset: 0.099
+  springPositionOffset: {x: 0, y: 0}
+  springHorizontalJointOffset: {x: 0, y: 0}
+  springVerticalJointOffset: {x: 0, y: 0}

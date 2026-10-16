@@ -31,15 +31,26 @@ namespace GravityPuzzle.Editor
             EnsurePrefabsFolder();
 
             Sprite tunnelSprite = LoadSprite("Tunnel");
+            Sprite elevatorSprite = LoadSprite("Elevator");
+            Sprite elevatorDoorSprite = LoadSprite("Elevator_Door");
             Sprite springSprite = LoadSprite("SpiralSpring");
             Material iceMaterial = AssetDatabase.LoadAssetAtPath<Material>(IceMaterialPath);
             TMP_FontAsset fontAsset = LoadTMPFont();
 
             BoxRevealAreaView boxPrefab = CreateBoxRevealPrefab(tunnelSprite, iceMaterial, fontAsset);
-            ElevatorRevealAreaView elevatorPrefab = CreateElevatorRevealPrefab(iceMaterial);
+            ElevatorRevealAreaView elevatorPrefab = CreateElevatorRevealPrefab(
+                elevatorSprite,
+                elevatorDoorSprite,
+                iceMaterial);
             JointSpringView springPrefab = CreateJointSpringPrefab(springSprite, iceMaterial);
 
-            UpdateRevealPresentationConfig(boxPrefab, elevatorPrefab, fontAsset);
+            UpdateRevealPresentationConfig(
+                boxPrefab,
+                elevatorPrefab,
+                tunnelSprite,
+                elevatorSprite,
+                elevatorDoorSprite,
+                fontAsset);
             UpdatePieceVisualConfig(fontAsset);
             AddBombCounterToBlockPiece(fontAsset);
 
@@ -85,7 +96,7 @@ namespace GravityPuzzle.Editor
                 TextMeshPro counterTmp = counterObj.AddComponent<TextMeshPro>();
                 if (font != null)
                     counterTmp.font = font;
-                counterTmp.fontSize = 6f;
+                counterTmp.fontSize = .55f;
                 counterTmp.color = Color.white;
                 counterTmp.outlineColor = new Color(0.055f, 0.08f, 0.28f, 1f);
                 counterTmp.outlineWidth = 0.22f;
@@ -140,7 +151,10 @@ namespace GravityPuzzle.Editor
             }
         }
 
-        private static ElevatorRevealAreaView CreateElevatorRevealPrefab(Material iceMaterial)
+        private static ElevatorRevealAreaView CreateElevatorRevealPrefab(
+            Sprite elevatorSprite,
+            Sprite elevatorDoorSprite,
+            Material iceMaterial)
         {
             GameObject root = new GameObject("ElevatorRevealArea");
             try
@@ -150,6 +164,11 @@ namespace GravityPuzzle.Editor
                 GameObject frame = new GameObject("Elevator Frame");
                 frame.transform.SetParent(root.transform, false);
                 SpriteRenderer frameRenderer = frame.AddComponent<SpriteRenderer>();
+                frameRenderer.sprite = elevatorSprite;
+                frameRenderer.drawMode = SpriteDrawMode.Sliced;
+                frameRenderer.size = Vector2.one;
+                if (iceMaterial != null)
+                    frameRenderer.material = iceMaterial;
                 frameRenderer.sortingOrder = 1;
 
                 GameObject opening = new GameObject("Elevator Opening");
@@ -162,11 +181,22 @@ namespace GravityPuzzle.Editor
                 GameObject leftDoor = new GameObject("Left Door");
                 leftDoor.transform.SetParent(root.transform, false);
                 SpriteRenderer leftDoorRenderer = leftDoor.AddComponent<SpriteRenderer>();
+                leftDoorRenderer.sprite = elevatorDoorSprite;
+                leftDoorRenderer.drawMode = SpriteDrawMode.Sliced;
+                leftDoorRenderer.size = Vector2.one;
+                leftDoorRenderer.flipX = true;
+                if (iceMaterial != null)
+                    leftDoorRenderer.material = iceMaterial;
                 leftDoorRenderer.sortingOrder = 3;
 
                 GameObject rightDoor = new GameObject("Right Door");
                 rightDoor.transform.SetParent(root.transform, false);
                 SpriteRenderer rightDoorRenderer = rightDoor.AddComponent<SpriteRenderer>();
+                rightDoorRenderer.sprite = elevatorDoorSprite;
+                rightDoorRenderer.drawMode = SpriteDrawMode.Sliced;
+                rightDoorRenderer.size = Vector2.one;
+                if (iceMaterial != null)
+                    rightDoorRenderer.material = iceMaterial;
                 rightDoorRenderer.sortingOrder = 4;
 
                 SerializedObject so = new SerializedObject(view);
@@ -201,8 +231,8 @@ namespace GravityPuzzle.Editor
                 renderer.sprite = springSprite;
                 if (iceMaterial != null)
                     renderer.material = iceMaterial;
-                renderer.sortingOrder = 5;
-                root.transform.localScale = Vector3.one * 0.14514376f;
+                renderer.sortingOrder = 20;
+                root.transform.localScale = Vector3.one * 0.1495036f;
 
                 SerializedObject so = new SerializedObject(view);
                 so.FindProperty("spriteRenderer").objectReferenceValue = renderer;
@@ -220,6 +250,9 @@ namespace GravityPuzzle.Editor
         private static void UpdateRevealPresentationConfig(
             BoxRevealAreaView boxPrefab,
             ElevatorRevealAreaView elevatorPrefab,
+            Sprite tunnelSprite,
+            Sprite elevatorSprite,
+            Sprite elevatorDoorSprite,
             TMP_FontAsset font)
         {
             RevealPresentationConfig config = AssetDatabase.LoadAssetAtPath<RevealPresentationConfig>(RevealConfigPath);
@@ -231,14 +264,20 @@ namespace GravityPuzzle.Editor
             so.FindProperty("boxPoolCapacity").intValue = 8;
             so.FindProperty("elevatorPrefab").objectReferenceValue = elevatorPrefab;
             so.FindProperty("elevatorPoolCapacity").intValue = 4;
+            so.FindProperty("boxCoverSprite").objectReferenceValue = tunnelSprite;
+            so.FindProperty("elevatorFrameSprite").objectReferenceValue = elevatorSprite;
+            so.FindProperty("elevatorLeftDoorSprite").objectReferenceValue = elevatorDoorSprite;
+            so.FindProperty("elevatorRightDoorSprite").objectReferenceValue = elevatorDoorSprite;
+            so.FindProperty("elevatorDoorSprite").objectReferenceValue = elevatorSprite;
 
             if (font != null)
                 so.FindProperty("boxCounterFont").objectReferenceValue = font;
-            so.FindProperty("boxCounterFontSize").floatValue = 6f;
+            so.FindProperty("boxCounterFontSize").floatValue = .55f;
             so.FindProperty("boxCounterTextColor").colorValue = Color.white;
             so.FindProperty("boxCounterOutlineColor").colorValue = new Color(0.055f, 0.08f, 0.28f, 1f);
             so.FindProperty("boxCounterOutlineWidth").floatValue = 0.22f;
             so.FindProperty("boxCounterSortingOrder").intValue = 201;
+            so.FindProperty("elevatorVisualWidthScale").floatValue = 1f;
 
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(config);
@@ -254,17 +293,18 @@ namespace GravityPuzzle.Editor
             if (font != null && so.FindProperty("iceCounterFont").objectReferenceValue == null)
                 so.FindProperty("iceCounterFont").objectReferenceValue = font;
 
-            so.FindProperty("iceCounterFontSize").floatValue = 5f;
+            so.FindProperty("iceCounterFontSize").floatValue = .55f;
             so.FindProperty("iceCounterTextColor").colorValue = Color.white;
             so.FindProperty("iceCounterOutlineColor").colorValue = new Color(0.055f, 0.08f, 0.28f, 1f);
             so.FindProperty("iceCounterOutlineWidth").floatValue = 0.22f;
+            so.FindProperty("iceCounterSortingOrder").intValue = 50;
 
             SerializedProperty bombFont = so.FindProperty("bombCounterFont");
             if (bombFont != null && font != null)
                 bombFont.objectReferenceValue = font;
             SerializedProperty bombSize = so.FindProperty("bombCounterFontSize");
             if (bombSize != null)
-                bombSize.floatValue = 4f;
+                bombSize.floatValue = .65f;
             SerializedProperty bombColor = so.FindProperty("bombCounterTextColor");
             if (bombColor != null)
                 bombColor.colorValue = Color.white;
@@ -277,6 +317,9 @@ namespace GravityPuzzle.Editor
             SerializedProperty bombOffset = so.FindProperty("bombCounterOffset");
             if (bombOffset != null)
                 bombOffset.vector2Value = new Vector2(-0.055f, -0.059f);
+            SerializedProperty bombSortingOrder = so.FindProperty("bombCounterSortingOrder");
+            if (bombSortingOrder != null)
+                bombSortingOrder.intValue = 50;
 
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(config);
@@ -312,7 +355,7 @@ namespace GravityPuzzle.Editor
                     TextMeshPro tmp = bombCounterObj.GetComponent<TextMeshPro>();
                     if (font != null)
                         tmp.font = font;
-                    tmp.fontSize = 4f;
+                    tmp.fontSize = .65f;
                     tmp.color = Color.white;
                     tmp.outlineColor = new Color(0.055f, 0.08f, 0.28f, 1f);
                     tmp.outlineWidth = 0.22f;
@@ -354,8 +397,9 @@ namespace GravityPuzzle.Editor
             so.FindProperty("prewarmCapacity").intValue = 16;
             so.FindProperty("springSprite").objectReferenceValue = springSprite;
             so.FindProperty("springMaterial").objectReferenceValue = iceMaterial;
-            so.FindProperty("sortingOrder").intValue = 5;
-            so.FindProperty("springScale").floatValue = 0.14514376f;
+            so.FindProperty("sortingOrder").intValue = 20;
+            so.FindProperty("springScale").floatValue = 0.1495036f;
+            so.FindProperty("studOffset").floatValue = 0.25f;
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(presenter);
 

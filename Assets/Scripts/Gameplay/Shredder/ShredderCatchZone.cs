@@ -22,6 +22,10 @@ namespace GravityPuzzle
         private float captureApproachDistance;
         private static readonly GridCoordinate Down = new GridCoordinate(0, -1);
         private const float CorridorEpsilon = .0001f;
+        // Catch decisions use real occupied cell geometry rather than the
+        // enclosing CompositeCollider2D AABB. This keeps notched shapes from
+        // claiming empty space in a mouth lane.
+        private readonly List<Bounds> activeCellBoundsBuffer = new List<Bounds>(32);
 
         private void Awake()
         {
@@ -55,13 +59,8 @@ namespace GravityPuzzle
             if (piece.GridFallView != null && piece.GridFallView.IsAnimating)
                 return false;
 
-            Bounds bounds = piece.CollisionBounds;
-            // A partial overlap used to allow a neighbouring or over-wide
-            // piece to enter the feed even though some of its cells were
-            // outside the real cutter opening. A feed owns a complete body.
-            if (bounds.min.x < leftX - CorridorEpsilon ||
-                bounds.max.x > rightX + CorridorEpsilon ||
-                bounds.min.y > captureTopY + captureApproachDistance)
+            if (!TryGetCellExtents(piece, out float lowestCellY, out _ ) ||
+                lowestCellY > captureTopY + captureApproachDistance)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
@@ -147,13 +146,53 @@ namespace GravityPuzzle
             if (piece == null || !piece.IsInShredderPhysicsHandoff)
                 return false;
 
-            Bounds bounds = piece.CollisionBounds;
             float captureTop = ShredY + Mathf.Max(0f, captureDistance);
             float escapeBottom = ShredY - Mathf.Max(0f, captureDistance);
-            return bounds.min.x >= leftX - CorridorEpsilon &&
-                   bounds.max.x <= rightX + CorridorEpsilon &&
-                   bounds.min.y <= captureTop &&
-                   bounds.max.y >= escapeBottom;
+            return TryGetCellExtents(piece, out float lowestCellY, out float highestCellY) &&
+                   lowestCellY <= captureTop &&
+                   highestCellY >= escapeBottom;
+        }
+
+        /// <summary>
+        /// Returns the lowest real occupied cell for stable island capture
+        /// ordering. The enclosing collision bounds are deliberately avoided:
+        /// their empty notches are not physical material.
+        /// </summary>
+        public bool TryGetPhysicsIslandCaptureFloorY(
+            PuzzlePiece piece,
+            out float lowestCellY)
+        {
+            return TryGetCellExtents(piece, out lowestCellY, out _);
+        }
+
+        private bool TryGetCellExtents(
+            PuzzlePiece piece,
+            out float lowestCellY,
+            out float highestCellY)
+        {
+            lowestCellY = float.PositiveInfinity;
+            highestCellY = float.NegativeInfinity;
+            if (piece == null)
+                return false;
+
+            piece.GetActiveCellBounds(activeCellBoundsBuffer);
+            if (activeCellBoundsBuffer.Count == 0)
+                return false;
+
+            for (int index = 0; index < activeCellBoundsBuffer.Count; index++)
+            {
+                Bounds bounds = activeCellBoundsBuffer[index];
+                if (bounds.min.x < leftX - CorridorEpsilon ||
+                    bounds.max.x > rightX + CorridorEpsilon)
+                {
+                    return false;
+                }
+
+                lowestCellY = Mathf.Min(lowestCellY, bounds.min.y);
+                highestCellY = Mathf.Max(highestCellY, bounds.max.y);
+            }
+
+            return lowestCellY != float.PositiveInfinity;
         }
 
         private bool IsInsideShredderLane(GravityLevelDefinition level, GridCoordinate coordinate)

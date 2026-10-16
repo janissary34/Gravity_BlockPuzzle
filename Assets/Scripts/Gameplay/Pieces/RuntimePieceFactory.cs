@@ -469,12 +469,12 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.IceMaterial : null,
                 GetFallbackSpriteMaterial());
 
-            float baseIceFontSize = pieceVisualConfig != null ? pieceVisualConfig.IceCounterFontSize : 6f;
+            float baseIceFontSize = pieceVisualConfig != null ? pieceVisualConfig.IceCounterFontSize : .55f;
             float resolvedIceFontSize = definition.iceCounterFontSize <= 0f
                 ? baseIceFontSize
                 : baseIceFontSize * Mathf.Clamp(definition.iceCounterFontSize / 36f, 0.2f, 3.0f);
 
-            float baseBombFontSize = pieceVisualConfig != null ? pieceVisualConfig.BombCounterFontSize : 4.5f;
+            float baseBombFontSize = pieceVisualConfig != null ? pieceVisualConfig.BombCounterFontSize : .65f;
             float resolvedBombFontSize = definition.bombCounterFontSize <= 0f
                 ? baseBombFontSize
                 : baseBombFontSize * Mathf.Clamp(definition.bombCounterFontSize / 36f, 0.2f, 3.0f);
@@ -498,6 +498,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineColor : definition.iceCounterOutlineColor,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineWidth : definition.iceCounterOutlineWidth,
                 pieceVisualConfig != null && pieceVisualConfig.IceCounterOffset != Vector2.zero ? pieceVisualConfig.IceCounterOffset : definition.iceCounterOffset,
+                pieceVisualConfig != null ? pieceVisualConfig.IceCounterSortingOrder : 50,
                 definition.specialBlockType,
                 definition.bombTimerSeconds,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterFont : null,
@@ -505,7 +506,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterTextColor : definition.bombCounterTextColor,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineColor : definition.bombCounterOutlineColor,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineWidth : definition.bombCounterOutlineWidth,
-                pieceVisualConfig != null && pieceVisualConfig.BombCounterOffset != Vector2.zero ? pieceVisualConfig.BombCounterOffset : definition.bombCounterOffset));
+                pieceVisualConfig != null && pieceVisualConfig.BombCounterOffset != Vector2.zero ? pieceVisualConfig.BombCounterOffset : definition.bombCounterOffset,
+                pieceVisualConfig != null ? pieceVisualConfig.BombCounterSortingOrder : 50));
             if (content.VoxelShards != null && content.VoxelShards.Count > 0)
                 puzzlePiece.ConfigureVoxelPresentation(content.VoxelShards);
             else if (content.CollisionCellVisuals != null)

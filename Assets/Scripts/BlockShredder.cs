@@ -39,11 +39,13 @@ namespace GravityPuzzle
 
         private ShredderFeedMask activeFeedMask;
         private int activeFeedCount;
-        // A physical mouth has one motorized throat. This gate is keyed by
-        // the authored catch zone rather than Y so two independent mouths at
-        // the same height never share mutable feed state.
-        private readonly HashSet<ShredderCatchZone> activeFeedZones =
-            new HashSet<ShredderCatchZone>();
+        // A feed reservation owns one horizontal material footprint in an
+        // authored mouth. Multiple non-overlapping bodies may use the same
+        // mouth, while material that could physically meet remains serial.
+        // This is intentionally local to the existing shredder owner rather
+        // than a second routing or column-management system.
+        private readonly List<FeedReservation> activeFeedReservations =
+            new List<FeedReservation>(4);
         private static readonly Comparison<BoxCollider2D> CompareCellsByCenterX = (a, b) =>
         {
             if (a == null || b == null) return 0;
@@ -80,6 +82,21 @@ namespace GravityPuzzle
         private readonly CutterContactSegment[] activeSegmentsBuffer = new CutterContactSegment[16];
         private readonly Vector2[] rawContactBoundsBuffer = new Vector2[32];
         private readonly List<Bounds> cachedCellBoundsBuffer = new List<Bounds>(32);
+        private readonly List<Bounds> candidateFeedCellBoundsBuffer = new List<Bounds>(32);
+        private readonly List<Bounds> reservedFeedCellBoundsBuffer = new List<Bounds>(32);
+        private readonly List<Bounds> guideDepthCellBoundsBuffer = new List<Bounds>(32);
+
+        private readonly struct FeedReservation
+        {
+            public readonly PuzzlePiece Piece;
+            public readonly ShredderCatchZone Zone;
+
+            public FeedReservation(PuzzlePiece piece, ShredderCatchZone zone)
+            {
+                Piece = piece;
+                Zone = zone;
+            }
+        }
 
         private void Awake()
         {
@@ -164,11 +181,10 @@ namespace GravityPuzzle
         public bool TryCapturePiece(PuzzlePiece piece, ShredderCatchZone zone)
         {
             if (piece == null || zone == null ||
-                !zone.ContainsCaptureFootprint(piece) ||
-                HasActivePhysicsIslandForZone(zone))
+                !zone.ContainsCaptureFootprint(piece))
                 return false;
 
-            if (!TryAcquireFeedGate(zone))
+            if (!TryAcquireFeedGate(piece, zone))
                 return false;
 
             if (TryStartPhysicsIsland(piece, zone))
@@ -176,7 +192,7 @@ namespace GravityPuzzle
 
             if (!piece.TryBeginShredderHandoff())
             {
-                ReleaseFeedGate(zone);
+                ReleaseFeedGate(piece, zone);
                 return false;
             }
 
@@ -256,8 +272,30 @@ namespace GravityPuzzle
             if (zone == null || members == null)
                 return false;
 
-            if (activePhysicsMouths.ContainsKey(zone))
-                return true;
+            float requiredGuideDepth = CalculateRequiredGuideDepth(zone, members);
+            if (activePhysicsMouths.TryGetValue(zone, out ShredderPhysicsMouth activeMouth))
+            {
+                // A second independent island can be taller than the first.
+                // Growing only the upward guide extent preserves the current
+                // cutter/shelf plane and avoids exposing its upper members.
+                if (requiredGuideDepth <= activeMouth.GuideDepth)
+                    return true;
+
+                if (activeMouth.Configure(
+                        zone.LeftX,
+                        zone.RightX,
+                        zone.ShredY,
+                        shredderConfig,
+                        requiredGuideDepth))
+                {
+                    return true;
+                }
+
+                Debug.LogError(
+                    "[ShredderPhysicsIsland] The active physics mouth could not grow for a concurrent support island.",
+                    this);
+                return false;
+            }
 
             if (!ShredderPhysicsMouthPool.TryRent(out ShredderPhysicsMouth mouth))
             {
@@ -272,7 +310,7 @@ namespace GravityPuzzle
                     zone.RightX,
                     zone.ShredY,
                     shredderConfig,
-                    CalculateRequiredGuideDepth(zone, members)))
+                    requiredGuideDepth))
             {
                 ShredderPhysicsMouthPool.Return(mouth);
                 Debug.LogError(
@@ -293,8 +331,12 @@ namespace GravityPuzzle
             for (int index = 0; index < members.Count; index++)
             {
                 PuzzlePiece member = members[index];
-                if (member != null)
-                    highestPoint = Mathf.Max(highestPoint, member.CollisionBounds.max.y);
+                if (member == null)
+                    continue;
+
+                member.GetActiveCellBounds(guideDepthCellBoundsBuffer);
+                for (int cellIndex = 0; cellIndex < guideDepthCellBoundsBuffer.Count; cellIndex++)
+                    highestPoint = Mathf.Max(highestPoint, guideDepthCellBoundsBuffer[cellIndex].max.y);
             }
 
             // Include one guide thickness above the top-most initial body so
@@ -316,7 +358,7 @@ namespace GravityPuzzle
 
         private void ReleasePhysicsMouthIfIdle(ShredderCatchZone zone)
         {
-            if (zone == null || activeFeedZones.Contains(zone) ||
+            if (zone == null || HasActiveFeedReservationForZone(zone) ||
                 HasActivePhysicsIslandForZone(zone) ||
                 !activePhysicsMouths.TryGetValue(zone, out ShredderPhysicsMouth mouth))
             {
@@ -376,12 +418,12 @@ namespace GravityPuzzle
             PrototypeBoard board = PrototypeBoard.Active;
             if (board == null || !board.TryGetPieceModel(piece, out PieceModel model) ||
                 model.State != PieceState.HandoffToPhysics ||
-                !TryAcquireFeedGate(zone))
+                !TryAcquireFeedGate(piece, zone))
                 return false;
 
             if (!piece.TryBeginShredderFeedFromPhysicsIsland())
             {
-                ReleaseFeedGate(zone);
+                ReleaseFeedGate(piece, zone);
                 return false;
             }
 
@@ -390,22 +432,133 @@ namespace GravityPuzzle
             return true;
         }
 
-        private bool TryAcquireFeedGate(ShredderCatchZone zone)
+        private bool TryAcquireFeedGate(PuzzlePiece piece, ShredderCatchZone zone)
         {
-            if (zone == null || activeFeedZones.Contains(zone))
+            if (piece == null || zone == null)
                 return false;
 
-            activeFeedZones.Add(zone);
+            piece.GetActiveCellBounds(candidateFeedCellBoundsBuffer);
+            if (candidateFeedCellBoundsBuffer.Count == 0)
+                return false;
+
+            float candidateRotationAllowance = GetFeedRotationAllowance(
+                piece,
+                candidateFeedCellBoundsBuffer);
+            for (int index = 0; index < activeFeedReservations.Count; index++)
+            {
+                FeedReservation reservation = activeFeedReservations[index];
+                if (reservation.Zone != zone || reservation.Piece == null)
+                    continue;
+
+                reservation.Piece.GetActiveCellBounds(reservedFeedCellBoundsBuffer);
+                if (reservedFeedCellBoundsBuffer.Count == 0)
+                    return false;
+
+                float reservationRotationAllowance = GetFeedRotationAllowance(
+                    reservation.Piece,
+                    reservedFeedCellBoundsBuffer);
+                if (HaveOverlappingHorizontalFootprints(
+                        candidateFeedCellBoundsBuffer,
+                        candidateRotationAllowance,
+                        reservedFeedCellBoundsBuffer,
+                        reservationRotationAllowance))
+                {
+                    return false;
+                }
+            }
+
+            activeFeedReservations.Add(new FeedReservation(piece, zone));
             return true;
         }
 
-        private void ReleaseFeedGate(ShredderCatchZone zone)
+        private void ReleaseFeedGate(PuzzlePiece piece, ShredderCatchZone zone)
         {
             if (zone == null)
                 return;
 
-            activeFeedZones.Remove(zone);
+            for (int index = activeFeedReservations.Count - 1; index >= 0; index--)
+            {
+                FeedReservation reservation = activeFeedReservations[index];
+                if (reservation.Zone == zone && ReferenceEquals(reservation.Piece, piece))
+                {
+                    activeFeedReservations.RemoveAt(index);
+                    break;
+                }
+            }
+
             ReleasePhysicsMouthIfIdle(zone);
+        }
+
+        private bool HasActiveFeedReservationForZone(ShredderCatchZone zone)
+        {
+            for (int index = 0; index < activeFeedReservations.Count; index++)
+            {
+                if (activeFeedReservations[index].Zone == zone)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private float GetFeedRotationAllowance(
+            PuzzlePiece piece,
+            List<Bounds> cellBounds)
+        {
+            if (piece == null || cellBounds == null || cellBounds.Count == 0 ||
+                shredderConfig == null)
+            {
+                return 0f;
+            }
+
+            Rigidbody2D body = piece.Body;
+            Vector2 pivot = body != null ? body.position : piece.transform.position;
+            float currentAngle = body != null ? body.rotation : piece.transform.eulerAngles.z;
+            float maxRotationDelta = Mathf.Abs(currentAngle) + shredderConfig.MaxFeedTiltAngle;
+            float sine = Mathf.Sin(Mathf.Deg2Rad * Mathf.Min(90f, maxRotationDelta));
+            if (sine <= 0f)
+                return 0f;
+
+            float allowance = 0f;
+            for (int index = 0; index < cellBounds.Count; index++)
+            {
+                Bounds bounds = cellBounds[index];
+                float halfDiagonal = new Vector2(
+                    bounds.extents.x,
+                    bounds.extents.y).magnitude;
+                Vector2 center = new Vector2(bounds.center.x, bounds.center.y);
+                float radius = Vector2.Distance(center, pivot) + halfDiagonal;
+                allowance = Mathf.Max(allowance, radius * sine);
+            }
+
+            return allowance;
+        }
+
+        private static bool HaveOverlappingHorizontalFootprints(
+            List<Bounds> first,
+            float firstAllowance,
+            List<Bounds> second,
+            float secondAllowance)
+        {
+            const float TouchingEpsilon = .0001f;
+            for (int firstIndex = 0; firstIndex < first.Count; firstIndex++)
+            {
+                Bounds firstBounds = first[firstIndex];
+                float firstMin = firstBounds.min.x - firstAllowance;
+                float firstMax = firstBounds.max.x + firstAllowance;
+                for (int secondIndex = 0; secondIndex < second.Count; secondIndex++)
+                {
+                    Bounds secondBounds = second[secondIndex];
+                    float secondMin = secondBounds.min.x - secondAllowance;
+                    float secondMax = secondBounds.max.x + secondAllowance;
+                    if (firstMax > secondMin + TouchingEpsilon &&
+                        secondMax > firstMin + TouchingEpsilon)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private void AcquireFeedMask(float shredderY)
@@ -444,7 +597,7 @@ namespace GravityPuzzle
         {
             if (piece == null || zone == null)
             {
-                ReleaseFeedGate(zone);
+                ReleaseFeedGate(piece, zone);
                 yield break;
             }
 
@@ -879,7 +1032,7 @@ namespace GravityPuzzle
             }
 
             ReleaseFeedMask();
-            ReleaseFeedGate(zone);
+            ReleaseFeedGate(piece, zone);
         }
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);

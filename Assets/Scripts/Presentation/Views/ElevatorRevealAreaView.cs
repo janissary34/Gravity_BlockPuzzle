@@ -23,6 +23,7 @@ namespace GravityPuzzle.Presentation.Views
         private Vector3 leftDoorClosedPosition;
         private Vector3 rightDoorClosedPosition;
         private float doorOpenDistance;
+        private Vector2 authoredSize;
 
         public string AreaId { get; private set; }
 
@@ -49,15 +50,28 @@ namespace GravityPuzzle.Presentation.Views
             AreaId = areaId;
             config = presentationConfig;
             transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
+            authoredSize = new Vector2(Mathf.Max(.01f, size.x), Mathf.Max(.01f, size.y));
+
+            float widthScale = config != null ? config.elevatorVisualWidthScale : 1f;
+            float frameWidth = authoredSize.x * widthScale;
+            float doorApertureWidth = authoredSize.x *
+                (config != null ? config.elevatorDoorWidthRatio : .44f);
+            float doorApertureHeight = authoredSize.y *
+                (config != null ? config.elevatorDoorHeightRatio : .62f);
+            float doorCenterY = authoredSize.y *
+                (config != null ? config.elevatorDoorCenterYOffset : -.04f);
+            float doorWidth = doorApertureWidth * .5f;
 
             if (elevatorLeftDoor != null)
             {
+                leftDoorClosedPosition = new Vector3(-doorWidth * .5f, doorCenterY, 0f);
                 elevatorLeftDoor.localPosition = leftDoorClosedPosition;
                 elevatorLeftDoor.gameObject.SetActive(true);
             }
 
             if (elevatorRightDoor != null)
             {
+                rightDoorClosedPosition = new Vector3(doorWidth * .5f, doorCenterY, 0f);
                 elevatorRightDoor.localPosition = rightDoorClosedPosition;
                 elevatorRightDoor.gameObject.SetActive(true);
             }
@@ -72,7 +86,17 @@ namespace GravityPuzzle.Presentation.Views
                         c.a = 1f;
                         doorRenderers[i].color = c;
                         if (config != null)
+                        {
                             doorRenderers[i].sortingOrder = config.elevatorSortingOrder + 2 + i;
+                            Sprite doorSprite = i == 0
+                                ? config.elevatorLeftDoorSprite
+                                : config.elevatorRightDoorSprite;
+                            if (doorSprite != null)
+                                doorRenderers[i].sprite = doorSprite;
+                        }
+                        doorRenderers[i].drawMode = SpriteDrawMode.Sliced;
+                        doorRenderers[i].size = new Vector2(doorWidth, doorApertureHeight);
+                        doorRenderers[i].flipX = i == 0;
                     }
                 }
             }
@@ -88,6 +112,8 @@ namespace GravityPuzzle.Presentation.Views
                         frameRenderer.sprite = config.elevatorDoorSprite;
                     frameRenderer.sortingOrder = config.elevatorSortingOrder;
                 }
+                frameRenderer.drawMode = SpriteDrawMode.Sliced;
+                frameRenderer.size = new Vector2(frameWidth, authoredSize.y);
             }
 
             if (openingRenderer != null)
@@ -100,9 +126,13 @@ namespace GravityPuzzle.Presentation.Views
                         : boardColor;
                     openingRenderer.sortingOrder = config.elevatorSortingOrder + 1;
                 }
+                openingRenderer.drawMode = SpriteDrawMode.Sliced;
+                openingRenderer.size = new Vector2(doorApertureWidth, doorApertureHeight);
+                openingRenderer.transform.localPosition = new Vector3(0f, doorCenterY, 0f);
             }
 
-            doorOpenDistance = config != null ? config.elevatorDoorDistance : 1.2f;
+            float configuredDistance = config != null ? config.elevatorDoorDistance : 1.2f;
+            doorOpenDistance = Mathf.Max(configuredDistance, authoredSize.x * .5f + doorWidth * .5f);
             isComplete = false;
         }
 
@@ -175,9 +205,9 @@ namespace GravityPuzzle.Presentation.Views
                 return;
 
             isComplete = true;
-            gameObject.SetActive(false);
             Action callback = completion;
             completion = null;
+            Despawn();
             callback?.Invoke();
         }
 

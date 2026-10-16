@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Presentation.Views;
 using UnityEngine;
@@ -9,8 +8,6 @@ namespace GravityPuzzle.Gameplay.Reveal
     {
         private static GameObjectPool<BoxRevealAreaView> boxPool;
         private static GameObjectPool<ElevatorRevealAreaView> elevatorPool;
-        private static readonly List<BoxRevealAreaView> activeBoxes = new List<BoxRevealAreaView>();
-        private static readonly List<ElevatorRevealAreaView> activeElevators = new List<ElevatorRevealAreaView>();
 
         public static void Configure(
             BoxRevealAreaView boxPrefab,
@@ -45,10 +42,7 @@ namespace GravityPuzzle.Gameplay.Reveal
         public static bool TryRentBox(out BoxRevealAreaView box)
         {
             if (boxPool != null && boxPool.TryRent(out box))
-            {
-                activeBoxes.Add(box);
                 return true;
-            }
 
             box = null;
             return false;
@@ -57,10 +51,7 @@ namespace GravityPuzzle.Gameplay.Reveal
         public static bool TryRentElevator(out ElevatorRevealAreaView elevator)
         {
             if (elevatorPool != null && elevatorPool.TryRent(out elevator))
-            {
-                activeElevators.Add(elevator);
                 return true;
-            }
 
             elevator = null;
             return false;
@@ -68,19 +59,8 @@ namespace GravityPuzzle.Gameplay.Reveal
 
         public static void ResetAllActive()
         {
-            for (int i = activeBoxes.Count - 1; i >= 0; i--)
-            {
-                if (activeBoxes[i] != null)
-                    activeBoxes[i].Despawn();
-            }
-            activeBoxes.Clear();
-
-            for (int i = activeElevators.Count - 1; i >= 0; i--)
-            {
-                if (activeElevators[i] != null)
-                    activeElevators[i].Despawn();
-            }
-            activeElevators.Clear();
+            boxPool?.ReturnAllRented();
+            elevatorPool?.ReturnAllRented();
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -88,8 +68,6 @@ namespace GravityPuzzle.Gameplay.Reveal
         {
             boxPool = null;
             elevatorPool = null;
-            activeBoxes.Clear();
-            activeElevators.Clear();
         }
     }
 }

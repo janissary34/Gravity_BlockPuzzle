@@ -205,21 +205,24 @@ namespace GravityPuzzle
                         config.PhysicsIslandCaptureDistance))
                     continue;
 
-                Bounds bounds = member.CollisionBounds;
-                bool isLower = bounds.min.y < lowestY - .0001f;
-                bool breaksTie = Mathf.Abs(bounds.min.y - lowestY) <= .0001f &&
+                if (!zone.TryGetPhysicsIslandCaptureFloorY(member, out float memberLowestY))
+                    continue;
+
+                bool isLower = memberLowestY < lowestY - .0001f;
+                bool breaksTie = Mathf.Abs(memberLowestY - lowestY) <= .0001f &&
                                  member.SourcePieceId < lowestId;
                 if (!isLower && !breaksTie)
                     continue;
 
                 captureIndex = index;
-                lowestY = bounds.min.y;
+                lowestY = memberLowestY;
                 lowestId = member.SourcePieceId;
             }
 
-            // A physical mouth owns one feed at a time. Leave the remaining
-            // members on the real throat shelf/contacts until that feed frees
-            // the gate; never force an out-of-mouth member into Shredding.
+            // A member may enter only when its real horizontal material
+            // footprint has no active-feed conflict. Leave a conflicting
+            // member on the real throat shelf/contacts; never force an
+            // out-of-mouth member into Shredding.
             if (captureIndex >= 0 &&
                 owner.TryCapturePhysicsIslandMember(dynamicMembers[captureIndex], zone))
             {

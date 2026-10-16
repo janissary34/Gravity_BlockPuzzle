@@ -41,7 +41,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
         [Tooltip("Shared counter style for every frozen piece. Level assets own the remaining move count, while this config owns its visual language.")]
         [SerializeField] private TMP_FontAsset iceCounterFont;
-        [SerializeField] private float iceCounterFontSize = 6f;
+        [SerializeField, Min(.1f)] private float iceCounterFontSize = .55f;
         [SerializeField] private Color iceCounterTextColor = Color.white;
         [SerializeField] private Color iceCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
         [SerializeField, Range(0f, 1f)] private float iceCounterOutlineWidth = .22f;
@@ -53,7 +53,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite bombOverlaySprite;
         [SerializeField, Range(.1f, 1f)] private float bombOverlayFill = .82f;
         [SerializeField] private TMP_FontAsset bombCounterFont;
-        [SerializeField] private float bombCounterFontSize = 4.5f;
+        [SerializeField, Min(.1f)] private float bombCounterFontSize = .65f;
         [SerializeField] private Color bombCounterTextColor = Color.white;
         [SerializeField] private Color bombCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
         [SerializeField, Range(0f, 1f)] private float bombCounterOutlineWidth = .22f;
@@ -70,6 +70,20 @@ namespace GravityPuzzle.Config
         [SerializeField, Range(0, 8)] private int outlineCornerVertices = 4;
         [SerializeField, Range(0, 8)] private int outlineCapVertices = 4;
 
+        [Header("Joint Springs Presentation")]
+        [Tooltip("Scale multiplier for the joint spiral rings.")]
+        [SerializeField, Min(0.01f)] private float springScale = 0.1495036f;
+        [Tooltip("Distance from the block center along the seam to each stud (default 0.25).")]
+        [SerializeField, Min(0f)] private float springStudOffset = 0.25f;
+        [Tooltip("Vertical offset of the holes from sprite center (default 0.099). Adjusts how high or low the rings sit on the studs.")]
+        [SerializeField] private float springHoleDepthOffset = 0.099f;
+        [Tooltip("General manual nudge offset (X, Y) applied to all spiral positions.")]
+        [SerializeField] private Vector2 springPositionOffset = Vector2.zero;
+        [Tooltip("Additional manual nudge applied only when pieces are connected side-by-side (horizontal).")]
+        [SerializeField] private Vector2 springHorizontalJointOffset = Vector2.zero;
+        [Tooltip("Additional manual nudge applied only when pieces are connected vertically.")]
+        [SerializeField] private Vector2 springVerticalJointOffset = Vector2.zero;
+
         public IReadOnlyList<PieceVisualDefinition> Definitions => definitions;
         public Material FallbackSpriteMaterial => fallbackSpriteMaterial;
         public Material IceMaterial => iceMaterial;
@@ -84,7 +98,7 @@ namespace GravityPuzzle.Config
         public Color IceOverlayTint => iceOverlayTint;
         public Color IceFrostTint => iceFrostTint;
         public TMP_FontAsset IceCounterFont => iceCounterFont;
-        public float IceCounterFontSize => Mathf.Max(0.5f, iceCounterFontSize);
+        public float IceCounterFontSize => Mathf.Max(.1f, iceCounterFontSize);
         public Color IceCounterTextColor => iceCounterTextColor;
         public Color IceCounterOutlineColor => iceCounterOutlineColor;
         public float IceCounterOutlineWidth => Mathf.Clamp01(iceCounterOutlineWidth);
@@ -93,7 +107,7 @@ namespace GravityPuzzle.Config
         public Sprite BombOverlaySprite => bombOverlaySprite;
         public float BombOverlayFill => bombOverlayFill;
         public TMP_FontAsset BombCounterFont => bombCounterFont != null ? bombCounterFont : iceCounterFont;
-        public float BombCounterFontSize => Mathf.Max(0.5f, bombCounterFontSize);
+        public float BombCounterFontSize => Mathf.Max(.1f, bombCounterFontSize);
         public Color BombCounterTextColor => bombCounterTextColor;
         public Color BombCounterOutlineColor => bombCounterOutlineColor;
         public float BombCounterOutlineWidth => Mathf.Clamp01(bombCounterOutlineWidth);
@@ -107,6 +121,12 @@ namespace GravityPuzzle.Config
         public int SelectedOutlineSortingOrder => selectedOutlineSortingOrder;
         public int OutlineCornerVertices => outlineCornerVertices;
         public int OutlineCapVertices => outlineCapVertices;
+        public float SpringScale => springScale > 0f ? springScale : 0.1495036f;
+        public float SpringStudOffset => springStudOffset > 0f ? springStudOffset : 0.25f;
+        public float SpringHoleDepthOffset => springHoleDepthOffset;
+        public Vector2 SpringPositionOffset => springPositionOffset;
+        public Vector2 SpringHorizontalJointOffset => springHorizontalJointOffset;
+        public Vector2 SpringVerticalJointOffset => springVerticalJointOffset;
 
         public bool TryGet(string visualId, out PieceVisualDefinition definition)
         {

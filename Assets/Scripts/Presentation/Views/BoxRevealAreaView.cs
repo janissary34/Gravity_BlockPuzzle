@@ -25,7 +25,13 @@ namespace GravityPuzzle.Presentation.Views
         private Action completion;
         private bool isComplete;
         private Vector3 shutterClosedPosition;
+        private Vector3 coverClosedPosition;
+        private Vector3 counterClosedPosition;
         private Vector2 authoredSize;
+        private MeshRenderer counterRenderer;
+        private Vector3[] fragmentClosedPositions;
+        private Quaternion[] fragmentClosedRotations;
+        private Vector3[] fragmentClosedScales;
 
         public string AreaId { get; private set; }
 
@@ -33,6 +39,30 @@ namespace GravityPuzzle.Presentation.Views
         {
             if (boxShutter != null)
                 shutterClosedPosition = boxShutter.localPosition;
+            if (boxCoverRenderer != null)
+                coverClosedPosition = boxCoverRenderer.transform.localPosition;
+            if (boxCounter != null)
+            {
+                counterClosedPosition = boxCounter.transform.localPosition;
+                counterRenderer = boxCounter.GetComponent<MeshRenderer>();
+            }
+
+            if (boxBurstFragments == null)
+                return;
+
+            fragmentClosedPositions = new Vector3[boxBurstFragments.Length];
+            fragmentClosedRotations = new Quaternion[boxBurstFragments.Length];
+            fragmentClosedScales = new Vector3[boxBurstFragments.Length];
+            for (int index = 0; index < boxBurstFragments.Length; index++)
+            {
+                Transform fragment = boxBurstFragments[index];
+                if (fragment == null)
+                    continue;
+
+                fragmentClosedPositions[index] = fragment.localPosition;
+                fragmentClosedRotations[index] = fragment.localRotation;
+                fragmentClosedScales[index] = fragment.localScale;
+            }
         }
 
         public void SetPoolReturnHandler(Action<BoxRevealAreaView> handler)
@@ -59,20 +89,40 @@ namespace GravityPuzzle.Presentation.Views
 
             if (boxCoverRenderer != null)
             {
+                boxCoverRenderer.transform.localPosition = coverClosedPosition;
+                boxCoverRenderer.transform.localScale = Vector3.one;
                 boxCoverRenderer.gameObject.SetActive(true);
                 Color c = boxCoverRenderer.color;
                 c.a = 1f;
                 boxCoverRenderer.color = c;
                 if (config != null && config.boxCoverSprite != null)
                     boxCoverRenderer.sprite = config.boxCoverSprite;
-                boxCoverRenderer.drawMode = SpriteDrawMode.Sliced;
-                boxCoverRenderer.size = size;
+
+                if (boxCoverRenderer.sprite != null && boxCoverRenderer.sprite.border != Vector4.zero)
+                {
+                    boxCoverRenderer.drawMode = SpriteDrawMode.Sliced;
+                    boxCoverRenderer.size = size;
+                }
+                else
+                {
+                    boxCoverRenderer.drawMode = SpriteDrawMode.Simple;
+                    Vector2 spriteSize = boxCoverRenderer.sprite != null
+                        ? boxCoverRenderer.sprite.rect.size / boxCoverRenderer.sprite.pixelsPerUnit
+                        : size;
+                    boxCoverRenderer.transform.localScale = new Vector3(
+                        spriteSize.x > 0f ? size.x / spriteSize.x : 1f,
+                        spriteSize.y > 0f ? size.y / spriteSize.y : 1f,
+                        1f);
+                }
+
                 if (config != null)
                     boxCoverRenderer.sortingOrder = config.boxSortingOrder;
             }
 
             if (boxCounter != null)
             {
+                boxCounter.transform.localPosition = counterClosedPosition +
+                    (config != null ? (Vector3)config.boxCounterOffset : Vector3.zero);
                 boxCounter.gameObject.SetActive(true);
                 if (config != null)
                 {
@@ -82,9 +132,8 @@ namespace GravityPuzzle.Presentation.Views
                     boxCounter.color = config.boxCounterTextColor;
                     boxCounter.outlineColor = config.boxCounterOutlineColor;
                     boxCounter.outlineWidth = config.boxCounterOutlineWidth;
-                    MeshRenderer mr = boxCounter.GetComponent<MeshRenderer>();
-                    if (mr != null)
-                        mr.sortingOrder = config.boxCounterSortingOrder;
+                    if (counterRenderer != null)
+                        counterRenderer.sortingOrder = config.boxCounterSortingOrder;
                 }
             }
 
@@ -93,7 +142,15 @@ namespace GravityPuzzle.Presentation.Views
                 for (int i = 0; i < boxBurstFragments.Length; i++)
                 {
                     if (boxBurstFragments[i] != null)
+                    {
+                        boxBurstFragments[i].localPosition = fragmentClosedPositions != null &&
+                            i < fragmentClosedPositions.Length ? fragmentClosedPositions[i] : Vector3.zero;
+                        boxBurstFragments[i].localRotation = fragmentClosedRotations != null &&
+                            i < fragmentClosedRotations.Length ? fragmentClosedRotations[i] : Quaternion.identity;
+                        boxBurstFragments[i].localScale = fragmentClosedScales != null &&
+                            i < fragmentClosedScales.Length ? fragmentClosedScales[i] : Vector3.one;
                         boxBurstFragments[i].gameObject.SetActive(false);
+                    }
                 }
             }
 
@@ -143,7 +200,22 @@ namespace GravityPuzzle.Presentation.Views
                     height =>
                     {
                         if (boxCoverRenderer != null)
-                            boxCoverRenderer.size = new Vector2(boxCoverRenderer.size.x, height);
+                        {
+                            if (boxCoverRenderer.drawMode == SpriteDrawMode.Sliced)
+                            {
+                                boxCoverRenderer.size = new Vector2(boxCoverRenderer.size.x, height);
+                            }
+                            else
+                            {
+                                Vector3 scale = boxCoverRenderer.transform.localScale;
+                                float initialH = authoredSize.y > 0f ? authoredSize.y : 1f;
+                                Vector2 spriteSize = boxCoverRenderer.sprite != null
+                                    ? boxCoverRenderer.sprite.rect.size / boxCoverRenderer.sprite.pixelsPerUnit
+                                    : authoredSize;
+                                scale.y = spriteSize.y > 0f ? height / spriteSize.y : 1f;
+                                boxCoverRenderer.transform.localScale = scale;
+                            }
+                        }
                     }).SetEase(config.boxOpenEase));
 
                 openingSequence.Join(coverTransform.DOLocalMoveY(
@@ -265,9 +337,9 @@ namespace GravityPuzzle.Presentation.Views
                 return;
 
             isComplete = true;
-            gameObject.SetActive(false);
             Action callback = completion;
             completion = null;
+            Despawn();
             callback?.Invoke();
         }
 
@@ -282,6 +354,7 @@ namespace GravityPuzzle.Presentation.Views
             openingSequence?.Kill();
             openingSequence = null;
             completion = null;
+            ResetVisualState();
             AreaId = null;
             config = null;
         }
@@ -289,6 +362,57 @@ namespace GravityPuzzle.Presentation.Views
         public void Despawn()
         {
             returnHandler?.Invoke(this);
+        }
+
+        private void ResetVisualState()
+        {
+            if (boxShutter != null)
+                boxShutter.localPosition = shutterClosedPosition;
+
+            if (boxCoverRenderer != null)
+            {
+                boxCoverRenderer.transform.localPosition = coverClosedPosition;
+                boxCoverRenderer.transform.localScale = Vector3.one;
+                Color coverColor = boxCoverRenderer.color;
+                coverColor.a = 1f;
+                boxCoverRenderer.color = coverColor;
+                boxCoverRenderer.gameObject.SetActive(true);
+            }
+
+            if (boxCounter != null)
+            {
+                boxCounter.transform.localPosition = counterClosedPosition;
+                boxCounter.gameObject.SetActive(true);
+            }
+
+            if (boxBurstFragments == null)
+                return;
+
+            for (int index = 0; index < boxBurstFragments.Length; index++)
+            {
+                Transform fragment = boxBurstFragments[index];
+                if (fragment == null)
+                    continue;
+
+                fragment.localPosition = fragmentClosedPositions != null && index < fragmentClosedPositions.Length
+                    ? fragmentClosedPositions[index]
+                    : Vector3.zero;
+                fragment.localRotation = fragmentClosedRotations != null && index < fragmentClosedRotations.Length
+                    ? fragmentClosedRotations[index]
+                    : Quaternion.identity;
+                fragment.localScale = fragmentClosedScales != null && index < fragmentClosedScales.Length
+                    ? fragmentClosedScales[index]
+                    : Vector3.one;
+                fragment.gameObject.SetActive(false);
+
+                if (boxBurstRenderers != null && index < boxBurstRenderers.Length &&
+                    boxBurstRenderers[index] != null)
+                {
+                    Color fragmentColor = boxBurstRenderers[index].color;
+                    fragmentColor.a = 1f;
+                    boxBurstRenderers[index].color = fragmentColor;
+                }
+            }
         }
     }
 }

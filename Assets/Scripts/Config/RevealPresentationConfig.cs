@@ -28,9 +28,9 @@ namespace GravityPuzzle.Config
         [Header("Art")]
         [Tooltip("Sprite shown on generated Box reveal covers.")]
         public Sprite boxCoverSprite;
-        [Tooltip("Nine-sliced full Elevator frame, kept static while its doors open.")]
+        [Tooltip("Scene Tuna Elevator sprite fitted to the authored Elevator area and kept static while its doors open.")]
         public Sprite elevatorFrameSprite;
-        [Tooltip("Cropped left Elevator door panel used by the opening animation.")]
+        [Tooltip("Scene Tuna Elevator door panel used by the opening animation.")]
         public Sprite elevatorLeftDoorSprite;
         [Tooltip("Cropped right Elevator door panel used by the opening animation.")]
         public Sprite elevatorRightDoorSprite;

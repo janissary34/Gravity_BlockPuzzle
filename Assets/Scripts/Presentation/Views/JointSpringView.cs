@@ -26,8 +26,8 @@ namespace GravityPuzzle.Presentation.Views
             bool isVertical,
             Sprite springSprite = null,
             Material springMaterial = null,
-            int sortingOrder = 5,
-            float scale = 0.14514376f)
+            int sortingOrder = 20,
+            float scale = 0.1495036f)
         {
             JointId = jointId;
             MemberA = memberA;
@@ -45,6 +45,15 @@ namespace GravityPuzzle.Presentation.Views
                     spriteRenderer.material = springMaterial;
                 spriteRenderer.sortingOrder = sortingOrder;
                 spriteRenderer.enabled = true;
+            }
+        }
+
+        public void SetSorting(int sortingLayerID, int sortingOrder)
+        {
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.sortingLayerID = sortingLayerID;
+                spriteRenderer.sortingOrder = sortingOrder;
             }
         }
 
@@ -66,6 +75,8 @@ namespace GravityPuzzle.Presentation.Views
             MemberA = -1;
             MemberB = -1;
             transform.SetParent(null, false);
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
             if (spriteRenderer != null)
                 spriteRenderer.enabled = false;
         }

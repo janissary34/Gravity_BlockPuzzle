@@ -7,14 +7,31 @@ namespace GravityPuzzle.Presentation.Views
 {
     public sealed class JointSpringPresenter : MonoBehaviour
     {
+        [Header("Spring Visual Assets")]
         [SerializeField] private JointSpringView springPrefab;
         [SerializeField] private int prewarmCapacity = 16;
         [SerializeField] private Sprite springSprite;
         [SerializeField] private Material springMaterial;
-        [SerializeField] private int sortingOrder = 5;
-        [SerializeField] private float springScale = 0.14514376f;
+        [SerializeField] private int sortingOrder = 20;
 
-        [SerializeField] private float studOffset = 0.18f;
+        [Header("Alignment & Position Tuning")]
+        [Tooltip("Scale multiplier for the joint spiral rings (default ~0.1495).")]
+        [SerializeField, Min(0.01f)] private float springScale = 0.1495036f;
+
+        [Tooltip("Distance from the block center along the seam to each stud (default 0.25).")]
+        [SerializeField, Min(0f)] private float studOffset = 0.25f;
+
+        [Tooltip("Vertical depth offset of the holes from sprite center (default 0.099). Adjusts how high or low the rings sit on the studs.")]
+        [SerializeField] private float holeDepthOffset = 0.099f;
+
+        [Tooltip("Global manual nudge (X, Y) applied to all spirals.")]
+        [SerializeField] private Vector2 positionOffset = Vector2.zero;
+
+        [Tooltip("Extra manual nudge applied only when pieces are connected side-by-side (horizontal).")]
+        [SerializeField] private Vector2 horizontalJointOffset = Vector2.zero;
+
+        [Tooltip("Extra manual nudge applied only when pieces are connected vertically.")]
+        [SerializeField] private Vector2 verticalJointOffset = Vector2.zero;
 
         private PrototypeBoard boardState;
         private PieceJointGraph jointGraph;
@@ -22,6 +39,17 @@ namespace GravityPuzzle.Presentation.Views
         private readonly Dictionary<int, JointSpringView> activeSpringViews = new Dictionary<int, JointSpringView>();
         private readonly List<PieceJointGraph.Joint> jointBuffer = new List<PieceJointGraph.Joint>();
         private readonly HashSet<int> currentSpringKeys = new HashSet<int>();
+        private readonly List<int> springKeysToRemove = new List<int>();
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (Application.isPlaying && boardState != null && activeSpringViews.Count > 0)
+            {
+                ReconcileSpringViews();
+            }
+        }
+#endif
 
         public void Configure(
             PrototypeBoard board,
@@ -34,7 +62,13 @@ namespace GravityPuzzle.Presentation.Views
             if (jointGraph != null)
                 jointGraph.JointsChanged -= OnJointsChanged;
 
+            if (boardState != null && boardState.JointSpringPresenter == this)
+                boardState.JointSpringPresenter = null;
+
             boardState = board;
+            if (boardState != null)
+                boardState.JointSpringPresenter = this;
+
             jointGraph = graph;
             activeLevel = level;
 
@@ -58,12 +92,20 @@ namespace GravityPuzzle.Presentation.Views
             if (jointGraph != null)
                 jointGraph.JointsChanged -= OnJointsChanged;
 
+            if (boardState != null && boardState.JointSpringPresenter == this)
+                boardState.JointSpringPresenter = null;
+
             ClearAll();
         }
 
         private void LateUpdate()
         {
-            UpdateSpringPositions();
+            // If joints exist but activeSpringViews is empty (e.g. pieces were not yet instantiated
+            // during early bootstrap), reconcile as soon as the live pieces become available.
+            if (activeSpringViews.Count == 0 && jointGraph != null && jointGraph.JointCount > 0 && boardState != null)
+            {
+                ReconcileSpringViews();
+            }
         }
 
         public void OnJointsChanged()
@@ -86,44 +128,41 @@ namespace GravityPuzzle.Presentation.Views
             for (int i = 0; i < jointBuffer.Count; i++)
             {
                 PieceJointGraph.Joint joint = jointBuffer[i];
-                if (!CalculateJointGeometry(joint, out Vector3 worldMidpoint, out bool isVertical, out PuzzlePiece pieceA))
+                if (!CalculateJointGeometry(
+                    joint,
+                    out Vector3 studMidpoint1,
+                    out Vector3 studMidpoint2,
+                    out Quaternion rotation,
+                    out bool isVertical,
+                    out PuzzlePiece anchorPiece))
+                {
                     continue;
-
-                Vector3 studOffsetVec = isVertical
-                    ? new Vector3(studOffset, 0f, 0f)
-                    : new Vector3(0f, studOffset, 0f);
+                }
 
                 int key1 = joint.Id * 2;
                 int key2 = joint.Id * 2 + 1;
                 currentSpringKeys.Add(key1);
                 currentSpringKeys.Add(key2);
 
-                UpdateOrSpawnSpring(key1, joint, worldMidpoint - studOffsetVec, isVertical, pieceA);
-                UpdateOrSpawnSpring(key2, joint, worldMidpoint + studOffsetVec, isVertical, pieceA);
+                UpdateOrSpawnSpring(key1, joint, studMidpoint1, rotation, isVertical, anchorPiece);
+                UpdateOrSpawnSpring(key2, joint, studMidpoint2, rotation, isVertical, anchorPiece);
             }
 
             // Return removed joints to pool
-            List<int> toRemove = null;
+            springKeysToRemove.Clear();
             foreach (var kvp in activeSpringViews)
             {
                 if (!currentSpringKeys.Contains(kvp.Key))
-                {
-                    if (toRemove == null)
-                        toRemove = new List<int>();
-                    toRemove.Add(kvp.Key);
-                }
+                    springKeysToRemove.Add(kvp.Key);
             }
 
-            if (toRemove != null)
+            for (int i = 0; i < springKeysToRemove.Count; i++)
             {
-                for (int i = 0; i < toRemove.Count; i++)
+                int id = springKeysToRemove[i];
+                if (activeSpringViews.TryGetValue(id, out JointSpringView view))
                 {
-                    int id = toRemove[i];
-                    if (activeSpringViews.TryGetValue(id, out JointSpringView view))
-                    {
-                        view.Despawn();
-                        activeSpringViews.Remove(id);
-                    }
+                    view.Despawn();
+                    activeSpringViews.Remove(id);
                 }
             }
         }
@@ -131,10 +170,15 @@ namespace GravityPuzzle.Presentation.Views
         private void UpdateOrSpawnSpring(
             int key,
             PieceJointGraph.Joint joint,
-            Vector3 position,
+            Vector3 worldPosition,
+            Quaternion rotation,
             bool isVertical,
-            PuzzlePiece pieceA)
+            PuzzlePiece anchorPiece)
         {
+            int targetSortingLayer = anchorPiece != null ? anchorPiece.PrimarySortingLayerID : 0;
+            int targetSortingOrder = Mathf.Max(sortingOrder, 20);
+            float scale = springScale > 0f ? springScale : 0.1495036f;
+
             if (!activeSpringViews.TryGetValue(key, out JointSpringView view))
             {
                 if (JointSpringPool.TryRent(out view))
@@ -143,64 +187,63 @@ namespace GravityPuzzle.Presentation.Views
                         key,
                         joint.MemberA,
                         joint.MemberB,
-                        position,
+                        worldPosition,
                         isVertical,
                         springSprite,
                         springMaterial,
-                        sortingOrder,
-                        springScale);
+                        targetSortingOrder,
+                        scale);
 
-                    if (pieceA != null)
-                        view.transform.SetParent(pieceA.transform, true);
+                    view.SetSorting(targetSortingLayer, targetSortingOrder);
+
+                    if (anchorPiece != null)
+                    {
+                        view.transform.SetParent(anchorPiece.transform, false);
+                        view.transform.localPosition = anchorPiece.transform.InverseTransformPoint(worldPosition);
+                        view.transform.localRotation = Quaternion.Inverse(anchorPiece.transform.rotation) * rotation;
+                        view.transform.localScale = Vector3.one * scale;
+                    }
 
                     activeSpringViews[key] = view;
                 }
             }
             else
             {
-                view.UpdateTransform(position, isVertical);
-                if (pieceA != null && view.transform.parent != pieceA.transform)
-                    view.transform.SetParent(pieceA.transform, true);
-            }
-        }
+                view.SetSorting(targetSortingLayer, targetSortingOrder);
 
-        private void UpdateSpringPositions()
-        {
-            if (boardState == null || activeLevel == null)
-                return;
+                if (anchorPiece != null)
+                {
+                    if (view.transform.parent != anchorPiece.transform)
+                        view.transform.SetParent(anchorPiece.transform, false);
 
-            for (int i = 0; i < jointBuffer.Count; i++)
-            {
-                PieceJointGraph.Joint joint = jointBuffer[i];
-                if (!CalculateJointGeometry(joint, out Vector3 worldMidpoint, out bool isVertical, out _))
-                    continue;
-
-                Vector3 studOffsetVec = isVertical
-                    ? new Vector3(studOffset, 0f, 0f)
-                    : new Vector3(0f, studOffset, 0f);
-
-                int key1 = joint.Id * 2;
-                int key2 = joint.Id * 2 + 1;
-
-                if (activeSpringViews.TryGetValue(key1, out JointSpringView view1))
-                    view1.UpdateTransform(worldMidpoint - studOffsetVec, isVertical);
-
-                if (activeSpringViews.TryGetValue(key2, out JointSpringView view2))
-                    view2.UpdateTransform(worldMidpoint + studOffsetVec, isVertical);
+                    view.transform.localPosition = anchorPiece.transform.InverseTransformPoint(worldPosition);
+                    view.transform.localRotation = Quaternion.Inverse(anchorPiece.transform.rotation) * rotation;
+                    view.transform.localScale = Vector3.one * scale;
+                }
+                else
+                {
+                    view.transform.position = worldPosition;
+                    view.transform.rotation = rotation;
+                    view.transform.localScale = Vector3.one * scale;
+                }
             }
         }
 
         private bool CalculateJointGeometry(
             PieceJointGraph.Joint joint,
-            out Vector3 worldMidpoint,
+            out Vector3 studMidpoint1,
+            out Vector3 studMidpoint2,
+            out Quaternion rotation,
             out bool isVertical,
-            out PuzzlePiece pieceA)
+            out PuzzlePiece anchorPiece)
         {
-            worldMidpoint = Vector3.zero;
+            studMidpoint1 = Vector3.zero;
+            studMidpoint2 = Vector3.zero;
+            rotation = Quaternion.identity;
             isVertical = false;
-            pieceA = null;
+            anchorPiece = null;
 
-            if (boardState.BoardSnapshot == null)
+            if (boardState == null || boardState.BoardSnapshot == null || activeLevel == null)
                 return false;
 
             if (!boardState.BoardSnapshot.TryGetPiece(joint.MemberA, out PieceModel modelA) ||
@@ -209,47 +252,73 @@ namespace GravityPuzzle.Presentation.Views
                 return false;
             }
 
-            pieceA = boardState.FindActivePiece(joint.MemberA);
+            PuzzlePiece pieceA = boardState.FindActivePiece(joint.MemberA);
             PuzzlePiece pieceB = boardState.FindActivePiece(joint.MemberB);
+            anchorPiece = pieceA != null ? pieceA : pieceB;
 
             int subdivisions = Mathf.Max(1, activeLevel.subdivisions);
             float fineCellSize = 1f / subdivisions;
-            int blockSize = subdivisions;
+            float halfBlock = subdivisions * 0.5f * fineCellSize;
 
             Vector3 localBlockCenterA = new Vector3(
-                (modelA.PivotOffset.X + joint.BlockA.X + (blockSize - 1) * 0.5f) * fineCellSize,
-                (modelA.PivotOffset.Y + joint.BlockA.Y + (blockSize - 1) * 0.5f) * fineCellSize,
+                (modelA.PivotOffset.X + joint.BlockA.X) * fineCellSize + halfBlock,
+                (modelA.PivotOffset.Y + joint.BlockA.Y) * fineCellSize + halfBlock,
                 0f);
 
             Vector3 localBlockCenterB = new Vector3(
-                (modelB.PivotOffset.X + joint.BlockB.X + (blockSize - 1) * 0.5f) * fineCellSize,
-                (modelB.PivotOffset.Y + joint.BlockB.Y + (blockSize - 1) * 0.5f) * fineCellSize,
+                (modelB.PivotOffset.X + joint.BlockB.X) * fineCellSize + halfBlock,
+                (modelB.PivotOffset.Y + joint.BlockB.Y) * fineCellSize + halfBlock,
                 0f);
 
-            Vector3 worldStudA = pieceA != null
+            Vector3 worldCenterA = pieceA != null
                 ? pieceA.transform.TransformPoint(localBlockCenterA)
                 : (Vector3)GravityLevelGridCoordinates.FineCellToWorld(activeLevel, modelA.Anchor.Offset(joint.BlockA)) +
-                  new Vector3((blockSize - 1) * 0.5f * fineCellSize, (blockSize - 1) * 0.5f * fineCellSize, 0f);
+                  new Vector3(halfBlock, halfBlock, 0f);
 
-            Vector3 worldStudB = pieceB != null
+            Vector3 worldCenterB = pieceB != null
                 ? pieceB.transform.TransformPoint(localBlockCenterB)
                 : (Vector3)GravityLevelGridCoordinates.FineCellToWorld(activeLevel, modelB.Anchor.Offset(joint.BlockB)) +
-                  new Vector3((blockSize - 1) * 0.5f * fineCellSize, (blockSize - 1) * 0.5f * fineCellSize, 0f);
+                  new Vector3(halfBlock, halfBlock, 0f);
 
-            worldMidpoint = (worldStudA + worldStudB) * 0.5f;
-            worldMidpoint.z = -0.1f;
-
-            Vector3 delta = worldStudB - worldStudA;
+            Vector3 delta = worldCenterB - worldCenterA;
             isVertical = Mathf.Abs(delta.y) > Mathf.Abs(delta.x);
-            return true;
-        }
 
-        private Vector3 ModelFineToWorld(Vector2 fineCoord, float fineCellSize)
-        {
-            return new Vector3(
-                -activeLevel.boardColumns * 0.5f + fineCoord.x * fineCellSize,
-                -activeLevel.boardRows * 0.5f + fineCoord.y * fineCellSize,
-                0f);
+            Vector3 seamMidpoint = (worldCenterA + worldCenterB) * 0.5f;
+
+            if (isVertical)
+            {
+                rotation = delta.y >= 0f
+                    ? Quaternion.Euler(0f, 0f, 90f)
+                    : Quaternion.Euler(0f, 0f, -90f);
+            }
+            else
+            {
+                rotation = Quaternion.identity;
+            }
+
+            // In SpiralSpring sprite:
+            // Holes are offset from center pivot by +66.2 pixels (unscaled 0.662 units at PPU 100).
+            // When scaled by springScale, holeOffsetY in world units is:
+            float effectiveScale = springScale > 0f ? springScale : 0.1495036f;
+            float holeOffsetY = holeDepthOffset != 0f ? holeDepthOffset : (0.662f * effectiveScale);
+            Vector3 holeOffsetWorld = rotation * new Vector3(0f, holeOffsetY, 0f);
+
+            // Stud spacing along the seam:
+            // A 1x1 block has 2 rows and 2 columns of studs spaced 0.5 units apart (0.25 units from center).
+            float spacing = studOffset > 0f ? studOffset : 0.25f;
+            Vector3 studOffsetVec = isVertical
+                ? new Vector3(spacing, 0f, 0f)
+                : new Vector3(0f, spacing, 0f);
+
+            Vector3 userNudge = (Vector3)positionOffset + (isVertical ? (Vector3)verticalJointOffset : (Vector3)horizontalJointOffset);
+
+            studMidpoint1 = (seamMidpoint - studOffsetVec) - holeOffsetWorld + userNudge;
+            studMidpoint1.z = -0.15f;
+
+            studMidpoint2 = (seamMidpoint + studOffsetVec) - holeOffsetWorld + userNudge;
+            studMidpoint2.z = -0.15f;
+
+            return true;
         }
 
         private void ClearAll()
@@ -261,6 +330,8 @@ namespace GravityPuzzle.Presentation.Views
             }
             activeSpringViews.Clear();
             jointBuffer.Clear();
+            springKeysToRemove.Clear();
         }
     }
 }
+

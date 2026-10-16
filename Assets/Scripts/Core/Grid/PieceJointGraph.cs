@@ -72,7 +72,7 @@ namespace GravityPuzzle.Core.Grid
             if (initialJoints != null)
             {
                 for (int index = 0; index < initialJoints.Count; index++)
-                    TryAddJoint(initialJoints[index]);
+                    TryAddJoint(initialJoints[index], false);
             }
 
             groupsDirty = true;
@@ -80,6 +80,11 @@ namespace GravityPuzzle.Core.Grid
         }
 
         public bool TryAddJoint(Joint joint)
+        {
+            return TryAddJoint(joint, true);
+        }
+
+        private bool TryAddJoint(Joint joint, bool notify)
         {
             if (joint.MemberA == joint.MemberB ||
                 !ContainsRegisteredMember(joint.MemberA) ||
@@ -91,7 +96,8 @@ namespace GravityPuzzle.Core.Grid
 
             joints.Add(joint);
             groupsDirty = true;
-            JointsChanged?.Invoke();
+            if (notify)
+                JointsChanged?.Invoke();
             return true;
         }
 

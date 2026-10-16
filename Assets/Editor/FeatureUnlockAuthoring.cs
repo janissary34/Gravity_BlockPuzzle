@@ -23,8 +23,8 @@ namespace GravityPuzzle.Editor
         // The source filename on disk uses macOS's decomposed umlaut form.
         // Keep that exact asset path so AssetDatabase can import the door slices.
         private const string ElevatorSpritePath = "Assets/Art/asanso\u0308r.png";
-        private const string BoxSpritePath = "Assets/Art/Parlak Mavi Garaj Kapısı Giriş.png";
-        private const string BoxCoverSpriteName = "BrightBlueGarageFrame";
+        private const string BoxSpritePath = "Assets/Art/map.png";
+        private const string BoxCoverSpriteName = "Tunnel";
 
         [InitializeOnLoadMethod]
         private static void RestoreRevealArtSlicesAfterAssemblyReload()
@@ -165,25 +165,6 @@ namespace GravityPuzzle.Editor
 
         private static Sprite ConfigureBoxCoverSprite()
         {
-            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(BoxSpritePath);
-            TextureImporter importer = AssetImporter.GetAtPath(BoxSpritePath) as TextureImporter;
-            if (texture == null || importer == null)
-            {
-                Debug.LogWarning("[Feature Unlocks] Garage art could not be imported for sliced rendering.");
-                return null;
-            }
-
-            importer.spriteImportMode = SpriteImportMode.Multiple;
-#pragma warning disable CS0618
-            importer.spritesheet = new[]
-            {
-                CreateSpriteMetaData(
-                    BoxCoverSpriteName,
-                    new Rect(94f, 475f, texture.width - 188f, 226f),
-                    new Vector4(45f, 40f, 45f, 40f))
-            };
-#pragma warning restore CS0618
-            importer.SaveAndReimport();
             return FindSprite(BoxSpritePath, BoxCoverSpriteName);
         }
 

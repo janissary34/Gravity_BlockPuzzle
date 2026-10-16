@@ -10,6 +10,25 @@
 
 See `Decisions/ADR-001-presentation-is-not-gameplay-authority.md` for the reasoning behind the presentation boundary.
 
+## Shredder admission and temporary physics
+
+`BlockShredder` owns admission to each authored `ShredderCatchZone`. Feed
+reservations are scoped to an active piece and zone, then compared through the
+piece's real occupied cell geometry projected horizontally. Non-overlapping
+pieces may therefore feed through one mouth concurrently; overlapping material
+remains serial so kinematic feeds cannot interpenetrate. The reservation expands
+by the existing configured feed-tilt range, making a later small rotation part
+of the same safety decision.
+
+`ShredderCatchZone` validates physical capture using per-cell geometry and then
+confirms the authoritative grid state. `CollisionBounds` is not used to decide
+capture or candidate order for irregular shapes. A temporary
+`ShredderPhysicsIsland` still owns only the board-derived dependent stack: its
+members remain grid-reserved while Unity renders their short-lived contact
+reaction. The pooled `ShredderPhysicsMouth` retains its shelf and guides; when
+independent islands share a zone, the guides can grow upward without moving the
+cutter or shelf plane.
+
 ## Current level construction
 
 `GravityLevelRuntime` computes the selected level's scene representations when a level starts:
@@ -35,6 +54,12 @@ The following hierarchy groups therefore remain visible outside Play Mode:
 * `Obstacle Visuals`
 
 Obstacle collision and obstacle presentation are intentionally separate. Collision objects own static physics contact; merged and sliced visual objects render the connected shape. Neither presentation object is board-state authority.
+
+Reveal-area and joint-spring presentation instances are prewarmed typed pools.
+`GameObjectPool` owns the rented-instance inventory and can return a whole pool
+at level reset; views return themselves immediately when their presentation
+completes. Presentation coordinators must not maintain a second active-instance
+list, because that duplicates pool state and risks stale pooled views.
 
 `RuntimePieceFactoryBootstrap` supplies the root explicitly to
 `GravityLevelRuntime`. If the reference is absent or a level exceeds an authored

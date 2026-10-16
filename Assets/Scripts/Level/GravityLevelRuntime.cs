@@ -347,6 +347,8 @@ namespace GravityPuzzle
             for (int pieceIndex = 0; pieceIndex < runtimePieces.Count; pieceIndex++)
                 boardState.TrySynchronizeRuntimePieceGeometry(runtimePieces[pieceIndex]);
 
+            boardState.JointSpringPresenter?.ReconcileSpringViews();
+
             boardState.RefreshInitialBombTimers();
 
             ValidateLevelSnapshotRuntimeState(level, boardState);
@@ -962,9 +964,10 @@ namespace GravityPuzzle
                     int length = x - startX;
                     Vector2 firstCentre = CellWorldPosition(level, new Vector2Int(startX, y));
                     Vector2 lastCentre = CellWorldPosition(level, new Vector2Int(x - 1, y));
+                    bool usesAuthoredContinuousFrame = configuredBoardPresentationConfig != null;
                     float leftTrim = 0f;
                     float rightTrim = 0f;
-                    if (frameEdge == BoardFrameEdge.Top && y == level.FineRows - 1)
+                    if (!usesAuthoredContinuousFrame && frameEdge == BoardFrameEdge.Top && y == level.FineRows - 1)
                     {
                         if (startX == 0 && HasOuterFrameCorner(
                                 level,
@@ -989,7 +992,11 @@ namespace GravityPuzzle
                         }
                     }
 
-                    float runLength = length * fineCellSize + thickness;
+                    // Atlas strips render exactly over the exposed board span.
+                    // Their corners render above them, so keeping the full span
+                    // gives a small intentional overlap instead of a visible gap.
+                    float runLength = length * fineCellSize +
+                                      (usesAuthoredContinuousFrame ? 0f : thickness);
                     float visibleLength = Mathf.Max(.001f, runLength - leftTrim - rightTrim);
                     Vector2 position = new Vector2(
                         (firstCentre.x + lastCentre.x) * .5f + (leftTrim - rightTrim) * .5f,
@@ -1036,9 +1043,10 @@ namespace GravityPuzzle
                     int length = y - startY;
                     Vector2 firstCentre = CellWorldPosition(level, new Vector2Int(x, startY));
                     Vector2 lastCentre = CellWorldPosition(level, new Vector2Int(x, y - 1));
+                    bool usesAuthoredContinuousFrame = configuredBoardPresentationConfig != null;
                     float bottomTrim = 0f;
                     float topTrim = 0f;
-                    if (startY == 0)
+                    if (!usesAuthoredContinuousFrame && startY == 0)
                     {
                         BoardFrameEdge bottomCorner = frameEdge == BoardFrameEdge.Left
                             ? BoardFrameEdge.BottomLeftCorner
@@ -1051,7 +1059,7 @@ namespace GravityPuzzle
                         }
                     }
 
-                    if (y == level.FineRows)
+                    if (!usesAuthoredContinuousFrame && y == level.FineRows)
                     {
                         BoardFrameEdge topCorner = frameEdge == BoardFrameEdge.Left
                             ? BoardFrameEdge.TopLeftCorner
@@ -1074,7 +1082,8 @@ namespace GravityPuzzle
                         }
                     }
 
-                    float runLength = length * fineCellSize + thickness;
+                    float runLength = length * fineCellSize +
+                                      (usesAuthoredContinuousFrame ? 0f : thickness);
                     float visibleLength = Mathf.Max(.001f, runLength - bottomTrim - topTrim);
                     Vector2 position = new Vector2(
                         firstCentre.x + horizontalDirection * (fineCellSize + thickness) * .5f,
@@ -1305,34 +1314,26 @@ namespace GravityPuzzle
             if (nativeLength <= .001f || requestedLength <= .001f)
                 return false;
 
-            int moduleCount = Mathf.Max(1, Mathf.RoundToInt(requestedLength / nativeLength));
-            float moduleLength = requestedLength / moduleCount;
-            for (int moduleIndex = 0; moduleIndex < moduleCount; moduleIndex++)
-            {
-                float offset = -requestedLength * .5f +
-                               moduleLength * (moduleIndex + .5f);
-                Vector2 modulePosition = position +
-                                         (horizontal
-                                             ? Vector2.right * offset
-                                             : Vector2.up * offset);
-                Vector2 moduleSize = horizontal
-                    ? new Vector2(moduleLength, visualThickness)
-                    : new Vector2(visualThickness, moduleLength);
-                GameObject module = CreateAuthoredVisualBlock(
-                    $"{name} Module {moduleIndex + 1}",
-                    modulePosition,
-                    moduleSize,
-                    configuredBoardPresentationConfig.FrameTint,
-                    configuredBoardPresentationConfig.FrameMaterial,
-                    FrameSortingOrder,
-                    sprite,
-                    true,
-                    true,
-                    false,
-                    false,
-                    false);
-                module.transform.SetParent(frameRoot, true);
-            }
+            // The edge strips contain soft highlight and shadow pixels at
+            // their ends. Repeating them exposes each module boundary as a
+            // seam, so a continuous run uses one fitted sprite instead.
+            Vector2 visualSize = horizontal
+                ? new Vector2(requestedLength, visualThickness)
+                : new Vector2(visualThickness, requestedLength);
+            GameObject strip = CreateAuthoredVisualBlock(
+                name,
+                position,
+                visualSize,
+                configuredBoardPresentationConfig.FrameTint,
+                configuredBoardPresentationConfig.FrameMaterial,
+                FrameSortingOrder,
+                sprite,
+                true,
+                true,
+                false,
+                false,
+                false);
+            strip.transform.SetParent(frameRoot, true);
 
             return true;
         }

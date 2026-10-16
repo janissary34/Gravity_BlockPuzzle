@@ -769,6 +769,7 @@ namespace GravityPuzzle
         public GameState GameState => gameStateMachine.Current;
         public LevelBoardSnapshot BoardSnapshot { get; private set; }
         public PieceJointGraph PieceJointGraph => pieceJointGraph;
+        public Presentation.Views.JointSpringPresenter JointSpringPresenter { get; set; }
 
         public void ConfigureRevealAreas(RevealAreaCoordinator coordinator)
         {

@@ -9,6 +9,7 @@ namespace GravityPuzzle.Infrastructure.Pooling
         private readonly Transform parent;
         private readonly Stack<T> available;
         private readonly HashSet<T> rented;
+        private readonly List<T> rentedBuffer;
 
         public int AvailableCount => available.Count;
         public int Capacity { get; }
@@ -20,6 +21,7 @@ namespace GravityPuzzle.Infrastructure.Pooling
             Capacity = Mathf.Max(0, capacity);
             available = new Stack<T>(Capacity);
             rented = new HashSet<T>();
+            rentedBuffer = new List<T>(Capacity);
         }
 
         // Called only during composition-root prewarm, before gameplay starts.
@@ -59,6 +61,25 @@ namespace GravityPuzzle.Infrastructure.Pooling
             item.transform.SetParent(parent, false);
             item.gameObject.SetActive(false);
             available.Push(item);
+        }
+
+        /// <summary>
+        /// Returns every currently rented item without requiring presentation
+        /// systems to maintain a second, potentially stale active list.
+        /// </summary>
+        public void ReturnAllRented()
+        {
+            if (rented.Count == 0)
+                return;
+
+            rentedBuffer.Clear();
+            foreach (T item in rented)
+                rentedBuffer.Add(item);
+
+            for (int index = 0; index < rentedBuffer.Count; index++)
+                Return(rentedBuffer[index]);
+
+            rentedBuffer.Clear();
         }
     }
 }

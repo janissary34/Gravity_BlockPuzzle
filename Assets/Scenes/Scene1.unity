@@ -8749,6 +8749,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -103
       objectReference: {fileID: 0}
+    - target: {fileID: 392846586587965100, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 538094313876201767, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_Name
       value: InGameUI
@@ -8769,6 +8773,14 @@ PrefabInstance:
       propertyPath: m_Sprite
       value: 
       objectReference: {fileID: -384717997, guid: e6806e9b571d641229bcd51e248b7f2a, type: 3}
+    - target: {fileID: 1558817324255041973, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0.0000076293945
+      objectReference: {fileID: 0}
+    - target: {fileID: 1558817324255041973, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 21
+      objectReference: {fileID: 0}
     - target: {fileID: 1628778989991355053, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -8828,6 +8840,14 @@ PrefabInstance:
     - target: {fileID: 5634230296925847838, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5893594611955566112, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 250
+      objectReference: {fileID: 0}
+    - target: {fileID: 5893594611955566112, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 21
       objectReference: {fileID: 0}
     - target: {fileID: 6016220375648943809, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_Pivot.x
@@ -8917,10 +8937,22 @@ PrefabInstance:
       propertyPath: m_Camera
       value: 
       objectReference: {fileID: 423769077}
+    - target: {fileID: 6366122851794084414, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -250
+      objectReference: {fileID: 0}
+    - target: {fileID: 6366122851794084414, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 21
+      objectReference: {fileID: 0}
     - target: {fileID: 6476265507460976363, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_Sprite
       value: 
       objectReference: {fileID: 965006765, guid: e6806e9b571d641229bcd51e248b7f2a, type: 3}
+    - target: {fileID: 6725087777904568259, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6823531513305316770, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: liveAddsButton
       value: 
@@ -9911,6 +9943,29 @@ MonoBehaviour:
   levelClearParticleEffectE: {fileID: 0}
   levelClearParticleEffectF: {fileID: 0}
   levelClearParticleEffectG: {fileID: 0}
+--- !u!114 &1938475615
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1938475610}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77da36556c1ff4ccda298ebfeb58b972, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  springPrefab: {fileID: 4401872390192847104, guid: a19d20c524b94e35a14d59a7f36934a1, type: 3}
+  prewarmCapacity: 16
+  springSprite: {fileID: 897479123, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  springMaterial: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
+  sortingOrder: 20
+  springScale: 0.1495036
+  studOffset: 0.25
+  holeDepthOffset: 0.099
+  positionOffset: {x: 0, y: 0}
+  horizontalJointOffset: {x: 0, y: 0}
+  verticalJointOffset: {x: 0, y: 0}
 --- !u!1 &1938475620
 GameObject:
   m_ObjectHideFlags: 0
@@ -10327,21 +10382,3 @@ SceneRoots:
   - {fileID: 423083019}
   - {fileID: 1749646595}
   - {fileID: 1024166634}
---- !u!114 &1938475615
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1938475610}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77da36556c1ff4ccda298ebfeb58b972, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  springPrefab: {fileID: 4401872390192847104, guid: a19d20c524b94e35a14d59a7f36934a1, type: 3}
-  prewarmCapacity: 16
-  springSprite: {fileID: 897479123, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  springMaterial: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
-  sortingOrder: 5
-  springScale: 0.14514376

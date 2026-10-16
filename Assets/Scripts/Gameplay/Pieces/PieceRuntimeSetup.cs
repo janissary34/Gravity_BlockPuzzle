@@ -25,6 +25,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             Color iceCounterOutlineColor,
             float iceCounterOutlineWidth,
             Vector2 iceCounterOffset,
+            int iceCounterSortingOrder,
             PieceSpecialBlockType specialBlockType,
             float bombTimerSeconds,
             TMP_FontAsset bombCounterFont,
@@ -32,7 +33,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             Color bombCounterTextColor,
             Color bombCounterOutlineColor,
             float bombCounterOutlineWidth,
-            Vector2 bombCounterOffset)
+            Vector2 bombCounterOffset,
+            int bombCounterSortingOrder)
         {
             SourcePieceId = sourcePieceId;
             ProgressUnits = progressUnits;
@@ -52,6 +54,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             IceCounterOutlineColor = iceCounterOutlineColor;
             IceCounterOutlineWidth = iceCounterOutlineWidth;
             IceCounterOffset = iceCounterOffset;
+            IceCounterSortingOrder = iceCounterSortingOrder;
             SpecialBlockType = specialBlockType;
             BombTimerSeconds = bombTimerSeconds;
             BombCounterFont = bombCounterFont;
@@ -60,6 +63,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             BombCounterOutlineColor = bombCounterOutlineColor;
             BombCounterOutlineWidth = bombCounterOutlineWidth;
             BombCounterOffset = bombCounterOffset;
+            BombCounterSortingOrder = bombCounterSortingOrder;
         }
 
         public int SourcePieceId { get; }
@@ -80,6 +84,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         public Color IceCounterOutlineColor { get; }
         public float IceCounterOutlineWidth { get; }
         public Vector2 IceCounterOffset { get; }
+        public int IceCounterSortingOrder { get; }
         public PieceSpecialBlockType SpecialBlockType { get; }
         public float BombTimerSeconds { get; }
         public TMP_FontAsset BombCounterFont { get; }
@@ -88,5 +93,6 @@ namespace GravityPuzzle.Gameplay.Pieces
         public Color BombCounterOutlineColor { get; }
         public float BombCounterOutlineWidth { get; }
         public Vector2 BombCounterOffset { get; }
+        public int BombCounterSortingOrder { get; }
     }
 }

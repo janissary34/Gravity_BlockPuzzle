@@ -98,10 +98,10 @@ MonoBehaviour:
   renderBottomEdgeSegments: 0
   frameMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
   frameTint: {r: 0.29411766, g: 0.2509804, b: 0.67058825, a: 1}
-  frameModuleScale: 0.5
+  frameModuleScale: 0.25
   frameVisualThicknessMultiplier: 1
-  topEdgeVisualThicknessMultiplier: 1
+  topEdgeVisualThicknessMultiplier: 0.75
   topEdgeInwardOverlap: 0.056
-  cornerOutset: {x: 0, y: 0}
+  cornerOutset: {x: 0.01, y: 0.01}
   topCornerHorizontalInset: 0.25
   topCornerVerticalInset: 0.25

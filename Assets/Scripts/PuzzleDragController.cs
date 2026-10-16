@@ -408,7 +408,7 @@ namespace GravityPuzzle
             for (int index = 0; index < retargetableGridFalls.Count; index++)
             {
                 PuzzlePiece piece = retargetableGridFalls[index];
-                if (piece.IsFrozen || piece.IsShredderInteractionLocked ||
+                if (piece.IsShredderInteractionLocked ||
                     !snapshot.TryGetPiece(piece.SourcePieceId, out PieceModel model) ||
                     model.State != PieceState.Falling ||
                     !snapshot.Grid.TryGetFallTarget(model, out GridCoordinate targetAnchor) ||
@@ -500,7 +500,9 @@ namespace GravityPuzzle
             for (int index = 0; index < pieces.Count; index++)
             {
                 PuzzlePiece piece = pieces[index];
-                if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
+                // Frozen prevents player input and shredder capture, not a legal
+                // board fall. Excluding it here leaves ice pieces suspended.
+                if (piece == null || piece.IsShredderInteractionLocked ||
                     piece.GridFallView == null || !piece.GridFallView.CanPlay ||
                     !board.TryGetPieceModel(piece, out PieceModel model) ||
                     model.State != PieceState.Placed)
@@ -517,8 +519,9 @@ namespace GravityPuzzle
         private static bool IsEligibleForGridGravity(PieceModel model)
         {
             PuzzlePiece piece = FindActivePiece(model.Id);
+            // IsFrozen intentionally is not a gravity gate; the grid remains the
+            // sole authority for whether this piece has support below it.
             return piece != null &&
-                   !piece.IsFrozen &&
                    !piece.IsShredderInteractionLocked &&
                    model.State == PieceState.Placed &&
                    (Instance == null ||
@@ -547,7 +550,7 @@ namespace GravityPuzzle
             {
                 GridGravityMove move = pendingGridGravityMoves.Dequeue();
                 PuzzlePiece piece = FindActivePiece(move.PieceId);
-                if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
+                if (piece == null || piece.IsShredderInteractionLocked ||
                     piece.GridFallView == null || !piece.GridFallView.CanPlay ||
                     !snapshot.TryGetPiece(move.PieceId, out PieceModel model))
                 {
