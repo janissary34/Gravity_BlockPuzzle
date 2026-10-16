@@ -114,6 +114,8 @@ namespace GravityPuzzle.Config
         [SerializeField, Min(0f)] private float topCornerHorizontalInset = .25f;
         [Tooltip("Moves both top corners downward. The side edges are shortened by the same amount so the sprites meet without overlap.")]
         [SerializeField, Min(0f)] private float topCornerVerticalInset = .25f;
+        [Tooltip("When enabled, uses the scene-authored Tuna modular border GameObjects and suppresses the runtime procedural frame runners.")]
+        [SerializeField] private bool useSceneAuthoredBorders = true;
 
         public bool OverrideLevelBackground => overrideLevelBackground;
         public Color BackgroundColor => backgroundColor;
@@ -158,6 +160,7 @@ namespace GravityPuzzle.Config
         public Vector2 CornerOutset => Vector2.Max(Vector2.zero, cornerOutset);
         public float TopCornerHorizontalInset => Mathf.Max(0f, topCornerHorizontalInset);
         public float TopCornerVerticalInset => Mathf.Max(0f, topCornerVerticalInset);
+        public bool UseSceneAuthoredBorders => useSceneAuthoredBorders;
 
         public bool TryGetStaticBlockShape(string shapeKey, out Sprite sprite)
         {

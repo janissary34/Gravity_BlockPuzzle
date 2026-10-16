@@ -56,7 +56,10 @@ A presentation refresh may rewrite sprites, materials, visibility, sorting, and 
 
 ## Directional Board Frame
 
-Board frames use 8 artist-authored directional atlas sprites (4 corners and 4 edges) from `BoardPresentationConfig`. The old solid quad fallback panel is suppressed when authored frame sprites are available. Each continuous outer run uses one fitted edge sprite so the highlight and shadow pixels at atlas-strip ends cannot form visible module seams; corners remain separate authored sprites.
+* Board frames use artist-authored directional atlas sprites (`Edge_Left`, `Edge_Right`, `Edge_Top`, and corners) from `map.png` / `BoardPresentationConfig`.
+* In `Scene_Tuna` and `Scene1`, the full modular border hierarchy (`GameObject (5)`) is scene-authored with 35 distinct 1x1 block obstacle-like modules (12 left, 12 right, 6 top, and corners) rather than flat stretched tubes.
+* `BoardPresentationConfig.UseSceneAuthoredBorders` configures `GravityLevelRuntime.CreateBoardFrame` to suppress procedural frame runner generation when scene-authored borders are active, while continuing to generate exact physics collision bounds via `CreateMapCollisionBlocks`.
+* For dynamic procedural levels without scene-authored borders, `TryCreateRepeatedFrameModules` generates repeated 1x1 modular block tiles along the edges, preserving the 3D beveled block / obstacle aesthetic across all level dimensions.
 
 ## Counters and Piece Overlays
 

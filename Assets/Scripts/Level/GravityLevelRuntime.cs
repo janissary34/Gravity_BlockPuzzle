@@ -807,6 +807,14 @@ namespace GravityPuzzle
             int edgeIndex = 0;
             Transform frameRoot = configuredLevelRuntimeRoot.BoardFrameRoot;
 
+            if (configuredBoardPresentationConfig != null &&
+                configuredBoardPresentationConfig.UseSceneAuthoredBorders)
+            {
+                // The scene has authored modular Tuna borders (GameObject (5)); procedural runners are suppressed.
+                CreateMapCollisionBlocks(level, exitWidth, fineCellSize);
+                return;
+            }
+
             // Map Shape defines playable board topology, not decorative walls.
             // Only the outside perimeter is rendered as a frame; cut-outs stay
             // visually open while their collision geometry is still generated
@@ -1314,26 +1322,36 @@ namespace GravityPuzzle
             if (nativeLength <= .001f || requestedLength <= .001f)
                 return false;
 
-            // The edge strips contain soft highlight and shadow pixels at
-            // their ends. Repeating them exposes each module boundary as a
-            // seam, so a continuous run uses one fitted sprite instead.
-            Vector2 visualSize = horizontal
-                ? new Vector2(requestedLength, visualThickness)
-                : new Vector2(visualThickness, requestedLength);
-            GameObject strip = CreateAuthoredVisualBlock(
-                name,
-                position,
-                visualSize,
-                configuredBoardPresentationConfig.FrameTint,
-                configuredBoardPresentationConfig.FrameMaterial,
-                FrameSortingOrder,
-                sprite,
-                true,
-                true,
-                false,
-                false,
-                false);
-            strip.transform.SetParent(frameRoot, true);
+            // Render repeated modular blocks along the edge (matching Scene Tuna's modular obstacle look)
+            int count = Mathf.Max(1, Mathf.RoundToInt(requestedLength / nativeLength));
+            float step = count > 1 ? (requestedLength - nativeLength) / (count - 1) : 0f;
+            float start = -requestedLength * 0.5f + nativeLength * 0.5f;
+
+            for (int i = 0; i < count; i++)
+            {
+                float offset = count == 1 ? 0f : (start + i * step);
+                Vector2 modulePos = horizontal
+                    ? new Vector2(position.x + offset, position.y)
+                    : new Vector2(position.x, position.y + offset);
+                Vector2 visualSize = horizontal
+                    ? new Vector2(nativeLength, visualThickness)
+                    : new Vector2(visualThickness, nativeLength);
+
+                GameObject module = CreateAuthoredVisualBlock(
+                    $"{name} Module {i + 1}",
+                    modulePos,
+                    visualSize,
+                    configuredBoardPresentationConfig.FrameTint,
+                    configuredBoardPresentationConfig.FrameMaterial,
+                    FrameSortingOrder,
+                    sprite,
+                    true,
+                    true,
+                    false,
+                    false,
+                    false);
+                module.transform.SetParent(frameRoot, true);
+            }
 
             return true;
         }

@@ -105,3 +105,4 @@ MonoBehaviour:
   cornerOutset: {x: 0.01, y: 0.01}
   topCornerHorizontalInset: 0.25
   topCornerVerticalInset: 0.25
+  useSceneAuthoredBorders: 1
