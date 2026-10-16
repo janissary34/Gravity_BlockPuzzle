@@ -1860,9 +1860,6 @@ namespace GravityPuzzle
                 AddOrExtendObstacleRectangle(rectangles, runStart, runEnd, row);
             }
 
-            float overlapScale = configuredBoardPresentationConfig != null
-                ? configuredBoardPresentationConfig.ModularStaticBlockScale
-                : 1f;
             Material material = configuredBoardPresentationConfig != null
                 ? configuredBoardPresentationConfig.BoardBlockMaterial
                 : null;
@@ -1872,7 +1869,10 @@ namespace GravityPuzzle
                 Vector2 centre = new Vector2(
                     -level.boardColumns * .5f + rectangle.x + rectangle.width * .5f,
                     -level.boardRows * .5f + rectangle.y + rectangle.height * .5f);
-                Vector2 visualSize = new Vector2(rectangle.width, rectangle.height) * overlapScale;
+                // Sliced rectangles represent the component's outer silhouette.
+                // Growing them beyond their authored cells makes the visual claim
+                // space that the authoritative grid and colliders do not own.
+                Vector2 visualSize = new Vector2(rectangle.width, rectangle.height);
                 CreateAuthoredVisualBlock(
                     "Sliced Obstacle Visual",
                     centre,

@@ -38,6 +38,18 @@ Obstacle gameplay collision and obstacle visuals have separate ownership:
 
 Visual merging must never change authored obstacle cells, collider dimensions, or board occupancy.
 
+The outer bounds of a merged or sliced obstacle visual must match its authored
+cell footprint. Presentation overlap is allowed only for internal seam coverage;
+it must not extend a sliced rectangle into a neighbouring playable cell.
+
+## Straight-piece asset authoring
+
+Generated straight-piece sprites are presentation silhouettes, so their canvas
+and visible alpha bounds must describe the same logical shape. A `1x3` sprite,
+for example, uses a `1:3` canvas and must not contain distant low-alpha pixels or
+large transparent end gutters. Runtime fitting intentionally uses the imported
+sprite bounds; it does not compensate for malformed source-image bounds.
+
 ## Presentation refreshes
 
 A presentation refresh may rewrite sprites, materials, visibility, sorting, and overlay state. It must not repair gameplay state as a side effect. If a visual appears only after another piece is destroyed or shredded, treat that as evidence of stale or conflicting presentation ownership rather than relying on the later refresh.
