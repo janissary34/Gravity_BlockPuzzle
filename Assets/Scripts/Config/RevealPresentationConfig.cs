@@ -1,4 +1,6 @@
 using DG.Tweening;
+using GravityPuzzle.Presentation.Views;
+using TMPro;
 using UnityEngine;
 
 namespace GravityPuzzle.Config
@@ -6,6 +8,23 @@ namespace GravityPuzzle.Config
     [CreateAssetMenu(fileName = "RevealPresentationConfig", menuName = "Gravity Puzzle/Config/Reveal Presentation")]
     public sealed class RevealPresentationConfig : ScriptableObject
     {
+        [Header("Prefabs & Pooling")]
+        [Tooltip("Authored prefab for Box reveal presentation.")]
+        public BoxRevealAreaView boxPrefab;
+        [Min(1)] public int boxPoolCapacity = 8;
+        [Tooltip("Authored prefab for Elevator reveal presentation.")]
+        public ElevatorRevealAreaView elevatorPrefab;
+        [Min(1)] public int elevatorPoolCapacity = 4;
+
+        [Header("Box Counter Presentation")]
+        public TMP_FontAsset boxCounterFont;
+        public float boxCounterFontSize = 6f;
+        public Color boxCounterTextColor = Color.white;
+        public Color boxCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
+        [Range(0f, 1f)] public float boxCounterOutlineWidth = .22f;
+        public Vector2 boxCounterOffset = Vector2.zero;
+        public int boxCounterSortingOrder = 201;
+
         [Header("Art")]
         [Tooltip("Sprite shown on generated Box reveal covers.")]
         public Sprite boxCoverSprite;

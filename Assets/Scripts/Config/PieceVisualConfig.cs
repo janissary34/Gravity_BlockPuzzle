@@ -45,11 +45,20 @@ namespace GravityPuzzle.Config
         [SerializeField] private Color iceCounterTextColor = Color.white;
         [SerializeField] private Color iceCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
         [SerializeField, Range(0f, 1f)] private float iceCounterOutlineWidth = .22f;
+        [SerializeField] private Vector2 iceCounterOffset = Vector2.zero;
+        [SerializeField] private int iceCounterSortingOrder = 50;
 
         [Header("Bomb Presentation")]
         [Tooltip("Sprite rendered above Bomb blocks. Leave empty to keep their normal piece visual.")]
         [SerializeField] private Sprite bombOverlaySprite;
         [SerializeField, Range(.1f, 1f)] private float bombOverlayFill = .82f;
+        [SerializeField] private TMP_FontAsset bombCounterFont;
+        [SerializeField] private float bombCounterFontSize = 4f;
+        [SerializeField] private Color bombCounterTextColor = Color.white;
+        [SerializeField] private Color bombCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
+        [SerializeField, Range(0f, 1f)] private float bombCounterOutlineWidth = .22f;
+        [SerializeField] private Vector2 bombCounterOffset = new Vector2(-0.055f, -0.059f);
+        [SerializeField] private int bombCounterSortingOrder = 50;
 
         [Header("Outline Presentation")]
         [SerializeField, Min(0.001f)] private float restingOutlineWidth = 0.05f;
@@ -79,8 +88,17 @@ namespace GravityPuzzle.Config
         public Color IceCounterTextColor => iceCounterTextColor;
         public Color IceCounterOutlineColor => iceCounterOutlineColor;
         public float IceCounterOutlineWidth => Mathf.Clamp01(iceCounterOutlineWidth);
+        public Vector2 IceCounterOffset => iceCounterOffset;
+        public int IceCounterSortingOrder => iceCounterSortingOrder;
         public Sprite BombOverlaySprite => bombOverlaySprite;
         public float BombOverlayFill => bombOverlayFill;
+        public TMP_FontAsset BombCounterFont => bombCounterFont != null ? bombCounterFont : iceCounterFont;
+        public float BombCounterFontSize => Mathf.Max(1f, bombCounterFontSize);
+        public Color BombCounterTextColor => bombCounterTextColor;
+        public Color BombCounterOutlineColor => bombCounterOutlineColor;
+        public float BombCounterOutlineWidth => Mathf.Clamp01(bombCounterOutlineWidth);
+        public Vector2 BombCounterOffset => bombCounterOffset;
+        public int BombCounterSortingOrder => bombCounterSortingOrder;
         public float RestingOutlineWidth => restingOutlineWidth;
         public float SelectedOutlineWidth => selectedOutlineWidth;
         public Color RestingOutlineColor => restingOutlineColor;

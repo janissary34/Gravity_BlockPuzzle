@@ -768,6 +768,7 @@ namespace GravityPuzzle
         public bool HasUsedTimerExpiryContinue { get; private set; }
         public GameState GameState => gameStateMachine.Current;
         public LevelBoardSnapshot BoardSnapshot { get; private set; }
+        public PieceJointGraph PieceJointGraph => pieceJointGraph;
 
         public void ConfigureRevealAreas(RevealAreaCoordinator coordinator)
         {

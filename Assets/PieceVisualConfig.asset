@@ -146,10 +146,17 @@ MonoBehaviour:
   iceOverlayTint: {r: 1, g: 1, b: 1, a: 0.82}
   iceFrostTint: {r: 0.9, g: 0.98, b: 1, a: 0.32}
   iceCounterFont: {fileID: 11400000, guid: 0e1847d847368439f88be6c09b488ce3, type: 2}
-  iceCounterFontSize: 36
+  iceCounterFontSize: 5
   iceCounterTextColor: {r: 1, g: 1, b: 1, a: 1}
   iceCounterOutlineColor: {r: 0.055, g: 0.08, b: 0.28, a: 1}
   iceCounterOutlineWidth: 0.22
+  bombCounterFont: {fileID: 11400000, guid: 0e1847d847368439f88be6c09b488ce3, type: 2}
+  bombCounterFontSize: 4
+  bombCounterTextColor: {r: 1, g: 1, b: 1, a: 1}
+  bombCounterOutlineColor: {r: 0.055, g: 0.08, b: 0.28, a: 1}
+  bombCounterOutlineWidth: 0.22
+  bombCounterOffset: {x: -0.055, y: -0.059}
+  bombCounterSortingOrder: 50
   bombOverlaySprite: {fileID: 1513006127, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bombOverlayFill: 1
   restingOutlineWidth: 0.001

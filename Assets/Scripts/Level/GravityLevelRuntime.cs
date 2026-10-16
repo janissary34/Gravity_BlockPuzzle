@@ -26,7 +26,6 @@ namespace GravityPuzzle
         private static RevealPresentationConfig configuredRevealPresentationConfig;
         private static BoardPresentationConfig configuredBoardPresentationConfig;
         private static LevelRuntimeRoot configuredLevelRuntimeRoot;
-        private static RevealPresentationConfig fallbackRevealPresentationConfig;
         private static Sprite obstacleJoinSprite;
         private static Sprite obstacleJoinSpriteSource;
         private static int currentLevelIndex = -1;
@@ -51,7 +50,6 @@ namespace GravityPuzzle
             configuredRevealPresentationConfig = null;
             configuredBoardPresentationConfig = null;
             configuredLevelRuntimeRoot = null;
-            fallbackRevealPresentationConfig = null;
             obstacleJoinSprite = null;
             obstacleJoinSpriteSource = null;
             currentLevelIndex = -1;
@@ -413,11 +411,7 @@ namespace GravityPuzzle
 
             RevealPresentationConfig config = configuredRevealPresentationConfig;
             if (config == null)
-            {
-                if (fallbackRevealPresentationConfig == null)
-                    fallbackRevealPresentationConfig = ScriptableObject.CreateInstance<RevealPresentationConfig>();
-                config = fallbackRevealPresentationConfig;
-            }
+                return;
 
             CreateGeneratedRevealPresentations(
                 level.boxes,
@@ -451,9 +445,37 @@ namespace GravityPuzzle
                     boardState.HasRevealPresentation(definition.areaId))
                     continue;
 
-                boardState.RegisterRevealPresentation(
-                    definition.areaId,
-                    RuntimeRevealAreaPresentation.Create(level, definition, kind, config));
+                Vector2 size = (Vector2)definition.bounds.size / Mathf.Max(1, level.subdivisions);
+                Vector2 centre = new Vector2(
+                    -level.boardColumns * .5f +
+                    (definition.bounds.origin.x + definition.bounds.size.x * .5f) / level.subdivisions,
+                    -level.boardRows * .5f +
+                    (definition.bounds.origin.y + definition.bounds.size.y * .5f) / level.subdivisions);
+
+                if (kind == RevealAreaKind.Box)
+                {
+                    if (RevealAreaPool.TryRentBox(out BoxRevealAreaView boxView))
+                    {
+                        boxView.Initialize(definition.areaId, centre, size, config);
+                        boardState.RegisterRevealPresentation(definition.areaId, boxView);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[RevealAreaPool] Box capacity exhausted for area '{definition.areaId}'.");
+                    }
+                }
+                else if (kind == RevealAreaKind.Elevator)
+                {
+                    if (RevealAreaPool.TryRentElevator(out ElevatorRevealAreaView elevatorView))
+                    {
+                        elevatorView.Initialize(definition.areaId, centre, size, level.backgroundColor, config);
+                        boardState.RegisterRevealPresentation(definition.areaId, elevatorView);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[RevealAreaPool] Elevator capacity exhausted for area '{definition.areaId}'.");
+                    }
+                }
             }
         }
 
@@ -1219,6 +1241,17 @@ namespace GravityPuzzle
                     position,
                     size,
                     frameEdge))
+                return;
+
+            if (IsFrameCorner(frameEdge))
+            {
+                GameObject cornerObject = CreateAuthoredVisualBlock(name, position, size, color);
+                cornerObject.transform.SetParent(frameRoot, true);
+                ApplyFramePresentation(cornerObject.GetComponent<SpriteRenderer>(), size, frameEdge);
+                return;
+            }
+
+            if (configuredBoardPresentationConfig != null)
                 return;
 
             GameObject frameObject = CreateAuthoredVisualBlock(name, position, size, color);

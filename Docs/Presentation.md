@@ -53,3 +53,20 @@ sprite bounds; it does not compensate for malformed source-image bounds.
 ## Presentation refreshes
 
 A presentation refresh may rewrite sprites, materials, visibility, sorting, and overlay state. It must not repair gameplay state as a side effect. If a visual appears only after another piece is destroyed or shredded, treat that as evidence of stale or conflicting presentation ownership rather than relying on the later refresh.
+
+## Directional Board Frame
+
+Board frames use 8 artist-authored directional atlas sprites (4 corners and 4 edges) from `BoardPresentationConfig`. The old solid quad fallback panel is suppressed when authored frame sprites are available. Edges are composed of repeated 1x1 modules to maintain consistent stud scale and visual density without stretching.
+
+## Counters and Piece Overlays
+
+* Ice counters and Bomb counters have separate presentation ownership. `BlockPiece` provides dedicated TextMeshPro child slots (`Ice Counter Presentation` and `Bomb Counter Presentation`) so that active bomb pieces do not mutate or overwrite ice counter styling.
+* Box reveal covers use a dedicated TextMeshPro counter rendered at sorting order 201 with navy outline.
+* Elevator mechanics do not have a countdown state in the gameplay contract; elevators feature animated sliding doors rather than a number counter.
+
+## Joint Springs
+
+* Piece joints are visualized using `JointSpringView` pooled instances managed by `JointSpringPresenter`.
+* Springs strictly observe `PieceJointGraph.JointsChanged` events and never dictate board connections or physics handoff.
+* Connecting springs are oriented horizontally across vertical boundaries and vertically across horizontal boundaries, positioned exactly at opposing stud centers (one spring per connected stud pair).
+

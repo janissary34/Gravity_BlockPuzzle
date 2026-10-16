@@ -140,6 +140,31 @@ namespace GravityPuzzle.Tests.Editor
         }
 
         [Test]
+        public void JointsChangedFiresOnAddRemoveAndTransfer()
+        {
+            PieceJointGraph graph = new PieceJointGraph();
+            int eventCount = 0;
+            graph.JointsChanged += () => eventCount++;
+
+            graph.Configure(
+                new[] { 10, 20, 30 },
+                new[] { new PieceJointGraph.Joint(1, 10, 20, new GridCoordinate(0, 0), new GridCoordinate(1, 0)) });
+            Assert.That(eventCount, Is.EqualTo(1));
+
+            graph.TryAddJoint(new PieceJointGraph.Joint(2, 20, 30, new GridCoordinate(0, 0), new GridCoordinate(0, 1)));
+            Assert.That(eventCount, Is.EqualTo(2));
+
+            graph.TransferEndpoint(10, new GridCoordinate(0, 0), 30, new GridCoordinate(1, 1), true);
+            Assert.That(eventCount, Is.EqualTo(3));
+
+            graph.RemoveJointsAtEndpoint(30, new GridCoordinate(1, 1));
+            Assert.That(eventCount, Is.EqualTo(4));
+
+            graph.RemoveJointsForMember(20);
+            Assert.That(eventCount, Is.EqualTo(5));
+        }
+
+        [Test]
         public void GroupGravityUsesTheShortestFreeFallAcrossMembers()
         {
             GravityBoardGrid grid = new GravityBoardGrid(4, 5);

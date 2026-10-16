@@ -1,0 +1,395 @@
+#if UNITY_EDITOR
+using System.IO;
+using GravityPuzzle.Bootstrap;
+using GravityPuzzle.Config;
+using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Gameplay.Reveal;
+using GravityPuzzle.Presentation.Views;
+using TMPro;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace GravityPuzzle.Editor
+{
+    public static class SceneTunaVisualAuthoring
+    {
+        private const string MapAtlasPath = "Assets/Art/map.png";
+        private const string IceMaterialPath = "Assets/Materials/M_Ice.mat";
+        private const string TMPFontPath = "Assets/Layer Lab/GUI Pro-CasualGame/ResourcesData/Fonts/LilitaOne-Regular_BlueDark.asset";
+        private const string BoxPrefabPath = "Assets/Prefabs/BoxRevealArea.prefab";
+        private const string ElevatorPrefabPath = "Assets/Prefabs/ElevatorRevealArea.prefab";
+        private const string SpringPrefabPath = "Assets/Prefabs/JointSpringView.prefab";
+        private const string RevealConfigPath = "Assets/Config/RevealPresentationConfig.asset";
+        private const string PieceVisualConfigPath = "Assets/PieceVisualConfig.asset";
+        private const string BlockPiecePrefabPath = "Assets/Prefabs/BlockPiece.prefab";
+
+        [MenuItem("Gravity Puzzle/Art/Author Scene Tuna Shared Assets")]
+        public static void AuthorAll()
+        {
+            EnsurePrefabsFolder();
+
+            Sprite tunnelSprite = LoadSprite("Tunnel");
+            Sprite springSprite = LoadSprite("SpiralSpring");
+            Material iceMaterial = AssetDatabase.LoadAssetAtPath<Material>(IceMaterialPath);
+            TMP_FontAsset fontAsset = LoadTMPFont();
+
+            BoxRevealAreaView boxPrefab = CreateBoxRevealPrefab(tunnelSprite, iceMaterial, fontAsset);
+            ElevatorRevealAreaView elevatorPrefab = CreateElevatorRevealPrefab(iceMaterial);
+            JointSpringView springPrefab = CreateJointSpringPrefab(springSprite, iceMaterial);
+
+            UpdateRevealPresentationConfig(boxPrefab, elevatorPrefab, fontAsset);
+            UpdatePieceVisualConfig(fontAsset);
+            AddBombCounterToBlockPiece(fontAsset);
+
+            ApplyToScene("Assets/Scenes/Scene1.unity", springPrefab, springSprite, iceMaterial);
+            ApplyToScene("Assets/Scenes/Scene_Tuna.unity", springPrefab, springSprite, iceMaterial);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[SceneTunaVisualAuthoring] Successfully authored all prefabs, configs, and scenes!");
+        }
+
+        private static void EnsurePrefabsFolder()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Prefabs"))
+                AssetDatabase.CreateFolder("Assets", "Prefabs");
+        }
+
+        private static BoxRevealAreaView CreateBoxRevealPrefab(
+            Sprite tunnelSprite,
+            Material iceMaterial,
+            TMP_FontAsset font)
+        {
+            GameObject root = new GameObject("BoxRevealArea");
+            try
+            {
+                BoxRevealAreaView view = root.AddComponent<BoxRevealAreaView>();
+
+                GameObject shutter = new GameObject("Shutter");
+                shutter.transform.SetParent(root.transform, false);
+
+                GameObject cover = new GameObject("Garage Shutter Cover");
+                cover.transform.SetParent(shutter.transform, false);
+                SpriteRenderer coverRenderer = cover.AddComponent<SpriteRenderer>();
+                coverRenderer.sprite = tunnelSprite;
+                if (iceMaterial != null)
+                    coverRenderer.material = iceMaterial;
+                coverRenderer.drawMode = SpriteDrawMode.Sliced;
+                coverRenderer.size = new Vector2(3f, 3f);
+                coverRenderer.sortingOrder = 200;
+
+                GameObject counterObj = new GameObject("Counter");
+                counterObj.transform.SetParent(shutter.transform, false);
+                counterObj.transform.localPosition = new Vector3(0f, 0f, -0.1f);
+                TextMeshPro counterTmp = counterObj.AddComponent<TextMeshPro>();
+                if (font != null)
+                    counterTmp.font = font;
+                counterTmp.fontSize = 6f;
+                counterTmp.color = Color.white;
+                counterTmp.outlineColor = new Color(0.055f, 0.08f, 0.28f, 1f);
+                counterTmp.outlineWidth = 0.22f;
+                counterTmp.alignment = TextAlignmentOptions.Center;
+                counterTmp.text = "5";
+                counterTmp.rectTransform.sizeDelta = new Vector2(20f, 5f);
+                counterTmp.GetComponent<MeshRenderer>().sortingOrder = 201;
+
+                const int burstColumns = 6;
+                const int burstRows = 2;
+                Transform[] fragments = new Transform[burstColumns * burstRows];
+                SpriteRenderer[] fragmentRenderers = new SpriteRenderer[burstColumns * burstRows];
+
+                for (int i = 0; i < burstColumns * burstRows; i++)
+                {
+                    GameObject frag = new GameObject($"Burst Fragment {i + 1}");
+                    frag.transform.SetParent(shutter.transform, false);
+                    SpriteRenderer fragRenderer = frag.AddComponent<SpriteRenderer>();
+                    fragRenderer.sprite = tunnelSprite;
+                    if (iceMaterial != null)
+                        fragRenderer.material = iceMaterial;
+                    fragRenderer.drawMode = SpriteDrawMode.Sliced;
+                    fragRenderer.sortingOrder = 201;
+                    frag.SetActive(false);
+                    fragments[i] = frag.transform;
+                    fragmentRenderers[i] = fragRenderer;
+                }
+
+                SerializedObject so = new SerializedObject(view);
+                so.FindProperty("boxShutter").objectReferenceValue = shutter.transform;
+                so.FindProperty("boxCoverRenderer").objectReferenceValue = coverRenderer;
+                so.FindProperty("boxCounter").objectReferenceValue = counterTmp;
+
+                SerializedProperty fragsProp = so.FindProperty("boxBurstFragments");
+                fragsProp.arraySize = fragments.Length;
+                for (int i = 0; i < fragments.Length; i++)
+                    fragsProp.GetArrayElementAtIndex(i).objectReferenceValue = fragments[i];
+
+                SerializedProperty rendsProp = so.FindProperty("boxBurstRenderers");
+                rendsProp.arraySize = fragmentRenderers.Length;
+                for (int i = 0; i < fragmentRenderers.Length; i++)
+                    rendsProp.GetArrayElementAtIndex(i).objectReferenceValue = fragmentRenderers[i];
+
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(root, BoxPrefabPath);
+                return savedPrefab.GetComponent<BoxRevealAreaView>();
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static ElevatorRevealAreaView CreateElevatorRevealPrefab(Material iceMaterial)
+        {
+            GameObject root = new GameObject("ElevatorRevealArea");
+            try
+            {
+                ElevatorRevealAreaView view = root.AddComponent<ElevatorRevealAreaView>();
+
+                GameObject frame = new GameObject("Elevator Frame");
+                frame.transform.SetParent(root.transform, false);
+                SpriteRenderer frameRenderer = frame.AddComponent<SpriteRenderer>();
+                frameRenderer.sortingOrder = 1;
+
+                GameObject opening = new GameObject("Elevator Opening");
+                opening.transform.SetParent(root.transform, false);
+                SpriteRenderer openingRenderer = opening.AddComponent<SpriteRenderer>();
+                openingRenderer.drawMode = SpriteDrawMode.Sliced;
+                openingRenderer.sortingOrder = 2;
+                openingRenderer.color = new Color(0.04f, 0.08f, 0.14f, 1f);
+
+                GameObject leftDoor = new GameObject("Left Door");
+                leftDoor.transform.SetParent(root.transform, false);
+                SpriteRenderer leftDoorRenderer = leftDoor.AddComponent<SpriteRenderer>();
+                leftDoorRenderer.sortingOrder = 3;
+
+                GameObject rightDoor = new GameObject("Right Door");
+                rightDoor.transform.SetParent(root.transform, false);
+                SpriteRenderer rightDoorRenderer = rightDoor.AddComponent<SpriteRenderer>();
+                rightDoorRenderer.sortingOrder = 4;
+
+                SerializedObject so = new SerializedObject(view);
+                so.FindProperty("frameRenderer").objectReferenceValue = frameRenderer;
+                so.FindProperty("openingRenderer").objectReferenceValue = openingRenderer;
+                so.FindProperty("elevatorLeftDoor").objectReferenceValue = leftDoor.transform;
+                so.FindProperty("elevatorRightDoor").objectReferenceValue = rightDoor.transform;
+
+                SerializedProperty doorRendsProp = so.FindProperty("doorRenderers");
+                doorRendsProp.arraySize = 2;
+                doorRendsProp.GetArrayElementAtIndex(0).objectReferenceValue = leftDoorRenderer;
+                doorRendsProp.GetArrayElementAtIndex(1).objectReferenceValue = rightDoorRenderer;
+
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(root, ElevatorPrefabPath);
+                return savedPrefab.GetComponent<ElevatorRevealAreaView>();
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static JointSpringView CreateJointSpringPrefab(Sprite springSprite, Material iceMaterial)
+        {
+            GameObject root = new GameObject("JointSpringView");
+            try
+            {
+                JointSpringView view = root.AddComponent<JointSpringView>();
+                SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
+                renderer.sprite = springSprite;
+                if (iceMaterial != null)
+                    renderer.material = iceMaterial;
+                renderer.sortingOrder = 5;
+                root.transform.localScale = Vector3.one * 0.14514376f;
+
+                SerializedObject so = new SerializedObject(view);
+                so.FindProperty("spriteRenderer").objectReferenceValue = renderer;
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(root, SpringPrefabPath);
+                return savedPrefab.GetComponent<JointSpringView>();
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void UpdateRevealPresentationConfig(
+            BoxRevealAreaView boxPrefab,
+            ElevatorRevealAreaView elevatorPrefab,
+            TMP_FontAsset font)
+        {
+            RevealPresentationConfig config = AssetDatabase.LoadAssetAtPath<RevealPresentationConfig>(RevealConfigPath);
+            if (config == null)
+                return;
+
+            SerializedObject so = new SerializedObject(config);
+            so.FindProperty("boxPrefab").objectReferenceValue = boxPrefab;
+            so.FindProperty("boxPoolCapacity").intValue = 8;
+            so.FindProperty("elevatorPrefab").objectReferenceValue = elevatorPrefab;
+            so.FindProperty("elevatorPoolCapacity").intValue = 4;
+
+            if (font != null)
+                so.FindProperty("boxCounterFont").objectReferenceValue = font;
+            so.FindProperty("boxCounterFontSize").floatValue = 6f;
+            so.FindProperty("boxCounterTextColor").colorValue = Color.white;
+            so.FindProperty("boxCounterOutlineColor").colorValue = new Color(0.055f, 0.08f, 0.28f, 1f);
+            so.FindProperty("boxCounterOutlineWidth").floatValue = 0.22f;
+            so.FindProperty("boxCounterSortingOrder").intValue = 201;
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(config);
+        }
+
+        private static void UpdatePieceVisualConfig(TMP_FontAsset font)
+        {
+            PieceVisualConfig config = AssetDatabase.LoadAssetAtPath<PieceVisualConfig>(PieceVisualConfigPath);
+            if (config == null)
+                return;
+
+            SerializedObject so = new SerializedObject(config);
+            if (font != null && so.FindProperty("iceCounterFont").objectReferenceValue == null)
+                so.FindProperty("iceCounterFont").objectReferenceValue = font;
+
+            so.FindProperty("iceCounterFontSize").floatValue = 5f;
+            so.FindProperty("iceCounterTextColor").colorValue = Color.white;
+            so.FindProperty("iceCounterOutlineColor").colorValue = new Color(0.055f, 0.08f, 0.28f, 1f);
+            so.FindProperty("iceCounterOutlineWidth").floatValue = 0.22f;
+
+            SerializedProperty bombFont = so.FindProperty("bombCounterFont");
+            if (bombFont != null && font != null)
+                bombFont.objectReferenceValue = font;
+            SerializedProperty bombSize = so.FindProperty("bombCounterFontSize");
+            if (bombSize != null)
+                bombSize.floatValue = 4f;
+            SerializedProperty bombColor = so.FindProperty("bombCounterTextColor");
+            if (bombColor != null)
+                bombColor.colorValue = Color.white;
+            SerializedProperty bombOutline = so.FindProperty("bombCounterOutlineColor");
+            if (bombOutline != null)
+                bombOutline.colorValue = new Color(0.055f, 0.08f, 0.28f, 1f);
+            SerializedProperty bombWidth = so.FindProperty("bombCounterOutlineWidth");
+            if (bombWidth != null)
+                bombWidth.floatValue = 0.22f;
+            SerializedProperty bombOffset = so.FindProperty("bombCounterOffset");
+            if (bombOffset != null)
+                bombOffset.vector2Value = new Vector2(-0.055f, -0.059f);
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(config);
+        }
+
+        private static void AddBombCounterToBlockPiece(TMP_FontAsset font)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BlockPiecePrefabPath);
+            if (prefab == null)
+                return;
+
+            GameObject instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+            try
+            {
+                Transform existing = instance.transform.Find("Bomb Counter Presentation");
+                if (existing == null)
+                {
+                    Transform iceCounter = instance.transform.Find("Ice Counter Presentation");
+                    GameObject bombCounterObj;
+                    if (iceCounter != null)
+                    {
+                        bombCounterObj = Object.Instantiate(iceCounter.gameObject, instance.transform);
+                        bombCounterObj.name = "Bomb Counter Presentation";
+                    }
+                    else
+                    {
+                        bombCounterObj = new GameObject("Bomb Counter Presentation");
+                        bombCounterObj.transform.SetParent(instance.transform, false);
+                        bombCounterObj.AddComponent<MeshRenderer>();
+                        bombCounterObj.AddComponent<TextMeshPro>();
+                    }
+
+                    TextMeshPro tmp = bombCounterObj.GetComponent<TextMeshPro>();
+                    if (font != null)
+                        tmp.font = font;
+                    tmp.fontSize = 4f;
+                    tmp.color = Color.white;
+                    tmp.outlineColor = new Color(0.055f, 0.08f, 0.28f, 1f);
+                    tmp.outlineWidth = 0.22f;
+                    tmp.alignment = TextAlignmentOptions.Center;
+                    tmp.rectTransform.sizeDelta = new Vector2(20f, 5f);
+                    bombCounterObj.GetComponent<MeshRenderer>().sortingOrder = 50;
+                    bombCounterObj.SetActive(true);
+
+                    PrefabUtility.SaveAsPrefabAsset(instance, BlockPiecePrefabPath);
+                    Debug.Log("[SceneTunaVisualAuthoring] Added Bomb Counter Presentation to BlockPiece.prefab.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
+        private static void ApplyToScene(
+            string scenePath,
+            JointSpringView springPrefab,
+            Sprite springSprite,
+            Material iceMaterial)
+        {
+            if (!File.Exists(scenePath))
+                return;
+
+            Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            RuntimePieceFactoryBootstrap bootstrap = Object.FindObjectOfType<RuntimePieceFactoryBootstrap>();
+            if (bootstrap == null)
+                return;
+
+            JointSpringPresenter presenter = bootstrap.GetComponent<JointSpringPresenter>();
+            if (presenter == null)
+                presenter = bootstrap.gameObject.AddComponent<JointSpringPresenter>();
+
+            SerializedObject so = new SerializedObject(presenter);
+            so.FindProperty("springPrefab").objectReferenceValue = springPrefab;
+            so.FindProperty("prewarmCapacity").intValue = 16;
+            so.FindProperty("springSprite").objectReferenceValue = springSprite;
+            so.FindProperty("springMaterial").objectReferenceValue = iceMaterial;
+            so.FindProperty("sortingOrder").intValue = 5;
+            so.FindProperty("springScale").floatValue = 0.14514376f;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(presenter);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[SceneTunaVisualAuthoring] Configured JointSpringPresenter in {scenePath}");
+        }
+
+        private static Sprite LoadSprite(string spriteName)
+        {
+            Object[] assets = AssetDatabase.LoadAllAssetsAtPath(MapAtlasPath);
+            for (int index = 0; index < assets.Length; index++)
+            {
+                if (assets[index] is Sprite s && s.name == spriteName)
+                    return s;
+            }
+            return null;
+        }
+
+        private static TMP_FontAsset LoadTMPFont()
+        {
+            TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(TMPFontPath);
+            if (font == null)
+            {
+                string[] guids = AssetDatabase.FindAssets("t:TMP_FontAsset");
+                for (int i = 0; i < guids.Length; i++)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                    if (guids[i] == "0e1847d847368439f88be6c09b488ce3")
+                        return AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
+                }
+            }
+            return font;
+        }
+    }
+}
+#endif

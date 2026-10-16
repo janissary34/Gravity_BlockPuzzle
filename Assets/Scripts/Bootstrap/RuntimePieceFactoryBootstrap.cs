@@ -1,6 +1,7 @@
 using GravityPuzzle.Config;
 using System.Collections.Generic;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Gameplay.Reveal;
 using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Presentation.Views;
 using GravityPuzzle.Presentation.VFX;
@@ -102,12 +103,34 @@ namespace GravityPuzzle.Bootstrap
             GravityLevelRuntime.ConfigureRevealPresentationConfig(revealPresentationConfig);
             GravityLevelRuntime.ConfigureBoardPresentationConfig(boardPresentationConfig);
             GravityLevelRuntime.ConfigureLevelRuntimeRoot(levelRuntimeRoot);
+
+            if (revealPresentationConfig != null)
+            {
+                Transform revealParent = poolParent != null ? poolParent : transform;
+                RevealAreaPool.Configure(
+                    revealPresentationConfig.boxPrefab,
+                    revealPresentationConfig.boxPoolCapacity,
+                    revealPresentationConfig.elevatorPrefab,
+                    revealPresentationConfig.elevatorPoolCapacity,
+                    revealParent);
+            }
+
             RegisterRevealPresentations();
             GravityLevelDefinition selectedLevel = GravityLevelRuntime.FindLevelToPlay();
             if (selectedLevel == null)
             {
                 Debug.LogError("[LevelSequence] RuntimePieceFactoryBootstrap could not resolve a playable level.", this);
                 return;
+            }
+
+            JointSpringPresenter springPresenter = GetComponent<JointSpringPresenter>();
+            if (springPresenter != null && prototypeBoard != null)
+            {
+                springPresenter.Configure(
+                    prototypeBoard,
+                    prototypeBoard.PieceJointGraph,
+                    selectedLevel,
+                    poolParent != null ? poolParent : transform);
             }
 
             UpdateLevelDisplays();

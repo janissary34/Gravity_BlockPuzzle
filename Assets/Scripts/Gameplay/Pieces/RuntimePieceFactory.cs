@@ -486,14 +486,14 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterTextColor : definition.iceCounterTextColor,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineColor : definition.iceCounterOutlineColor,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineWidth : definition.iceCounterOutlineWidth,
-                definition.iceCounterOffset,
+                pieceVisualConfig != null && pieceVisualConfig.IceCounterOffset != Vector2.zero ? pieceVisualConfig.IceCounterOffset : definition.iceCounterOffset,
                 definition.specialBlockType,
                 definition.bombTimerSeconds,
-                definition.bombCounterFontSize,
-                definition.bombCounterTextColor,
-                definition.bombCounterOutlineColor,
-                definition.bombCounterOutlineWidth,
-                definition.bombCounterOffset));
+                pieceVisualConfig != null ? pieceVisualConfig.BombCounterFontSize : definition.bombCounterFontSize,
+                pieceVisualConfig != null ? pieceVisualConfig.BombCounterTextColor : definition.bombCounterTextColor,
+                pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineColor : definition.bombCounterOutlineColor,
+                pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineWidth : definition.bombCounterOutlineWidth,
+                pieceVisualConfig != null && pieceVisualConfig.BombCounterOffset != Vector2.zero ? pieceVisualConfig.BombCounterOffset : definition.bombCounterOffset));
             if (content.VoxelShards != null && content.VoxelShards.Count > 0)
                 puzzlePiece.ConfigureVoxelPresentation(content.VoxelShards);
             else if (content.CollisionCellVisuals != null)

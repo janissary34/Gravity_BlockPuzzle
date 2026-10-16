@@ -58,6 +58,7 @@ namespace GravityPuzzle
         private const float MinimumBombCounterFontScale = .18f;
         private const float MaximumBombCounterFontScale = .32f;
         private const string IceCounterPresentationName = "Ice Counter Presentation";
+        private const string BombCounterPresentationName = "Bomb Counter Presentation";
         private static readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
 
         public static IReadOnlyList<PuzzlePiece> ActivePieces => activePieces;
@@ -221,6 +222,7 @@ namespace GravityPuzzle
         private int frozenUntilDestroyedCount;
         private int previousFrozenRemaining = -1;
         private TextMeshPro iceCounterText;
+        private TextMeshPro bombCounterText;
         private TMP_FontAsset iceCounterFont;
         private TMP_FontAsset defaultCounterFont;
         private Action<PuzzlePiece> returnToPool;
@@ -305,9 +307,15 @@ namespace GravityPuzzle
                 {
                     iceCounterText = textComponents[index];
                     defaultCounterFont = iceCounterText.font;
-                    break;
+                }
+                else if (textComponents[index].name == BombCounterPresentationName)
+                {
+                    bombCounterText = textComponents[index];
                 }
             }
+
+            if (bombCounterText == null)
+                bombCounterText = iceCounterText;
 
             if (iceSlots.Count > 0)
                 wholePieceRenderer = iceSlots[0];
@@ -1817,7 +1825,8 @@ namespace GravityPuzzle
                 return;
 
             int remainingSeconds = Mathf.CeilToInt(Mathf.Max(0f, secondsRemaining));
-            if (remainingSeconds == previousBombRemaining && iceCounterText != null && iceCounterText.enabled)
+            TextMeshPro counter = bombCounterText != null ? bombCounterText : iceCounterText;
+            if (remainingSeconds == previousBombRemaining && counter != null && counter.enabled)
                 return;
 
             previousBombRemaining = remainingSeconds;
@@ -2240,8 +2249,13 @@ namespace GravityPuzzle
         private void SetBombDefused(bool isDefused)
         {
             IsBombDefused = isDefused;
-            if (isDefused && iceCounterText != null)
-                iceCounterText.enabled = false;
+            if (isDefused)
+            {
+                if (bombCounterText != null)
+                    bombCounterText.enabled = false;
+                if (iceCounterText != null)
+                    iceCounterText.enabled = false;
+            }
         }
 
         // The rendered voxel grid is intentionally made of child VoxelShard
@@ -2797,7 +2811,7 @@ namespace GravityPuzzle
             iceCounterText.color = iceCounterTextColor;
             iceCounterText.enabled = true;
             iceCounterText.enableAutoSizing = false;
-            iceCounterText.fontSize = iceCounterFontSize * RuntimeIceCounterFontScale;
+            iceCounterText.fontSize = iceCounterFontSize;
             iceCounterText.outlineColor = iceCounterOutlineColor;
             iceCounterText.outlineWidth = iceCounterOutlineWidth * .1f;
             iceCounterText.renderer.sortingLayerID = collisionCellVisuals[0].sortingLayerID;
@@ -2807,15 +2821,14 @@ namespace GravityPuzzle
                 combinedBounds.center.x + iceCounterOffset.x,
                 combinedBounds.center.y + iceCounterOffset.y,
                 transform.position.z - .1f);
-            iceCounterText.rectTransform.sizeDelta = new Vector2(
-                Mathf.Max(.75f, combinedBounds.size.x * .9f),
-                Mathf.Max(.75f, combinedBounds.size.y * .9f));
+            iceCounterText.rectTransform.sizeDelta = new Vector2(20f, 5f);
             iceCounterText.ForceMeshUpdate();
         }
 
         private void UpdateBombCounter(int remainingCount)
         {
-            if (collisionCellVisuals == null || collisionCellVisuals.Count == 0 || iceCounterText == null)
+            TextMeshPro counterText = bombCounterText != null ? bombCounterText : iceCounterText;
+            if (collisionCellVisuals == null || collisionCellVisuals.Count == 0 || counterText == null)
                 return;
 
             Bounds combinedBounds = collisionCellVisuals[0].bounds;
@@ -2829,30 +2842,24 @@ namespace GravityPuzzle
             Bounds counterBounds = bombOverlayRenderer != null && bombOverlayRenderer.enabled
                 ? bombOverlayRenderer.bounds
                 : combinedBounds;
-            float counterFontScale = Mathf.Clamp(
-                counterBounds.size.y * MinimumBombCounterFontScale,
-                MinimumBombCounterFontScale,
-                MaximumBombCounterFontScale);
 
             if (defaultCounterFont != null)
-                iceCounterText.font = defaultCounterFont;
-            iceCounterText.color = bombCounterTextColor;
-            iceCounterText.enabled = true;
-            iceCounterText.enableAutoSizing = false;
-            iceCounterText.fontSize = bombCounterFontSize * counterFontScale;
-            iceCounterText.outlineColor = bombCounterOutlineColor;
-            iceCounterText.outlineWidth = bombCounterOutlineWidth * .1f;
-            iceCounterText.renderer.sortingLayerID = collisionCellVisuals[0].sortingLayerID;
-            iceCounterText.renderer.sortingOrder = 50;
-            iceCounterText.text = Mathf.Max(0, remainingCount).ToString();
-            iceCounterText.transform.position = new Vector3(
+                counterText.font = defaultCounterFont;
+            counterText.color = bombCounterTextColor;
+            counterText.enabled = true;
+            counterText.enableAutoSizing = false;
+            counterText.fontSize = bombCounterFontSize;
+            counterText.outlineColor = bombCounterOutlineColor;
+            counterText.outlineWidth = bombCounterOutlineWidth * .1f;
+            counterText.renderer.sortingLayerID = collisionCellVisuals[0].sortingLayerID;
+            counterText.renderer.sortingOrder = 50;
+            counterText.text = Mathf.Max(0, remainingCount).ToString();
+            counterText.transform.position = new Vector3(
                 counterBounds.center.x + bombCounterOffset.x,
                 counterBounds.center.y + bombCounterOffset.y,
                 transform.position.z - .1f);
-            iceCounterText.rectTransform.sizeDelta = new Vector2(
-                Mathf.Max(.5f, counterBounds.size.x * .55f),
-                Mathf.Max(.5f, counterBounds.size.y * .4f));
-            iceCounterText.ForceMeshUpdate();
+            counterText.rectTransform.sizeDelta = new Vector2(20f, 5f);
+            counterText.ForceMeshUpdate();
         }
 
         private void CreateIceLayer(
@@ -3146,9 +3153,9 @@ namespace GravityPuzzle
             iceRenderers.Clear();
 
             if (iceCounterText != null)
-            {
                 iceCounterText.enabled = false;
-            }
+            if (bombCounterText != null && bombCounterText != iceCounterText)
+                bombCounterText.enabled = false;
         }
 
         private void RefreshWholePiecePresentation()

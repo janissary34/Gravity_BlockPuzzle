@@ -9813,6 +9813,7 @@ GameObject:
   - component: {fileID: 1938475612}
   - component: {fileID: 1938475614}
   - component: {fileID: 1938475613}
+  - component: {fileID: 1938475615}
   m_Layer: 0
   m_Name: Runtime Piece Factory Bootstrap
   m_TagString: Untagged
@@ -10326,3 +10327,21 @@ SceneRoots:
   - {fileID: 423083019}
   - {fileID: 1749646595}
   - {fileID: 1024166634}
+--- !u!114 &1938475615
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1938475610}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77da36556c1ff4ccda298ebfeb58b972, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  springPrefab: {fileID: 4401872390192847104, guid: a19d20c524b94e35a14d59a7f36934a1, type: 3}
+  prewarmCapacity: 16
+  springSprite: {fileID: 897479123, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  springMaterial: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
+  sortingOrder: 5
+  springScale: 0.14514376

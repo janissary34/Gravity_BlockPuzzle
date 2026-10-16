@@ -48,10 +48,10 @@ configured sequence, expands capacity when required, saves
 
 ## Remaining legacy boundary
 
-Generated reveal presentations and pin presentation/collision still use their
-older runtime-construction paths. Shredders and pieces already use prewarmed
-pools. These remaining paths are technical debt and must not be copied into new
-features.
+Generated pin presentation and collision still use their older
+runtime-construction paths. Reveal presentations, piece connections (joint springs),
+shredders, and pieces use prewarmed typed pools. The remaining pin path is
+technical debt and must not be copied into new features.
 
 See `Decisions/ADR-002-scene-authored-hybrid-level-geometry.md` for ownership and
 performance trade-offs.

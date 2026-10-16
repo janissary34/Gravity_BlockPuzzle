@@ -47,6 +47,8 @@ namespace GravityPuzzle.Core.Grid
         private readonly HashSet<int> visitedMembers = new HashSet<int>();
         private bool groupsDirty = true;
 
+        public event Action JointsChanged;
+
         public int JointCount => joints.Count;
 
         public void RegisterMember(int memberId)
@@ -74,6 +76,7 @@ namespace GravityPuzzle.Core.Grid
             }
 
             groupsDirty = true;
+            JointsChanged?.Invoke();
         }
 
         public bool TryAddJoint(Joint joint)
@@ -88,6 +91,7 @@ namespace GravityPuzzle.Core.Grid
 
             joints.Add(joint);
             groupsDirty = true;
+            JointsChanged?.Invoke();
             return true;
         }
 
@@ -104,7 +108,10 @@ namespace GravityPuzzle.Core.Grid
             }
 
             if (removed > 0)
+            {
                 groupsDirty = true;
+                JointsChanged?.Invoke();
+            }
             return removed;
         }
 
@@ -121,7 +128,10 @@ namespace GravityPuzzle.Core.Grid
             }
 
             if (removed > 0)
+            {
                 groupsDirty = true;
+                JointsChanged?.Invoke();
+            }
             return removed;
         }
 
@@ -157,7 +167,10 @@ namespace GravityPuzzle.Core.Grid
             }
 
             if (removed > 0)
+            {
                 groupsDirty = true;
+                JointsChanged?.Invoke();
+            }
             return removed;
         }
 
@@ -198,7 +211,10 @@ namespace GravityPuzzle.Core.Grid
             }
 
             if (changed)
+            {
                 groupsDirty = true;
+                JointsChanged?.Invoke();
+            }
         }
 
         public void CollectGroupMembers(int memberId, List<int> results)
