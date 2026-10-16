@@ -61,6 +61,7 @@ Board frames use 8 artist-authored directional atlas sprites (4 corners and 4 ed
 ## Counters and Piece Overlays
 
 * Ice counters and Bomb counters have separate presentation ownership. `BlockPiece` provides dedicated TextMeshPro child slots (`Ice Counter Presentation` and `Bomb Counter Presentation`) so that active bomb pieces do not mutate or overwrite ice counter styling.
+* Ice counters and bomb counters derive their world-space font sizes from `PieceVisualConfig` (defaults 6.0 and 4.5 points respectively) scaled proportionally by level-definition font size properties (where 36 represents standard 1.0x scale).
 * Box reveal covers use a dedicated TextMeshPro counter rendered at sorting order 201 with navy outline.
 * Elevator mechanics do not have a countdown state in the gameplay contract; elevators feature animated sliding doors rather than a number counter.
 

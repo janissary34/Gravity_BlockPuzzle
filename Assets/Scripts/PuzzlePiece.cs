@@ -757,12 +757,10 @@ namespace GravityPuzzle
                         continue;
 
                     Vector3 center = cell.transform.TransformPoint(cell.offset);
-                    Vector3 scale = cell.transform.lossyScale;
-                    Vector2 cellSize = cell.size;
-
-                    float width = Mathf.Max(0.2f, cellSize.x * Mathf.Abs(scale.x));
-                    float height = Mathf.Max(0.2f, cellSize.y * Mathf.Abs(scale.y));
-                    resultsBuffer.Add(new Bounds(center, new Vector3(width, height, 1f)));
+                    resultsBuffer.Add(CreateWorldCellBounds(
+                        cell.transform,
+                        center,
+                        cell.size));
                 }
 
                 if (resultsBuffer.Count > 0)
@@ -779,14 +777,14 @@ namespace GravityPuzzle
                         continue;
 
                     Vector3 center = visual.transform.position;
-                    Vector3 scale = visual.transform.lossyScale;
                     Vector2 cellSize = (fullCollisionCellSizes != null && i < fullCollisionCellSizes.Count)
                         ? fullCollisionCellSizes[i]
                         : Vector2.one;
 
-                    float width = Mathf.Max(0.2f, cellSize.x * Mathf.Abs(scale.x));
-                    float height = Mathf.Max(0.2f, cellSize.y * Mathf.Abs(scale.y));
-                    resultsBuffer.Add(new Bounds(center, new Vector3(width, height, 1f)));
+                    resultsBuffer.Add(CreateWorldCellBounds(
+                        visual.transform,
+                        center,
+                        cellSize));
                 }
 
                 if (resultsBuffer.Count > 0)
@@ -802,6 +800,21 @@ namespace GravityPuzzle
 
             resultsBuffer.Add(new Bounds(transform.position, Vector3.one));
             return 1;
+        }
+
+        private static Bounds CreateWorldCellBounds(
+            Transform cellTransform,
+            Vector3 center,
+            Vector2 localSize)
+        {
+            // TransformVector includes both the hierarchy scale and rotation.
+            // Summing the projected local axes yields the world-space AABB of
+            // this actual cell instead of treating a rotated cell as axis-aligned.
+            Vector3 worldWidth = cellTransform.TransformVector(new Vector3(localSize.x, 0f, 0f));
+            Vector3 worldHeight = cellTransform.TransformVector(new Vector3(0f, localSize.y, 0f));
+            float width = Mathf.Max(.2f, Mathf.Abs(worldWidth.x) + Mathf.Abs(worldHeight.x));
+            float height = Mathf.Max(.2f, Mathf.Abs(worldWidth.y) + Mathf.Abs(worldHeight.y));
+            return new Bounds(center, new Vector3(width, height, 1f));
         }
 
         public void RemoveVoxelPresentation(IReadOnlyList<VoxelShard> voxels)
@@ -1775,7 +1788,7 @@ namespace GravityPuzzle
         {
             frozenUntilDestroyedCount = Mathf.Max(0, requiredDestroyedPieces);
             iceCounterFont = counterFont;
-            iceCounterFontSize = Mathf.Clamp(counterFontSize, 0.1f, 3.0f);
+            iceCounterFontSize = Mathf.Clamp(counterFontSize, 0.5f, 30.0f);
             iceCounterTextColor = counterTextColor;
             iceCounterOutlineColor = counterOutlineColor;
             iceCounterOutlineWidth = Mathf.Clamp01(counterOutlineWidth);
@@ -1797,7 +1810,7 @@ namespace GravityPuzzle
             IsBomb = isBomb;
             IsBombDefused = false;
             BombTimerSeconds = isBomb ? Mathf.Max(1f, timerSeconds) : 0f;
-            bombCounterFontSize = Mathf.Clamp(counterFontSize, 0.1f, 3.0f);
+            bombCounterFontSize = Mathf.Clamp(counterFontSize, 0.5f, 30.0f);
             bombCounterTextColor = counterTextColor;
             bombCounterOutlineColor = counterOutlineColor;
             bombCounterOutlineWidth = Mathf.Clamp01(counterOutlineWidth);
@@ -2812,19 +2825,22 @@ namespace GravityPuzzle
             // after changing the serialized level settings.
             if (iceCounterFont != null)
                 iceCounterText.font = iceCounterFont;
+            else if (iceCounterText.font == null && defaultCounterFont != null)
+                iceCounterText.font = defaultCounterFont;
+
             iceCounterText.color = iceCounterTextColor;
             iceCounterText.enabled = true;
             iceCounterText.enableAutoSizing = false;
             iceCounterText.fontSize = iceCounterFontSize;
             iceCounterText.outlineColor = iceCounterOutlineColor;
-            iceCounterText.outlineWidth = iceCounterOutlineWidth * .1f;
+            iceCounterText.outlineWidth = iceCounterOutlineWidth;
             iceCounterText.renderer.sortingLayerID = collisionCellVisuals[0].sortingLayerID;
             iceCounterText.renderer.sortingOrder = 50;
             iceCounterText.text = Mathf.Max(0, remainingCount).ToString();
             iceCounterText.transform.position = new Vector3(
                 combinedBounds.center.x + iceCounterOffset.x,
                 combinedBounds.center.y + iceCounterOffset.y,
-                transform.position.z - .1f);
+                transform.position.z - .15f);
             iceCounterText.rectTransform.sizeDelta = new Vector2(20f, 5f);
             iceCounterText.ForceMeshUpdate();
         }
