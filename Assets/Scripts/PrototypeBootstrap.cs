@@ -2150,7 +2150,7 @@ namespace GravityPuzzle
             return results.Count > 0;
         }
 
-        private static PuzzlePiece FindActivePiece(int sourcePieceId)
+        public PuzzlePiece FindActivePiece(int sourcePieceId)
         {
             IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
             for (int index = 0; index < pieces.Count; index++)
