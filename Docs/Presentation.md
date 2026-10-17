@@ -18,6 +18,14 @@ the active overlay list is empty.
 
 Presentation slots are pooled state. Every renter must receive reset sprite, material, colour, transform, sorting, mask, enabled state, and property-block state.
 
+Normal brick colours use the named Scene Tuna material palette in `PieceVisualConfig`.
+Level pieces own their semantic palette ID; the material owns the rendered colour,
+so normal renderers use white tint. The level editor assigns a palette when a
+piece is added or its authoring colour changes and exposes the ID for deliberate
+overrides. Legacy assets can be assigned via the non-destructive palette migration
+menu, which preserves existing IDs. The fallback material remains for missing or
+unsupported palette materials, not as the intended normal appearance.
+
 ## Whole-piece and modular fallback selection
 
 Gameplay colliders and board cells remain unchanged when presentation switches between these paths:

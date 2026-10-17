@@ -531,12 +531,14 @@ namespace GravityPuzzle.Editor
             if (GUILayout.Button(addButtonLabel))
             {
                 Undo.RecordObject(level, $"Add {ownerLabel} hidden piece");
-                hiddenPieces.Add(new PieceDefinition
+                var hiddenPiece = new PieceDefinition
                 {
                     name = $"{ownerLabel} Hidden {hiddenPieces.Count + 1}",
                     origin = bounds.origin,
                     cells = CreateNormalGridBlockCells()
-                });
+                };
+                hiddenPiece.paletteId = PiecePaletteMigration.ResolvePaletteId(hiddenPiece.color);
+                hiddenPieces.Add(hiddenPiece);
                 MarkDirty();
             }
         }
@@ -623,6 +625,11 @@ namespace GravityPuzzle.Editor
                 GUILayout.Label("Selected Piece", EditorStyles.boldLabel);
                 string newName = EditorGUILayout.TextField("Name", piece.name);
                 Color newColor = EditorGUILayout.ColorField("Color", piece.color);
+                string newPaletteId = EditorGUILayout.TextField(
+                    new GUIContent("Material Palette", "PieceVisualConfig palette ID; changing Color selects the matching palette."),
+                    piece.paletteId);
+                if (newColor != piece.color)
+                    newPaletteId = PiecePaletteMigration.ResolvePaletteId(newColor);
                 string newVisualId = EditorGUILayout.TextField(
                     new GUIContent("Visual Id", "Optional key resolved through Piece Visual Config."),
                     piece.visualId);
@@ -696,7 +703,7 @@ namespace GravityPuzzle.Editor
                 }
 
                 if (newName != piece.name || newColor != piece.color ||
-                    newVisualId != piece.visualId ||
+                    newVisualId != piece.visualId || newPaletteId != piece.paletteId ||
                     newOrigin != piece.origin ||
                     newSpecialBlockType != resolvedSpecialType ||
                     newFrozenMoveCount != piece.frozenMoveCount ||
@@ -715,6 +722,7 @@ namespace GravityPuzzle.Editor
                     Undo.RecordObject(level, "Edit puzzle piece");
                     piece.name = newName;
                     piece.color = newColor;
+                    piece.paletteId = newPaletteId;
                     piece.visualId = newVisualId;
                     piece.origin = newOrigin;
                     piece.specialBlockType = newSpecialBlockType;
@@ -2609,6 +2617,7 @@ namespace GravityPuzzle.Editor
                 origin = new Vector2Int(level.FineColumns / 2, level.FineRows / 2),
                 color = Color.HSVToRGB((level.pieces.Count * .19f) % 1f, .7f, 1f)
             };
+            piece.paletteId = PiecePaletteMigration.ResolvePaletteId(piece.color);
             level.pieces.Add(piece);
             SelectPiece(level.pieces.Count - 1);
             tool = EditTool.PaintBlock;
@@ -2633,6 +2642,7 @@ namespace GravityPuzzle.Editor
                     boardY * subdivisions - minimum.y * subdivisions),
                 color = Color.HSVToRGB((level.pieces.Count * .19f) % 1f, .7f, 1f)
             };
+            piece.paletteId = PiecePaletteMigration.ResolvePaletteId(piece.color);
             foreach (Vector2Int boardCell in template.Cells)
             {
                 Vector2Int fineOrigin = boardCell * subdivisions;

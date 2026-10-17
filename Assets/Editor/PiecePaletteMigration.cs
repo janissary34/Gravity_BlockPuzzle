@@ -7,8 +7,8 @@ namespace GravityPuzzle.Editor
 {
     /// <summary>
     /// One-time authoring migration from legacy per-piece tint values to the
-    /// shared Scene_Tuna material palette. Runtime never guesses a palette
-    /// from a colour; new levels must select their semantic palette directly.
+    /// shared Scene_Tuna material palette. Runtime consumes the authored
+    /// semantic palette ID; the level editor can suggest it from a colour.
     /// </summary>
     public static class PiecePaletteMigration
     {
@@ -93,33 +93,35 @@ namespace GravityPuzzle.Editor
             PieceVisualConfig visualConfig,
             out string paletteId)
         {
+            paletteId = ResolvePaletteId(source);
+            return visualConfig.TryGetPaletteMaterial(paletteId, out _);
+        }
+
+        // Shared by migration and level authoring; runtime consumes explicit IDs.
+        public static string ResolvePaletteId(Color source)
+        {
             Color.RGBToHSV(source, out float hue, out float saturation, out _);
             if (saturation < .12f)
-            {
-                paletteId = "BlueDark";
-                return visualConfig.TryGetPaletteMaterial(paletteId, out _);
-            }
+                return "BlueDark";
 
             // Legacy levels use lightened source tints, while the final
             // materials are deeply saturated. Map by the deliberately
             // authored hue bands rather than nearest RGB distance, which
             // incorrectly turns legacy red pieces orange.
             if (hue < .045f)
-                paletteId = source.g < .4f ? "Red" : "Orange";
+                return source.g < .4f ? "Red" : "Orange";
             else if (hue < .16f)
-                paletteId = "Orange";
+                return "Orange";
             else if (hue < .26f)
-                paletteId = "Yellow";
+                return "Yellow";
             else if (hue < .45f)
-                paletteId = "GreenLight";
+                return "GreenLight";
             else if (hue < .63f)
-                paletteId = "BlueLight";
+                return "BlueLight";
             else if (hue < .84f)
-                paletteId = "Purple";
+                return "Purple";
             else
-                paletteId = "Pink";
-
-            return visualConfig.TryGetPaletteMaterial(paletteId, out _);
+                return "Pink";
         }
     }
 }

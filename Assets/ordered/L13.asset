@@ -899,7 +899,7 @@ MonoBehaviour:
     name: Piece 11
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Pink
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
     origin: {x: 0, y: 24}
     quarterTurns: 0
@@ -985,7 +985,7 @@ MonoBehaviour:
     name: Piece 12
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Orange
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
     origin: {x: 16, y: 12}
     quarterTurns: 0

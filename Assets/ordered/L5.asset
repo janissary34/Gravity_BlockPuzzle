@@ -489,7 +489,7 @@ MonoBehaviour:
     name: Piece 4
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Orange
     color: {r: 1, g: 0.8870916, b: 0.2980392, a: 1}
     origin: {x: 0, y: 20}
     quarterTurns: 0

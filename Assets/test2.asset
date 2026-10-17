@@ -1195,7 +1195,7 @@ MonoBehaviour:
     name: Piece 23
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Yellow
     color: {r: 0.94400024, g: 1, b: 0.3, a: 1}
     origin: {x: 24, y: 20}
     quarterTurns: 0

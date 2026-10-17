@@ -39,7 +39,7 @@ MonoBehaviour:
     name: Piece 1
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Red
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 14}
     quarterTurns: 0
@@ -61,7 +61,7 @@ MonoBehaviour:
     name: Double 2
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Yellow
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
     origin: {x: 0, y: 4}
     quarterTurns: 0
@@ -83,7 +83,7 @@ MonoBehaviour:
     name: Single 3
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: GreenLight
     color: {r: 0.3, g: 1, b: 0.496, a: 1}
     origin: {x: 8, y: 4}
     quarterTurns: 0
@@ -105,7 +105,7 @@ MonoBehaviour:
     name: Piece 4
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: BlueLight
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
     origin: {x: 20, y: 36}
     quarterTurns: 0
@@ -191,7 +191,7 @@ MonoBehaviour:
     name: Piece 5
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Purple
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
     origin: {x: 24, y: 32}
     quarterTurns: 0
@@ -277,7 +277,7 @@ MonoBehaviour:
     name: Double 6
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Pink
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
     origin: {x: 32, y: 20}
     quarterTurns: 0
@@ -363,7 +363,7 @@ MonoBehaviour:
     name: HS 7
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Orange
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
     origin: {x: 32, y: 24}
     quarterTurns: 0
@@ -481,7 +481,7 @@ MonoBehaviour:
     name: 3L 8
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: GreenLight
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
     origin: {x: 0, y: 12}
     quarterTurns: 0
@@ -503,7 +503,7 @@ MonoBehaviour:
     name: Double 9
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: BlueLight
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
     origin: {x: 32, y: 32}
     quarterTurns: 0
@@ -589,7 +589,7 @@ MonoBehaviour:
     name: Piece 10
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Purple
     color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
     origin: {x: 4, y: 4}
     quarterTurns: 0
@@ -675,7 +675,7 @@ MonoBehaviour:
     name: Piece 11
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Pink
     color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
     origin: {x: 0, y: 4}
     quarterTurns: 0
@@ -761,7 +761,7 @@ MonoBehaviour:
     name: Piece 12
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Orange
     color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
     origin: {x: 12, y: 4}
     quarterTurns: 0
@@ -847,7 +847,7 @@ MonoBehaviour:
     name: HS 13
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: GreenLight
     color: {r: 0.5240001, g: 1, b: 0.3, a: 1}
     origin: {x: 0, y: 12}
     quarterTurns: 0
@@ -1093,7 +1093,7 @@ MonoBehaviour:
     name: HS 14
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: BlueLight
     color: {r: 0.3, g: 1, b: 0.8739998, a: 1}
     origin: {x: 12, y: 12}
     quarterTurns: 0

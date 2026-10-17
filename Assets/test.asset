@@ -1321,7 +1321,7 @@ MonoBehaviour:
   - name: 3L 24
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: GreenLight
     color: {r: 0.3, g: 1, b: 0.45399988, a: 1}
     origin: {x: 24, y: 20}
     quarterTurns: 0
@@ -1502,7 +1502,7 @@ MonoBehaviour:
   - name: HS 25
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: BlueLight
     color: {r: 0.3, g: 0.74800026, b: 1, a: 1}
     origin: {x: 24, y: 32}
     quarterTurns: 0

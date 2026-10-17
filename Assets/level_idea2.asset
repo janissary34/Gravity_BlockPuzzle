@@ -39,7 +39,7 @@ MonoBehaviour:
     name: Piece 1
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: Red
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 10, y: 14}
     quarterTurns: 0
