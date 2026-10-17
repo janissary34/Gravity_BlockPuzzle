@@ -950,15 +950,17 @@ namespace GravityPuzzle
             for (int index = 0; index < level.pieces.Count; index++)
             {
                 if (!BoardSnapshot.TryGetPiece(index, out _) ||
-                    level.pieces[index] == null ||
-                    string.IsNullOrEmpty(level.pieces[index].pieceId))
+                    level.pieces[index] == null)
                 {
                     continue;
                 }
 
-                sourceIdByPieceId[level.pieces[index].pieceId] = index;
-                definitionByPieceId[level.pieces[index].pieceId] = level.pieces[index];
                 memberIds.Add(index);
+                if (!string.IsNullOrEmpty(level.pieces[index].pieceId))
+                {
+                    sourceIdByPieceId[level.pieces[index].pieceId] = index;
+                    definitionByPieceId[level.pieces[index].pieceId] = level.pieces[index];
+                }
             }
 
             if (level.joints != null)
@@ -1931,11 +1933,26 @@ namespace GravityPuzzle
 
             results.Clear();
             pieceJointGraph.CollectGroupMembers(sourcePieceId, jointGroupMemberIds);
+            if (jointGroupMemberIds.Count == 0)
+            {
+                PuzzlePiece fallbackPiece = FindActivePiece(sourcePieceId);
+                if (fallbackPiece != null)
+                    results.Add(fallbackPiece);
+                return;
+            }
+
             for (int memberIndex = 0; memberIndex < jointGroupMemberIds.Count; memberIndex++)
             {
                 PuzzlePiece runtimePiece = FindActivePiece(jointGroupMemberIds[memberIndex]);
                 if (runtimePiece != null)
                     results.Add(runtimePiece);
+            }
+
+            if (results.Count == 0)
+            {
+                PuzzlePiece fallbackPiece = FindActivePiece(sourcePieceId);
+                if (fallbackPiece != null)
+                    results.Add(fallbackPiece);
             }
         }
 

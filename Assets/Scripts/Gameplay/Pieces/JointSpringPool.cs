@@ -10,16 +10,12 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         public static void Configure(JointSpringView prefab, Transform parent, int capacity)
         {
-            ResetAllActive();
+            pool = null;
 
             if (prefab != null && capacity > 0)
             {
                 pool = new GameObjectPool<JointSpringView>(prefab, parent, capacity);
                 pool.Prewarm();
-            }
-            else
-            {
-                pool = null;
             }
         }
 
@@ -38,7 +34,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetPool()
+        public static void ResetPool()
         {
             pool = null;
         }

@@ -15,6 +15,7 @@ namespace GravityPuzzle.Editor
     public static class LevelRuntimeRootAuthoring
     {
         private const string PrefabPath = "Assets/Prefabs/LevelRuntimeRoot.prefab";
+        private const string SceneTunaBoardFramePrefabPath = "Assets/Prefabs/SceneTunaBoardFrame.prefab";
         private const string FallbackSpritePath = "Assets/Sprites/Generated/LevelRuntimeSquare.png";
         private const int MinimumVisualCapacity = 512;
         private const int MinimumMapCollisionCapacity = 256;
@@ -48,7 +49,8 @@ namespace GravityPuzzle.Editor
                 sequence.levels,
                 out int visualCapacity,
                 out int obstacleCapacity,
-                out int mapCapacity);
+                out int mapCapacity,
+                out int frameModuleCapacity);
 
             GameObject template = null;
             LevelRuntimeRoot root = null;
@@ -61,6 +63,7 @@ namespace GravityPuzzle.Editor
                     visualCapacity,
                     obstacleCapacity,
                     mapCapacity,
+                    frameModuleCapacity,
                     fallbackSprite,
                     out root);
 
@@ -72,22 +75,26 @@ namespace GravityPuzzle.Editor
                         root,
                         out int peakVisualCount,
                         out int peakObstacleCount,
-                        out int peakMapCount);
+                        out int peakMapCount,
+                        out int peakFrameModuleCount);
                     visualCapacity = peakVisualCount + CapacitySafetyMargin;
                     obstacleCapacity = peakObstacleCount + CapacitySafetyMargin;
                     mapCapacity = peakMapCount + CapacitySafetyMargin;
+                    frameModuleCapacity = peakFrameModuleCount + CapacitySafetyMargin;
 
                     Object.DestroyImmediate(template);
                     template = CreateTemplate(
                         visualCapacity,
                         obstacleCapacity,
                         mapCapacity,
+                        frameModuleCapacity,
                         fallbackSprite,
                         out root);
                     ValidateEveryLevel(
                         sequence.levels,
                         presentationConfig,
                         root,
+                        out _,
                         out _,
                         out _,
                         out _);
@@ -104,6 +111,7 @@ namespace GravityPuzzle.Editor
                     visualCapacity *= 2;
                     obstacleCapacity *= 2;
                     mapCapacity *= 2;
+                    frameModuleCapacity *= 2;
                     Debug.LogWarning(
                         $"[LevelAuthoring] Expanding LevelRuntimeRoot capacities after validation: {exception.Message}");
                 }
@@ -121,7 +129,8 @@ namespace GravityPuzzle.Editor
 
             Debug.Log(
                 $"[LevelAuthoring] LevelRuntimeRoot authored with {visualCapacity} visual, " +
-                $"{obstacleCapacity} obstacle-collision and {mapCapacity} map-collision slots.",
+                $"{frameModuleCapacity} Scene Tuna frame modules, {obstacleCapacity} obstacle-collision " +
+                $"and {mapCapacity} map-collision slots.",
                 bootstrap);
         }
 
@@ -129,6 +138,7 @@ namespace GravityPuzzle.Editor
             int visualCapacity,
             int obstacleCapacity,
             int mapCapacity,
+            int frameModuleCapacity,
             Sprite fallbackSprite,
             out LevelRuntimeRoot root)
         {
@@ -138,6 +148,9 @@ namespace GravityPuzzle.Editor
             Transform visualSlotRoot = CreateChild(template.transform, "Unused Visual Slots");
             Transform backgroundRoot = CreateChild(template.transform, "Board Background");
             Transform frameRoot = CreateChild(template.transform, "Composite Board Frame");
+            FrameAuthoringSlots frameSlots = CreateSceneTunaFrameModules(
+                frameRoot,
+                frameModuleCapacity);
             Transform obstacleVisualRoot = CreateChild(template.transform, "Obstacle Visuals");
             Transform obstacleCollisionRoot = CreateChild(template.transform, "Obstacle Collisions");
             Transform mapCollisionRoot = CreateChild(template.transform, "Map Collision - Obstacle Boxes");
@@ -175,12 +188,174 @@ namespace GravityPuzzle.Editor
                 obstacleCollisionRoot,
                 mapCollisionRoot,
                 visualSlots,
+                frameSlots.Pools,
+                frameSlots.Backdrop,
                 obstacleSlots,
                 mapSlots,
                 mapBody,
                 composite);
             root.ConfigureFallbackSprite(fallbackSprite);
             return template;
+        }
+
+        private static FrameAuthoringSlots CreateSceneTunaFrameModules(
+            Transform frameRoot,
+            int requiredCapacity)
+        {
+            EnsureSceneTunaFramePrefabCapacity(requiredCapacity);
+            GameObject framePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SceneTunaBoardFramePrefabPath);
+            if (framePrefab == null)
+            {
+                Debug.LogWarning(
+                    "[LevelAuthoring] SceneTunaBoardFrame prefab is missing; frame modules will use the legacy visual slots.");
+                return new FrameAuthoringSlots(
+                    Array.Empty<BoardFrameModulePool>(),
+                    null);
+            }
+
+            GameObject frameInstance = PrefabUtility.InstantiatePrefab(framePrefab, frameRoot) as GameObject;
+            if (frameInstance == null)
+                throw new InvalidOperationException("[LevelAuthoring] Failed to nest SceneTunaBoardFrame in LevelRuntimeRoot.");
+
+            frameInstance.name = "Scene Tuna Board Frame";
+            BoardFrameModulePool[] pools = CreateFramePools(frameInstance.transform);
+            SpriteRenderer backdrop = FindChildRenderer(frameInstance.transform, "Frame Glow Backdrop");
+            return new FrameAuthoringSlots(pools, backdrop);
+        }
+
+        private static void EnsureSceneTunaFramePrefabCapacity(int requiredCapacity)
+        {
+            GameObject framePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SceneTunaBoardFramePrefabPath);
+            if (framePrefab == null)
+                return;
+
+            GameObject contents = PrefabUtility.LoadPrefabContents(SceneTunaBoardFramePrefabPath);
+            try
+            {
+                // Validation reports total modules across the four repeated-edge
+                // roles.  Keep the prefab compact by translating that total into
+                // a per-role capacity; validation retries if a particular edge
+                // needs more slots than the estimate.
+                int poolCapacity = Mathf.Max(8, Mathf.CeilToInt(requiredCapacity / 4f));
+                BoardFrameModuleRole[] roles =
+                {
+                    BoardFrameModuleRole.TopLeftCorner,
+                    BoardFrameModuleRole.TopRightCorner,
+                    BoardFrameModuleRole.BottomLeftCorner,
+                    BoardFrameModuleRole.BottomRightCorner,
+                    BoardFrameModuleRole.TopEdgeModule,
+                    BoardFrameModuleRole.BottomEdgeModule,
+                    BoardFrameModuleRole.LeftEdgeModule,
+                    BoardFrameModuleRole.RightEdgeModule
+                };
+
+                for (int roleIndex = 0; roleIndex < roles.Length; roleIndex++)
+                {
+                    BoardFrameModuleRole role = roles[roleIndex];
+                    int roleCount = IsCornerRole(role) ? 1 : poolCapacity;
+                    Transform roleRoot = FindOrCreateRoleRoot(contents.transform, role);
+                    int existingCount = roleRoot.GetComponentsInChildren<SpriteRenderer>(true).Length;
+                    for (int slotIndex = existingCount; slotIndex < roleCount; slotIndex++)
+                    {
+                        GameObject slot = new GameObject(roleCount == 1
+                            ? role.ToString()
+                            : $"{role} {slotIndex + 1:00}");
+                        slot.transform.SetParent(roleRoot, false);
+                        SpriteRenderer renderer = slot.AddComponent<SpriteRenderer>();
+                        renderer.enabled = false;
+                    }
+                }
+
+                EnsureBackdrop(contents.transform);
+                PrefabUtility.SaveAsPrefabAsset(contents, SceneTunaBoardFramePrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+        }
+
+        private static BoardFrameModulePool[] CreateFramePools(Transform frameRoot)
+        {
+            BoardFrameModuleRole[] roles =
+            {
+                BoardFrameModuleRole.TopLeftCorner,
+                BoardFrameModuleRole.TopRightCorner,
+                BoardFrameModuleRole.BottomLeftCorner,
+                BoardFrameModuleRole.BottomRightCorner,
+                BoardFrameModuleRole.TopEdgeModule,
+                BoardFrameModuleRole.BottomEdgeModule,
+                BoardFrameModuleRole.LeftEdgeModule,
+                BoardFrameModuleRole.RightEdgeModule
+            };
+            BoardFrameModulePool[] pools = new BoardFrameModulePool[roles.Length];
+            for (int index = 0; index < roles.Length; index++)
+            {
+                Transform roleRoot = FindOrCreateRoleRoot(frameRoot, roles[index]);
+                pools[index] = new BoardFrameModulePool(
+                    roles[index],
+                    roleRoot.GetComponentsInChildren<SpriteRenderer>(true));
+            }
+
+            return pools;
+        }
+
+        private static Transform FindOrCreateRoleRoot(Transform parent, BoardFrameModuleRole role)
+        {
+            string name = role + " Slots";
+            for (int index = 0; index < parent.childCount; index++)
+            {
+                Transform child = parent.GetChild(index);
+                if (child.name == name)
+                    return child;
+            }
+
+            return CreateChild(parent, name);
+        }
+
+        private static SpriteRenderer EnsureBackdrop(Transform frameRoot)
+        {
+            SpriteRenderer existing = FindChildRenderer(frameRoot, "Frame Glow Backdrop");
+            if (existing != null)
+                return existing;
+
+            GameObject backdrop = new GameObject("Frame Glow Backdrop");
+            backdrop.transform.SetParent(frameRoot, false);
+            SpriteRenderer renderer = backdrop.AddComponent<SpriteRenderer>();
+            renderer.enabled = false;
+            return renderer;
+        }
+
+        private static SpriteRenderer FindChildRenderer(Transform root, string name)
+        {
+            SpriteRenderer[] renderers = root.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int index = 0; index < renderers.Length; index++)
+            {
+                if (renderers[index] != null && renderers[index].gameObject.name == name)
+                    return renderers[index];
+            }
+
+            return null;
+        }
+
+        private static bool IsCornerRole(BoardFrameModuleRole role)
+        {
+            return role == BoardFrameModuleRole.TopLeftCorner ||
+                   role == BoardFrameModuleRole.TopRightCorner ||
+                   role == BoardFrameModuleRole.BottomLeftCorner ||
+                   role == BoardFrameModuleRole.BottomRightCorner;
+        }
+
+        private readonly struct FrameAuthoringSlots
+        {
+            public readonly BoardFrameModulePool[] Pools;
+            public readonly SpriteRenderer Backdrop;
+
+            public FrameAuthoringSlots(BoardFrameModulePool[] pools, SpriteRenderer backdrop)
+            {
+                Pools = pools;
+                Backdrop = backdrop;
+            }
         }
 
         private static BoxCollider2D[] CreateColliderSlots(
@@ -207,11 +382,13 @@ namespace GravityPuzzle.Editor
             LevelRuntimeRoot root,
             out int peakVisualCount,
             out int peakObstacleCount,
-            out int peakMapCount)
+            out int peakMapCount,
+            out int peakFrameModuleCount)
         {
             peakVisualCount = 0;
             peakObstacleCount = 0;
             peakMapCount = 0;
+            peakFrameModuleCount = 0;
             for (int index = 0; index < levels.Count; index++)
             {
                 GravityLevelDefinition level = levels[index];
@@ -223,6 +400,9 @@ namespace GravityPuzzle.Editor
                         peakObstacleCount,
                         root.UsedObstacleCollisionSlotCount);
                     peakMapCount = Mathf.Max(peakMapCount, root.UsedMapCollisionSlotCount);
+                    peakFrameModuleCount = Mathf.Max(
+                        peakFrameModuleCount,
+                        root.UsedFrameModuleSlotCount);
                 }
             }
         }
@@ -315,11 +495,13 @@ namespace GravityPuzzle.Editor
             IReadOnlyList<GravityLevelDefinition> levels,
             out int visualCapacity,
             out int obstacleCapacity,
-            out int mapCapacity)
+            out int mapCapacity,
+            out int frameModuleCapacity)
         {
             visualCapacity = MinimumVisualCapacity;
             obstacleCapacity = MinimumObstacleCollisionCapacity;
             mapCapacity = MinimumMapCollisionCapacity;
+            frameModuleCapacity = 0;
 
             for (int index = 0; index < levels.Count; index++)
             {
@@ -329,6 +511,7 @@ namespace GravityPuzzle.Editor
 
                 int boardAndLowerGridUpperBound = CountBoardVisuals(level) + level.boardColumns * 24;
                 int frameUpperBound = (level.FineColumns + level.FineRows) * 2 + 24;
+                frameModuleCapacity = Mathf.Max(frameModuleCapacity, frameUpperBound + CapacitySafetyMargin);
                 int obstacleCellCount = CountObstacleCells(level);
                 int obstacleVisualUpperBound = obstacleCellCount * 3 + level.obstacles.Count;
                 visualCapacity = Mathf.Max(

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using GravityPuzzle.Config;
 using GravityPuzzle.Infrastructure.Pooling;
@@ -6,10 +7,23 @@ namespace GravityPuzzle
 {
     public sealed class ShredderWheel : MonoBehaviour, IPoolable
     {
-        private float rotationSpeed;
+        private static readonly List<ShredderWheel> activeWheels = new List<ShredderWheel>();
+        public static IReadOnlyList<ShredderWheel> ActiveWheels => activeWheels;
+
+        private float baseDirection = 1f;
+        private float idleSpeed = 220f;
+        private float shredSpeed = 550f;
+        private float currentSpeed = 220f;
+        private bool isShredding;
+        private bool isContactVibrating;
+        private Vector3 initialLocalScale = Vector3.one;
+        private Vector3 basePosition;
         private CircleCollider2D trigger;
         private SpriteRenderer[] visualRenderers;
         private bool hasAuthoredHierarchy;
+
+        public float WorldX => transform.position.x;
+        public float Radius { get; private set; }
 
         private void Awake()
         {
@@ -18,12 +32,32 @@ namespace GravityPuzzle
             trigger = GetComponent<CircleCollider2D>();
             visualRenderers = GetComponentsInChildren<SpriteRenderer>(true);
             hasAuthoredHierarchy = trigger != null && visualRenderers.Length > 0;
+            basePosition = transform.position;
+            initialLocalScale = transform.localScale;
+        }
+
+        private void OnEnable()
+        {
+            if (!activeWheels.Contains(this))
+                activeWheels.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            activeWheels.Remove(this);
         }
 
         // Runtime path: a prewarmed prefab instance is configured, never built.
         public void Configure(float radius, float speed)
         {
-            rotationSpeed = speed;
+            Radius = radius;
+            baseDirection = speed >= 0f ? 1f : -1f;
+            idleSpeed = Mathf.Max(10f, Mathf.Abs(speed));
+            shredSpeed = idleSpeed * 2.8f;
+            currentSpeed = idleSpeed;
+            isShredding = false;
+            isContactVibrating = false;
+
             if (!hasAuthoredHierarchy)
             {
                 Debug.LogError("[ShredderPool] ShredderWheel prefab is missing its authored trigger or visual children.", this);
@@ -31,8 +65,28 @@ namespace GravityPuzzle
             }
 
             transform.localScale = Vector3.one * radius;
+            initialLocalScale = transform.localScale;
+            basePosition = transform.position;
             trigger.enabled = true;
             RestoreAuthoredVisuals();
+        }
+
+        public void ConfigureSpeeds(float idle, float shred)
+        {
+            idleSpeed = Mathf.Max(10f, idle);
+            shredSpeed = Mathf.Max(idleSpeed, shred);
+            currentSpeed = isShredding ? shredSpeed : idleSpeed;
+        }
+
+        public void SetShredding(bool active, bool contactVibrate = false)
+        {
+            isShredding = active;
+            isContactVibrating = active && contactVibrate;
+            if (!active)
+            {
+                transform.position = basePosition;
+                transform.localScale = initialLocalScale;
+            }
         }
 
 #if UNITY_EDITOR
@@ -79,7 +133,29 @@ namespace GravityPuzzle
         }
 #endif
 
-        private void Update() => transform.Rotate(0f, 0f, rotationSpeed * Time.deltaTime);
+        private void Update()
+        {
+            float targetSpeed = isShredding ? shredSpeed : idleSpeed;
+            currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, 1200f * Time.deltaTime);
+
+            transform.Rotate(0f, 0f, currentSpeed * baseDirection * Time.deltaTime);
+
+            if (isContactVibrating)
+            {
+                float time = Time.time * 65f;
+                float vibX = Mathf.Sin(time) * 0.015f;
+                float vibY = Mathf.Cos(time * 1.37f) * 0.010f;
+                transform.position = basePosition + new Vector3(vibX, vibY, 0f);
+
+                float scalePulse = 1f + Mathf.Sin(time * 0.85f) * 0.03f;
+                transform.localScale = initialLocalScale * scalePulse;
+            }
+            else
+            {
+                transform.position = basePosition;
+                transform.localScale = initialLocalScale;
+            }
+        }
 
         private void RestoreAuthoredVisuals()
         {
@@ -89,15 +165,20 @@ namespace GravityPuzzle
 
         public void OnSpawn()
         {
-            rotationSpeed = 0f;
+            currentSpeed = idleSpeed;
+            isShredding = false;
+            isContactVibrating = false;
             transform.localRotation = Quaternion.identity;
         }
 
         public void OnDespawn()
         {
-            rotationSpeed = 0f;
+            currentSpeed = idleSpeed;
+            isShredding = false;
+            isContactVibrating = false;
+            transform.position = basePosition;
+            transform.localScale = initialLocalScale;
             transform.localRotation = Quaternion.identity;
         }
-
     }
 }

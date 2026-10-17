@@ -15,7 +15,7 @@ MonoBehaviour:
   overrideLevelBackground: 1
   backgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
   alternateBackgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
-  exteriorColor: {r: 0.22941178, g: 0.19576471, b: 0.52305883, a: 1}
+  exteriorColor: {r: 0.22941178, g: 0.1957647, b: 0.52305883, a: 1}
   environmentTint: {r: 0.78, g: 0.78, b: 0.78, a: 1}
   environmentBackdropMaterial: {fileID: 2100000, guid: 8393891fdbdf84e91990a0fcc91a9dd1, type: 2}
   exteriorEdgeDarkeningMaterial: {fileID: 2100000, guid: b9cf6272a86e4c8cbd13c5d1a848c72a, type: 2}
@@ -96,13 +96,102 @@ MonoBehaviour:
   bottomLeftCorner: {fileID: 907948875, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bottomRightCorner: {fileID: -2049558506, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   renderBottomEdgeSegments: 0
-  frameMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
-  frameTint: {r: 0.29411766, g: 0.2509804, b: 0.67058825, a: 1}
-  frameModuleScale: 0.25
+  frameMaterial: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
+  frameTint: {r: 1, g: 1, b: 1, a: 1}
+  frameModuleScale: 0.5
   frameVisualThicknessMultiplier: 1
-  topEdgeVisualThicknessMultiplier: 0.75
-  topEdgeInwardOverlap: 0.056
-  cornerOutset: {x: 0.01, y: 0.01}
+  topEdgeVisualThicknessMultiplier: 0.25
+  topEdgeInwardOverlap: 0.2
+  cornerOutset: {x: 0, y: 0}
   topCornerHorizontalInset: 0.25
   topCornerVerticalInset: 0.25
   useSceneAuthoredBorders: 1
+  sceneTunaCornerInset: {x: 0.02208, y: 0.0013}
+  sceneTunaEdgeOffset: {x: 0.3091, y: 0.3234}
+  sceneTunaTopRunInset: 0.25325
+  sceneTunaFirstSideDrop: {x: 1.25455, y: 0.92338}
+  frameBackdropSprite: {fileID: 0}
+  frameBackdropMaterial: {fileID: 0}
+  frameBackdropTint: {r: 1, g: 1, b: 1, a: 1}
+  frameBackdropPadding: {x: 0.35, y: 0.35}
+  frameBackdropSortingOrder: -20
+  topLeftFrameRole:
+    sprite: {fileID: 1180291467, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+    material: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    paintedBoundsInset: {x: 0, y: 0, z: 0, w: 0}
+    paintedBoundsOffset: {x: 0, y: 0}
+    sourceScale: 0.64935064
+    joinInset: 0
+    overlap: 0.02
+    sortingOrder: -8
+  topRightFrameRole:
+    sprite: {fileID: 1628857650, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+    material: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    paintedBoundsInset: {x: 0, y: 0, z: 0, w: 0}
+    paintedBoundsOffset: {x: 0, y: 0}
+    sourceScale: 0.64935064
+    joinInset: 0
+    overlap: 0.02
+    sortingOrder: -9
+  bottomLeftFrameRole:
+    sprite: {fileID: 907948875, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+    material: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    paintedBoundsInset: {x: 0, y: 0, z: 0, w: 0}
+    paintedBoundsOffset: {x: 0, y: 0}
+    sourceScale: 0.64935064
+    joinInset: 0
+    overlap: 0.02
+    sortingOrder: -8
+  bottomRightFrameRole:
+    sprite: {fileID: -2049558506, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+    material: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    paintedBoundsInset: {x: 0, y: 0, z: 0, w: 0}
+    paintedBoundsOffset: {x: 0, y: 0}
+    sourceScale: 0.64935064
+    joinInset: 0
+    overlap: 0.02
+    sortingOrder: -8
+  topFrameRole:
+    sprite: {fileID: -448638201, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+    material: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    paintedBoundsInset: {x: 0, y: 0, z: 0, w: 0}
+    paintedBoundsOffset: {x: 0, y: 0}
+    sourceScale: 0.64935064
+    joinInset: 0
+    overlap: 0.02
+    sortingOrder: -8
+  bottomFrameRole:
+    sprite: {fileID: 1112318756, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+    material: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    paintedBoundsInset: {x: 0, y: 0, z: 0, w: 0}
+    paintedBoundsOffset: {x: 0, y: 0}
+    sourceScale: 0.64935064
+    joinInset: 0
+    overlap: 0.02
+    sortingOrder: -8
+  leftFrameRole:
+    sprite: {fileID: -188560374, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+    material: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    paintedBoundsInset: {x: 0, y: 0, z: 0, w: 0}
+    paintedBoundsOffset: {x: 0, y: 0}
+    sourceScale: 0.64935064
+    joinInset: 0
+    overlap: 0.02
+    sortingOrder: 0
+  rightFrameRole:
+    sprite: {fileID: 1536040797, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+    material: {fileID: 2100000, guid: bbe37394a194f4051ad2ecae00155073, type: 2}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    paintedBoundsInset: {x: 0, y: 0, z: 0, w: 0}
+    paintedBoundsOffset: {x: 0, y: 0}
+    sourceScale: 0.64935064
+    joinInset: 0
+    overlap: 0.02
+    sortingOrder: 0

@@ -74,7 +74,6 @@ namespace GravityPuzzle.Presentation.Views
             JointId = -1;
             MemberA = -1;
             MemberB = -1;
-            transform.SetParent(null, false);
             transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.identity;
             if (spriteRenderer != null)

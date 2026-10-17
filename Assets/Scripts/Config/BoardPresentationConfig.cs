@@ -117,6 +117,36 @@ namespace GravityPuzzle.Config
         [Tooltip("When enabled, uses the scene-authored Tuna modular border GameObjects and suppresses the runtime procedural frame runners.")]
         [SerializeField] private bool useSceneAuthoredBorders = true;
 
+        [Header("Scene Tuna Frame Alignment")]
+        [Tooltip("Source-scene corner inset from the grid's top-left and top-right bounds, measured in runtime grid cells.")]
+        [SerializeField] private Vector2 sceneTunaCornerInset = new Vector2(.02208f, .0013f);
+        [Tooltip("Source-scene top-edge height above the grid and side-edge distance outside the grid, in runtime grid cells.")]
+        [SerializeField] private Vector2 sceneTunaEdgeOffset = new Vector2(.3091f, .3234f);
+        [Tooltip("Source-scene horizontal edge inset from each grid side, in runtime grid cells.")]
+        [SerializeField, Min(0f)] private float sceneTunaTopRunInset = .25325f;
+        [Tooltip("Distance from the grid top to the first left and right side module centres, in runtime grid cells.")]
+        [SerializeField] private Vector2 sceneTunaFirstSideDrop = new Vector2(1.25455f, .92338f);
+
+        [Header("Board Frame Backdrop")]
+        [Tooltip("Independent 9-sliced glow panel rendered behind the board grid. It deliberately does not inherit Frame Tint.")]
+        [SerializeField] private Sprite frameBackdropSprite;
+        [SerializeField] private Material frameBackdropMaterial;
+        [SerializeField] private Color frameBackdropTint = Color.white;
+        [Tooltip("Extra world-space coverage around the level bounds for the continuous glow panel.")]
+        [SerializeField] private Vector2 frameBackdropPadding = new Vector2(.35f, .35f);
+        [Tooltip("Sorting order for the continuous glow panel. It must remain behind grid cells and modular frame artwork.")]
+        [SerializeField] private int frameBackdropSortingOrder = -20;
+
+        [Header("Calibrated Frame Roles")]
+        [SerializeField] private BoardFrameRolePresentation topLeftFrameRole = new BoardFrameRolePresentation();
+        [SerializeField] private BoardFrameRolePresentation topRightFrameRole = new BoardFrameRolePresentation();
+        [SerializeField] private BoardFrameRolePresentation bottomLeftFrameRole = new BoardFrameRolePresentation();
+        [SerializeField] private BoardFrameRolePresentation bottomRightFrameRole = new BoardFrameRolePresentation();
+        [SerializeField] private BoardFrameRolePresentation topFrameRole = new BoardFrameRolePresentation();
+        [SerializeField] private BoardFrameRolePresentation bottomFrameRole = new BoardFrameRolePresentation();
+        [SerializeField] private BoardFrameRolePresentation leftFrameRole = new BoardFrameRolePresentation();
+        [SerializeField] private BoardFrameRolePresentation rightFrameRole = new BoardFrameRolePresentation();
+
         public bool OverrideLevelBackground => overrideLevelBackground;
         public Color BackgroundColor => backgroundColor;
         public Color AlternateBackgroundColor => alternateBackgroundColor;
@@ -161,6 +191,15 @@ namespace GravityPuzzle.Config
         public float TopCornerHorizontalInset => Mathf.Max(0f, topCornerHorizontalInset);
         public float TopCornerVerticalInset => Mathf.Max(0f, topCornerVerticalInset);
         public bool UseSceneAuthoredBorders => useSceneAuthoredBorders;
+        public Vector2 SceneTunaCornerInset => sceneTunaCornerInset;
+        public Vector2 SceneTunaEdgeOffset => sceneTunaEdgeOffset;
+        public float SceneTunaTopRunInset => Mathf.Max(0f, sceneTunaTopRunInset);
+        public Vector2 SceneTunaFirstSideDrop => sceneTunaFirstSideDrop;
+        public Sprite FrameBackdropSprite => frameBackdropSprite;
+        public Material FrameBackdropMaterial => frameBackdropMaterial;
+        public Color FrameBackdropTint => frameBackdropTint;
+        public Vector2 FrameBackdropPadding => Vector2.Max(Vector2.zero, frameBackdropPadding);
+        public int FrameBackdropSortingOrder => frameBackdropSortingOrder;
 
         public bool TryGetStaticBlockShape(string shapeKey, out Sprite sprite)
         {
@@ -218,6 +257,32 @@ namespace GravityPuzzle.Config
                     return null;
             }
         }
+
+        public BoardFrameRolePresentation GetFrameRole(BoardFrameEdge edge)
+        {
+            switch (edge)
+            {
+                case BoardFrameEdge.Top:
+                    return topFrameRole;
+                case BoardFrameEdge.Bottom:
+                    return bottomFrameRole;
+                case BoardFrameEdge.Left:
+                    return leftFrameRole;
+                case BoardFrameEdge.Right:
+                    return rightFrameRole;
+                case BoardFrameEdge.TopLeftCorner:
+                    return topLeftFrameRole;
+                case BoardFrameEdge.TopRightCorner:
+                    return topRightFrameRole;
+                case BoardFrameEdge.BottomLeftCorner:
+                    return bottomLeftFrameRole;
+                case BoardFrameEdge.BottomRightCorner:
+                    return bottomRightFrameRole;
+                default:
+                    return null;
+            }
+        }
+
     }
 
     [Serializable]
@@ -241,4 +306,40 @@ namespace GravityPuzzle.Config
         BottomLeftCorner,
         BottomRightCorner
     }
+/// <summary>
+/// Per-role presentation calibration. Insets are normalized against the sprite's
+/// atlas rectangle and describe transparent padding around the painted artwork.
+/// They are deliberately data, rather than inferred at runtime, because source
+/// atlas textures are not guaranteed to be readable in player builds.
+/// </summary>
+[Serializable]
+public sealed class BoardFrameRolePresentation
+{
+    [SerializeField] private Sprite sprite;
+    [SerializeField] private Material material;
+    [SerializeField] private Color tint = Color.white;
+    [Tooltip("Normalized painted-art insets: left, bottom, right, top.")]
+    [SerializeField] private Vector4 paintedBoundsInset;
+    [Tooltip("World-space correction from the sprite pivot to its painted-art centre.")]
+    [SerializeField] private Vector2 paintedBoundsOffset;
+    [SerializeField, Min(.01f)] private float sourceScale = 1f;
+    [SerializeField, Min(0f)] private float joinInset;
+    [SerializeField, Min(0f)] private float overlap = .02f;
+    [SerializeField] private int sortingOrder = -8;
+
+    public Sprite Sprite => sprite;
+    public Material Material => material;
+    public Color Tint => tint;
+    public Vector4 PaintedBoundsInset => new Vector4(
+        Mathf.Clamp01(paintedBoundsInset.x),
+        Mathf.Clamp01(paintedBoundsInset.y),
+        Mathf.Clamp01(paintedBoundsInset.z),
+        Mathf.Clamp01(paintedBoundsInset.w));
+    public Vector2 PaintedBoundsOffset => paintedBoundsOffset;
+    public float SourceScale => Mathf.Max(.01f, sourceScale);
+    public float JoinInset => Mathf.Max(0f, joinInset);
+    public float Overlap => Mathf.Max(0f, overlap);
+    public int SortingOrder => sortingOrder;
+
+}
 }

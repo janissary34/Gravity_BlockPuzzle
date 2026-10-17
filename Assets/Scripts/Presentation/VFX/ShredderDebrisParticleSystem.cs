@@ -4,13 +4,17 @@ using UnityEngine;
 namespace GravityPuzzle.Presentation.VFX
 {
     /// <summary>
-    /// One shared, world-space particle system for all active cutter mouths.
-    /// It is presentation-only: the grid and shredder feed remain the sole
-    /// owners of when a piece is actually released.
+    /// Shared world-space particle systems for active cutter mouths:
+    /// - Layer B: High-speed stretched friction sparks.
+    /// - Layer C: Chunky colored debris falling under gravity.
+    /// Presentation-only: does not own gameplay or piece lifecycle.
     /// </summary>
     [RequireComponent(typeof(ParticleSystem), typeof(ParticleSystemRenderer))]
     public sealed class ShredderDebrisParticleSystem : MonoBehaviour
     {
+        [SerializeField] private ParticleSystem sparksParticleSystem;
+        [SerializeField] private ParticleSystemRenderer sparksRenderer;
+
         private ParticleSystem particleSystemComponent;
         private ParticleSystemRenderer particleRenderer;
         private ShredderConfig config;
@@ -22,15 +26,32 @@ namespace GravityPuzzle.Presentation.VFX
         {
             particleSystemComponent = GetComponent<ParticleSystem>();
             particleRenderer = GetComponent<ParticleSystemRenderer>();
-            // The component is authored on the scene controller, but the
-            // advanced presentation is deliberately opt-in. Do not let Unity's
-            // default ParticleSystem settings emit before BlockShredder enables
-            // it through the config.
-            ParticleSystem.MainModule main = particleSystemComponent.main;
+
+            if (sparksParticleSystem == null)
+            {
+                Transform child = transform.Find("ShredderSparks");
+                if (child != null)
+                {
+                    sparksParticleSystem = child.GetComponent<ParticleSystem>();
+                    sparksRenderer = child.GetComponent<ParticleSystemRenderer>();
+                }
+            }
+
+            InitParticleSystem(particleSystemComponent);
+            if (sparksParticleSystem != null)
+                InitParticleSystem(sparksParticleSystem);
+        }
+
+        private static void InitParticleSystem(ParticleSystem ps)
+        {
+            if (ps == null)
+                return;
+
+            ParticleSystem.MainModule main = ps.main;
             main.playOnAwake = false;
-            ParticleSystem.EmissionModule emission = particleSystemComponent.emission;
+            ParticleSystem.EmissionModule emission = ps.emission;
             emission.enabled = false;
-            particleSystemComponent.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         }
 
         public void Configure(ShredderConfig shredderConfig)
@@ -39,16 +60,14 @@ namespace GravityPuzzle.Presentation.VFX
             if (particleSystemComponent == null || particleRenderer == null || config == null)
                 return;
 
+            // 1. Configure Layer C (Chunky Debris) on the main ParticleSystem
             ParticleSystem.MainModule main = particleSystemComponent.main;
             main.playOnAwake = false;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            // The shared emitter lives on the progress manager, not at every
-            // cutter mouth. Never let off-screen bounds of that host suppress
-            // an explicitly emitted, on-screen shredder burst.
             main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             main.maxParticles = config.DebrisParticleCapacity;
-            main.gravityModifier = config.DebrisGravityModifier;
+            main.gravityModifier = config.DebrisGravityModifier > 0f ? config.DebrisGravityModifier : 2.0f;
 
             ParticleSystem.EmissionModule emission = particleSystemComponent.emission;
             emission.enabled = false;
@@ -63,15 +82,24 @@ namespace GravityPuzzle.Presentation.VFX
             velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(
                 -config.DebrisHorizontalSpeed,
                 config.DebrisHorizontalSpeed);
-            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(
-                -config.DebrisDownwardSpeed * .85f,
-                -config.DebrisDownwardSpeed * .35f);
+
+            // Pop arc: slight initial upward pop then rapid downward gravity drop
+            float upSpeed = config.DebrisUpwardSpeed;
+            AnimationCurve minCurveY = new AnimationCurve(
+                new Keyframe(0f, upSpeed * 0.35f),
+                new Keyframe(0.2f, upSpeed * 0.05f),
+                new Keyframe(1f, -upSpeed * 1.5f));
+            AnimationCurve maxCurveY = new AnimationCurve(
+                new Keyframe(0f, upSpeed * 0.85f),
+                new Keyframe(0.2f, upSpeed * 0.25f),
+                new Keyframe(1f, -upSpeed * 2.2f));
+            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(1f, minCurveY, maxCurveY);
 
             ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = particleSystemComponent.sizeOverLifetime;
             sizeOverLifetime.enabled = true;
             sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(
                 1f,
-                AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
+                AnimationCurve.EaseInOut(0f, 1f, 1f, 0.2f));
 
             ParticleSystem.ColorOverLifetimeModule colorOverLifetime = particleSystemComponent.colorOverLifetime;
             colorOverLifetime.enabled = true;
@@ -85,32 +113,78 @@ namespace GravityPuzzle.Presentation.VFX
                 new[]
                 {
                     new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(.8f, .55f),
+                    new GradientAlphaKey(0.9f, 0.65f),
                     new GradientAlphaKey(0f, 1f)
                 });
             colorOverLifetime.color = fade;
-
-            // The assigned unlit debris material already renders a solid
-            // square quad. Texture-sheet animation is deliberately disabled:
-            // runtime-generated sprites are not consistently supported by
-            // all mobile particle backends and could make otherwise-emitted
-            // particles invisible.
-            ParticleSystem.TextureSheetAnimationModule textureSheet = particleSystemComponent.textureSheetAnimation;
-            textureSheet.enabled = false;
 
             particleRenderer.enabled = true;
             particleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
             particleRenderer.sortingOrder = config.DebrisSortingOrder;
             if (config.DebrisMaterial != null)
                 particleRenderer.sharedMaterial = config.DebrisMaterial;
+
+            // 2. Configure Layer B (Friction Sparks) on the sparks ParticleSystem
+            if (sparksParticleSystem != null)
+            {
+                ParticleSystem.MainModule sparkMain = sparksParticleSystem.main;
+                sparkMain.playOnAwake = false;
+                sparkMain.loop = false;
+                sparkMain.simulationSpace = ParticleSystemSimulationSpace.World;
+                sparkMain.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+                sparkMain.maxParticles = 512;
+                sparkMain.gravityModifier = 0.5f;
+
+                ParticleSystem.EmissionModule sparkEmission = sparksParticleSystem.emission;
+                sparkEmission.enabled = false;
+
+                ParticleSystem.ShapeModule sparkShape = sparksParticleSystem.shape;
+                sparkShape.enabled = true;
+                sparkShape.shapeType = ParticleSystemShapeType.Box;
+
+                ParticleSystem.VelocityOverLifetimeModule sparkVel = sparksParticleSystem.velocityOverLifetime;
+                sparkVel.enabled = true;
+                sparkVel.space = ParticleSystemSimulationSpace.World;
+                sparkVel.x = new ParticleSystem.MinMaxCurve(-4.5f, 4.5f);
+                sparkVel.y = new ParticleSystem.MinMaxCurve(2.5f, 7.5f);
+
+                ParticleSystem.LimitVelocityOverLifetimeModule limitVel = sparksParticleSystem.limitVelocityOverLifetime;
+                limitVel.enabled = true;
+                limitVel.drag = 3.5f;
+                limitVel.multiplyDragByParticleSize = false;
+                limitVel.multiplyDragByParticleVelocity = false;
+
+                ParticleSystem.ColorOverLifetimeModule sparkColorMod = sparksParticleSystem.colorOverLifetime;
+                sparkColorMod.enabled = true;
+                Gradient sparkFade = new Gradient();
+                sparkFade.SetKeys(
+                    new[]
+                    {
+                        new GradientColorKey(Color.white, 0f),
+                        new GradientColorKey(new Color(1f, 0.92f, 0.45f), 0.5f),
+                        new GradientColorKey(new Color(1f, 0.65f, 0.15f), 1f)
+                    },
+                    new[]
+                    {
+                        new GradientAlphaKey(1f, 0f),
+                        new GradientAlphaKey(0.85f, 0.6f),
+                        new GradientAlphaKey(0f, 1f)
+                    });
+                sparkColorMod.color = sparkFade;
+
+                if (sparksRenderer != null)
+                {
+                    sparksRenderer.enabled = true;
+                    sparksRenderer.renderMode = ParticleSystemRenderMode.Stretch;
+                    sparksRenderer.velocityScale = 0.22f;
+                    sparksRenderer.lengthScale = 1.0f;
+                    sparksRenderer.sortingOrder = 28;
+                    if (config.DebrisMaterial != null)
+                        sparksRenderer.sharedMaterial = config.DebrisMaterial;
+                }
+            }
         }
 
-        /// <summary>
-        /// Emits debris from the visible material-conversion band at the mouth.
-        /// The vertical distribution is deliberate: a single horizontal source
-        /// reads as a mask edge, while this compact volume reads as block matter
-        /// continuously breaking apart before it disappears behind the wheels.
-        /// </summary>
         public void EmitAtCutter(Vector2 cutterPosition, float width, Color color, int count)
         {
             if (particleSystemComponent == null || config == null || count <= 0)
@@ -121,14 +195,11 @@ namespace GravityPuzzle.Presentation.VFX
             int particleCount = Mathf.Min(count, Mathf.Max(0, remainingParticleBudget));
             if (particleCount <= 0)
                 return;
+
             emittedParticleCountThisFrame += particleCount;
             EmitParticles(cutterPosition, width, color, particleCount);
         }
 
-        /// <summary>
-        /// The first tooth contact gets its own bounded GPU-particle budget so
-        /// it reads as material fracturing, not as a gradual mask reveal.
-        /// </summary>
         public void EmitEntryBurstAtCutter(Vector2 cutterPosition, float width, Color color, int count)
         {
             if (particleSystemComponent == null || config == null || count <= 0)
@@ -149,29 +220,60 @@ namespace GravityPuzzle.Presentation.VFX
             if (!particleSystemComponent.isPlaying)
                 particleSystemComponent.Play();
 
-            Vector2 sizeRange = config.DebrisSizeRange;
+            Vector2 sizeRange = config.DebrisSize;
             float minSize = Mathf.Min(sizeRange.x, sizeRange.y);
             float maxSize = Mathf.Max(sizeRange.x, sizeRange.y);
             float bandHeight = config.DebrisContactBandHeight;
             Color opaqueColor = new Color(color.r, color.g, color.b, 1f);
-            // Shape, lifetime, size and velocity modules randomise individual
-            // particles on the native side. A single bulk call therefore
-            // creates a true field of voxels rather than stacked copies of one
-            // particle, with no managed loop per particle.
+
             ParticleSystem.MainModule main = particleSystemComponent.main;
             main.startColor = opaqueColor;
             main.startSize = new ParticleSystem.MinMaxCurve(minSize, maxSize);
-            main.startLifetime = new ParticleSystem.MinMaxCurve(
-                config.DebrisLifetime * .78f,
-                config.DebrisLifetime * 1.18f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.3f, 0.45f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
 
             ParticleSystem.ShapeModule shape = particleSystemComponent.shape;
-            float sourceHeight = bandHeight + .035f;
+            float sourceHeight = bandHeight + 0.035f;
             shape.scale = new Vector3(width, sourceHeight, 0f);
-            Vector3 sourceCenter = cutterPosition + Vector2.up * ((bandHeight - .035f) * .5f);
+            Vector3 sourceCenter = cutterPosition + Vector2.up * ((bandHeight - 0.035f) * 0.5f);
             shape.position = particleSystemComponent.transform.InverseTransformPoint(sourceCenter);
-            particleSystemComponent.Emit(particleCount);
+
+            int sparkCount = particleCount > 2 ? Mathf.Max(1, Mathf.RoundToInt(particleCount * 0.35f)) : 0;
+            int chipCount = Mathf.Max(1, particleCount - sparkCount);
+
+            // Layer C: Chunky colored debris
+            particleSystemComponent.Emit(chipCount);
+
+            // Layer B: Friction sparks
+            if (sparkCount > 0)
+            {
+                if (sparksParticleSystem != null)
+                {
+                    if (!sparksParticleSystem.isPlaying)
+                        sparksParticleSystem.Play();
+
+                    ParticleSystem.MainModule sparkMain = sparksParticleSystem.main;
+                    sparkMain.startColor = Color.white;
+                    sparkMain.startSize = new ParticleSystem.MinMaxCurve(0.04f, 0.08f);
+                    sparkMain.startLifetime = new ParticleSystem.MinMaxCurve(0.12f, 0.22f);
+                    sparkMain.startSpeed = new ParticleSystem.MinMaxCurve(6f, 10f);
+
+                    ParticleSystem.ShapeModule sparkShape = sparksParticleSystem.shape;
+                    sparkShape.scale = new Vector3(width, 0.05f, 0f);
+                    sparkShape.position = sparksParticleSystem.transform.InverseTransformPoint(cutterPosition);
+
+                    sparksParticleSystem.Emit(sparkCount);
+                }
+                else
+                {
+                    // Fallback to primary particle system if sparks system is not present
+                    Color sparkColor = Color.Lerp(opaqueColor, Color.white, 0.85f);
+                    main.startColor = sparkColor;
+                    main.startSize = new ParticleSystem.MinMaxCurve(minSize * 0.4f, minSize * 0.8f);
+                    main.startLifetime = new ParticleSystem.MinMaxCurve(0.12f, 0.22f);
+                    particleSystemComponent.Emit(sparkCount);
+                }
+            }
         }
 
         private void RefreshFrameBudget()

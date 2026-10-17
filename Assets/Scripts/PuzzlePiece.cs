@@ -202,6 +202,7 @@ namespace GravityPuzzle
         private SpriteMaskInteraction[] shredderPresentationMaskStates;
         private int[] shredderPresentationSortingOrders;
         private int shredderPresentationOutlineSortingOrder;
+        private Vector2 currentVisualJitterOffset;
         private enum ShredderHandoffMode
         {
             None,
@@ -1626,6 +1627,63 @@ namespace GravityPuzzle
             }
         }
 
+        public void ApplyShredderVisualJitter(Vector2 jitterOffset)
+        {
+            Vector2 delta = jitterOffset - currentVisualJitterOffset;
+            if (delta == Vector2.zero)
+                return;
+
+            currentVisualJitterOffset = jitterOffset;
+            if (shredderPresentationRenderers != null)
+            {
+                for (int i = 0; i < shredderPresentationRenderers.Length; i++)
+                {
+                    SpriteRenderer r = shredderPresentationRenderers[i];
+                    if (r != null && r.transform.IsChildOf(transform))
+                        r.transform.localPosition += (Vector3)delta;
+                }
+            }
+
+            if (configuredVoxelShards != null)
+            {
+                for (int i = 0; i < configuredVoxelShards.Count; i++)
+                {
+                    VoxelShard s = configuredVoxelShards[i];
+                    if (s != null && s.transform.IsChildOf(transform))
+                        s.transform.localPosition += (Vector3)delta;
+                }
+            }
+        }
+
+        public void ResetShredderVisualJitter()
+        {
+            if (currentVisualJitterOffset == Vector2.zero)
+                return;
+
+            Vector2 undoDelta = -currentVisualJitterOffset;
+            currentVisualJitterOffset = Vector2.zero;
+
+            if (shredderPresentationRenderers != null)
+            {
+                for (int i = 0; i < shredderPresentationRenderers.Length; i++)
+                {
+                    SpriteRenderer r = shredderPresentationRenderers[i];
+                    if (r != null && r.transform.IsChildOf(transform))
+                        r.transform.localPosition += (Vector3)undoDelta;
+                }
+            }
+
+            if (configuredVoxelShards != null)
+            {
+                for (int i = 0; i < configuredVoxelShards.Count; i++)
+                {
+                    VoxelShard s = configuredVoxelShards[i];
+                    if (s != null && s.transform.IsChildOf(transform))
+                        s.transform.localPosition += (Vector3)undoDelta;
+                }
+            }
+        }
+
         public void HideShredderRenderer(SpriteRenderer renderer)
         {
             if (renderer != null && renderer.transform.IsChildOf(transform))
@@ -1647,6 +1705,7 @@ namespace GravityPuzzle
 
         private void RestoreShredderPresentation()
         {
+            ResetShredderVisualJitter();
             shredderDissolvePresentation?.Restore();
             if (shredderPresentationRenderers == null)
                 return;

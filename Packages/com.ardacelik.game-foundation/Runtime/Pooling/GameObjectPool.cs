@@ -62,7 +62,15 @@ namespace Arda.GameFoundation.Pooling
                 return;
 
             item.OnDespawn();
-            item.transform.SetParent(parent, false);
+            if (parent != null)
+            {
+                if (item.transform.parent != parent && parent.gameObject.scene.isLoaded)
+                    item.transform.SetParent(parent, false);
+            }
+            else if (item.transform.parent != null)
+            {
+                item.transform.SetParent(null, false);
+            }
             item.gameObject.SetActive(false);
             available.Push(item);
         }

@@ -28,6 +28,8 @@ namespace GravityPuzzle
         private static LevelRuntimeRoot configuredLevelRuntimeRoot;
         private static Sprite obstacleJoinSprite;
         private static Sprite obstacleJoinSpriteSource;
+        private static Sprite obstacleSlicedSprite;
+        private static Sprite obstacleSlicedSpriteSource;
         private static int currentLevelIndex = -1;
         private static BoosterRewardConfig queuedBoosterReward;
         private static bool levelSequenceInitialized;
@@ -52,6 +54,8 @@ namespace GravityPuzzle
             configuredLevelRuntimeRoot = null;
             obstacleJoinSprite = null;
             obstacleJoinSpriteSource = null;
+            obstacleSlicedSprite = null;
+            obstacleSlicedSpriteSource = null;
             currentLevelIndex = -1;
             queuedBoosterReward = null;
             levelSequenceInitialized = false;
@@ -807,13 +811,14 @@ namespace GravityPuzzle
             int edgeIndex = 0;
             Transform frameRoot = configuredLevelRuntimeRoot.BoardFrameRoot;
 
-            if (configuredBoardPresentationConfig != null &&
-                configuredBoardPresentationConfig.UseSceneAuthoredBorders)
+            if (UsesAuthoredFrameModules() && !configuredBoardPresentationConfig.RenderBottomEdgeSegments)
             {
-                // The scene has authored modular Tuna borders (GameObject (5)); procedural runners are suppressed.
+                CreateSceneTunaFrame(level);
                 CreateMapCollisionBlocks(level, exitWidth, fineCellSize);
                 return;
             }
+
+            ConfigureFrameBackdrop(level);
 
             // Map Shape defines playable board topology, not decorative walls.
             // Only the outside perimeter is rendered as a frame; cut-outs stay
@@ -863,6 +868,10 @@ namespace GravityPuzzle
                 }
             }
 
+            // Reserve the top corners first. Straight modules are subsequently
+            // fitted into the remaining edge spans, so every level starts from
+            // the same explicit corner-to-corner frame construction.
+            CreateOuterFrameCorners(frameRoot, level, fineCellSize, thickness, ref edgeIndex);
             CreateHorizontalFrameRuns(
                 frameRoot,
                 level,
@@ -890,10 +899,82 @@ namespace GravityPuzzle
                 1f,
                 BoardFrameEdge.Right,
                 ref edgeIndex);
-            CreateOuterFrameCorners(frameRoot, level, fineCellSize, thickness, ref edgeIndex);
             CreateLowerFrameContinuation(frameRoot, level, thickness, ref edgeIndex);
 
             CreateMapCollisionBlocks(level, exitWidth, fineCellSize);
+        }
+
+        private static void CreateSceneTunaFrame(GravityLevelDefinition level)
+        {
+            float halfWidth = level.boardColumns * .5f;
+            float halfHeight = level.boardRows * .5f;
+            Vector2 cornerInset = configuredBoardPresentationConfig.SceneTunaCornerInset;
+            Vector2 edgeOffset = configuredBoardPresentationConfig.SceneTunaEdgeOffset;
+            Vector2 firstSideDrop = configuredBoardPresentationConfig.SceneTunaFirstSideDrop;
+
+            RentSceneTunaModule(BoardFrameEdge.TopLeftCorner,
+                new Vector2(-halfWidth + cornerInset.x, halfHeight - cornerInset.y));
+            RentSceneTunaModule(BoardFrameEdge.TopRightCorner,
+                new Vector2(halfWidth - cornerInset.x, halfHeight - cornerInset.y));
+
+            float inset = Mathf.Min(halfWidth, configuredBoardPresentationConfig.SceneTunaTopRunInset);
+            PlaceSceneTunaRun(BoardFrameEdge.Top, -halfWidth + inset, halfWidth - inset,
+                halfHeight + edgeOffset.y, true);
+
+            float bottom = -halfHeight - ResolveLowerPresentationExtent(level);
+            PlaceSceneTunaRun(BoardFrameEdge.Left, bottom,
+                halfHeight - firstSideDrop.x + GetSceneTunaModuleSize(BoardFrameEdge.Left).y * .5f,
+                -halfWidth - edgeOffset.x, false);
+            PlaceSceneTunaRun(BoardFrameEdge.Right, bottom,
+                halfHeight - firstSideDrop.y + GetSceneTunaModuleSize(BoardFrameEdge.Right).y * .5f,
+                halfWidth + edgeOffset.x, false);
+        }
+
+        private static Vector2 GetSceneTunaModuleSize(BoardFrameEdge edge)
+        {
+            Sprite sprite = configuredLevelRuntimeRoot.GetFrameTemplateSprite(ToFrameModuleRole(edge));
+            BoardFrameRolePresentation role = configuredBoardPresentationConfig.GetFrameRole(edge);
+            if (sprite == null || role == null)
+                throw new InvalidOperationException($"[BoardFrame] Missing Scene Tuna sprite or calibration for {edge}.");
+            return (Vector2)sprite.bounds.size * role.SourceScale;
+        }
+
+        private static void RentSceneTunaModule(BoardFrameEdge edge, Vector2 position)
+        {
+            RentSceneTunaModule(edge, position, GetSceneTunaModuleSize(edge));
+        }
+
+        private static void RentSceneTunaModule(BoardFrameEdge edge, Vector2 position, Vector2 size)
+        {
+            configuredLevelRuntimeRoot.RentFrameModule(
+                ToFrameModuleRole(edge), $"Scene Tuna {edge}", position, size,
+                GetFrameTint(edge), GetFrameMaterial(edge), GetFrameSortingOrder(edge),
+                GetFrameSprite(edge), false, edge == BoardFrameEdge.Top, true);
+        }
+
+        private static void PlaceSceneTunaRun(
+            BoardFrameEdge edge, float start, float end, float crossAxis, bool horizontal)
+        {
+            Vector2 nativeSize = GetSceneTunaModuleSize(edge);
+            float nativeLength = horizontal ? nativeSize.x : nativeSize.y;
+            float length = end - start;
+            if (length <= 0f || nativeLength <= .001f)
+                return;
+
+            int count = Mathf.Max(1, Mathf.CeilToInt(length / nativeLength));
+            float moduleLength = Mathf.Min(length, nativeLength);
+            for (int index = 0; index < count; index++)
+            {
+                // The final full-sized module overlaps the previous one when the
+                // interval is not a whole number of source modules; no atlas art is stretched.
+                float moduleStart = Mathf.Min(start + index * nativeLength, end - moduleLength);
+                float centre = moduleStart + moduleLength * .5f;
+                Vector2 position = horizontal ? new Vector2(centre, crossAxis) : new Vector2(crossAxis, centre);
+                Vector2 size = horizontal
+                    ? new Vector2(moduleLength, nativeSize.y)
+                    : new Vector2(nativeSize.x, moduleLength);
+                RentSceneTunaModule(edge, position, size);
+            }
         }
 
         private static void CreateLowerFrameContinuation(
@@ -975,7 +1056,8 @@ namespace GravityPuzzle
                     bool usesAuthoredContinuousFrame = configuredBoardPresentationConfig != null;
                     float leftTrim = 0f;
                     float rightTrim = 0f;
-                    if (!usesAuthoredContinuousFrame && frameEdge == BoardFrameEdge.Top && y == level.FineRows - 1)
+                    if (UsesAuthoredFrameModules() &&
+                        frameEdge == BoardFrameEdge.Top && y == level.FineRows - 1)
                     {
                         if (startX == 0 && HasOuterFrameCorner(
                                 level,
@@ -985,7 +1067,7 @@ namespace GravityPuzzle
                             leftTrim = GetCornerJoinTrim(
                                 thickness,
                                 configuredBoardPresentationConfig.CornerOutset.x) +
-                                configuredBoardPresentationConfig.TopCornerHorizontalInset;
+                                GetFrameRoleJoinInset(BoardFrameEdge.TopLeftCorner);
                         }
 
                         if (x == level.FineColumns && HasOuterFrameCorner(
@@ -996,13 +1078,13 @@ namespace GravityPuzzle
                             rightTrim = GetCornerJoinTrim(
                                 thickness,
                                 configuredBoardPresentationConfig.CornerOutset.x) +
-                                configuredBoardPresentationConfig.TopCornerHorizontalInset;
+                                GetFrameRoleJoinInset(BoardFrameEdge.TopRightCorner);
                         }
                     }
 
                     // Atlas strips render exactly over the exposed board span.
-                    // Their corners render above them, so keeping the full span
-                    // gives a small intentional overlap instead of a visible gap.
+                    // Modular authored borders instead reserve the two corner
+                    // joins and fill the interval between them exactly.
                     float runLength = length * fineCellSize +
                                       (usesAuthoredContinuousFrame ? 0f : thickness);
                     float visibleLength = Mathf.Max(.001f, runLength - leftTrim - rightTrim);
@@ -1054,7 +1136,7 @@ namespace GravityPuzzle
                     bool usesAuthoredContinuousFrame = configuredBoardPresentationConfig != null;
                     float bottomTrim = 0f;
                     float topTrim = 0f;
-                    if (!usesAuthoredContinuousFrame && startY == 0)
+                    if (UsesAuthoredFrameModules() && startY == 0)
                     {
                         BoardFrameEdge bottomCorner = frameEdge == BoardFrameEdge.Left
                             ? BoardFrameEdge.BottomLeftCorner
@@ -1067,7 +1149,7 @@ namespace GravityPuzzle
                         }
                     }
 
-                    if (!usesAuthoredContinuousFrame && y == level.FineRows)
+                    if (UsesAuthoredFrameModules() && y == level.FineRows)
                     {
                         BoardFrameEdge topCorner = frameEdge == BoardFrameEdge.Left
                             ? BoardFrameEdge.TopLeftCorner
@@ -1077,7 +1159,7 @@ namespace GravityPuzzle
                             topTrim = GetCornerJoinTrim(
                                 thickness,
                                 configuredBoardPresentationConfig.CornerOutset.y) +
-                                configuredBoardPresentationConfig.TopCornerVerticalInset;
+                                GetFrameRoleJoinInset(topCorner);
                         }
                         else if (configuredBoardPresentationConfig != null)
                         {
@@ -1249,7 +1331,7 @@ namespace GravityPuzzle
             BoardFrameEdge frameEdge)
         {
             if (configuredBoardPresentationConfig != null &&
-                configuredBoardPresentationConfig.GetEdgeSprite(frameEdge) == null)
+                GetFrameSprite(frameEdge) == null)
                 return;
 
             if (!IsFrameCorner(frameEdge) && TryCreateRepeatedFrameModules(
@@ -1262,6 +1344,20 @@ namespace GravityPuzzle
 
             if (IsFrameCorner(frameEdge))
             {
+                if (UsesAuthoredFrameModules())
+                {
+                    configuredLevelRuntimeRoot.RentFrameModule(
+                        ToFrameModuleRole(frameEdge),
+                        name,
+                        position,
+                        size,
+                        GetFrameTint(frameEdge),
+                        GetFrameMaterial(frameEdge),
+                        GetFrameSortingOrder(frameEdge),
+                        GetFrameSprite(frameEdge));
+                    return;
+                }
+
                 GameObject cornerObject = CreateAuthoredVisualBlock(name, position, size, color);
                 cornerObject.transform.SetParent(frameRoot, true);
                 ApplyFramePresentation(cornerObject.GetComponent<SpriteRenderer>(), size, frameEdge);
@@ -1287,20 +1383,21 @@ namespace GravityPuzzle
             if (configuredBoardPresentationConfig == null)
                 return false;
 
-            Sprite sprite = configuredBoardPresentationConfig.GetEdgeSprite(frameEdge);
+            Sprite sprite = GetFrameSprite(frameEdge);
             if (sprite == null)
                 return false;
 
+            BoardFrameRolePresentation role = configuredBoardPresentationConfig.GetFrameRole(frameEdge);
+
             bool horizontal = frameEdge == BoardFrameEdge.Top ||
                               frameEdge == BoardFrameEdge.Bottom;
-            float thicknessMultiplier = frameEdge == BoardFrameEdge.Top
-                ? configuredBoardPresentationConfig.TopEdgeVisualThicknessMultiplier
-                : configuredBoardPresentationConfig.FrameVisualThicknessMultiplier;
             float originalThickness = horizontal ? size.y : size.x;
             Vector2 spriteSize = sprite.bounds.size;
-            float nativeScale = configuredBoardPresentationConfig.FrameModuleScale;
-            float visualThickness = (horizontal ? spriteSize.y : spriteSize.x) *
-                                    nativeScale * thicknessMultiplier;
+            float nativeScale = role != null
+                ? role.SourceScale
+                : configuredBoardPresentationConfig.FrameModuleScale;
+            Vector2 paintedSpriteSize = GetPaintedSpriteSize(sprite, role);
+            float visualThickness = (horizontal ? spriteSize.y : spriteSize.x) * nativeScale;
 
             // Authored Scene Tuna modules straddle the logical board boundary.
             // The former implementation aligned their inner transparent edge
@@ -1316,26 +1413,56 @@ namespace GravityPuzzle
             else if (frameEdge == BoardFrameEdge.Right)
                 position.x -= originalThickness * .5f;
 
-            float nativeLength = (horizontal ? spriteSize.x : spriteSize.y) *
+            float nativeLength = (horizontal ? paintedSpriteSize.x : paintedSpriteSize.y) *
                                  nativeScale;
             float requestedLength = horizontal ? size.x : size.y;
             if (nativeLength <= .001f || requestedLength <= .001f)
                 return false;
 
-            // Render repeated modular blocks along the edge (matching Scene Tuna's modular obstacle look)
-            int count = Mathf.Max(1, Mathf.RoundToInt(requestedLength / nativeLength));
-            float step = count > 1 ? (requestedLength - nativeLength) / (count - 1) : 0f;
-            float start = -requestedLength * 0.5f + nativeLength * 0.5f;
+            // Each middle module keeps its authored painted length. Only the
+            // terminal module is fitted to the true remainder, while the
+            // role-owned overlap hides transparent atlas gutters at joins.
+            float overlap = role != null ? role.Overlap : 0f;
+            float advance = Mathf.Max(.001f, nativeLength - overlap);
+            int count = Mathf.Max(1, Mathf.CeilToInt((requestedLength - overlap) / advance));
+            float start = -requestedLength * .5f + nativeLength * .5f;
 
             for (int i = 0; i < count; i++)
             {
-                float offset = count == 1 ? 0f : (start + i * step);
+                float remainingLength = requestedLength - i * advance;
+                float paintedLength = i == count - 1
+                    ? Mathf.Max(.001f, remainingLength)
+                    : nativeLength;
+                float offset = start + i * advance;
                 Vector2 modulePos = horizontal
                     ? new Vector2(position.x + offset, position.y)
                     : new Vector2(position.x, position.y + offset);
-                Vector2 visualSize = horizontal
-                    ? new Vector2(nativeLength, visualThickness)
-                    : new Vector2(visualThickness, nativeLength);
+                Vector2 visualSize = GetFullSpriteVisualSize(
+                    sprite,
+                    role,
+                    horizontal,
+                    paintedLength,
+                    visualThickness);
+                modulePos += GetPaintedBoundsWorldOffset(
+                    sprite,
+                    role,
+                    horizontal,
+                    paintedLength,
+                    visualThickness);
+
+                if (UsesAuthoredFrameModules())
+                {
+                    configuredLevelRuntimeRoot.RentFrameModule(
+                        ToFrameModuleRole(frameEdge),
+                        $"{name} Module {i + 1}",
+                        modulePos,
+                        visualSize,
+                        GetFrameTint(frameEdge),
+                        GetFrameMaterial(frameEdge),
+                        GetFrameSortingOrder(frameEdge),
+                        sprite);
+                    continue;
+                }
 
                 GameObject module = CreateAuthoredVisualBlock(
                     $"{name} Module {i + 1}",
@@ -1354,6 +1481,152 @@ namespace GravityPuzzle
             }
 
             return true;
+        }
+
+        private static bool UsesAuthoredFrameModules()
+        {
+            return configuredBoardPresentationConfig != null &&
+                   configuredBoardPresentationConfig.UseSceneAuthoredBorders &&
+                   configuredLevelRuntimeRoot != null &&
+                   configuredLevelRuntimeRoot.HasAuthoredFrameModuleSlots;
+        }
+
+        private static void ConfigureFrameBackdrop(GravityLevelDefinition level)
+        {
+            if (configuredBoardPresentationConfig == null || configuredLevelRuntimeRoot == null ||
+                configuredBoardPresentationConfig.FrameBackdropSprite == null)
+            {
+                return;
+            }
+
+            Vector2 padding = configuredBoardPresentationConfig.FrameBackdropPadding;
+            configuredLevelRuntimeRoot.ConfigureFrameBackdrop(
+                Vector2.zero,
+                new Vector2(
+                    level.boardColumns + padding.x * 2f,
+                    level.boardRows + padding.y * 2f),
+                configuredBoardPresentationConfig.FrameBackdropSprite,
+                configuredBoardPresentationConfig.FrameBackdropMaterial,
+                configuredBoardPresentationConfig.FrameBackdropTint,
+                configuredBoardPresentationConfig.FrameBackdropSortingOrder);
+        }
+
+        private static Sprite GetFrameSprite(BoardFrameEdge edge)
+        {
+            BoardFrameRolePresentation role = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.GetFrameRole(edge)
+                : null;
+            return role != null && role.Sprite != null
+                ? role.Sprite
+                : configuredBoardPresentationConfig != null
+                    ? configuredBoardPresentationConfig.GetEdgeSprite(edge)
+                    : null;
+        }
+
+        private static Material GetFrameMaterial(BoardFrameEdge edge)
+        {
+            BoardFrameRolePresentation role = configuredBoardPresentationConfig.GetFrameRole(edge);
+            return role != null && role.Material != null
+                ? role.Material
+                : configuredBoardPresentationConfig.FrameMaterial;
+        }
+
+        private static Color GetFrameTint(BoardFrameEdge edge)
+        {
+            BoardFrameRolePresentation role = configuredBoardPresentationConfig.GetFrameRole(edge);
+            return role != null ? role.Tint : configuredBoardPresentationConfig.FrameTint;
+        }
+
+        private static int GetFrameSortingOrder(BoardFrameEdge edge)
+        {
+            BoardFrameRolePresentation role = configuredBoardPresentationConfig.GetFrameRole(edge);
+            return role != null
+                ? role.SortingOrder
+                : IsFrameCorner(edge) ? FrameCornerSortingOrder : FrameSortingOrder;
+        }
+
+        private static float GetFrameRoleJoinInset(BoardFrameEdge edge)
+        {
+            BoardFrameRolePresentation role = configuredBoardPresentationConfig.GetFrameRole(edge);
+            return role != null ? role.JoinInset : 0f;
+        }
+
+        private static Vector2 GetPaintedSpriteSize(
+            Sprite sprite,
+            BoardFrameRolePresentation role)
+        {
+            Vector2 spriteSize = sprite.bounds.size;
+            if (role == null)
+                return spriteSize;
+
+            Vector4 inset = role.PaintedBoundsInset;
+            return new Vector2(
+                Mathf.Max(.001f, spriteSize.x * (1f - inset.x - inset.z)),
+                Mathf.Max(.001f, spriteSize.y * (1f - inset.y - inset.w)));
+        }
+
+        private static Vector2 GetFullSpriteVisualSize(
+            Sprite sprite,
+            BoardFrameRolePresentation role,
+            bool horizontal,
+            float paintedLength,
+            float visualThickness)
+        {
+            Vector2 spriteSize = sprite.bounds.size;
+            Vector2 paintedSize = GetPaintedSpriteSize(sprite, role);
+            if (horizontal)
+            {
+                float scale = paintedLength / paintedSize.x;
+                return new Vector2(spriteSize.x * scale, visualThickness);
+            }
+
+            float verticalScale = paintedLength / paintedSize.y;
+            return new Vector2(visualThickness, spriteSize.y * verticalScale);
+        }
+
+        private static Vector2 GetPaintedBoundsWorldOffset(
+            Sprite sprite,
+            BoardFrameRolePresentation role,
+            bool horizontal,
+            float paintedLength,
+            float visualThickness)
+        {
+            if (role == null)
+                return Vector2.zero;
+
+            Vector2 spriteSize = sprite.bounds.size;
+            Vector2 paintedSize = GetPaintedSpriteSize(sprite, role);
+            float scaleX = horizontal
+                ? paintedLength / paintedSize.x
+                : visualThickness / spriteSize.x;
+            float scaleY = horizontal
+                ? visualThickness / spriteSize.y
+                : paintedLength / paintedSize.y;
+            Vector2 sourceOffset = role.PaintedBoundsOffset;
+            return new Vector2(sourceOffset.x * scaleX, sourceOffset.y * scaleY);
+        }
+
+        private static BoardFrameModuleRole ToFrameModuleRole(BoardFrameEdge edge)
+        {
+            switch (edge)
+            {
+                case BoardFrameEdge.Top:
+                    return BoardFrameModuleRole.TopEdgeModule;
+                case BoardFrameEdge.Bottom:
+                    return BoardFrameModuleRole.BottomEdgeModule;
+                case BoardFrameEdge.Left:
+                    return BoardFrameModuleRole.LeftEdgeModule;
+                case BoardFrameEdge.Right:
+                    return BoardFrameModuleRole.RightEdgeModule;
+                case BoardFrameEdge.TopLeftCorner:
+                    return BoardFrameModuleRole.TopLeftCorner;
+                case BoardFrameEdge.TopRightCorner:
+                    return BoardFrameModuleRole.TopRightCorner;
+                case BoardFrameEdge.BottomLeftCorner:
+                    return BoardFrameModuleRole.BottomLeftCorner;
+                default:
+                    return BoardFrameModuleRole.BottomRightCorner;
+            }
         }
 
         private static void CreateOuterFrameCorners(
@@ -1460,20 +1733,20 @@ namespace GravityPuzzle
 
         private static float GetOuterFrameCornerSize(float thickness)
         {
-            Sprite cornerSprite = configuredBoardPresentationConfig != null
-                ? configuredBoardPresentationConfig.GetEdgeSprite(BoardFrameEdge.TopLeftCorner)
-                : null;
+            Sprite cornerSprite = GetFrameSprite(BoardFrameEdge.TopLeftCorner);
             if (cornerSprite == null)
                 return Mathf.Max(.001f, thickness);
 
             // Keep the authored Scene Tuna corner at its native module scale.
             // Compressing it to the logical collision-frame thickness turns
             // the curve into a detached square cap at the end of the top rail.
+            BoardFrameRolePresentation role = configuredBoardPresentationConfig.GetFrameRole(
+                BoardFrameEdge.TopLeftCorner);
             Vector2 spriteSize = cornerSprite.bounds.size;
             return Mathf.Max(
                 .001f,
                 Mathf.Max(spriteSize.x, spriteSize.y) *
-                configuredBoardPresentationConfig.FrameModuleScale);
+                (role != null ? role.SourceScale : configuredBoardPresentationConfig.FrameModuleScale));
         }
 
         private static float GetCornerJoinTrim(
@@ -1499,11 +1772,9 @@ namespace GravityPuzzle
 
             renderer.sprite = sprite;
             bool isCorner = IsFrameCorner(edge);
-            renderer.sharedMaterial = configuredBoardPresentationConfig.FrameMaterial;
-            renderer.color = configuredBoardPresentationConfig.FrameTint;
-            renderer.sortingOrder = isCorner
-                ? FrameCornerSortingOrder
-                : FrameSortingOrder;
+            renderer.sharedMaterial = GetFrameMaterial(edge);
+            renderer.color = GetFrameTint(edge);
+            renderer.sortingOrder = GetFrameSortingOrder(edge);
 
             Vector2 spriteSize = sprite.bounds.size;
             if (spriteSize.x <= 0f || spriteSize.y <= 0f)
@@ -1683,7 +1954,8 @@ namespace GravityPuzzle
                 topY - thickness * .5f),
                 new Vector2(width, thickness),
                 topY,
-                shredderConfig.CaptureApproachDistance);
+                shredderConfig.CaptureApproachDistance,
+                radius);
         }
 
         private static void CreateObstacles(GravityLevelDefinition level)
@@ -1885,6 +2157,7 @@ namespace GravityPuzzle
             Color color,
             Sprite modularSprite)
         {
+            modularSprite = GetSlicedObstacleSprite(modularSprite);
             // Exact atlas silhouettes remain the preferred path. For shapes
             // that the atlas does not contain, merge contiguous row spans and
             // then extend identical spans vertically. This turns an arbitrary
@@ -1951,6 +2224,23 @@ namespace GravityPuzzle
             }
 
             CreateObstacleJoinVisuals(level, rectangles, color, material, modularSprite);
+        }
+
+        private static Sprite GetSlicedObstacleSprite(Sprite source)
+        {
+            if (obstacleSlicedSprite != null && obstacleSlicedSpriteSource == source)
+                return obstacleSlicedSprite;
+
+            // Sliced renderers require a full-rectangle mesh. Keep the atlas
+            // texture and border intact without changing the import settings
+            // for every other sprite in the artist's atlas.
+            Rect rect = source.rect;
+            Vector2 pivot = new Vector2(source.pivot.x / rect.width, source.pivot.y / rect.height);
+            obstacleSlicedSpriteSource = source;
+            obstacleSlicedSprite = Sprite.Create(source.texture, rect, pivot,
+                source.pixelsPerUnit, 0, SpriteMeshType.FullRect, source.border);
+            obstacleSlicedSprite.name = source.name + " Sliced Full Rect";
+            return obstacleSlicedSprite;
         }
 
         private static void CreateObstacleJoinVisuals(

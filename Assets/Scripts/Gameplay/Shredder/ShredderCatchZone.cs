@@ -14,6 +14,7 @@ namespace GravityPuzzle
         private BoxCollider2D trigger;
         public static IReadOnlyList<ShredderCatchZone> ActiveZones => activeZones;
         public float ShredY { get; private set; }
+        public float WheelRadius { get; private set; }
         public float LeftX => leftX;
         public float RightX => rightX;
         private float leftX;
@@ -32,13 +33,14 @@ namespace GravityPuzzle
             trigger = GetComponent<BoxCollider2D>();
         }
 
-        public void Configure(Vector2 position, Vector2 size, float shredY, float approachDistance)
+        public void Configure(Vector2 position, Vector2 size, float shredY, float approachDistance, float wheelRadius = 0.4f)
         {
             transform.position = position;
             trigger.size = size;
             trigger.isTrigger = true;
             trigger.enabled = true;
             ShredY = shredY;
+            WheelRadius = Mathf.Max(0.1f, wheelRadius);
             leftX = position.x - size.x * .5f;
             rightX = position.x + size.x * .5f;
             captureTopY = position.y + size.y * .5f;
@@ -204,6 +206,7 @@ namespace GravityPuzzle
         public void OnSpawn()
         {
             ShredY = 0f;
+            WheelRadius = 0f;
             leftX = 0f;
             rightX = 0f;
             captureTopY = 0f;
@@ -214,6 +217,7 @@ namespace GravityPuzzle
         {
             trigger.enabled = false;
             ShredY = 0f;
+            WheelRadius = 0f;
             leftX = 0f;
             rightX = 0f;
             captureTopY = 0f;

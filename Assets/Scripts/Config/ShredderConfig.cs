@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Serialization;
+using GravityPuzzle.Presentation.Views;
 
 namespace GravityPuzzle.Config
 {
@@ -34,10 +35,16 @@ namespace GravityPuzzle.Config
         [Range(128, 8192)] [SerializeField] private int debrisParticleCapacity = 1536;
         [Tooltip("Lifetime of a square debris fragment in seconds.")]
         [Range(.05f, 2f)] [SerializeField] private float debrisLifetime = .58f;
-        [Tooltip("World-space size range for debris fragments.")]
-        [SerializeField] private Vector2 debrisSizeRange = new Vector2(.035f, .09f);
-        [Tooltip("Initial downward pull that makes fragments read as being drawn into the wheels.")]
-        [Range(0f, 8f)] [SerializeField] private float debrisDownwardSpeed = 2.8f;
+        [FormerlySerializedAs("debrisSizeRange")]
+        [Tooltip("Layer C: World-space size range for chunky colored gravity debris chips.")]
+        [SerializeField] private Vector2 debrisSize = new Vector2(0.12f, 0.22f);
+        [Tooltip("Layer A: Brightness and alpha multiplier for the additive contact glow seam hider.")]
+        [Range(0.1f, 5f)] [SerializeField] private float glowIntensity = 1.4f;
+        [Tooltip("Layer B: Number of high-speed stretched friction sparks emitted during contact bursts.")]
+        [Range(1, 60)] [SerializeField] private int sparkEmissionRate = 20;
+        [FormerlySerializedAs("debrisDownwardSpeed")]
+        [Tooltip("Initial upward pop speed that sends debris above the cutter mouth to obscure the clipping seam.")]
+        [Range(0f, 8f)] [SerializeField] private float debrisUpwardSpeed = 2.6f;
         [Tooltip("Small lateral variation applied as fragments leave the cutter line.")]
         [Range(0f, 4f)] [SerializeField] private float debrisHorizontalSpeed = .75f;
         [Tooltip("Particle-system gravity multiplier for the debris after it leaves the wheels.")]
@@ -66,6 +73,8 @@ namespace GravityPuzzle.Config
         [Min(1)] [SerializeField] private int physicsMouthPoolCapacity = 1;
         [SerializeField] private ShredderFeedMask feedMaskPrefab;
         [SerializeField] private PhysicsMaterial2D feedPhysicsMaterial;
+        [SerializeField] private ShredderContactGlowView contactGlowPrefab;
+        [Min(1)] [SerializeField] private int contactGlowPoolCapacity = 4;
 
         [Header("Temporary Physics Island")]
         [Tooltip("Lets only a contact-connected stack above a shredder feed use Unity physics briefly. Normal board gravity remains grid-owned.")]
@@ -91,6 +100,12 @@ namespace GravityPuzzle.Config
         [SerializeField] private Vector2 feedMaskScale = new Vector2(60f, 30f);
 
         [Header("Runtime Shredder Wheels")]
+        [Tooltip("Idle rotation speed of shredder gears in degrees/second.")]
+        [Min(0f)] [SerializeField] private float gearIdleSpeed = 220f;
+        [Tooltip("Active rotation speed of shredder gears during block contact (2.5x - 3x idle).")]
+        [Min(0f)] [SerializeField] private float gearShredSpeed = 600f;
+        [Tooltip("Clipping height ratio relative to wheel radius (0 = top tangent, 0.45 = upper-middle line behind teeth).")]
+        [Range(0.1f, 0.9f)] [SerializeField] private float gearClippingRatio = 0.45f;
         [Min(0.01f)] [SerializeField] private float wheelRadiusMultiplier = 1f;
         [Min(0f)] [SerializeField] private float wheelRotationSpeedMultiplier = 1f;
         [Tooltip("Small board-space tolerance above the cutter line used to capture a piece on the final legal grid row.")]
@@ -137,6 +152,8 @@ namespace GravityPuzzle.Config
         public ShredderPhysicsMouth PhysicsMouthPrefab => physicsMouthPrefab;
         public int PhysicsMouthPoolCapacity => physicsMouthPoolCapacity;
         public ShredderFeedMask FeedMaskPrefab => feedMaskPrefab;
+        public ShredderContactGlowView ContactGlowPrefab => contactGlowPrefab;
+        public int ContactGlowPoolCapacity => contactGlowPoolCapacity;
         public float FeedMaskVerticalOffset => feedMaskVerticalOffset;
         public Vector2 FeedMaskScale => feedMaskScale;
         /// <summary>Authored low-friction material used only during a shredder feed.</summary>
@@ -175,8 +192,15 @@ namespace GravityPuzzle.Config
         public int MaxDebrisPerFrame => maxDebrisPerFrame;
         public int DebrisParticleCapacity => debrisParticleCapacity;
         public float DebrisLifetime => debrisLifetime;
-        public Vector2 DebrisSizeRange => debrisSizeRange;
-        public float DebrisDownwardSpeed => debrisDownwardSpeed;
+        public Vector2 DebrisSize => debrisSize;
+        public Vector2 DebrisSizeRange => debrisSize;
+        public float GlowIntensity => glowIntensity;
+        public int SparkEmissionRate => sparkEmissionRate;
+        public float GearIdleSpeed => gearIdleSpeed;
+        public float GearShredSpeed => gearShredSpeed;
+        public float GearClippingRatio => Mathf.Clamp(gearClippingRatio, 0.1f, 0.9f);
+        public float DebrisDownwardSpeed => debrisUpwardSpeed;
+        public float DebrisUpwardSpeed => debrisUpwardSpeed;
         public float DebrisHorizontalSpeed => debrisHorizontalSpeed;
         public float DebrisGravityModifier => debrisGravityModifier;
         public float DebrisAngularVelocity => debrisAngularVelocity;

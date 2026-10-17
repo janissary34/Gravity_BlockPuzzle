@@ -12,25 +12,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50a1c14f239a644cb9c0492628aa4e8e, type: 3}
   m_Name: ShredderConfig
   m_EditorClassIdentifier: 
-  feedMaskMouthInset: 0.14
-  enableContactDebrisPresentation: 0
+  feedMaskMouthInset: 0.16
+  enableContactDebrisPresentation: 1
   progressVoxelMultiplier: 4
   enableAdvancedShreddingPresentation: 0
-  debrisPerSecondPerWorldUnit: 4500
-  debrisEntryBurstPerWorldUnit: 256
-  maxDebrisEntryBurstPerFrame: 256
-  debrisFinalBurstPerWorldUnit: 180
-  debrisContactBandHeight: 0.18
-  debrisBurstPerCrossedCell: 32
-  maxDebrisPerFrame: 96
-  debrisParticleCapacity: 4096
-  debrisLifetime: 0.55
-  debrisSizeRange: {x: 0.03, y: 0.075}
-  debrisDownwardSpeed: 3.2
-  debrisHorizontalSpeed: 0.12
-  debrisGravityModifier: 0.35
+  debrisPerSecondPerWorldUnit: 30
+  debrisEntryBurstPerWorldUnit: 18
+  maxDebrisEntryBurstPerFrame: 24
+  debrisFinalBurstPerWorldUnit: 12
+  debrisContactBandHeight: 0.22
+  debrisBurstPerCrossedCell: 4
+  maxDebrisPerFrame: 20
+  debrisParticleCapacity: 512
+  debrisLifetime: 0.35
+  debrisSize: {x: 0.12, y: 0.22}
+  glowIntensity: 1.4
+  sparkEmissionRate: 20
+  debrisUpwardSpeed: 2.4
+  debrisHorizontalSpeed: 1.0
+  debrisGravityModifier: 2.0
   debrisAngularVelocity: 540
-  debrisSortingOrder: 28
+  debrisSortingOrder: 24
   debrisMaterial: {fileID: 2100000, guid: 7c2f5cdfc9c4450a9938e69f3dd6cee1, type: 2}
   cutterEdgeAmplitude: 0.075
   cutterEdgeSoftness: 0.035
@@ -43,6 +45,8 @@ MonoBehaviour:
   physicsMouthPoolCapacity: 1
   feedMaskPrefab: {fileID: 7388911840364374829, guid: bce66f74d48164638a9b3d050d7db5c3, type: 3}
   feedPhysicsMaterial: {fileID: 6200000, guid: 9eb6102580d2f4baa88e6b9e2ee5187f, type: 2}
+  contactGlowPrefab: {fileID: 5501872390192847104, guid: e3d2c1b0a987654321fedcba09876543, type: 3}
+  contactGlowPoolCapacity: 4
   enablePhysicsIsland: 1
   physicsIslandGravityScale: 1
   physicsIslandAngularDrag: 4
@@ -53,6 +57,9 @@ MonoBehaviour:
   physicsIslandGuideDepth: 6
   feedMaskVerticalOffset: -15
   feedMaskScale: {x: 60, y: 30}
+  gearIdleSpeed: 220
+  gearShredSpeed: 600
+  gearClippingRatio: 0.45
   wheelRadiusMultiplier: 1
   wheelRotationSpeedMultiplier: 1
   captureApproachDistance: 0.04
@@ -70,7 +77,7 @@ MonoBehaviour:
   feedSpeed: 2
   tremorIntensity: 0.045
   tremorFrequency: 55
-  feedShakeAmplitude: 1
+  feedShakeAmplitude: 1.2
   feedAngularDrag: 6
   tumbleTorque: 7.5
   maxFeedTiltAngle: 5

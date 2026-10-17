@@ -45,6 +45,12 @@ collider slots in Edit Mode. Runtime construction only renames, positions, sizes
 enables, and skins those existing components; it does not instantiate these
 objects or add their components.
 
+`SceneTunaBoardFrame.prefab` is nested under `Composite Board Frame` inside that
+runtime-root prefab. It is an editable artist baseline and pre-authored slot
+owner for the modular frame. `GravityLevelRuntime` configures those slots from
+the selected level's perimeter (corners first, then directional edge runs); its
+sprites are presentation-only and do not own map collision or grid topology.
+
 The following hierarchy groups therefore remain visible outside Play Mode:
 
 * `Board Background`

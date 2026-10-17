@@ -35,6 +35,7 @@ Obstacle gameplay collision and obstacle visuals have separate ownership:
 * `Obstacle N Collision` objects provide static collision.
 * A matching atlas silhouette is rendered as `Merged Obstacle Visual`.
 * Shapes without a matching silhouette are decomposed into `Sliced Obstacle Visual` rectangles and join visuals.
+  The sliced rectangles reuse the configured atlas texture and border through a cached full-rectangle sprite mesh; switching the renderer to sliced mode must precede restoring unit transform scale. This avoids changing the atlas import settings for unrelated artwork.
 
 Visual merging must never change authored obstacle cells, collider dimensions, or board occupancy.
 
@@ -56,10 +57,11 @@ A presentation refresh may rewrite sprites, materials, visibility, sorting, and 
 
 ## Directional Board Frame
 
-* Board frames use artist-authored directional atlas sprites (`Edge_Left`, `Edge_Right`, `Edge_Top`, and corners) from `map.png` / `BoardPresentationConfig`.
-* In `Scene_Tuna` and `Scene1`, the full modular border hierarchy (`GameObject (5)`) is scene-authored with 35 distinct 1x1 block obstacle-like modules (12 left, 12 right, 6 top, and corners) rather than flat stretched tubes.
-* `BoardPresentationConfig.UseSceneAuthoredBorders` configures `GravityLevelRuntime.CreateBoardFrame` to suppress procedural frame runner generation when scene-authored borders are active, while continuing to generate exact physics collision bounds via `CreateMapCollisionBlocks`.
-* For dynamic procedural levels without scene-authored borders, `TryCreateRepeatedFrameModules` generates repeated 1x1 modular block tiles along the edges, preserving the 3D beveled block / obstacle aesthetic across all level dimensions.
+The decorative frame uses the Scene Tuna atlas pieces `Corner_Top_Left`, `Corner_Top_Right`, `Edge_Top`, `Edge_Left`, and `Edge_Right`. Scene Tuna's grid cells are 0.77 world units wide; its authored 0.5 sprite scale is therefore converted to `0.5 / 0.77` for the one-unit runtime grid. The top strip retains the source's vertical flip. Source-relative join positions live in `BoardPresentationConfig`; no generated backdrop or replacement frame art participates in this frame.
+
+`Assets/Prefabs/SceneTunaBoardFrame.prefab` provides pre-authored pools under `LevelRuntimeRoot/Composite Board Frame`. For open-bottom boards, `GravityLevelRuntime` places the two top corners first and fills the outer bounds with matching source strips; the last full-size strip overlaps to fit the remainder rather than stretching its artwork. The first SpriteRenderer in each active role's Slots group is its editable template: its sprite, material, color, sorting order and flip are copied to that role's placed modules. Edit those templates in the frame prefab; module positions and scales are controlled by level geometry and `BoardPresentationConfig`. A rented slot's GameObject is activated as well as its renderer, because copied Scene Tuna objects may have been authored inactive. These modules are presentation-only; `CreateMapCollisionBlocks` remains the sole source of collision and grid occupancy.
+
+Run `Gravity Puzzle/Level Authoring/Rebuild Level Runtime Root` after changing module capacity. It validates configured levels and leaves the first valid level as an edit-mode preview. The pre-authored objects remain disabled until a preview/build configures them; this avoids runtime `Instantiate`/`Destroy`.
 
 ## Counters and Piece Overlays
 
@@ -76,4 +78,19 @@ A presentation refresh may rewrite sprites, materials, visibility, sorting, and 
 * Connecting springs are oriented horizontally across vertical boundaries and vertically across horizontal boundaries, positioned exactly at opposing stud centers (one spring per connected stud pair, spaced at `±0.25f` along the seam).
 * The spiral sprite scale is calibrated to `0.1495036f` to match the exact 0.50 world-unit stud distance between 2x2 modular block studs, with a vertical hole offset of `0.099f` ensuring the spiral holes sit dead-center on top of the studs at sorting order 20.
 * **Inspector Alignment & Tuning**: `JointSpringPresenter` (and `PieceVisualConfig`) exposes serialized tuning fields (`springScale`, `studOffset`, `holeDepthOffset`, `positionOffset`, `horizontalJointOffset`, `verticalJointOffset`). In Unity Editor Play Mode, modifying any of these fields triggers `OnValidate()` to reconcile active views in real time for immediate visual alignment feedback.
+* **Lifecycle & Teardown**: In-scene reconfigurations (`Configure`) return active springs via `ClearAll()`. Teardown (`OnDestroy`) unbinds graph events, releases board references, and clears tracked dictionaries without attempting to reparent active views to a destroying pool parent.
+
+## Shredder Feed Presentation
+
+* **Occlusion & Masking**: Pieces entering the shredder are visually clipped using a pooled `ShredderFeedMask` whose top edge is inset into the shredder mouth (`FeedMaskMouthInset`).
+* **Visual Layering**:
+  * Puzzle Pieces: sorting orders 5..9
+  * Shredder Wheels (disc, teeth, hub): sorting orders 25..27
+  * Contact Debris Particles: sorting order 28
+  * Friction Contact Glow: sorting order 29
+* **Additive Friction Contact Glow**:
+  * Handled by pooled `ShredderContactGlowView` (`ShredderContactGlowPool`), prewarmed at bootstrap.
+  * Uses an additive Universal2D shader (`ShredderContactGlow.shader`, `Blend One One`) and high-frequency friction pulsation to blow out pixel contrast right at the contact seam, disguising the horizontal clipping boundary.
+  * Rented once per piece feed coroutine and tracked against `TryGetCutterContactSurface` bounds without per-frame garbage allocations, then safely returned in the feed coroutine's `finally` block.
+
 

@@ -81,6 +81,28 @@ namespace GravityPuzzle.EditorTools
                     debris = shredder.gameObject.AddComponent<ShredderDebrisParticleSystem>();
                 }
 
+                Transform sparksChild = shredder.transform.Find("ShredderSparks");
+                if (sparksChild == null)
+                {
+                    GameObject sparksGo = new GameObject("ShredderSparks");
+                    sparksGo.transform.SetParent(shredder.transform, false);
+                    sparksChild = sparksGo.transform;
+                }
+                ParticleSystem sparkPs = sparksChild.GetComponent<ParticleSystem>();
+                if (sparkPs == null)
+                    sparkPs = sparksChild.gameObject.AddComponent<ParticleSystem>();
+                ParticleSystemRenderer sparkRenderer = sparkPs.GetComponent<ParticleSystemRenderer>();
+                sparkRenderer.renderMode = ParticleSystemRenderMode.Stretch;
+                sparkRenderer.velocityScale = 0.22f;
+                sparkRenderer.lengthScale = 1.0f;
+                sparkRenderer.sortingOrder = 28;
+
+                SerializedObject serializedDebris = new SerializedObject(debris);
+                serializedDebris.FindProperty("sparksParticleSystem").objectReferenceValue = sparkPs;
+                serializedDebris.FindProperty("sparksRenderer").objectReferenceValue = sparkRenderer;
+                serializedDebris.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(debris);
+
                 SerializedObject serializedShredder = new SerializedObject(shredder);
                 serializedShredder.FindProperty("debrisParticleSystem").objectReferenceValue = debris;
                 serializedShredder.ApplyModifiedPropertiesWithoutUndo();

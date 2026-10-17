@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Presentation.VFX;
+using GravityPuzzle.Presentation.Views;
 using UnityEngine;
 
 namespace GravityPuzzle
@@ -138,6 +139,11 @@ namespace GravityPuzzle
             }
             if (shredderConfig != null && shredderConfig.FeedMaskPrefab != null)
                 ShredderFeedMaskPool.Configure(shredderConfig.FeedMaskPrefab, transform);
+            if (shredderConfig != null && shredderConfig.ContactGlowPrefab != null)
+                ShredderContactGlowPool.Configure(
+                    shredderConfig.ContactGlowPrefab,
+                    transform,
+                    shredderConfig.ContactGlowPoolCapacity);
         }
 
         private void FixedUpdate()
@@ -602,8 +608,11 @@ namespace GravityPuzzle
             }
 
             float shredderY = zone.ShredY;
+            float wheelRadius = zone.WheelRadius > 0f ? zone.WheelRadius : 0.4f;
+            float gearClippingRatio = shredderConfig != null ? shredderConfig.GearClippingRatio : 0.45f;
+            float clippingSeamY = shredderY - (wheelRadius * gearClippingRatio);
 
-            AcquireFeedMask(shredderY);
+            AcquireFeedMask(clippingSeamY);
 
             // 1. Release the piece into physics with its full collision geometry
             // intact. Individual lower cells are removed only when they reach
@@ -624,7 +633,7 @@ namespace GravityPuzzle
             // cutter surface with its own irregular edge.
             piece.PrepareModularShredderSurface();
             SpriteRenderer[] pieceRenderers = piece.ConfiguredShredderRenderers ?? EmptyRenderers;
-            piece.BeginShredderPresentation(pieceRenderers, shredderY, shredderConfig);
+            piece.BeginShredderPresentation(pieceRenderers, clippingSeamY, shredderConfig);
             piece.ApplyShredderPresentationClipping();
             piece.SetShredderPresentationDepth(0);
             // Always use the authored PuzzlePiece colour for debris and UI voxels.
@@ -670,20 +679,14 @@ namespace GravityPuzzle
             float feedSpeed = shredderConfig != null ? shredderConfig.FeedSpeed : 3.8f;
             float maxTime = 6.0f;
             float elapsed = 0f;
-            float previousShakeOffsetX = 0f;
             float tremorIntensity = shredderConfig != null ? shredderConfig.TremorIntensity : .045f;
             float tremorFrequency = shredderConfig != null ? shredderConfig.TremorFrequency : 55f;
             float shakeAmplitude = shredderConfig != null ? shredderConfig.FeedShakeAmplitude : 2.5f;
             float maxTiltAngle = shredderConfig != null ? shredderConfig.MaxFeedTiltAngle : 5f;
             float debrisAccumulator = 0f;
-            // The mask's top edge is lowered into the wheel mouth. Wheel teeth
-            // render above this edge, turning visual removal into occlusion.
-            float visualCutterY = shredderY - (shredderConfig != null
-                ? shredderConfig.FeedMaskMouthInset
-                : 0f);
-            // Fragments start at the visible mouth/top tooth tangent, before
-            // the mask hides material farther inside the wheel mechanism.
-            float debrisContactY = shredderY;
+            // The clipping seam sits at the center/upper-middle line of the wheels.
+            float visualCutterY = clippingSeamY;
+            float debrisContactY = clippingSeamY;
             int totalCollisionCells = piece.CollisionCellCount;
 
             // Total area based on true cell blocks (1 unit per block)
@@ -697,6 +700,8 @@ namespace GravityPuzzle
             Vector2 lastContactCenter = Vector2.zero;
             float lastContactWidth = 0f;
             bool isShreddingSoundActive = false;
+            ShredderContactGlowView activeGlowView = null;
+            ShredderContactGlowPool.TryRent(out activeGlowView);
 
             try
             {
@@ -710,18 +715,8 @@ namespace GravityPuzzle
 
                 if (rb != null)
                 {
-                    // Apply continuous high-frequency horizontal tremor
-                    float shakeOffsetX = Mathf.Sin(Time.time * tremorFrequency) * tremorIntensity * shakeAmplitude;
-                    // The feed is kinematic, so commit its position here rather
-                    // than waiting for a later physics step to integrate a
-                    // velocity.  The grid release immediately below must see
-                    // the same cutter crossing as the presentation; otherwise
-                    // pieces above keep treating already-shredded cells as solid
-                    // until the whole root is returned to its pool.
-                    rb.MovePosition(rb.position + new Vector2(
-                        shakeOffsetX - previousShakeOffsetX,
-                        -feedSpeed * feedDeltaTime));
-                    previousShakeOffsetX = shakeOffsetX;
+                    // The feed is kinematic, so commit its position steadily downwards.
+                    rb.MovePosition(rb.position + new Vector2(0f, -feedSpeed * feedDeltaTime));
 
                     // Kinematic bodies do not integrate torque. Advance the
                     // authored feed angular velocity explicitly so a dynamic
@@ -756,11 +751,50 @@ namespace GravityPuzzle
                         isShreddingSoundActive = true;
                         StartContinuousShredSound();
                     }
+
+                    // Apply high-frequency mechanical vibration to visual renderers without jittering the physics body
+                    float shakeOffsetX = Mathf.Sin(Time.time * tremorFrequency) * tremorIntensity * shakeAmplitude;
+                    float shakeOffsetY = Mathf.Cos(Time.time * tremorFrequency * 1.37f) * tremorIntensity * shakeAmplitude * 0.35f;
+                    piece.ApplyShredderVisualJitter(new Vector2(shakeOffsetX, shakeOffsetY));
+
+                    // Accelerate gears and vibrate active contact gears touching the block
+                    IReadOnlyList<ShredderWheel> activeWheels = ShredderWheel.ActiveWheels;
+                    float halfContact = contactWidth * 0.55f;
+                    float contactMinX = currentContactCenter.x - halfContact;
+                    float contactMaxX = currentContactCenter.x + halfContact;
+                    for (int w = 0; w < activeWheels.Count; w++)
+                    {
+                        ShredderWheel wheel = activeWheels[w];
+                        if (wheel == null) continue;
+                        float wx = wheel.transform.position.x;
+                        bool isTouching = wx >= contactMinX && wx <= contactMaxX;
+                        wheel.SetShredding(true, isTouching);
+                    }
+
+                    if (activeGlowView != null)
+                    {
+                        float glowIntensity = shredderConfig != null ? shredderConfig.GlowIntensity : 1.4f;
+                        activeGlowView.UpdateGlow(currentContactCenter, contactWidth, tileColor, glowIntensity);
+                    }
+                }
+                else
+                {
+                    piece.ResetShredderVisualJitter();
+                    IReadOnlyList<ShredderWheel> activeWheels = ShredderWheel.ActiveWheels;
+                    for (int w = 0; w < activeWheels.Count; w++)
+                    {
+                        ShredderWheel wheel = activeWheels[w];
+                        if (wheel != null)
+                            wheel.SetShredding(false, false);
+                    }
+
+                    if (activeGlowView != null)
+                        activeGlowView.Hide();
                 }
 
                 // Release cells that have reached the cutter mouth for physics clearance.
                 releasedCellsBuffer.Clear();
-                float cutterThresholdY = shredderY + (shredderConfig != null
+                float cutterThresholdY = clippingSeamY + (shredderConfig != null
                     ? shredderConfig.CaptureApproachDistance + 0.12f
                     : 0.16f);
                 piece.ReleaseCollisionCellsAtOrBelow(cutterThresholdY, releasedCellsBuffer);
@@ -892,7 +926,7 @@ namespace GravityPuzzle
                     VoxelShard shard = shardList[i];
                     if (shard == null || processedShards.Contains(shard)) continue;
 
-                    if (shard.transform.position.y <= shredderY)
+                    if (shard.transform.position.y <= clippingSeamY)
                     {
                         processedShards.Add(shard);
 
@@ -977,6 +1011,8 @@ namespace GravityPuzzle
                     }
 
                     EmitFinalDebrisBurst(lastContactCenter, lastContactWidth, tileColor);
+                    if (activeGlowView != null)
+                        activeGlowView.Hide();
                     if (isShreddingSoundActive)
                     {
                         isShreddingSoundActive = false;
@@ -988,6 +1024,23 @@ namespace GravityPuzzle
             }
             finally
             {
+                IReadOnlyList<ShredderWheel> activeWheels = ShredderWheel.ActiveWheels;
+                for (int w = 0; w < activeWheels.Count; w++)
+                {
+                    ShredderWheel wheel = activeWheels[w];
+                    if (wheel != null)
+                        wheel.SetShredding(false, false);
+                }
+
+                if (piece != null)
+                    piece.ResetShredderVisualJitter();
+
+                if (activeGlowView != null)
+                {
+                    ShredderContactGlowPool.Return(activeGlowView);
+                    activeGlowView = null;
+                }
+
                 if (isShreddingSoundActive)
                 {
                     isShreddingSoundActive = false;

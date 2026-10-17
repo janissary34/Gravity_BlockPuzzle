@@ -65,6 +65,8 @@ namespace GravityPuzzle.Presentation.Views
             if (boardState != null && boardState.JointSpringPresenter == this)
                 boardState.JointSpringPresenter = null;
 
+            ClearAll();
+
             boardState = board;
             if (boardState != null)
                 boardState.JointSpringPresenter = this;
@@ -95,7 +97,10 @@ namespace GravityPuzzle.Presentation.Views
             if (boardState != null && boardState.JointSpringPresenter == this)
                 boardState.JointSpringPresenter = null;
 
-            ClearAll();
+            activeSpringViews.Clear();
+            jointBuffer.Clear();
+            springKeysToRemove.Clear();
+            JointSpringPool.ResetPool();
         }
 
         private void LateUpdate()
