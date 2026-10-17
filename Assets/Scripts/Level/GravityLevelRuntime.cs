@@ -2231,14 +2231,17 @@ namespace GravityPuzzle
             if (obstacleSlicedSprite != null && obstacleSlicedSpriteSource == source)
                 return obstacleSlicedSprite;
 
-            // Sliced renderers require a full-rectangle mesh. Keep the atlas
-            // texture and border intact without changing the import settings
-            // for every other sprite in the artist's atlas.
+            // Normal one-cell art is fitted to one world unit. Using its
+            // original PPU here would leave the sliced borders in the atlas's
+            // larger native units instead of matching that fitted artwork.
+            // Preserve secondary textures as well: the obstacle shader uses
+            // the atlas's _ShineMask at the same UVs as its base texture.
             Rect rect = source.rect;
             Vector2 pivot = new Vector2(source.pivot.x / rect.width, source.pivot.y / rect.height);
             obstacleSlicedSpriteSource = source;
             obstacleSlicedSprite = Sprite.Create(source.texture, rect, pivot,
-                source.pixelsPerUnit, 0, SpriteMeshType.FullRect, source.border);
+                rect.height, 0, SpriteMeshType.FullRect, source.border, false,
+                CopySecondaryTextures(source));
             obstacleSlicedSprite.name = source.name + " Sliced Full Rect";
             return obstacleSlicedSprite;
         }
@@ -2342,9 +2345,23 @@ namespace GravityPuzzle
                 new Vector2(.5f, .5f),
                 source.pixelsPerUnit,
                 0,
-                SpriteMeshType.FullRect);
+                SpriteMeshType.FullRect,
+                Vector4.zero,
+                false,
+                CopySecondaryTextures(source));
             obstacleJoinSprite.name = source.name + " Join Centre";
             return obstacleJoinSprite;
+        }
+
+        private static SecondarySpriteTexture[] CopySecondaryTextures(Sprite source)
+        {
+            int count = source.GetSecondaryTextureCount();
+            if (count == 0)
+                return null;
+
+            var textures = new SecondarySpriteTexture[count];
+            source.GetSecondaryTextures(textures);
+            return textures;
         }
 
         private static void CreateObstacleJoinVisual(

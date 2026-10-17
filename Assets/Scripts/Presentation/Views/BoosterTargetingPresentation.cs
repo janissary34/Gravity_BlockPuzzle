@@ -86,6 +86,9 @@ namespace GravityPuzzle.Presentation.Views
             new List<GameObjectState>();
         private readonly List<HudGroupState> hiddenBoosterButtonStates =
             new List<HudGroupState>();
+        private bool boosterButtonGroupsValid;
+        private TutorialHandView cachedTutorialHand;
+        private bool wasTutorialFocusActive;
         private readonly struct HudGroupState
         {
             public readonly CanvasGroup Group;
@@ -132,7 +135,17 @@ namespace GravityPuzzle.Presentation.Views
 
         private void EnsureBoosterButtonGroups()
         {
-            if (rocketBoosterButtonGroup == null)
+            if (boosterButtonGroupsValid &&
+                rocketBoosterButtonGroup != null &&
+                hammerBoosterButtonGroup != null &&
+                timerBoosterButtonGroup != null)
+            {
+                return;
+            }
+
+            if (rocketBoosterButtonGroup == null ||
+                (rocketBoosterButtonGroup.GetComponent<RocketBooster>() == null &&
+                 rocketBoosterButtonGroup.GetComponent<BoosterButton>() == null))
             {
                 RocketBooster rocket = GetComponentInChildren<RocketBooster>(true);
                 if (rocket == null)
@@ -141,7 +154,9 @@ namespace GravityPuzzle.Presentation.Views
                     rocketBoosterButtonGroup = rocket.GetComponent<CanvasGroup>();
             }
 
-            if (hammerBoosterButtonGroup == null)
+            if (hammerBoosterButtonGroup == null ||
+                (hammerBoosterButtonGroup.GetComponent<HammerBooster>() == null &&
+                 hammerBoosterButtonGroup.GetComponent<BoosterButton>() == null))
             {
                 HammerBooster hammer = GetComponentInChildren<HammerBooster>(true);
                 if (hammer == null)
@@ -150,7 +165,10 @@ namespace GravityPuzzle.Presentation.Views
                     hammerBoosterButtonGroup = hammer.GetComponent<CanvasGroup>();
             }
 
-            if (timerBoosterButtonGroup == null)
+            if (timerBoosterButtonGroup == null ||
+                (timerBoosterButtonGroup.GetComponent<FreezeTimerBooster>() == null &&
+                 timerBoosterButtonGroup.GetComponent<TimerBooster>() == null &&
+                 timerBoosterButtonGroup.GetComponent<BoosterButton>() == null))
             {
                 FreezeTimerBooster freeze = GetComponentInChildren<FreezeTimerBooster>(true);
                 if (freeze == null)
@@ -165,6 +183,13 @@ namespace GravityPuzzle.Presentation.Views
                     if (timer != null)
                         timerBoosterButtonGroup = timer.GetComponent<CanvasGroup>();
                 }
+            }
+
+            if (rocketBoosterButtonGroup != null &&
+                hammerBoosterButtonGroup != null &&
+                timerBoosterButtonGroup != null)
+            {
+                boosterButtonGroupsValid = true;
             }
         }
 
@@ -242,6 +267,13 @@ namespace GravityPuzzle.Presentation.Views
         /// </summary>
         public static void ShowFirstUseBoosterFocus(BoosterRewardType boosterType)
         {
+            if (Active == null)
+            {
+                Active = Object.FindFirstObjectByType<BoosterTargetingPresentation>(FindObjectsInactive.Include);
+                if (Active != null)
+                    Active.EnsureBoosterButtonGroups();
+            }
+
             if (Active != null)
                 Active.ShowFirstUseBoosterFocusInternal(boosterType);
         }
@@ -303,6 +335,10 @@ namespace GravityPuzzle.Presentation.Views
 
         private void ShowFirstUseBoosterFocusInternal(BoosterRewardType boosterType)
         {
+            EnsureBoosterButtonGroups();
+            ResolveButtonGlowReferences();
+            ResolveSparkleReferences();
+
             HideGameplayHud();
             HideInactiveBoosterButtons(boosterType);
             if (boardDimBackdrop != null)
@@ -655,11 +691,19 @@ namespace GravityPuzzle.Presentation.Views
 
         private void ResolveButtonGlowReferences()
         {
+            EnsureBoosterButtonGroups();
+
             if (rocketButtonGlow == null && rocketBoosterButtonGroup != null)
             {
                 BoosterButton button = rocketBoosterButtonGroup.GetComponent<BoosterButton>();
                 if (button != null && button.SelectionGlow != null)
                     rocketButtonGlow = button.SelectionGlow;
+                if (rocketButtonGlow == null)
+                {
+                    Transform glow = rocketBoosterButtonGroup.transform.Find("RocketSelectionGlow");
+                    if (glow != null)
+                        rocketButtonGlow = glow.gameObject;
+                }
             }
 
             if (hammerButtonGlow == null && hammerBoosterButtonGroup != null)
@@ -667,6 +711,12 @@ namespace GravityPuzzle.Presentation.Views
                 BoosterButton button = hammerBoosterButtonGroup.GetComponent<BoosterButton>();
                 if (button != null && button.SelectionGlow != null)
                     hammerButtonGlow = button.SelectionGlow;
+                if (hammerButtonGlow == null)
+                {
+                    Transform glow = hammerBoosterButtonGroup.transform.Find("HammerSelectionGlow");
+                    if (glow != null)
+                        hammerButtonGlow = glow.gameObject;
+                }
             }
 
             if (timerButtonGlow == null && timerBoosterButtonGroup != null)
@@ -676,9 +726,27 @@ namespace GravityPuzzle.Presentation.Views
                     timerButtonGlow = button.SelectionGlow;
                 if (timerButtonGlow == null)
                 {
+                    TimerBooster tb = timerBoosterButtonGroup.GetComponent<TimerBooster>();
+                    if (tb != null && tb.SelectionGlow != null)
+                        timerButtonGlow = tb.SelectionGlow;
+                }
+                if (timerButtonGlow == null)
+                {
                     Transform glow = timerBoosterButtonGroup.transform.Find("TimerSelectionGlow");
                     if (glow != null)
                         timerButtonGlow = glow.gameObject;
+                }
+                if (timerButtonGlow == null)
+                {
+                    for (int i = 0; i < timerBoosterButtonGroup.transform.childCount; i++)
+                    {
+                        Transform c = timerBoosterButtonGroup.transform.GetChild(i);
+                        if (c.name.IndexOf("glow", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            timerButtonGlow = c.gameObject;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -696,11 +764,14 @@ namespace GravityPuzzle.Presentation.Views
 
         private void SetSelectionGlow(BoosterRewardType? focusedBooster)
         {
+            EnsureBoosterButtonGroups();
+            ResolveButtonGlowReferences();
+
             bool rocketActive = focusedBooster == BoosterRewardType.Rocket;
             bool hammerActive = focusedBooster == BoosterRewardType.Hammer;
             bool timerActive = focusedBooster == BoosterRewardType.FreezeTimer;
 
-            if (rocketButtonGlow != null)
+            if (rocketButtonGlow != null && rocketButtonGlow.activeSelf != rocketActive)
                 rocketButtonGlow.SetActive(rocketActive);
             if (rocketBoosterButtonGroup != null)
             {
@@ -708,7 +779,7 @@ namespace GravityPuzzle.Presentation.Views
                 button?.SetSelectionGlowVisible(rocketActive);
             }
 
-            if (hammerButtonGlow != null)
+            if (hammerButtonGlow != null && hammerButtonGlow.activeSelf != hammerActive)
                 hammerButtonGlow.SetActive(hammerActive);
             if (hammerBoosterButtonGroup != null)
             {
@@ -716,12 +787,70 @@ namespace GravityPuzzle.Presentation.Views
                 button?.SetSelectionGlowVisible(hammerActive);
             }
 
-            if (timerButtonGlow != null)
+            if (timerButtonGlow != null && timerButtonGlow.activeSelf != timerActive)
                 timerButtonGlow.SetActive(timerActive);
             if (timerBoosterButtonGroup != null)
             {
                 BoosterButton button = timerBoosterButtonGroup.GetComponent<BoosterButton>();
                 button?.SetSelectionGlowVisible(timerActive);
+
+                TimerBooster tb = timerBoosterButtonGroup.GetComponent<TimerBooster>();
+                if (tb != null && tb.SelectionGlow != null && tb.SelectionGlow.activeSelf != timerActive)
+                    tb.SelectionGlow.SetActive(timerActive);
+            }
+
+            if (timerActive)
+            {
+                BoosterButton timerBtn = BoosterFirstUseTutorialRuntime.GetButton(BoosterRewardType.FreezeTimer);
+                timerBtn?.SetSelectionGlowVisible(true);
+            }
+            else if (hammerActive)
+            {
+                BoosterButton hammerBtn = BoosterFirstUseTutorialRuntime.GetButton(BoosterRewardType.Hammer);
+                hammerBtn?.SetSelectionGlowVisible(true);
+            }
+            else if (rocketActive)
+            {
+                BoosterButton rocketBtn = BoosterFirstUseTutorialRuntime.GetButton(BoosterRewardType.Rocket);
+                rocketBtn?.SetSelectionGlowVisible(true);
+            }
+        }
+
+        private void Update()
+        {
+            IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
+            bool isTimer = gate != null && (gate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer) || gate.IsFirstUseActive(BoosterRewardType.FreezeTimer));
+            bool isHammer = gate != null && (gate.IsBoosterHighlighted(BoosterRewardType.Hammer) || gate.IsFirstUseActive(BoosterRewardType.Hammer));
+            bool isRocket = gate != null && (gate.IsBoosterHighlighted(BoosterRewardType.Rocket) || gate.IsFirstUseActive(BoosterRewardType.Rocket));
+            bool isAnyTutorialActive = isTimer || isHammer || isRocket;
+
+            if (isAnyTutorialActive)
+            {
+                wasTutorialFocusActive = true;
+                EnsureBoosterButtonGroups();
+
+                if (boardDimBackdrop != null && !boardDimBackdrop.activeSelf)
+                    boardDimBackdrop.SetActive(true);
+
+                BoosterRewardType focus = isTimer ? BoosterRewardType.FreezeTimer : (isHammer ? BoosterRewardType.Hammer : BoosterRewardType.Rocket);
+                HideInactiveBoosterButtons(focus);
+                SetSelectionGlow(focus);
+
+                TutorialHandView hand = cachedTutorialHand != null ? cachedTutorialHand : TutorialHandView.Active;
+                if (hand == null)
+                {
+                    cachedTutorialHand = Object.FindFirstObjectByType<TutorialHandView>(FindObjectsInactive.Include);
+                    hand = cachedTutorialHand;
+                }
+                if (hand != null && (!hand.gameObject.activeSelf || !hand.IsPlaying))
+                {
+                    hand.RefreshActiveTutorial();
+                }
+            }
+            else if (wasTutorialFocusActive)
+            {
+                wasTutorialFocusActive = false;
+                SetVisible(false);
             }
         }
 

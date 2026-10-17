@@ -206,14 +206,18 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 return;
             }
 
+            if (config.PresentationLevel != GravityLevelRuntime.CurrentLevelNumber)
+                return;
+
             BoosterFirstUseTutorialState persisted = BoosterFirstUseTutorialProgress.GetState(config);
-            if (persisted == BoosterFirstUseTutorialState.Completed)
+            bool isEditorMatch = Application.isEditor && config.PresentationLevel == GravityLevelRuntime.CurrentLevelNumber;
+            if (persisted == BoosterFirstUseTutorialState.Completed && !isEditorMatch)
             {
                 BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
                 return;
             }
 
-            if (persisted == BoosterFirstUseTutorialState.NotStarted)
+            if (persisted == BoosterFirstUseTutorialState.NotStarted || isEditorMatch)
             {
                 int currentCount = BoosterInventoryRuntime.Current.GetCount(config.BoosterType);
                 if (currentCount < config.GrantAmount)
@@ -235,10 +239,20 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 if (config == null || !Supports(config.BoosterType))
                     continue;
 
+                // A first-use tutorial belongs strictly to its authored introduction level.
+                // It must NEVER trigger or resume on an unrelated level (e.g. Level 27).
+                if (config.PresentationLevel != GravityLevelRuntime.CurrentLevelNumber)
+                    continue;
+
                 BoosterFirstUseTutorialState persistedState = BoosterFirstUseTutorialProgress.GetState(config);
-                bool isPending = persistedState == BoosterFirstUseTutorialState.PendingRequiredUse;
-                bool isInitialLevelNotStarted = persistedState == BoosterFirstUseTutorialState.NotStarted &&
-                    config.PresentationLevel == GravityLevelRuntime.CurrentLevelNumber;
+                bool isPending = persistedState != BoosterFirstUseTutorialState.NotStarted &&
+                    persistedState != BoosterFirstUseTutorialState.Completed;
+
+                // In editor playtesting, always trigger the lesson on its authored introduction level
+                bool isEditorMatch = Application.isEditor;
+
+                // A first-use lesson only begins on its exact authored introduction level
+                bool isInitialLevelNotStarted = persistedState == BoosterFirstUseTutorialState.NotStarted || isEditorMatch;
 
                 if (!isPending && !isInitialLevelNotStarted)
                     continue;
@@ -316,6 +330,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
             state = BoosterFirstUseTutorialState.Completed;
             BoosterFirstUseTutorialProgress.SetState(activeConfig, state);
             TutorialHandView.Hide();
+            BoosterTargetingPresentation.Hide();
             if (buttons.TryGetValue(boosterType, out BoosterButton button))
                 button.SetSelectionGlowVisible(false);
             if (boosterType != BoosterRewardType.FreezeTimer)
@@ -353,7 +368,28 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 board?.TryPauseTimer(this);
             BoosterTargetingPresentation.ShowFirstUseBoosterFocus(config.BoosterType);
 
-            if (buttons.TryGetValue(config.BoosterType, out BoosterButton button))
+            if (!buttons.TryGetValue(config.BoosterType, out BoosterButton button) || button == null)
+            {
+                button = BoosterFirstUseTutorialRuntime.GetButton(config.BoosterType);
+                if (button != null)
+                    buttons[config.BoosterType] = button;
+            }
+
+            if (button == null)
+            {
+                BoosterButton[] allButtons = UnityEngine.Object.FindObjectsByType<BoosterButton>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                for (int i = 0; i < allButtons.Length; i++)
+                {
+                    if (allButtons[i] != null && allButtons[i].HasBoosterType && allButtons[i].BoosterType == config.BoosterType)
+                    {
+                        button = allButtons[i];
+                        RegisterButton(button);
+                        break;
+                    }
+                }
+            }
+
+            if (button != null)
             {
                 button.SetSelectionGlowVisible(true);
                 TutorialHandView.ShowForButton(button);
@@ -585,6 +621,34 @@ namespace GravityPuzzle.Gameplay.Tutorial
             if (button != null && !registeredButtons.Contains(button))
                 registeredButtons.Add(button);
             current?.RegisterButton(button);
+        }
+
+        public static BoosterButton GetButton(BoosterRewardType boosterType)
+        {
+            for (int i = registeredButtons.Count - 1; i >= 0; i--)
+            {
+                BoosterButton btn = registeredButtons[i];
+                if (btn == null)
+                {
+                    registeredButtons.RemoveAt(i);
+                    continue;
+                }
+
+                if (btn.HasBoosterType && btn.BoosterType == boosterType)
+                    return btn;
+            }
+
+            BoosterButton[] allButtons = UnityEngine.Object.FindObjectsByType<BoosterButton>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < allButtons.Length; i++)
+            {
+                if (allButtons[i] != null && allButtons[i].HasBoosterType && allButtons[i].BoosterType == boosterType)
+                {
+                    RegisterButton(allButtons[i]);
+                    return allButtons[i];
+                }
+            }
+
+            return null;
         }
     }
 }

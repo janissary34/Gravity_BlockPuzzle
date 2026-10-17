@@ -1,5 +1,8 @@
 using DG.Tweening;
 using UnityEngine;
+using GravityPuzzle;
+using GravityPuzzle.Config;
+using GravityPuzzle.Gameplay.Tutorial;
 
 namespace GravityPuzzle.Presentation.Views
 {
@@ -34,14 +37,63 @@ namespace GravityPuzzle.Presentation.Views
         private Sequence loop;
         private Vector3 authoredScale;
 
+        public bool IsPlaying => loop != null && loop.IsActive();
+
         private void Awake()
         {
             Active = this;
             if (handRoot == null)
                 handRoot = transform as RectTransform;
-            authoredScale = handRoot != null ? handRoot.localScale : Vector3.one;
+            authoredScale = (handRoot != null && handRoot.localScale.sqrMagnitude > 0.001f)
+                ? handRoot.localScale
+                : Vector3.one;
             SetEffectsVisible(false);
             SetVisible(false);
+        }
+
+        private void Start()
+        {
+            RefreshActiveTutorial();
+        }
+
+        private void Update()
+        {
+            IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
+            if (gate != null &&
+                (gate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer) ||
+                 gate.IsBoosterHighlighted(BoosterRewardType.Hammer) ||
+                 gate.IsBoosterHighlighted(BoosterRewardType.Rocket)))
+            {
+                if (handRoot != null && (!handRoot.gameObject.activeSelf || !IsPlaying))
+                {
+                    RefreshActiveTutorial();
+                }
+            }
+        }
+
+        public void RefreshActiveTutorial()
+        {
+            IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
+            if (gate == null)
+                return;
+
+            BoosterRewardType? targetType = null;
+            if (gate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer))
+                targetType = BoosterRewardType.FreezeTimer;
+            else if (gate.IsBoosterHighlighted(BoosterRewardType.Hammer))
+                targetType = BoosterRewardType.Hammer;
+            else if (gate.IsBoosterHighlighted(BoosterRewardType.Rocket))
+                targetType = BoosterRewardType.Rocket;
+
+            if (targetType.HasValue)
+            {
+                BoosterButton btn = BoosterFirstUseTutorialRuntime.GetButton(targetType.Value);
+                if (btn != null)
+                {
+                    btn.SetSelectionGlowVisible(true);
+                    ShowForButton(btn);
+                }
+            }
         }
 
         private void OnDisable()
@@ -60,16 +112,25 @@ namespace GravityPuzzle.Presentation.Views
         {
             if (Active == null)
                 Active = Object.FindFirstObjectByType<TutorialHandView>(FindObjectsInactive.Include);
-            if (Active == null || button == null || button.ButtonComponent == null)
+            if (Active == null || button == null)
                 return;
 
-            Active.ShowForUiTarget(button.ButtonComponent.transform as RectTransform);
+            RectTransform targetRect = button.ButtonComponent != null
+                ? button.ButtonComponent.transform as RectTransform
+                : button.transform as RectTransform;
+
+            if (targetRect == null)
+                targetRect = button.transform as RectTransform;
+
+            Active.ShowForUiTarget(targetRect);
         }
 
         public static void ShowForBoardTarget(Vector2 worldPosition, Camera gameplayCamera)
         {
             if (Active == null)
                 Active = Object.FindFirstObjectByType<TutorialHandView>(FindObjectsInactive.Include);
+            if (gameplayCamera == null)
+                gameplayCamera = PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main;
             if (Active == null || gameplayCamera == null)
                 return;
 
@@ -87,48 +148,109 @@ namespace GravityPuzzle.Presentation.Views
             if (target == null)
                 return;
 
-            Canvas canvas = target.GetComponentInParent<Canvas>();
-            Camera camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
-                ? canvas.worldCamera
+            if (handRoot == null)
+                handRoot = transform as RectTransform;
+
+            RectTransform parent = handRoot != null ? handRoot.parent as RectTransform : null;
+            if (parent == null)
+                return;
+
+            SetVisible(true);
+            handRoot.SetAsLastSibling();
+
+            Canvas handCanvas = handRoot.GetComponentInParent<Canvas>();
+            Camera handCam = handCanvas != null && handCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? (handCanvas.worldCamera != null ? handCanvas.worldCamera : PrototypeBootstrap.SceneCamera)
                 : null;
-            ShowAtScreenPosition(RectTransformUtility.WorldToScreenPoint(camera, target.position));
+
+            Canvas targetCanvas = target.GetComponentInParent<Canvas>();
+            Camera targetCam = targetCanvas != null && targetCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? (targetCanvas.worldCamera != null ? targetCanvas.worldCamera : PrototypeBootstrap.SceneCamera)
+                : null;
+
+            Vector3 worldCenter = target.TransformPoint(target.rect.center);
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(targetCam, worldCenter);
+
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, handCam, out Vector2 localTarget))
+            {
+                Vector3 localTarget3D = parent.InverseTransformPoint(worldCenter);
+                localTarget = new Vector2(localTarget3D.x, localTarget3D.y);
+            }
+
+            handRoot.anchorMin = Vector2.zero;
+            handRoot.anchorMax = Vector2.zero;
+            handRoot.pivot = new Vector2(0.5f, 0.5f);
+
+            // Buttons are in the bottom HUD: the gauntlet should stay above the button and point down
+            handRoot.localRotation = Quaternion.identity;
+            if (rippleRoot != null)
+                rippleRoot.anchoredPosition = new Vector2(0f, -60f);
+
+            // Hand center offset +60f puts the bottom fingertip directly over the button center
+            Vector2 handCenter = localTarget + new Vector2(0f, 60f);
+            PlayLoop(handCenter, new Vector2(0f, 50f), Vector2.down * 14f);
         }
 
         private void ShowAtScreenPosition(Vector2 screenPosition)
         {
+            if (handRoot == null)
+                handRoot = transform as RectTransform;
+
             RectTransform parent = handRoot != null ? handRoot.parent as RectTransform : null;
             if (parent == null)
                 return;
 
             Canvas canvas = handRoot.GetComponentInParent<Canvas>();
             Camera camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
-                ? canvas.worldCamera
+                ? (canvas.worldCamera != null ? canvas.worldCamera : (PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main))
                 : null;
+
+            if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera && canvas.worldCamera == null && camera != null)
+                canvas.worldCamera = camera;
+
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPosition, camera, out Vector2 localTarget))
                 return;
 
             SetVisible(true);
-            PlayLoop(localTarget);
+            handRoot.SetAsLastSibling();
+
+            handRoot.anchorMin = Vector2.zero;
+            handRoot.anchorMax = Vector2.zero;
+            handRoot.pivot = new Vector2(0.5f, 0.5f);
+
+            // Board targets are above: the gauntlet points up from below
+            handRoot.localRotation = Quaternion.Euler(0f, 0f, 180f);
+            if (rippleRoot != null)
+                rippleRoot.anchoredPosition = new Vector2(0f, 60f);
+
+            Vector2 handCenter = localTarget + new Vector2(0f, -60f);
+            PlayLoop(handCenter, new Vector2(0f, -50f), Vector2.up * 14f);
         }
 
-        private void PlayLoop(Vector2 targetPosition)
+        private void PlayLoop(Vector2 targetPosition, Vector2 offset, Vector2 pressDelta)
         {
             StopLoop();
             if (handRoot == null)
                 return;
 
-            handRoot.anchoredPosition = targetPosition + approachOffset;
-            handRoot.localScale = authoredScale;
-            Vector2 pressedPosition = targetPosition + Vector2.down * pressDistance;
+            Vector3 scale = authoredScale;
+            if (scale.sqrMagnitude < 0.001f)
+                scale = Vector3.one;
+
+            handRoot.localScale = scale;
+            Vector2 approachPos = targetPosition + offset;
+            Vector2 pressedPos = targetPosition + pressDelta;
+
+            handRoot.anchoredPosition = approachPos;
             loop = DOTween.Sequence()
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
             loop.Append(handRoot.DOAnchorPos(targetPosition, approachDuration).SetEase(approachEase));
-            loop.Append(handRoot.DOAnchorPos(pressedPosition, pressDuration).SetEase(pressEase));
+            loop.Append(handRoot.DOAnchorPos(pressedPos, pressDuration).SetEase(pressEase));
             loop.AppendCallback(PlayTapEffects);
             loop.Append(handRoot.DOAnchorPos(targetPosition, releaseDuration).SetEase(releaseEase));
             loop.AppendInterval(loopWaitDuration);
-            loop.AppendCallback(() => handRoot.anchoredPosition = targetPosition + approachOffset);
+            loop.AppendCallback(() => handRoot.anchoredPosition = approachPos);
             loop.SetLoops(-1, LoopType.Restart);
         }
 

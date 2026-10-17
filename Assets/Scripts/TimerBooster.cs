@@ -30,6 +30,7 @@ namespace GravityPuzzle
 
         [Tooltip("Scene-authored selection glow shown only while this timer booster is activating.")]
         [SerializeField] private GameObject selectionGlow;
+        public GameObject SelectionGlow => selectionGlow;
 
         [Tooltip("Booster count component on this timer booster button.")]
         [SerializeField] private BoosterButton boosterButtonRef;
@@ -368,6 +369,11 @@ namespace GravityPuzzle
                 freezeTimerBooster = GetComponent<FreezeTimerBooster>();
             }
 
+            if (boosterButtonRef == null)
+            {
+                boosterButtonRef = GetComponent<BoosterButton>();
+            }
+
             if (timerUrgencyPresentation != null && timerUrgencyCanvasGroup == null)
                 timerUrgencyCanvasGroup = timerUrgencyPresentation.GetComponent<CanvasGroup>();
 
@@ -526,18 +532,20 @@ namespace GravityPuzzle
 
             IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
             bool isRequiredFirstUse = tutorialGate != null &&
-                                      tutorialGate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer);
+                                      (tutorialGate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer) ||
+                                       tutorialGate.IsFirstUseActive(BoosterRewardType.FreezeTimer));
             bool isTimerActiveOrTutorial = board != null &&
-                (board.IsTimerActive || (isRequiredFirstUse && board.TimeLimit > 0f && board.IsLevelRunning));
+                (board.IsTimerActive || (isRequiredFirstUse && board.IsLevelRunning));
 
             boosterButton.interactable =
-                board != null &&
+                isRequiredFirstUse ||
+                (board != null &&
                 isTimerActiveOrTutorial &&
-                (board.IsTimerStarted || isRequiredFirstUse) &&
+                board.IsTimerStarted &&
                 board.TimeRemaining > 0f &&
                 !LevelTimerUI.IsGameOver &&
                 !isSequenceRunning &&
-                !isFreezeActive;
+                !isFreezeActive);
         }
 
         /// <summary>
@@ -551,7 +559,8 @@ namespace GravityPuzzle
 
             PrototypeBoard activeBoard = PrototypeBoard.Active;
             bool isRequiredFirstUse = tutorialGate != null &&
-                                      tutorialGate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer);
+                                      (tutorialGate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer) ||
+                                       tutorialGate.IsFirstUseActive(BoosterRewardType.FreezeTimer));
             if (isRequiredFirstUse && activeBoard != null && !activeBoard.IsTimerStarted)
                 activeBoard.StartTimer();
 

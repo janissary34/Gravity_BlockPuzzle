@@ -2,6 +2,7 @@ using TMPro;
 using GravityPuzzle.Config;
 using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Gameplay.Tutorial;
+using GravityPuzzle.Presentation.Views;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Events;
@@ -82,15 +83,49 @@ namespace GravityPuzzle
             }
         }
         public bool HasUses => RemainingCount > 0;
-        public Button ButtonComponent => button;
-        public bool HasBoosterType => hasBoosterType;
-        public BoosterRewardType BoosterType => boosterType;
-        public GameObject SelectionGlow => selectionGlow;
+        public Button ButtonComponent => button != null ? button : (button = GetComponent<Button>());
+        public bool HasBoosterType
+        {
+            get
+            {
+                if (!hasBoosterType)
+                    hasBoosterType = TryResolveBoosterType(out boosterType);
+                return hasBoosterType;
+            }
+        }
+
+        public BoosterRewardType BoosterType
+        {
+            get
+            {
+                if (!hasBoosterType)
+                    hasBoosterType = TryResolveBoosterType(out boosterType);
+                return boosterType;
+            }
+        }
+
+        public GameObject SelectionGlow
+        {
+            get
+            {
+                if (selectionGlow == null)
+                    FindSelectionGlowReferences();
+                return selectionGlow;
+            }
+        }
 
         public void SetSelectionGlowVisible(bool visible)
         {
+            if (selectionGlow == null)
+                FindSelectionGlowReferences();
+
             if (selectionGlow != null && selectionGlow.activeSelf != visible)
                 selectionGlow.SetActive(visible);
+
+            if (timerBooster == null)
+                timerBooster = GetComponent<TimerBooster>();
+            if (timerBooster != null && timerBooster.SelectionGlow != null && timerBooster.SelectionGlow.activeSelf != visible)
+                timerBooster.SelectionGlow.SetActive(visible);
         }
 
         public static int GetIntroductionLevel(BoosterRewardType type)
@@ -354,6 +389,13 @@ namespace GravityPuzzle
                 }
             }
 
+            if (child == null)
+            {
+                if (timerBooster == null) timerBooster = GetComponent<TimerBooster>();
+                if (timerBooster != null && timerBooster.SelectionGlow != null)
+                    child = timerBooster.SelectionGlow.transform;
+            }
+
             if (child != null)
                 selectionGlow = child.gameObject;
         }
@@ -452,6 +494,17 @@ namespace GravityPuzzle
                 buttonCanvasGroup = GetComponent<CanvasGroup>();
             }
 
+            if (BoosterTargetingPresentation.IsBoosterButtonSuppressed(buttonCanvasGroup))
+            {
+                buttonCanvasGroup.alpha = 0f;
+                buttonCanvasGroup.interactable = false;
+                buttonCanvasGroup.blocksRaycasts = false;
+                if (button != null)
+                    button.interactable = false;
+                SetSelectionGlowVisible(false);
+                return;
+            }
+
             bool isIntroduced = IsIntroduced;
 
             if (!isIntroduced)
@@ -521,21 +574,30 @@ namespace GravityPuzzle
             if (countUiText != null)
                 countUiText.gameObject.SetActive(true);
 
-            if (!HasUses)
+            bool isTutorialActive = HasBoosterType && BoosterFirstUseTutorialRuntime.Gate != null &&
+                (BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(BoosterType) ||
+                 BoosterFirstUseTutorialRuntime.Gate.IsFirstUseActive(BoosterType));
+
+            if (isTutorialActive)
+            {
+                SetSelectionGlowVisible(true);
+            }
+            else
             {
                 SetSelectionGlowVisible(false);
             }
 
+            bool canInteract = HasUses || isTutorialActive;
             if (buttonCanvasGroup != null)
             {
-                buttonCanvasGroup.alpha = HasUses ? 1f : 0.55f;
-                buttonCanvasGroup.interactable = HasUses;
-                buttonCanvasGroup.blocksRaycasts = HasUses;
+                buttonCanvasGroup.alpha = canInteract ? 1f : 0.55f;
+                buttonCanvasGroup.interactable = canInteract;
+                buttonCanvasGroup.blocksRaycasts = canInteract;
             }
 
             if (button != null)
             {
-                button.interactable = HasUses;
+                button.interactable = canInteract;
             }
         }
 
@@ -565,18 +627,22 @@ namespace GravityPuzzle
 
         private bool TryResolveBoosterType(out BoosterRewardType resolvedType)
         {
+            if (rocketBooster == null) rocketBooster = GetComponent<RocketBooster>();
             if (rocketBooster != null)
             {
                 resolvedType = BoosterRewardType.Rocket;
                 return true;
             }
 
+            if (hammerBooster == null) hammerBooster = GetComponent<HammerBooster>();
             if (hammerBooster != null)
             {
                 resolvedType = BoosterRewardType.Hammer;
                 return true;
             }
 
+            if (timerBooster == null) timerBooster = GetComponent<TimerBooster>();
+            if (freezeTimerBooster == null) freezeTimerBooster = GetComponent<FreezeTimerBooster>();
             if (timerBooster != null || freezeTimerBooster != null)
             {
                 resolvedType = BoosterRewardType.FreezeTimer;
@@ -584,7 +650,6 @@ namespace GravityPuzzle
             }
 
             resolvedType = default;
-            Debug.LogWarning("[BoosterButton] No supported booster component is attached to this button.", this);
             return false;
         }
     }

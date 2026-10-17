@@ -35,7 +35,7 @@ Obstacle gameplay collision and obstacle visuals have separate ownership:
 * `Obstacle N Collision` objects provide static collision.
 * A matching atlas silhouette is rendered as `Merged Obstacle Visual`.
 * Shapes without a matching silhouette are decomposed into `Sliced Obstacle Visual` rectangles and join visuals.
-  The sliced rectangles reuse the configured atlas texture and border through a cached full-rectangle sprite mesh; switching the renderer to sliced mode must precede restoring unit transform scale. This avoids changing the atlas import settings for unrelated artwork.
+  Cached full-rectangle sprites retain the source atlas's secondary textures, including `_ShineMask`, so the shared obstacle shader can use the same UV-aligned highlight data as imported sprites. The sliced sprite uses the one-cell source's pixel height as pixels per unit: its border then has the same world-space proportions as the source fitted to one grid cell. Switching the renderer to sliced mode must precede restoring unit transform scale. These adaptations do not change the atlas import settings for unrelated artwork.
 
 Visual merging must never change authored obstacle cells, collider dimensions, or board occupancy.
 

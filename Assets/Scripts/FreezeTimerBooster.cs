@@ -134,8 +134,10 @@ namespace GravityPuzzle
             SynchronizeLevel();
 
             bool isRequiredFirstUse = BoosterFirstUseTutorialRuntime.Gate != null &&
-                                      BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(
-                                          BoosterRewardType.FreezeTimer);
+                                      (BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(
+                                          BoosterRewardType.FreezeTimer) ||
+                                       BoosterFirstUseTutorialRuntime.Gate.IsFirstUseActive(
+                                          BoosterRewardType.FreezeTimer));
             if (isRequiredFirstUse && boundBoard != null && !boundBoard.IsTimerStarted)
                 boundBoard.StartTimer();
 
@@ -164,7 +166,10 @@ namespace GravityPuzzle
                 boundBoard.ResumeTimer(this);
                 return false;
             }
+
+            BoosterFirstUseTutorialRuntime.Gate?.NotifyBoosterActivated(BoosterRewardType.FreezeTimer);
             freezeRoutine = StartCoroutine(FreezeTimerRoutine(boundBoard));
+            BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.FreezeTimer);
             RefreshButtonState();
             return true;
         }
@@ -270,18 +275,20 @@ namespace GravityPuzzle
             // its timer-freeze sequence owns the board timer.
             bool hasUses = HasUses;
             bool isRequiredFirstUse = BoosterFirstUseTutorialRuntime.Gate != null &&
-                                      BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(
-                                          BoosterRewardType.FreezeTimer);
+                                      (BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(
+                                          BoosterRewardType.FreezeTimer) ||
+                                       BoosterFirstUseTutorialRuntime.Gate.IsFirstUseActive(
+                                          BoosterRewardType.FreezeTimer));
             bool isTimerActiveOrTutorial = boundBoard != null &&
-                (boundBoard.IsTimerActive || (isRequiredFirstUse && boundBoard.TimeLimit > 0f && boundBoard.IsLevelRunning));
-            bool canInteract =
-                hasUses &&
+                (boundBoard.IsTimerActive || (isRequiredFirstUse && boundBoard.IsLevelRunning));
+            bool canInteract = isRequiredFirstUse ||
+                (hasUses &&
                 !IsFreezeActive &&
                 boundBoard != null &&
                 !LevelTimerUI.IsGameOver &&
                 isTimerActiveOrTutorial &&
-                (boundBoard.IsTimerStarted || isRequiredFirstUse) &&
-                boundBoard.TimeRemaining > 0f;
+                boundBoard.IsTimerStarted &&
+                boundBoard.TimeRemaining > 0f);
 
             if (buttonCanvasGroup != null)
             {
@@ -291,6 +298,10 @@ namespace GravityPuzzle
             }
 
             boosterButton.interactable = canInteract;
+            if (isRequiredFirstUse && boosterButtonRef != null)
+            {
+                boosterButtonRef.SetSelectionGlowVisible(true);
+            }
         }
 
         private void EnsureReferences()

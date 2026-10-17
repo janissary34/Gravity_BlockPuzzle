@@ -2787,7 +2787,8 @@ namespace GravityPuzzle
 
                 if (BoosterFirstUseTutorialCoordinator.Supports(config.BoosterType))
                 {
-                    if (BoosterFirstUseTutorialProgress.GetState(config) !=
+                    if (!Application.isEditor &&
+                        BoosterFirstUseTutorialProgress.GetState(config) !=
                         BoosterFirstUseTutorialState.NotStarted)
                         continue;
                 }
