@@ -121,38 +121,6 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 7}
       type: 0
-    - localCell: {x: 0, y: 8}
-      type: 0
-    - localCell: {x: 1, y: 8}
-      type: 0
-    - localCell: {x: 2, y: 8}
-      type: 0
-    - localCell: {x: 3, y: 8}
-      type: 0
-    - localCell: {x: 0, y: 9}
-      type: 0
-    - localCell: {x: 1, y: 9}
-      type: 0
-    - localCell: {x: 2, y: 9}
-      type: 0
-    - localCell: {x: 3, y: 9}
-      type: 0
-    - localCell: {x: 0, y: 10}
-      type: 0
-    - localCell: {x: 1, y: 10}
-      type: 0
-    - localCell: {x: 2, y: 10}
-      type: 0
-    - localCell: {x: 3, y: 10}
-      type: 0
-    - localCell: {x: 0, y: 11}
-      type: 0
-    - localCell: {x: 1, y: 11}
-      type: 0
-    - localCell: {x: 2, y: 11}
-      type: 0
-    - localCell: {x: 3, y: 11}
-      type: 0
   - pieceId: 86183193809d4614b25891c0cde14a82
     name: Piece 2
     tutorialTargetId: 
@@ -1079,6 +1047,92 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
+  - pieceId: e1d649e42fe44c30ba4a5f286104c2b8
+    name: Piece 15
+    tutorialTargetId: 
+    visualId: 
+    paletteId: Purple
+    color: {r: 0.3, g: 0.32800016, b: 1, a: 1}
+    origin: {x: 16, y: 16}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 0, y: 0}
+      type: 0
+    - localCell: {x: 1, y: 0}
+      type: 0
+    - localCell: {x: 2, y: 0}
+      type: 0
+    - localCell: {x: 3, y: 0}
+      type: 0
+    - localCell: {x: 0, y: 1}
+      type: 0
+    - localCell: {x: 1, y: 1}
+      type: 0
+    - localCell: {x: 2, y: 1}
+      type: 0
+    - localCell: {x: 3, y: 1}
+      type: 0
+    - localCell: {x: 0, y: 2}
+      type: 0
+    - localCell: {x: 1, y: 2}
+      type: 0
+    - localCell: {x: 2, y: 2}
+      type: 0
+    - localCell: {x: 3, y: 2}
+      type: 0
+    - localCell: {x: 0, y: 3}
+      type: 0
+    - localCell: {x: 1, y: 3}
+      type: 0
+    - localCell: {x: 2, y: 3}
+      type: 0
+    - localCell: {x: 3, y: 3}
+      type: 0
+    - localCell: {x: 0, y: -4}
+      type: 0
+    - localCell: {x: 1, y: -4}
+      type: 0
+    - localCell: {x: 2, y: -4}
+      type: 0
+    - localCell: {x: 3, y: -4}
+      type: 0
+    - localCell: {x: 0, y: -3}
+      type: 0
+    - localCell: {x: 1, y: -3}
+      type: 0
+    - localCell: {x: 2, y: -3}
+      type: 0
+    - localCell: {x: 3, y: -3}
+      type: 0
+    - localCell: {x: 0, y: -2}
+      type: 0
+    - localCell: {x: 1, y: -2}
+      type: 0
+    - localCell: {x: 2, y: -2}
+      type: 0
+    - localCell: {x: 3, y: -2}
+      type: 0
+    - localCell: {x: 0, y: -1}
+      type: 0
+    - localCell: {x: 1, y: -1}
+      type: 0
+    - localCell: {x: 2, y: -1}
+      type: 0
+    - localCell: {x: 3, y: -1}
+      type: 0
   joints:
   - jointId: 1331abcafe9b40b8ab879f099124986a
     endpointA:
@@ -1114,7 +1168,7 @@ MonoBehaviour:
     bounds:
       origin: {x: 8, y: 8}
       size: {x: 12, y: 12}
-    editorLocked: 0
+    editorLocked: 1
     hiddenPieces: []
     targetShredCount: 1
   elevators: []

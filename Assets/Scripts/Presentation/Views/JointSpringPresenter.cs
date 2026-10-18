@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Pieces;
 using UnityEngine;
+using GravityPuzzle.Config;
 
 namespace GravityPuzzle.Presentation.Views
 {
@@ -13,6 +14,10 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private Sprite springSprite;
         [SerializeField] private Material springMaterial;
         [SerializeField] private int sortingOrder = 20;
+        [Tooltip("Optional authored sprite-local stud and spring-end anchors. Unauthored sprites keep the legacy placement.")]
+        [SerializeField] private JointAnchorConfig anchorConfig;
+        [Tooltip("Log which placement path each joint uses when views are reconciled.")]
+        [SerializeField] private bool logAnchorDiagnostics;
 
         [Header("Alignment & Position Tuning")]
         [Tooltip("Scale multiplier for the joint spiral rings (default ~0.1495).")]
@@ -139,18 +144,25 @@ namespace GravityPuzzle.Presentation.Views
                     out Vector3 studMidpoint2,
                     out Quaternion rotation,
                     out bool isVertical,
-                    out PuzzlePiece anchorPiece))
+                    out PuzzlePiece anchorPiece,
+                    out Quaternion rotation2,
+                    out float scale1,
+                    out float scale2,
+                    out string placementStatus))
                 {
                     continue;
                 }
+
+                if (logAnchorDiagnostics)
+                    Debug.Log($"[JointSpring] joint={joint.Id} members={joint.MemberA},{joint.MemberB} placement={placementStatus}", this);
 
                 int key1 = joint.Id * 2;
                 int key2 = joint.Id * 2 + 1;
                 currentSpringKeys.Add(key1);
                 currentSpringKeys.Add(key2);
 
-                UpdateOrSpawnSpring(key1, joint, studMidpoint1, rotation, isVertical, anchorPiece);
-                UpdateOrSpawnSpring(key2, joint, studMidpoint2, rotation, isVertical, anchorPiece);
+                UpdateOrSpawnSpring(key1, joint, studMidpoint1, rotation, isVertical, anchorPiece, scale1);
+                UpdateOrSpawnSpring(key2, joint, studMidpoint2, rotation2, isVertical, anchorPiece, scale2);
             }
 
             // Return removed joints to pool
@@ -178,11 +190,11 @@ namespace GravityPuzzle.Presentation.Views
             Vector3 worldPosition,
             Quaternion rotation,
             bool isVertical,
-            PuzzlePiece anchorPiece)
+            PuzzlePiece anchorPiece,
+            float scale)
         {
             int targetSortingLayer = anchorPiece != null ? anchorPiece.PrimarySortingLayerID : 0;
             int targetSortingOrder = Mathf.Max(sortingOrder, 20);
-            float scale = springScale > 0f ? springScale : 0.1495036f;
 
             if (!activeSpringViews.TryGetValue(key, out JointSpringView view))
             {
@@ -240,13 +252,20 @@ namespace GravityPuzzle.Presentation.Views
             out Vector3 studMidpoint2,
             out Quaternion rotation,
             out bool isVertical,
-            out PuzzlePiece anchorPiece)
+            out PuzzlePiece anchorPiece,
+            out Quaternion rotation2,
+            out float scale1,
+            out float scale2,
+            out string placementStatus)
         {
             studMidpoint1 = Vector3.zero;
             studMidpoint2 = Vector3.zero;
             rotation = Quaternion.identity;
             isVertical = false;
             anchorPiece = null;
+            rotation2 = Quaternion.identity;
+            scale1 = scale2 = springScale > 0f ? springScale : 0.1495036f;
+            placementStatus = "legacy: missing config, active piece, or valid spring anchors";
 
             if (boardState == null || boardState.BoardSnapshot == null || activeLevel == null)
                 return false;
@@ -323,6 +342,83 @@ namespace GravityPuzzle.Presentation.Views
             studMidpoint2 = (seamMidpoint + studOffsetVec) - holeOffsetWorld + userNudge;
             studMidpoint2.z = -0.15f;
 
+            rotation2 = rotation;
+            if (anchorConfig != null && pieceA != null && pieceB != null &&
+                anchorConfig.TryGetSpringFitPoints(springSprite, out Vector2 endA, out Vector2 endB))
+            {
+                placementStatus = "legacy: stud anchors unavailable near one or more joint endpoints";
+                Vector3 along = isVertical ? Vector3.right : Vector3.up;
+                Vector3 across = isVertical ? Vector3.up : Vector3.right;
+                float sign = Vector3.Dot(delta, across) >= 0f ? 1f : -1f;
+                Vector3 studA1 = worldCenterA + across * (sign * .25f) - along * .25f;
+                Vector3 studB1 = worldCenterB - across * (sign * .25f) - along * .25f;
+                Vector3 studA2 = worldCenterA + across * (sign * .25f) + along * .25f;
+                Vector3 studB2 = worldCenterB - across * (sign * .25f) + along * .25f;
+                if (TryFindStud(pieceA, studA1, out Vector3 a1) && TryFindStud(pieceB, studB1, out Vector3 b1) &&
+                    TryFindStud(pieceA, studA2, out Vector3 a2) && TryFindStud(pieceB, studB2, out Vector3 b2))
+                {
+                    if (sign < 0f) { Vector3 t = a1; a1 = b1; b1 = t; t = a2; a2 = b2; b2 = t; }
+                    if (TryFitSpring(a1, b1, endA, endB, out Vector3 p1, out Quaternion r1, out float s1) &&
+                        TryFitSpring(a2, b2, endA, endB, out Vector3 p2, out Quaternion r2, out float s2))
+                    {
+                        studMidpoint1 = p1 + userNudge; studMidpoint1.z = -0.15f;
+                        studMidpoint2 = p2 + userNudge; studMidpoint2.z = -0.15f;
+                        rotation = r1; rotation2 = r2; scale1 = s1; scale2 = s2;
+                        placementStatus = "authored anchors";
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private bool TryFindStud(PuzzlePiece piece, Vector3 expected, out Vector3 result)
+        {
+            result = Vector3.zero;
+            float best = .3f * .3f;
+            bool found = false;
+            ConsiderRenderer(piece.WholePieceVisual, expected, ref best, ref found, ref result);
+            var joined = piece.JoinedPieceVisuals;
+            for (int i = 0; i < joined.Count; i++)
+                ConsiderRenderer(joined[i], expected, ref best, ref found, ref result);
+            var cells = piece.CollisionCellVisuals;
+            if (cells != null)
+                for (int i = 0; i < cells.Count; i++)
+                    ConsiderRenderer(cells[i], expected, ref best, ref found, ref result);
+            return found;
+        }
+
+        private void ConsiderRenderer(SpriteRenderer renderer, Vector3 expected, ref float best, ref bool found, ref Vector3 result)
+        {
+            if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy || renderer.sprite == null ||
+                renderer.drawMode != SpriteDrawMode.Simple ||
+                !anchorConfig.TryGetStuds(renderer.sprite, out List<Vector2> studs))
+                return;
+            for (int i = 0; i < studs.Count; i++)
+            {
+                Vector2 local = JointAnchorConfig.SpriteLocalPoint(renderer.sprite, studs[i]);
+                if (renderer.flipX) local.x = -local.x;
+                if (renderer.flipY) local.y = -local.y;
+                Vector3 world = renderer.transform.TransformPoint(local);
+                float distance = ((Vector2)(world - expected)).sqrMagnitude;
+                if (distance >= best) continue;
+                best = distance; result = world; found = true;
+            }
+        }
+
+        private bool TryFitSpring(Vector3 a, Vector3 b, Vector2 anchorA, Vector2 anchorB,
+            out Vector3 position, out Quaternion rotation, out float scale)
+        {
+            Vector2 localA = JointAnchorConfig.SpriteLocalPoint(springSprite, anchorA);
+            Vector2 localB = JointAnchorConfig.SpriteLocalPoint(springSprite, anchorB);
+            Vector2 localDelta = localB - localA;
+            Vector2 worldDelta = b - a;
+            position = Vector3.zero; rotation = Quaternion.identity; scale = 0f;
+            if (localDelta.sqrMagnitude < .000001f || worldDelta.sqrMagnitude < .000001f) return false;
+            scale = worldDelta.magnitude / localDelta.magnitude;
+            float angle = Mathf.Atan2(worldDelta.y, worldDelta.x) - Mathf.Atan2(localDelta.y, localDelta.x);
+            rotation = Quaternion.Euler(0f, 0f, angle * Mathf.Rad2Deg);
+            position = a - rotation * (Vector3)(localA * scale);
             return true;
         }
 

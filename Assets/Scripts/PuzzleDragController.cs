@@ -309,8 +309,15 @@ namespace GravityPuzzle
                 for (int zoneIndex = 0; zoneIndex < zones.Count; zoneIndex++)
                 {
                     ShredderCatchZone zone = zones[zoneIndex];
-                    if (zone == null || !zone.ContainsCaptureFootprint(piece))
+                    if (zone == null)
                         continue;
+                    if (!zone.ContainsCaptureFootprint(piece))
+                    {
+#if UNITY_EDITOR
+                        zone.LogCaptureRejection(piece, shredder);
+#endif
+                        continue;
+                    }
 
                     // The feed cancels its presentation tween internally. Clear
                     // this controller's matching fall record first, otherwise a

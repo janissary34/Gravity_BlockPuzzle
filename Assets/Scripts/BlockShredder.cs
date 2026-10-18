@@ -47,6 +47,8 @@ namespace GravityPuzzle
         // than a second routing or column-management system.
         private readonly List<FeedReservation> activeFeedReservations =
             new List<FeedReservation>(4);
+        private readonly HashSet<PuzzlePiece> feedStraighteningRequests =
+            new HashSet<PuzzlePiece>();
         private static readonly Comparison<BoxCollider2D> CompareCellsByCenterX = (a, b) =>
         {
             if (a == null || b == null) return 0;
@@ -86,6 +88,11 @@ namespace GravityPuzzle
         private readonly List<Bounds> candidateFeedCellBoundsBuffer = new List<Bounds>(32);
         private readonly List<Bounds> reservedFeedCellBoundsBuffer = new List<Bounds>(32);
         private readonly List<Bounds> guideDepthCellBoundsBuffer = new List<Bounds>(32);
+
+#if UNITY_EDITOR
+        private readonly Dictionary<int, string> admissionDiagnosticStates =
+            new Dictionary<int, string>();
+#endif
 
         private readonly struct FeedReservation
         {
@@ -443,37 +450,62 @@ namespace GravityPuzzle
             if (piece == null || zone == null)
                 return false;
 
-            piece.GetActiveCellBounds(candidateFeedCellBoundsBuffer);
-            if (candidateFeedCellBoundsBuffer.Count == 0)
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board == null || !board.TryGetPieceModel(piece, out PieceModel candidateModel))
                 return false;
 
-            float candidateRotationAllowance = GetFeedRotationAllowance(
-                piece,
-                candidateFeedCellBoundsBuffer);
+            piece.GetActiveCellBounds(candidateFeedCellBoundsBuffer);
+            if (candidateFeedCellBoundsBuffer.Count == 0)
+            {
+#if UNITY_EDITOR
+                DebugLogAdmission(piece, zone, "gate_rejected", "candidate_no_cells", null);
+#endif
+                return false;
+            }
+
             for (int index = 0; index < activeFeedReservations.Count; index++)
             {
                 FeedReservation reservation = activeFeedReservations[index];
                 if (reservation.Zone != zone || reservation.Piece == null)
                     continue;
 
+                if (!board.TryGetPieceModel(reservation.Piece, out PieceModel reservedModel) ||
+                    HaveOverlappingGridColumns(candidateModel, reservedModel))
+                {
+#if UNITY_EDITOR
+                    DebugLogAdmission(piece, zone, "gate_rejected", "grid_columns_overlap_or_model_missing", reservation.Piece);
+#endif
+                    return false;
+                }
+
                 reservation.Piece.GetActiveCellBounds(reservedFeedCellBoundsBuffer);
                 if (reservedFeedCellBoundsBuffer.Count == 0)
+                {
+#if UNITY_EDITOR
+                    DebugLogAdmission(piece, zone, "gate_rejected", "reservation_no_cells", reservation.Piece);
+#endif
                     return false;
+                }
 
-                float reservationRotationAllowance = GetFeedRotationAllowance(
-                    reservation.Piece,
-                    reservedFeedCellBoundsBuffer);
                 if (HaveOverlappingHorizontalFootprints(
                         candidateFeedCellBoundsBuffer,
-                        candidateRotationAllowance,
-                        reservedFeedCellBoundsBuffer,
-                        reservationRotationAllowance))
+                        reservedFeedCellBoundsBuffer))
                 {
+                    // The grid paths are independent, but a tilted or displaced
+                    // body can still overlap the other feed's physical space.
+                    // Re-align the existing feed before allowing both motors.
+                    feedStraighteningRequests.Add(reservation.Piece);
+#if UNITY_EDITOR
+                    DebugLogAdmission(piece, zone, "gate_rejected", "straightening_for_physical_clearance", reservation.Piece);
+#endif
                     return false;
                 }
             }
 
             activeFeedReservations.Add(new FeedReservation(piece, zone));
+#if UNITY_EDITOR
+            DebugLogAdmission(piece, zone, "gate_acquired", "accepted", null);
+#endif
             return true;
         }
 
@@ -487,6 +519,10 @@ namespace GravityPuzzle
                 FeedReservation reservation = activeFeedReservations[index];
                 if (reservation.Zone == zone && ReferenceEquals(reservation.Piece, piece))
                 {
+                    feedStraighteningRequests.Remove(piece);
+#if UNITY_EDITOR
+                    DebugLogAdmission(piece, zone, "gate_released", "feed_finished_or_cancelled", null);
+#endif
                     activeFeedReservations.RemoveAt(index);
                     break;
                 }
@@ -506,56 +542,99 @@ namespace GravityPuzzle
             return false;
         }
 
-        private float GetFeedRotationAllowance(
-            PuzzlePiece piece,
-            List<Bounds> cellBounds)
+#if UNITY_EDITOR
+        internal bool DebugHasFeedInZone(ShredderCatchZone zone) => HasActiveFeedReservationForZone(zone);
+
+        internal void DebugLogAdmission(
+            PuzzlePiece piece, ShredderCatchZone zone, string stage, string reason, PuzzlePiece blocker)
         {
-            if (piece == null || cellBounds == null || cellBounds.Count == 0 ||
-                shredderConfig == null)
+            if (piece == null || zone == null)
+                return;
+
+            int key = piece.GetInstanceID();
+            string state = stage + ":" + reason + ":" + (blocker != null ? blocker.GetInstanceID() : 0) +
+                           ":" + zone.GetInstanceID();
+            if (admissionDiagnosticStates.TryGetValue(key, out string previous) && previous == state)
+                return;
+            admissionDiagnosticStates[key] = state;
+
+            string candidate = DebugDescribePiece(piece);
+            string other = blocker != null ? DebugDescribePiece(blocker) : "none";
+            Debug.Log($"[ShredAdmission] frame={Time.frameCount} stage={stage} reason={reason} " +
+                      $"zone={zone.GetInstanceID()} candidate={candidate} blocker={other}", piece);
+        }
+
+        private string DebugDescribePiece(PuzzlePiece piece)
+        {
+            PrototypeBoard board = PrototypeBoard.Active;
+            string modelInfo = "model=unavailable";
+            if (board != null && board.TryGetPieceModel(piece, out PieceModel model))
             {
-                return 0f;
+                var columns = new System.Text.StringBuilder();
+                for (int i = 0; i < model.LocalCells.Count; i++)
+                {
+                    if (i > 0) columns.Append(',');
+                    columns.Append(model.GetWorldCell(i).X);
+                }
+                modelInfo = $"state={model.State} anchor=({model.Anchor.X},{model.Anchor.Y}) gridX=[{columns}]";
             }
 
-            Rigidbody2D body = piece.Body;
-            Vector2 pivot = body != null ? body.position : piece.transform.position;
-            float currentAngle = body != null ? body.rotation : piece.transform.eulerAngles.z;
-            float maxRotationDelta = Mathf.Abs(currentAngle) + shredderConfig.MaxFeedTiltAngle;
-            float sine = Mathf.Sin(Mathf.Deg2Rad * Mathf.Min(90f, maxRotationDelta));
-            if (sine <= 0f)
-                return 0f;
-
-            float allowance = 0f;
-            for (int index = 0; index < cellBounds.Count; index++)
+            var cells = new List<Bounds>();
+            piece.GetActiveCellBounds(cells);
+            var intervals = new System.Text.StringBuilder();
+            for (int i = 0; i < cells.Count; i++)
             {
-                Bounds bounds = cellBounds[index];
-                float halfDiagonal = new Vector2(
-                    bounds.extents.x,
-                    bounds.extents.y).magnitude;
-                Vector2 center = new Vector2(bounds.center.x, bounds.center.y);
-                float radius = Vector2.Distance(center, pivot) + halfDiagonal;
-                allowance = Mathf.Max(allowance, radius * sine);
+                if (i > 0) intervals.Append(',');
+                intervals.AppendFormat("{0:F3}..{1:F3}", cells[i].min.x, cells[i].max.x);
             }
+            float angle = piece.Body != null ? piece.Body.rotation : piece.transform.eulerAngles.z;
+            bool falling = piece.GridFallView != null && piece.GridFallView.IsAnimating;
+            return $"'{piece.name}' id={piece.SourcePieceId} {modelInfo} " +
+                   $"fallTween={falling} angle={angle:F3} cellX=[{intervals}]";
+        }
+#endif
 
-            return allowance;
+        private bool HasConcurrentFeed(ShredderCatchZone zone)
+        {
+            int count = 0;
+            for (int index = 0; index < activeFeedReservations.Count; index++)
+            {
+                if (activeFeedReservations[index].Zone == zone &&
+                    activeFeedReservations[index].Piece != null && ++count > 1)
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool HaveOverlappingGridColumns(PieceModel first, PieceModel second)
+        {
+            for (int firstIndex = 0; firstIndex < first.LocalCells.Count; firstIndex++)
+            {
+                int firstColumn = first.GetWorldCell(firstIndex).X;
+                for (int secondIndex = 0; secondIndex < second.LocalCells.Count; secondIndex++)
+                {
+                    if (firstColumn == second.GetWorldCell(secondIndex).X)
+                        return true;
+                }
+            }
+            return false;
         }
 
         private static bool HaveOverlappingHorizontalFootprints(
             List<Bounds> first,
-            float firstAllowance,
-            List<Bounds> second,
-            float secondAllowance)
+            List<Bounds> second)
         {
             const float TouchingEpsilon = .0001f;
             for (int firstIndex = 0; firstIndex < first.Count; firstIndex++)
             {
                 Bounds firstBounds = first[firstIndex];
-                float firstMin = firstBounds.min.x - firstAllowance;
-                float firstMax = firstBounds.max.x + firstAllowance;
+                float firstMin = firstBounds.min.x;
+                float firstMax = firstBounds.max.x;
                 for (int secondIndex = 0; secondIndex < second.Count; secondIndex++)
                 {
                     Bounds secondBounds = second[secondIndex];
-                    float secondMin = secondBounds.min.x - secondAllowance;
-                    float secondMax = secondBounds.max.x + secondAllowance;
+                    float secondMin = secondBounds.min.x;
+                    float secondMax = secondBounds.max.x;
                     if (firstMax > secondMin + TouchingEpsilon &&
                         secondMax > firstMin + TouchingEpsilon)
                     {
@@ -700,6 +779,8 @@ namespace GravityPuzzle
             Vector2 lastContactCenter = Vector2.zero;
             float lastContactWidth = 0f;
             bool isShreddingSoundActive = false;
+            bool feedRotationSuspended = false;
+            float suspendedAngularVelocity = 0f;
             ShredderContactGlowView activeGlowView = null;
             ShredderContactGlowPool.TryRent(out activeGlowView);
 
@@ -722,14 +803,50 @@ namespace GravityPuzzle
                     // authored feed angular velocity explicitly so a dynamic
                     // support above reacts to the same tilted collider the
                     // player sees.
-                    float currentAngle = Mathf.DeltaAngle(0f, rb.rotation);
-                    float nextAngle = currentAngle + rb.angularVelocity * feedDeltaTime;
-                    if (Mathf.Abs(nextAngle) > maxTiltAngle)
+                    // Concurrent feeds have disjoint current footprints. Hold
+                    // their angles until only one remains so the kinematic
+                    // motors cannot rotate into a neighbour after admission.
+                    bool straightenFeed = feedStraighteningRequests.Contains(piece);
+                    if (HasConcurrentFeed(zone) || straightenFeed)
                     {
-                        nextAngle = Mathf.Clamp(nextAngle, -maxTiltAngle, maxTiltAngle);
-                        rb.angularVelocity = -rb.angularVelocity * 0.5f;
+                        if (!feedRotationSuspended)
+                        {
+                            suspendedAngularVelocity = rb.angularVelocity;
+                            feedRotationSuspended = true;
+                        }
+                        rb.angularVelocity = 0f;
+                        float currentAngle = Mathf.DeltaAngle(0f, rb.rotation);
+                        if (straightenFeed)
+                        {
+                            float straightenSpeed = Mathf.Max(feedSpeed,
+                                Mathf.Max(maxTiltAngle, Mathf.Abs(suspendedAngularVelocity)));
+                            float nextAngle = Mathf.MoveTowardsAngle(
+                                currentAngle, 0f, straightenSpeed * feedDeltaTime);
+                            rb.MoveRotation(nextAngle);
+                            if (Mathf.Approximately(nextAngle, 0f))
+                                feedStraighteningRequests.Remove(piece);
+                        }
+                        else
+                        {
+                            rb.MoveRotation(currentAngle);
+                        }
                     }
-                    rb.MoveRotation(nextAngle);
+                    else
+                    {
+                        if (feedRotationSuspended)
+                        {
+                            rb.angularVelocity = suspendedAngularVelocity;
+                            feedRotationSuspended = false;
+                        }
+                        float currentAngle = Mathf.DeltaAngle(0f, rb.rotation);
+                        float nextAngle = currentAngle + rb.angularVelocity * feedDeltaTime;
+                        if (Mathf.Abs(nextAngle) > maxTiltAngle)
+                        {
+                            nextAngle = Mathf.Clamp(nextAngle, -maxTiltAngle, maxTiltAngle);
+                            rb.angularVelocity = -rb.angularVelocity * 0.5f;
+                        }
+                        rb.MoveRotation(nextAngle);
+                    }
                 }
 
                 // Sample active block cells directly so concave/notched pieces (L, U, etc.)

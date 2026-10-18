@@ -141,6 +141,10 @@ namespace GravityPuzzle
         public IReadOnlyList<BoxCollider2D> CollisionCells => collisionCells;
         public IReadOnlyList<SpriteRenderer> CollisionCellVisuals => collisionCellVisuals;
 
+        // These are presentation renderers only; joint gameplay remains grid-owned.
+        public SpriteRenderer WholePieceVisual => wholePieceRenderer;
+        public IReadOnlyList<SpriteRenderer> JoinedPieceVisuals => joinedPieceRenderers;
+
         public int PrimarySortingLayerID =>
             wholePieceRenderer != null && wholePieceRenderer.enabled
                 ? wholePieceRenderer.sortingLayerID

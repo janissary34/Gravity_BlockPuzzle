@@ -13,12 +13,14 @@ See `Decisions/ADR-001-presentation-is-not-gameplay-authority.md` for the reason
 ## Shredder admission and temporary physics
 
 `BlockShredder` owns admission to each authored `ShredderCatchZone`. Feed
-reservations are scoped to an active piece and zone, then compared through the
-piece's real occupied cell geometry projected horizontally. Non-overlapping
-pieces may therefore feed through one mouth concurrently; overlapping material
-remains serial so kinematic feeds cannot interpenetrate. The reservation expands
-by the existing configured feed-tilt range, making a later small rotation part
-of the same safety decision.
+reservations are scoped to an active piece and zone. Their authoritative grid
+columns must be disjoint for concurrent admission; overlapping columns remain
+serial. Current cell bounds additionally guard physical clearance. If an
+independent candidate encounters a tilted active feed, the active feed is
+straightened toward its grid orientation before retrying admission. While
+multiple feeds share a zone, their feed rotation is held at its current angle;
+once only one remains, its configured rotation resumes. Physical bounds can
+still delay admission when a body is displaced or the conservative bounds overlap.
 
 `ShredderCatchZone` validates physical capture using per-cell geometry and then
 confirms the authoritative grid state. `CollisionBounds` is not used to decide

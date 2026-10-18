@@ -107,6 +107,79 @@ namespace GravityPuzzle
             return hasShredderEntryCell;
         }
 
+#if UNITY_EDITOR
+        // Diagnostic only: evaluate the rejected candidate without changing
+        // the authoritative capture decision or emitting per-frame logs.
+        internal void LogCaptureRejection(PuzzlePiece piece, BlockShredder shredder)
+        {
+            if (piece == null || shredder == null || !shredder.DebugHasFeedInZone(this))
+                return;
+
+            piece.GetActiveCellBounds(activeCellBoundsBuffer);
+            float lowest = float.PositiveInfinity;
+            bool intersectsLane = false;
+            bool outsideCorridor = false;
+            for (int i = 0; i < activeCellBoundsBuffer.Count; i++)
+            {
+                Bounds cell = activeCellBoundsBuffer[i];
+                lowest = Mathf.Min(lowest, cell.min.y);
+                intersectsLane |= cell.max.x > leftX && cell.min.x < rightX;
+                outsideCorridor |= cell.min.x < leftX - CorridorEpsilon ||
+                                   cell.max.x > rightX + CorridorEpsilon;
+            }
+
+            // Limit diagnostics to pieces close enough to be relevant to the mouth.
+            if (!intersectsLane || lowest > captureTopY + captureApproachDistance + 1f)
+                return;
+
+            string reason;
+            PrototypeBoard board = PrototypeBoard.Active;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (piece.IsShredderInteractionLocked)
+                reason = "interaction_locked";
+            else if (piece.GridFallView != null && piece.GridFallView.IsAnimating)
+                reason = "grid_fall_animating";
+            else if (outsideCorridor)
+                reason = "cell_outside_corridor";
+            else if (lowest > captureTopY + captureApproachDistance)
+                reason = "above_capture_band";
+            else if (board == null || board.BoardSnapshot == null || level == null ||
+                     !board.TryGetPieceModel(piece, out PieceModel model))
+                reason = "missing_board_or_model";
+            else if (model.State != PieceState.Placed && model.State != PieceState.Dragging)
+                reason = "piece_state_not_ready";
+            else
+            {
+                reason = "no_entry_cell";
+                bool hasEntry = false;
+                for (int i = 0; i < model.LocalCells.Count; i++)
+                {
+                    GridCoordinate coordinate = model.GetWorldCell(i);
+                    GridCoordinate below = coordinate.Offset(Down);
+                    if (board.BoardSnapshot.Grid.TryGetOccupantId(below, out int occupantId) &&
+                        occupantId == model.Id)
+                        continue;
+                    if (coordinate.Y == 0 && IsInsideShredderLane(level, coordinate))
+                    {
+                        hasEntry = true;
+                        continue;
+                    }
+                    GridCellState support = board.BoardSnapshot.Grid.GetCellState(below);
+                    if (support == GridCellState.Blocked || support == GridCellState.Occupied ||
+                        support == GridCellState.Reserved)
+                    {
+                        reason = "blocked_or_reserved_support";
+                        break;
+                    }
+                }
+                if (hasEntry && reason == "no_entry_cell")
+                    reason = "capture_recheck_mismatch";
+            }
+
+            shredder.DebugLogAdmission(piece, this, "capture_rejected", reason, null);
+        }
+#endif
+
         /// <summary>
         /// Preflights a grid-owned support-chain member before it is handed to
         /// Unity physics. The full authored footprint must fit the real mouth
