@@ -60,7 +60,7 @@ MonoBehaviour:
   gearIdleSpeed: 220
   gearShredSpeed: 600
   gearClippingRatio: 0.45
-  wheelRadiusMultiplier: 1
+  wheelRadiusMultiplier: 1.24
   wheelRotationSpeedMultiplier: 1
   captureApproachDistance: 0.04
   wheelArtScale: 0.04
