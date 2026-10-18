@@ -1049,6 +1049,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ba798d65daefd4586bbc7e3184e0130f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  sparksParticleSystem: {fileID: 0}
+  sparksRenderer: {fileID: 0}
 --- !u!199 &254861996
 ParticleSystemRenderer:
   serializedVersion: 6
@@ -6225,6 +6227,8 @@ MonoBehaviour:
   hammerIconSparkles: {fileID: 0}
   rocketButtonGlow: {fileID: 0}
   hammerButtonGlow: {fileID: 0}
+  timerButtonGlow: {fileID: 0}
+  timerButtonSparkles: {fileID: 0}
   gameplayHudGroups: []
   rocketBoosterButtonGroup: {fileID: 1749646609}
   hammerBoosterButtonGroup: {fileID: 1749646610}
@@ -8671,7 +8675,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 392846586587965100, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 538094313876201767, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_Name
@@ -10185,6 +10189,22 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7597851660546034200, guid: 4851ee2845ced4b3f9aa4012fdd9dc4b, type: 3}
+      propertyPath: m_Color.b
+      value: 0.7764706
+      objectReference: {fileID: 0}
+    - target: {fileID: 7597851660546034200, guid: 4851ee2845ced4b3f9aa4012fdd9dc4b, type: 3}
+      propertyPath: m_Color.g
+      value: 0.29411766
+      objectReference: {fileID: 0}
+    - target: {fileID: 7597851660546034200, guid: 4851ee2845ced4b3f9aa4012fdd9dc4b, type: 3}
+      propertyPath: m_Color.r
+      value: 0.32156864
+      objectReference: {fileID: 0}
+    - target: {fileID: 7597851660546034200, guid: 4851ee2845ced4b3f9aa4012fdd9dc4b, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

@@ -1112,9 +1112,9 @@ MonoBehaviour:
   - areaId: 3b550d36-9e09-48b4-84df-4c437fd9e9e2
     name: Box 1
     bounds:
-      origin: {x: 8, y: 12}
-      size: {x: 12, y: 8}
-    editorLocked: 1
+      origin: {x: 8, y: 8}
+      size: {x: 12, y: 12}
+    editorLocked: 0
     hiddenPieces: []
     targetShredCount: 1
   elevators: []

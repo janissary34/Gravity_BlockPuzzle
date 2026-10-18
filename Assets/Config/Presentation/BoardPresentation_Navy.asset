@@ -16,8 +16,8 @@ MonoBehaviour:
   backgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
   alternateBackgroundColor: {r: 0.22, g: 0.18, b: 0.5, a: 1}
   exteriorColor: {r: 0.22941178, g: 0.1957647, b: 0.52305883, a: 1}
-  environmentTint: {r: 0.78, g: 0.78, b: 0.78, a: 1}
-  environmentBackdropMaterial: {fileID: 2100000, guid: 8393891fdbdf84e91990a0fcc91a9dd1, type: 2}
+  environmentTint: {r: 0.2627451, g: 0.23921569, b: 0.67058825, a: 1}
+  environmentBackdropMaterial: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
   exteriorEdgeDarkeningMaterial: {fileID: 2100000, guid: b9cf6272a86e4c8cbd13c5d1a848c72a, type: 2}
   exteriorEdgeDarkeningWidth: 1.5
   exteriorEdgeDarkeningAlpha: 0.22
