@@ -27,7 +27,7 @@ namespace GravityPuzzle.Gameplay.Reveal
     /// <summary>Explicit presentation boundary. Gameplay safely completes immediately when no view is authored.</summary>
     public interface IRevealAreaPresentation
     {
-        void SetBoxRemaining(int remaining);
+        void SetBoxRemaining(int remaining, int target);
         void PlayOpening(RevealAreaKind kind, Action onCompleted);
     }
 
@@ -111,7 +111,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             {
                 BoxRuntime box = boxes[index];
                 if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
-                    presentation.SetBoxRemaining(box.Definition.targetShredCount);
+                    presentation.SetBoxRemaining(box.Definition.targetShredCount, box.Definition.targetShredCount);
             }
 
             // A zero-target box is deliberately opened from the initialized
@@ -135,7 +135,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             {
                 BoxRuntime box = boxes[index];
                 if (box.Definition.areaId == areaId)
-                    presentation.SetBoxRemaining(box.Definition.targetShredCount - box.CountedShredPieceIds.Count);
+                    presentation.SetBoxRemaining(box.Definition.targetShredCount - box.CountedShredPieceIds.Count, box.Definition.targetShredCount);
             }
         }
 
@@ -149,7 +149,7 @@ namespace GravityPuzzle.Gameplay.Reveal
                     continue;
 
                 if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
-                    presentation.SetBoxRemaining(box.Definition.targetShredCount - box.CountedShredPieceIds.Count);
+                    presentation.SetBoxRemaining(box.Definition.targetShredCount - box.CountedShredPieceIds.Count, box.Definition.targetShredCount);
 
                 if (box.CountedShredPieceIds.Count >= box.Definition.targetShredCount)
                     StartBoxUnlock(box);

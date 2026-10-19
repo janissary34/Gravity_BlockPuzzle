@@ -35,7 +35,8 @@ MonoBehaviour:
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
-  - name: Piece 1
+  - pieceId: 
+    name: Piece 1
     tutorialTargetId: 
     visualId: 
     paletteId: Red
@@ -280,7 +281,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 9, y: 5}
       type: 0
-  - name: Piece 4
+  - pieceId: 
+    name: Piece 4
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -429,7 +431,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -9, y: 5}
       type: 0
-  - name: Piece 3
+  - pieceId: 
+    name: Piece 3
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -546,7 +549,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 9}
       type: 0
-  - name: Piece 4
+  - pieceId: 
+    name: Piece 4
     tutorialTargetId: 
     visualId: 
     paletteId: Orange
@@ -631,7 +635,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 11, y: 9}
       type: 0
-  - name: Piece 5
+  - pieceId: 
+    name: Piece 5
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
@@ -748,7 +753,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 13, y: 1}
       type: 0
-  - name: Piece 6
+  - pieceId: 
+    name: Piece 6
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -801,6 +807,7 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 9, y: 13}
       type: 0
+  joints: []
   boxes: []
   elevators: []
   pins: []

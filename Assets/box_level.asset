@@ -35,7 +35,8 @@ MonoBehaviour:
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
-  - name: Piece 1
+  - pieceId: 
+    name: Piece 1
     tutorialTargetId: 
     visualId: 
     paletteId: Red
@@ -152,7 +153,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: -1}
       type: 0
-  - name: Piece 2
+  - pieceId: 
+    name: Piece 2
     tutorialTargetId: 
     visualId: 
     paletteId: Yellow
@@ -269,7 +271,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: -1}
       type: 0
-  - name: Piece 3
+  - pieceId: 
+    name: Piece 3
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -290,12 +293,13 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 4
+  - pieceId: 
+    name: Piece 4
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
     color: {r: 0.3, g: 0.706, b: 1, a: 1}
-    origin: {x: 12, y: 8}
+    origin: {x: 12, y: 4}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -407,12 +411,13 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 7}
       type: 0
-  - name: Piece 5
+  - pieceId: 
+    name: Piece 5
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
-    origin: {x: 12, y: 12}
+    origin: {x: 12, y: 8}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -492,12 +497,13 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 7}
       type: 0
-  - name: Piece 6
+  - pieceId: 
+    name: Piece 6
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
-    origin: {x: 12, y: 20}
+    origin: {x: 12, y: 16}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -545,7 +551,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
-  - name: Double 7
+  - pieceId: 
+    name: Double 7
     tutorialTargetId: 
     visualId: 
     paletteId: Orange
@@ -566,7 +573,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Double 8
+  - pieceId: 
+    name: Double 8
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -587,12 +595,13 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
+  joints: []
   boxes:
-  - areaId: d3f94ccc-b6b7-4599-be53-d0694506ce4a
+  - areaId: 6de30b9c-400f-4053-8529-c10d39bcfa82
     name: Box 1
     bounds:
-      origin: {x: 0, y: 20}
-      size: {x: 12, y: 8}
+      origin: {x: 0, y: 16}
+      size: {x: 12, y: 12}
     editorLocked: 1
     hiddenPieces: []
     targetShredCount: 3
@@ -601,7 +610,7 @@ MonoBehaviour:
   obstacles:
   - name: Obstacle 1
     usesGridCells: 1
-    gridCell: {x: 0, y: 4}
+    gridCell: {x: 0, y: 3}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -609,7 +618,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 2
     usesGridCells: 1
-    gridCell: {x: 1, y: 4}
+    gridCell: {x: 1, y: 3}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -617,7 +626,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 3
     usesGridCells: 1
-    gridCell: {x: 3, y: 1}
+    gridCell: {x: 2, y: 3}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -625,7 +634,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 4
     usesGridCells: 1
-    gridCell: {x: 4, y: 1}
+    gridCell: {x: 3, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -633,15 +642,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 5
     usesGridCells: 1
-    gridCell: {x: 2, y: 4}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 6
-    usesGridCells: 1
-    gridCell: {x: 2, y: 1}
+    gridCell: {x: 4, y: 0}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}

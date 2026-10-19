@@ -28,6 +28,7 @@ namespace GravityPuzzle
             new Queue<GridGravityMove>();
         private readonly List<GridGravityMove> candidateJointGravityMoves = new List<GridGravityMove>();
         private readonly List<GridGravityMove> selectedJointGravityMoves = new List<GridGravityMove>();
+        private readonly HashSet<int> gravityBatchColumns = new HashSet<int>();
         private readonly List<PuzzlePiece> gravityGroupPieces = new List<PuzzlePiece>();
         private GridCoordinate selectedPieceStartAnchor;
         private bool hasSelectedPieceStartAnchor;
@@ -445,6 +446,17 @@ namespace GravityPuzzle
             PrototypeBoard activeBoard,
             LevelBoardSnapshot snapshot)
         {
+            gravityBatchColumns.Clear();
+            bool committedAny = false;
+            while (TryCommitIndependentGravityGroup(activeBoard, snapshot))
+                committedAny = true;
+            return committedAny;
+        }
+
+        private bool TryCommitIndependentGravityGroup(
+            PrototypeBoard activeBoard,
+            LevelBoardSnapshot snapshot)
+        {
             selectedJointGravityMoves.Clear();
             int selectedLandingY = int.MaxValue;
             int selectedSourceId = int.MaxValue;
@@ -461,6 +473,26 @@ namespace GravityPuzzle
 
                 candidateJointGravityMoves.Clear();
                 if (!activeBoard.TryPlanJointGroupGravityMove(model.Id, candidateJointGravityMoves))
+                    continue;
+
+                bool sharesBatchColumn = false;
+                for (int moveIndex = 0; moveIndex < candidateJointGravityMoves.Count && !sharesBatchColumn; moveIndex++)
+                {
+                    if (!snapshot.TryGetPiece(candidateJointGravityMoves[moveIndex].PieceId, out PieceModel member))
+                    {
+                        sharesBatchColumn = true;
+                        break;
+                    }
+                    for (int cellIndex = 0; cellIndex < member.LocalCells.Count; cellIndex++)
+                    {
+                        if (gravityBatchColumns.Contains(member.GetWorldCell(cellIndex).X))
+                        {
+                            sharesBatchColumn = true;
+                            break;
+                        }
+                    }
+                }
+                if (sharesBatchColumn)
                     continue;
 
                 int groupLandingY = int.MaxValue;
@@ -491,7 +523,14 @@ namespace GravityPuzzle
             }
 
             for (int index = 0; index < selectedJointGravityMoves.Count; index++)
+            {
+                if (snapshot.TryGetPiece(selectedJointGravityMoves[index].PieceId, out PieceModel member))
+                {
+                    for (int cellIndex = 0; cellIndex < member.LocalCells.Count; cellIndex++)
+                        gravityBatchColumns.Add(member.GetWorldCell(cellIndex).X);
+                }
                 pendingGridGravityMoves.Enqueue(selectedJointGravityMoves[index]);
+            }
             return true;
         }
 

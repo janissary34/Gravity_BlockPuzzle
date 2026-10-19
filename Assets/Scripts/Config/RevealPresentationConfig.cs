@@ -38,6 +38,10 @@ namespace GravityPuzzle.Config
         public Sprite elevatorDoorSprite;
 
         [Header("Box")]
+        [Tooltip("Insets of the Tunnel opening in source sprite pixels: left, bottom, right, top.")]
+        public Vector4 boxOpeningInsets = new Vector4(31f, 48f, 31f, 56f);
+        [Tooltip("Opaque interior and corner backing while the box is locked.")]
+        public Color boxBackingColor = new Color(.035f, .025f, .16f, 1f);
         [Min(.01f)] public float boxOpenDuration = .45f;
         [Tooltip("Additional clearance above the fixed shutter top before the final burst.")]
         [Min(0f)] public float boxOpenDistance = .08f;

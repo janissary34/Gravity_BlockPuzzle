@@ -47,7 +47,7 @@ namespace GravityPuzzle.Presentation.Views
             ApplySorting();
         }
 
-        public void SetBoxRemaining(int remaining)
+        public void SetBoxRemaining(int remaining, int target)
         {
             if (boxCounter != null)
                 boxCounter.SetText("{0}", Mathf.Max(0, remaining));

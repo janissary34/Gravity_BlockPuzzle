@@ -12,9 +12,12 @@ namespace GravityPuzzle.Presentation.Views
     {
         private const int BoxBurstColumns = 6;
         private const int BoxBurstRows = 2;
+        private static readonly int OpeningId = Shader.PropertyToID("_Opening");
 
         [SerializeField] private Transform boxShutter;
         [SerializeField] private SpriteRenderer boxCoverRenderer;
+        [SerializeField] private SpriteRenderer boxBackingRenderer;
+        [SerializeField] private SpriteRenderer boxPanelRenderer;
         [SerializeField] private TMP_Text boxCounter;
         [SerializeField] private Transform[] boxBurstFragments;
         [SerializeField] private SpriteRenderer[] boxBurstRenderers;
@@ -22,6 +25,10 @@ namespace GravityPuzzle.Presentation.Views
         private Action<BoxRevealAreaView> returnHandler;
         private RevealPresentationConfig config;
         private Sequence openingSequence;
+        private Tween progressTween;
+        private float currentHeight;
+        private float apertureHeight;
+        private MaterialPropertyBlock panelProperties;
         private Action completion;
         private bool isComplete;
         private Vector3 shutterClosedPosition;
@@ -37,6 +44,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private void Awake()
         {
+            panelProperties = new MaterialPropertyBlock();
             if (boxShutter != null)
                 shutterClosedPosition = boxShutter.localPosition;
             if (boxCoverRenderer != null)
@@ -79,6 +87,7 @@ namespace GravityPuzzle.Presentation.Views
             AreaId = areaId;
             config = presentationConfig;
             authoredSize = size;
+            currentHeight = Mathf.Max(0f, size.y);
             transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
 
             if (boxShutter != null)
@@ -95,9 +104,6 @@ namespace GravityPuzzle.Presentation.Views
                 Color c = boxCoverRenderer.color;
                 c.a = 1f;
                 boxCoverRenderer.color = c;
-                if (config != null && config.boxCoverSprite != null)
-                    boxCoverRenderer.sprite = config.boxCoverSprite;
-
                 if (boxCoverRenderer.sprite != null && boxCoverRenderer.sprite.border != Vector4.zero)
                 {
                     boxCoverRenderer.drawMode = SpriteDrawMode.Sliced;
@@ -118,6 +124,9 @@ namespace GravityPuzzle.Presentation.Views
                 if (config != null)
                     boxCoverRenderer.sortingOrder = config.boxSortingOrder;
             }
+
+            ConfigureLayers(size);
+            ApplyShutterHeight(currentHeight);
 
             if (boxCounter != null)
             {
@@ -157,16 +166,33 @@ namespace GravityPuzzle.Presentation.Views
             isComplete = false;
         }
 
-        public void SetBoxRemaining(int remaining)
+        public void SetBoxRemaining(int remaining, int target)
         {
             if (boxCounter != null)
                 boxCounter.SetText("{0}", Mathf.Max(0, remaining));
+
+            // The final step is owned by PlayOpening so the burst and unlock
+            // completion follow the same uninterrupted animation.
+            if (remaining <= 0 || target <= 0 || config == null)
+                return;
+
+            float height = authoredSize.y * Mathf.Clamp01((float)remaining / target);
+            progressTween?.Kill();
+            if (Mathf.Approximately(currentHeight, height))
+                return;
+
+            progressTween = DOVirtual.Float(currentHeight, height, config.boxOpenDuration, ApplyShutterHeight)
+                .SetEase(config.boxOpenEase)
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
         }
 
         public void PlayOpening(RevealAreaKind requestedKind, Action onCompleted)
         {
             completion = onCompleted;
             isComplete = false;
+            progressTween?.Kill();
+            progressTween = null;
             openingSequence?.Kill();
 
             if (config == null || boxShutter == null)
@@ -175,64 +201,77 @@ namespace GravityPuzzle.Presentation.Views
                 return;
             }
 
+            float residualHeight = Mathf.Min(authoredSize.y, Mathf.Max(0f, config.boxBurstResidualHeight));
+            float fixedTopY = coverClosedPosition.y + authoredSize.y * .5f;
+            float residualCentreY = fixedTopY - residualHeight * .5f;
+            PrepareBoxBurstFragments(new Vector3(0f, residualCentreY, 0f), residualHeight);
+
             openingSequence = DOTween.Sequence()
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
-
-            Transform coverTransform = boxCoverRenderer != null ? boxCoverRenderer.transform : null;
-            float fullHeight = authoredSize.y > 0 ? authoredSize.y : 1f;
-            float residualHeight = Mathf.Min(fullHeight, config.boxBurstResidualHeight);
-            float fixedTopY = coverTransform != null
-                ? coverTransform.localPosition.y + fullHeight * .5f
-                : shutterClosedPosition.y;
-            float residualCentreY = fixedTopY - residualHeight * .5f;
-
-            PrepareBoxBurstFragments(
-                new Vector3(0f, residualCentreY, 0f),
-                residualHeight);
-
-            if (coverTransform != null)
-            {
-                openingSequence.Append(DOVirtual.Float(
-                    fullHeight,
-                    residualHeight,
-                    config.boxOpenDuration,
-                    height =>
-                    {
-                        if (boxCoverRenderer != null)
-                        {
-                            if (boxCoverRenderer.drawMode == SpriteDrawMode.Sliced)
-                            {
-                                boxCoverRenderer.size = new Vector2(boxCoverRenderer.size.x, height);
-                            }
-                            else
-                            {
-                                Vector3 scale = boxCoverRenderer.transform.localScale;
-                                float initialH = authoredSize.y > 0f ? authoredSize.y : 1f;
-                                Vector2 spriteSize = boxCoverRenderer.sprite != null
-                                    ? boxCoverRenderer.sprite.rect.size / boxCoverRenderer.sprite.pixelsPerUnit
-                                    : authoredSize;
-                                scale.y = spriteSize.y > 0f ? height / spriteSize.y : 1f;
-                                boxCoverRenderer.transform.localScale = scale;
-                            }
-                        }
-                    }).SetEase(config.boxOpenEase));
-
-                openingSequence.Join(coverTransform.DOLocalMoveY(
-                    residualCentreY,
-                    config.boxOpenDuration).SetEase(config.boxOpenEase));
-            }
-
-            if (boxCounter != null)
-            {
-                openingSequence.Join(boxCounter.transform.DOLocalMoveY(
-                    residualCentreY,
-                    config.boxOpenDuration).SetEase(config.boxOpenEase));
-            }
-
+            openingSequence.Append(DOVirtual.Float(currentHeight, 0f, config.boxOpenDuration, ApplyShutterHeight)
+                .SetEase(config.boxOpenEase));
             openingSequence.AppendCallback(PlayBoxBurst);
             openingSequence.AppendInterval(config.boxBurstDuration);
             openingSequence.OnComplete(CompleteOpening);
+        }
+
+        private void ConfigureLayers(Vector2 size)
+        {
+            if (boxCoverRenderer == null || boxCoverRenderer.sprite == null ||
+                boxBackingRenderer == null || boxBackingRenderer.sprite == null || boxPanelRenderer == null ||
+                boxPanelRenderer.sprite == null || boxPanelRenderer.sharedMaterial == null || config == null)
+            {
+                Debug.LogError($"[BoxRevealAreaView] Missing box presentation layers or config on '{name}'.", this);
+                return;
+            }
+
+            Sprite frameSprite = boxCoverRenderer.sprite;
+            float ppu = frameSprite.pixelsPerUnit;
+            Vector4 border = frameSprite.border / ppu;
+            Vector4 insets = config.boxOpeningInsets / ppu;
+            float horizontalScale = Mathf.Min(1f, size.x / Mathf.Max(.001f, border.x + border.z));
+            float verticalScale = Mathf.Min(1f, size.y / Mathf.Max(.001f, border.y + border.w));
+            float left = insets.x * horizontalScale;
+            float right = insets.z * horizontalScale;
+            float bottom = insets.y * verticalScale;
+            float top = insets.w * verticalScale;
+            float width = Mathf.Max(0f, size.x - left - right);
+            apertureHeight = Mathf.Max(0f, size.y - bottom - top);
+
+            boxBackingRenderer.transform.localPosition = coverClosedPosition;
+            boxBackingRenderer.drawMode = SpriteDrawMode.Simple;
+            Vector2 backingSize = boxBackingRenderer.sprite.bounds.size;
+            boxBackingRenderer.transform.localScale = new Vector3(size.x / backingSize.x, size.y / backingSize.y, 1f);
+            Color backingColor = config.boxBackingColor;
+            backingColor.a = 1f;
+            boxBackingRenderer.color = backingColor;
+            boxBackingRenderer.sortingOrder = config.boxSortingOrder - 2;
+            boxBackingRenderer.gameObject.SetActive(true);
+
+            boxPanelRenderer.transform.localPosition = coverClosedPosition + new Vector3((left - right) * .5f, (bottom - top) * .5f, 0f);
+            boxPanelRenderer.drawMode = SpriteDrawMode.Simple;
+            Vector2 panelSize = boxPanelRenderer.sprite.bounds.size;
+            boxPanelRenderer.transform.localScale = new Vector3(width / panelSize.x, apertureHeight / panelSize.y, 1f);
+            boxPanelRenderer.sortingOrder = config.boxSortingOrder - 1;
+            boxPanelRenderer.gameObject.SetActive(true);
+        }
+
+        private void ApplyShutterHeight(float height)
+        {
+            currentHeight = height;
+            float opening = authoredSize.y > 0f ? 1f - Mathf.Clamp01(height / authoredSize.y) : 0f;
+            if (boxPanelRenderer != null)
+            {
+                boxPanelRenderer.GetPropertyBlock(panelProperties);
+                panelProperties.SetFloat(OpeningId, opening);
+                boxPanelRenderer.SetPropertyBlock(panelProperties);
+            }
+
+            if (boxCounter != null)
+                boxCounter.transform.localPosition = counterClosedPosition +
+                    (config != null ? (Vector3)config.boxCounterOffset : Vector3.zero) +
+                    Vector3.up * (opening * apertureHeight * .5f);
         }
 
         private void PrepareBoxBurstFragments(Vector3 burstOrigin, float residualHeight)
@@ -271,6 +310,8 @@ namespace GravityPuzzle.Presentation.Views
                 boxCoverRenderer.gameObject.SetActive(false);
             if (boxCounter != null)
                 boxCounter.gameObject.SetActive(false);
+            if (boxPanelRenderer != null)
+                boxPanelRenderer.gameObject.SetActive(false);
 
             if (boxBurstFragments == null || boxBurstRenderers == null || config == null)
                 return;
@@ -346,11 +387,14 @@ namespace GravityPuzzle.Presentation.Views
         public void OnSpawn()
         {
             isComplete = false;
+            progressTween?.Kill();
             openingSequence?.Kill();
         }
 
         public void OnDespawn()
         {
+            progressTween?.Kill();
+            progressTween = null;
             openingSequence?.Kill();
             openingSequence = null;
             completion = null;
@@ -378,6 +422,14 @@ namespace GravityPuzzle.Presentation.Views
                 boxCoverRenderer.color = coverColor;
                 boxCoverRenderer.gameObject.SetActive(true);
             }
+
+            if (boxPanelRenderer != null)
+            {
+                boxPanelRenderer.SetPropertyBlock(null);
+                boxPanelRenderer.gameObject.SetActive(true);
+            }
+            if (boxBackingRenderer != null)
+                boxBackingRenderer.gameObject.SetActive(true);
 
             if (boxCounter != null)
             {

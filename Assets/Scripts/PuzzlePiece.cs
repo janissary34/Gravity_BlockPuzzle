@@ -427,6 +427,7 @@ namespace GravityPuzzle
             ApplyOutlinePresentation();
             returnToPool = null;
             ClearIceVisuals();
+            ClearBombVisuals();
             ClearWholePiecePresentation();
             RestoreShredderPresentation();
             RestoreDefaultPhysicsLayers();
@@ -489,6 +490,7 @@ namespace GravityPuzzle
             bool tileNormalSpriteToBounds = false)
         {
             ClearIceVisuals();
+            ClearBombVisuals();
             ClearJoinedPiecePresentation();
             wholePieceNormalSprite = normalSprite;
             wholePieceIceSprite = iceSprite;
@@ -515,6 +517,7 @@ namespace GravityPuzzle
             Sprite verticalBarSprite)
         {
             ClearIceVisuals();
+            ClearBombVisuals();
             ClearWholePiecePresentation();
             if (moduleCells == null || moduleCells.Count == 0 ||
                 singleModuleSprite == null || horizontalBarSprite == null ||
@@ -1250,6 +1253,7 @@ namespace GravityPuzzle
         private void PrepareForRuntimeSetup()
         {
             ClearIceVisuals();
+            ClearBombVisuals();
             ClearWholePiecePresentation();
             iceOverlaySprite = null;
             iceOverlayTint = new Color(1f, 1f, 1f, .42f);
@@ -2265,6 +2269,7 @@ namespace GravityPuzzle
                 SetSelected(false);
 
             ClearIceVisuals();
+            ClearBombVisuals();
             ClearWholePiecePresentation();
 
             SpriteRenderer removedVisual = collisionCellVisuals[targetIndex];
@@ -2863,7 +2868,6 @@ namespace GravityPuzzle
             renderer.sortingOrder = sortingSource.sortingOrder + 5;
             renderer.enabled = true;
             bombOverlayRenderer = renderer;
-            iceRenderers.Add(renderer);
         }
 
         private static Vector3 GetOverlayScaleToFit(
@@ -3061,7 +3065,7 @@ namespace GravityPuzzle
             for (int index = 0; index < iceSlots.Count; index++)
             {
                 SpriteRenderer candidate = iceSlots[index];
-                if (candidate == null || candidate == wholePieceRenderer ||
+                if (candidate == null || candidate == wholePieceRenderer || candidate == bombOverlayRenderer ||
                     iceRenderers.Contains(candidate) || joinedPieceRenderers.Contains(candidate))
                     continue;
 
@@ -3271,8 +3275,6 @@ namespace GravityPuzzle
         {
             iceReleaseAnimating = false;
             previousFrozenRemaining = -1;
-            previousBombRemaining = -1;
-            bombOverlayRenderer = null;
             foreach (SpriteRenderer renderer in iceRenderers)
             {
                 if (renderer == null)
@@ -3284,12 +3286,25 @@ namespace GravityPuzzle
             }
             iceRenderers.Clear();
 
-            if (iceCounterText != null)
+            if (iceCounterText != null &&
+                (iceCounterText != bombCounterText || !IsBomb || IsBombDefused))
             {
                 iceCounterText.enabled = false;
                 iceCounterText.gameObject.SetActive(false);
             }
-            if (bombCounterText != null && bombCounterText != iceCounterText)
+        }
+
+        private void ClearBombVisuals()
+        {
+            previousBombRemaining = -1;
+            if (bombOverlayRenderer != null)
+            {
+                DOTween.Kill(bombOverlayRenderer);
+                bombOverlayRenderer.enabled = false;
+                bombOverlayRenderer.transform.SetParent(iceSlotsRoot, false);
+                bombOverlayRenderer = null;
+            }
+            if (bombCounterText != null && (bombCounterText != iceCounterText || !IsFrozen))
             {
                 bombCounterText.enabled = false;
                 bombCounterText.gameObject.SetActive(false);

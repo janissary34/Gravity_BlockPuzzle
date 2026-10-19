@@ -18,6 +18,10 @@ namespace GravityPuzzle.Editor
         private const string MapAtlasPath = "Assets/Art/map.png";
         private const string IceMaterialPath = "Assets/Materials/M_Ice.mat";
         private const string TMPFontPath = "Assets/Layer Lab/GUI Pro-CasualGame/ResourcesData/Fonts/LilitaOne-Regular_BlueDark.asset";
+        private const string BoxFramePath = "Assets/Art/BoxReveal/TunnelFrame.png";
+        private const string BoxPanelPath = "Assets/Art/BoxReveal/TunnelShutter.png";
+        private const string BoxBackingPath = "Assets/Art/BoxReveal/BoxBacking.png";
+        private const string BoxPanelMaterialPath = "Assets/Materials/BoxShutter.mat";
         private const string BoxPrefabPath = "Assets/Prefabs/BoxRevealArea.prefab";
         private const string ElevatorPrefabPath = "Assets/Prefabs/ElevatorRevealArea.prefab";
         private const string SpringPrefabPath = "Assets/Prefabs/JointSpringView.prefab";
@@ -72,6 +76,13 @@ namespace GravityPuzzle.Editor
             Material iceMaterial,
             TMP_FontAsset font)
         {
+            Sprite frameSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxFramePath);
+            Sprite panelSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxPanelPath);
+            Sprite backingSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxBackingPath);
+            Material panelMaterial = AssetDatabase.LoadAssetAtPath<Material>(BoxPanelMaterialPath);
+            if (frameSprite == null || panelSprite == null || backingSprite == null || panelMaterial == null)
+                throw new System.InvalidOperationException("Box reveal artwork or shutter material is missing; cannot author the box prefab.");
+
             GameObject root = new GameObject("BoxRevealArea");
             try
             {
@@ -83,12 +94,27 @@ namespace GravityPuzzle.Editor
                 GameObject cover = new GameObject("Garage Shutter Cover");
                 cover.transform.SetParent(shutter.transform, false);
                 SpriteRenderer coverRenderer = cover.AddComponent<SpriteRenderer>();
-                coverRenderer.sprite = tunnelSprite;
+                coverRenderer.sprite = frameSprite;
                 if (iceMaterial != null)
                     coverRenderer.material = iceMaterial;
                 coverRenderer.drawMode = SpriteDrawMode.Sliced;
                 coverRenderer.size = new Vector2(3f, 3f);
                 coverRenderer.sortingOrder = 200;
+
+                GameObject backing = new GameObject("Box Opaque Backing");
+                backing.transform.SetParent(shutter.transform, false);
+                SpriteRenderer backingRenderer = backing.AddComponent<SpriteRenderer>();
+                backingRenderer.sprite = backingSprite;
+                if (iceMaterial != null)
+                    backingRenderer.sharedMaterial = iceMaterial;
+                backingRenderer.sortingOrder = 198;
+
+                GameObject panel = new GameObject("Box Moving Shutter");
+                panel.transform.SetParent(shutter.transform, false);
+                SpriteRenderer panelRenderer = panel.AddComponent<SpriteRenderer>();
+                panelRenderer.sprite = panelSprite;
+                panelRenderer.sharedMaterial = panelMaterial;
+                panelRenderer.sortingOrder = 199;
 
                 GameObject counterObj = new GameObject("Counter");
                 counterObj.transform.SetParent(shutter.transform, false);
@@ -128,6 +154,8 @@ namespace GravityPuzzle.Editor
                 SerializedObject so = new SerializedObject(view);
                 so.FindProperty("boxShutter").objectReferenceValue = shutter.transform;
                 so.FindProperty("boxCoverRenderer").objectReferenceValue = coverRenderer;
+                so.FindProperty("boxBackingRenderer").objectReferenceValue = backingRenderer;
+                so.FindProperty("boxPanelRenderer").objectReferenceValue = panelRenderer;
                 so.FindProperty("boxCounter").objectReferenceValue = counterTmp;
 
                 SerializedProperty fragsProp = so.FindProperty("boxBurstFragments");

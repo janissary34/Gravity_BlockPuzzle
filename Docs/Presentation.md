@@ -16,6 +16,10 @@ Bomb overlays and ice layers both use `TryGetAvailableIceSlot`. Do not restore
 direct collection indexing: slot zero may be the whole-piece renderer even when
 the active overlay list is empty.
 
+Bomb and ice overlays have separate ownership and cleanup. Ice refresh and release
+must not fade or clear the bomb icon or its counter; bomb cleanup is performed
+explicitly on presentation rebuild, defuse/fragment handling, and pool reset.
+
 Presentation slots are pooled state. Every renter must receive reset sprite, material, colour, transform, sorting, mask, enabled state, and property-block state.
 
 Normal brick colours use the named Scene Tuna material palette in `PieceVisualConfig`.
@@ -76,7 +80,7 @@ Run `Gravity Puzzle/Level Authoring/Rebuild Level Runtime Root` after changing m
 * Ice counters and Bomb counters have separate presentation ownership. `BlockPiece` provides dedicated TextMeshPro child slots (`Ice Counter Presentation` and `Bomb Counter Presentation`) so that active bomb pieces do not mutate or overwrite ice counter styling.
 * Ice counters and bomb counters derive their world-space font sizes from `PieceVisualConfig` (defaults 0.55 and 0.65 respectively) scaled proportionally by level-definition font size properties (where 36 represents standard 1.0x scale).
 * Ice locks player input and shredder capture until its counter is cleared, but does not make a piece a gravity support. A frozen piece, including a member of a connected group, still follows a legal grid fall.
-* Box reveal covers use the `Tunnel` sprite from `map.png` with 9-slice border configuration, accompanied by a dedicated TextMeshPro counter rendered at sorting order 201 with navy outline.
+* Box reveal presentation uses a fixed nine-sliced frame, an opaque rectangular backing, and a clipped shutter behind the frame. The frame and shutter textures are derived from the `Tunnel` artwork in `map.png`; the white rim and bottom edge remain on the frame. The aperture is the rounded rectangle from pixel (31, 56) to (426, 418), measured from the top-left of that 458 × 467 source sprite; the shutter is cropped from that region. Preserve the unmodified atlas and keep the layer artwork and insets synchronized when editing it. The shutter material clips and translates its UVs within its own aperture, so other boxes and shredder masks do not share its mask. `RevealPresentationConfig.boxOpeningInsets` records the aperture edges in source pixels and must be updated if the frame artwork changes. The prefab and `SceneTunaVisualAuthoring` must both retain all three renderers. The coordinator supplies the original target and remaining count; the pooled view retargets from the current opening. The opaque backing stays through the final burst and is removed when the view returns to its pool. Hidden pieces and collision remain governed by the reveal lifecycle, not the visible aperture. The dedicated TextMeshPro counter renders at sorting order 201 by default.
 * Elevator mechanics do not have a countdown state in the gameplay contract; elevators feature animated sliding doors rather than a number counter.
 
 ## Joint Springs

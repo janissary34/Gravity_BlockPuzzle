@@ -12,6 +12,11 @@ See `Decisions/ADR-001-presentation-is-not-gameplay-authority.md` for the reason
 
 ## Shredder admission and temporary physics
 
+Grid gravity batches independent falling groups when their occupied grid columns
+are disjoint. Groups sharing columns retain sequential planning, preventing a
+fall from passing through another group's in-flight visual path. Each group is
+still committed through the board's existing gravity and lifecycle APIs.
+
 `BlockShredder` owns admission to each authored `ShredderCatchZone`. Feed
 reservations are scoped to an active piece and zone. Their authoritative grid
 columns must be disjoint for concurrent admission; overlapping columns remain

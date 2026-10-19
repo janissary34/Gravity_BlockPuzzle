@@ -136,7 +136,7 @@ namespace GravityPuzzle.Presentation.Views
             isComplete = false;
         }
 
-        public void SetBoxRemaining(int remaining)
+        public void SetBoxRemaining(int remaining, int target)
         {
             // Gameplay contract note: Elevator has no remaining count counter.
         }
