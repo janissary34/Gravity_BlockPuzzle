@@ -1926,6 +1926,52 @@ namespace GravityPuzzle
             return true;
         }
 
+        /// <summary>
+        /// Commits an independently supported stack without changing its joint graph.
+        /// All members must be ordinary pieces and travel by the same grid delta.
+        /// </summary>
+        public bool TryCommitCoordinatedGravityMove(
+            IReadOnlyList<GridGravityMove> moves, out GridPlacementResult result)
+        {
+            result = GridPlacementResult.Failure(
+                GridPlacementFailureReason.EmptyPiece, default, GridCellState.Empty, default);
+            if (BoardSnapshot == null || moves == null || moves.Count < 2)
+                return false;
+
+            jointGroupModels.Clear();
+            jointGroupTargetAnchors.Clear();
+            int distance = moves[0].FromAnchor.Y - moves[0].ToAnchor.Y;
+            if (distance <= 0)
+                return false;
+
+            for (int index = 0; index < moves.Count; index++)
+            {
+                GridGravityMove move = moves[index];
+                if (!BoardSnapshot.TryGetPiece(move.PieceId, out PieceModel member) ||
+                    member.State != PieceState.Placed || !member.Anchor.Equals(move.FromAnchor) ||
+                    move.ToAnchor.X != move.FromAnchor.X ||
+                    move.FromAnchor.Y - move.ToAnchor.Y != distance ||
+                    (revealAreaCoordinator != null && !revealAreaCoordinator.CanMovePiece(member, move.ToAnchor)))
+                    return false;
+
+                pieceJointGraph.CollectGroupMembers(member.Id, jointGroupMemberIds);
+                if (jointGroupMemberIds.Count > 1)
+                    return false;
+                jointGroupModels.Add(member);
+                jointGroupTargetAnchors.Add(move.ToAnchor);
+            }
+
+            if (!BoardSnapshot.Grid.TryGetGroupFallTarget(jointGroupModels, jointGroupTargetAnchors) ||
+                jointGroupTargetAnchors[0].Y != moves[0].ToAnchor.Y ||
+                !BoardSnapshot.Grid.TryMoveGroupIgnoringMembers(jointGroupModels, jointGroupTargetAnchors, out result))
+                return false;
+
+            for (int index = 0; index < jointGroupModels.Count; index++)
+                TryTransitionPieceState(jointGroupModels[index], PieceState.Falling);
+            BoardOccupancyChanged?.Invoke();
+            return true;
+        }
+
         public void CollectJointGroupPieces(int sourcePieceId, List<PuzzlePiece> results)
         {
             if (results == null)

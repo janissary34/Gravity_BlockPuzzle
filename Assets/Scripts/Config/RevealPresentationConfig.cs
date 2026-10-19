@@ -38,6 +38,8 @@ namespace GravityPuzzle.Config
         public Sprite elevatorDoorSprite;
 
         [Header("Box")]
+        [Tooltip("Frame border thickness relative to the authored sprite. Lower values make the border thinner. Reload the level to apply changes.")]
+        [Range(.25f, 2f)] public float boxFrameThickness = 1f;
         [Tooltip("Insets of the Tunnel opening in source sprite pixels: left, bottom, right, top.")]
         public Vector4 boxOpeningInsets = new Vector4(31f, 48f, 31f, 56f);
         [Tooltip("Opaque interior and corner backing while the box is locked.")]
@@ -48,14 +50,25 @@ namespace GravityPuzzle.Config
         public Ease boxOpenEase = Ease.OutCubic;
         [Tooltip("Remaining shutter height before the top-edge burst begins.")]
         [Min(.01f)] public float boxBurstResidualHeight = .16f;
-        [Min(.01f)] public float boxBurstDuration = .22f;
+        [Tooltip("Brief frame recoil after the shutter reaches the top.")]
+        [Min(0f)] public float boxBreakAnticipationDuration = .06f;
+        [Tooltip("Frame recoil as a fraction of its current scale.")]
+        [Range(0f, .2f)] public float boxBreakAnticipationScale = .04f;
+        [Min(.01f)] public float boxBurstDuration = .38f;
+        [Tooltip("Normalized source-sprite rectangles (x, y, width, height) used for the blue frame fragments.")]
+        public Vector4 boxFragmentTopRegion = new Vector4(.15f, .93f, .7f, .055f);
+        public Vector4 boxFragmentBottomRegion = new Vector4(.15f, .015f, .7f, .055f);
+        public Vector4 boxFragmentLeftRegion = new Vector4(.015f, .15f, .055f, .7f);
+        public Vector4 boxFragmentRightRegion = new Vector4(.93f, .15f, .055f, .7f);
+        [Tooltip("Initial upward movement of fragments during the burst.")]
+        [Min(0f)] public float boxBreakLiftDistance = .22f;
         [Tooltip("How far the broken shutter pieces separate sideways.")]
-        [Min(0f)] public float boxBreakSeparation = .07f;
+        [Min(0f)] public float boxBreakSeparation = .12f;
         [Tooltip("Maximum extra sideways scatter applied independently to each broken shutter piece.")]
-        [Min(0f)] public float boxBreakScatterDistance = .18f;
+        [Min(0f)] public float boxBreakScatterDistance = .48f;
         [Tooltip("How far the broken shutter pieces sag downward before fading.")]
-        [Min(0f)] public float boxBreakDropDistance = .16f;
-        [Min(0f)] public float boxBreakRotation = 8f;
+        [Min(0f)] public float boxBreakDropDistance = .42f;
+        [Min(0f)] public float boxBreakRotation = 70f;
         [Header("Elevator")]
         [Min(.01f)] public float elevatorOpenDuration = .4f;
         [Min(0f)] public float elevatorDoorDistance = 1.2f;

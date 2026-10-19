@@ -10,9 +10,13 @@ namespace GravityPuzzle.Presentation.Views
 {
     public sealed class BoxRevealAreaView : MonoBehaviour, IRevealAreaPresentation, IPoolable, IPoolReturnReceiver<BoxRevealAreaView>
     {
-        private const int BoxBurstColumns = 6;
-        private const int BoxBurstRows = 2;
+        private const int BoxBurstTopCount = 6;
+        private const int BoxBurstFragmentCount = 12;
+        private const float BurstRiseFraction = .35f;
+        private const float BurstFadeStartFraction = .45f;
         private static readonly int OpeningId = Shader.PropertyToID("_Opening");
+        private static readonly int SpriteUvId = Shader.PropertyToID("_SpriteUV");
+        private static readonly int FragmentUvId = Shader.PropertyToID("_FragmentUV");
 
         [SerializeField] private Transform boxShutter;
         [SerializeField] private SpriteRenderer boxCoverRenderer;
@@ -29,6 +33,7 @@ namespace GravityPuzzle.Presentation.Views
         private float currentHeight;
         private float apertureHeight;
         private MaterialPropertyBlock panelProperties;
+        private MaterialPropertyBlock fragmentProperties;
         private Action completion;
         private bool isComplete;
         private Vector3 shutterClosedPosition;
@@ -45,6 +50,7 @@ namespace GravityPuzzle.Presentation.Views
         private void Awake()
         {
             panelProperties = new MaterialPropertyBlock();
+            fragmentProperties = new MaterialPropertyBlock();
             if (boxShutter != null)
                 shutterClosedPosition = boxShutter.localPosition;
             if (boxCoverRenderer != null)
@@ -106,8 +112,10 @@ namespace GravityPuzzle.Presentation.Views
                 boxCoverRenderer.color = c;
                 if (boxCoverRenderer.sprite != null && boxCoverRenderer.sprite.border != Vector4.zero)
                 {
+                    float thickness = config != null ? Mathf.Max(.01f, config.boxFrameThickness) : 1f;
                     boxCoverRenderer.drawMode = SpriteDrawMode.Sliced;
-                    boxCoverRenderer.size = size;
+                    boxCoverRenderer.size = size / thickness;
+                    boxCoverRenderer.transform.localScale = new Vector3(thickness, thickness, 1f);
                 }
                 else
                 {
@@ -201,18 +209,28 @@ namespace GravityPuzzle.Presentation.Views
                 return;
             }
 
-            float residualHeight = Mathf.Min(authoredSize.y, Mathf.Max(0f, config.boxBurstResidualHeight));
-            float fixedTopY = coverClosedPosition.y + authoredSize.y * .5f;
-            float residualCentreY = fixedTopY - residualHeight * .5f;
-            PrepareBoxBurstFragments(new Vector3(0f, residualCentreY, 0f), residualHeight);
+            PrepareBoxBurstFragments();
 
             openingSequence = DOTween.Sequence()
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
             openingSequence.Append(DOVirtual.Float(currentHeight, 0f, config.boxOpenDuration, ApplyShutterHeight)
-                .SetEase(config.boxOpenEase));
-            openingSequence.AppendCallback(PlayBoxBurst);
+                .SetEase(config.boxOpenEase).SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
+            if (boxCoverRenderer != null && config.boxBreakAnticipationDuration > 0f)
+            {
+                Vector3 scale = boxCoverRenderer.transform.localScale;
+                openingSequence.Append(boxCoverRenderer.transform.DOPunchScale(
+                    scale * config.boxBreakAnticipationScale,
+                    config.boxBreakAnticipationDuration, 2, 0f).SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
+            }
+
+            openingSequence.AppendCallback(BeginBoxBurst);
+            float burstStart = openingSequence.Duration();
             openingSequence.AppendInterval(config.boxBurstDuration);
+            if (boxCoverRenderer != null)
+                openingSequence.Insert(burstStart, boxCoverRenderer.DOFade(0f, config.boxBurstDuration * BurstRiseFraction)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
+            AddBoxFragmentTweens(openingSequence, burstStart);
             openingSequence.OnComplete(CompleteOpening);
         }
 
@@ -228,8 +246,11 @@ namespace GravityPuzzle.Presentation.Views
 
             Sprite frameSprite = boxCoverRenderer.sprite;
             float ppu = frameSprite.pixelsPerUnit;
-            Vector4 border = frameSprite.border / ppu;
-            Vector4 insets = config.boxOpeningInsets / ppu;
+            float frameScale = boxCoverRenderer.drawMode == SpriteDrawMode.Sliced
+                ? boxCoverRenderer.transform.localScale.x
+                : 1f;
+            Vector4 border = frameSprite.border * (frameScale / ppu);
+            Vector4 insets = config.boxOpeningInsets * (frameScale / ppu);
             float horizontalScale = Mathf.Min(1f, size.x / Mathf.Max(.001f, border.x + border.z));
             float verticalScale = Mathf.Min(1f, size.y / Mathf.Max(.001f, border.y + border.w));
             float left = insets.x * horizontalScale;
@@ -274,53 +295,91 @@ namespace GravityPuzzle.Presentation.Views
                     Vector3.up * (opening * apertureHeight * .5f);
         }
 
-        private void PrepareBoxBurstFragments(Vector3 burstOrigin, float residualHeight)
+        private void PrepareBoxBurstFragments()
         {
-            if (boxBurstFragments == null || boxBurstRenderers == null)
+            if (boxBurstFragments == null || boxBurstRenderers == null || config == null)
                 return;
 
-            float coverWidth = authoredSize.x > 0 ? authoredSize.x : 1f;
-            int count = Mathf.Min(boxBurstFragments.Length, BoxBurstColumns * BoxBurstRows);
+            float width = Mathf.Max(0f, authoredSize.x);
+            float height = Mathf.Max(0f, authoredSize.y);
+            float thickness = Mathf.Min(Mathf.Min(width, height), Mathf.Max(0f, config.boxBurstResidualHeight));
+            int count = Mathf.Min(BoxBurstFragmentCount, Mathf.Min(boxBurstFragments.Length, boxBurstRenderers.Length));
             for (int index = 0; index < count; index++)
             {
                 Transform fragment = boxBurstFragments[index];
-                if (fragment == null)
+                SpriteRenderer renderer = boxBurstRenderers[index];
+                if (fragment == null || renderer == null)
                     continue;
 
-                int column = index % BoxBurstColumns;
-                int row = index / BoxBurstColumns;
-                float fragmentHeight = residualHeight / BoxBurstRows;
-                fragment.localPosition = burstOrigin + new Vector3(
-                    -coverWidth * .5f + coverWidth / BoxBurstColumns * (column + .5f),
-                    residualHeight * .5f - fragmentHeight * (row + .5f),
-                    0f);
-
-                if (index < boxBurstRenderers.Length && boxBurstRenderers[index] != null)
+                Vector2 position;
+                Vector2 fragmentSize;
+                Vector4 sourceRegion;
+                if (index < BoxBurstTopCount)
                 {
-                    boxBurstRenderers[index].size = new Vector2(coverWidth / BoxBurstColumns, fragmentHeight);
-                    if (config != null)
-                        boxBurstRenderers[index].sortingOrder = config.boxSortingOrder + 1;
+                    position = new Vector2(-width * .5f + width * (index + .5f) / BoxBurstTopCount, (height - thickness) * .5f);
+                    fragmentSize = new Vector2(width / BoxBurstTopCount, thickness);
+                    sourceRegion = config.boxFragmentTopRegion;
                 }
+                else if (index < 10)
+                {
+                    int sideIndex = index - BoxBurstTopCount;
+                    float side = sideIndex < 2 ? -1f : 1f;
+                    float row = sideIndex % 2 == 0 ? -.25f : .25f;
+                    position = new Vector2(side * (width - thickness) * .5f, row * height);
+                    fragmentSize = new Vector2(thickness, height * .35f);
+                    sourceRegion = side < 0f ? config.boxFragmentLeftRegion : config.boxFragmentRightRegion;
+                }
+                else
+                {
+                    position = new Vector2((index == 10 ? -.25f : .25f) * width, -(height - thickness) * .5f);
+                    fragmentSize = new Vector2(width * .35f, thickness);
+                    sourceRegion = config.boxFragmentBottomRegion;
+                }
+
+                float sizeVariation = Mathf.Lerp(.65f, 1f, GetFragmentUnitValue(index, 5));
+                fragment.localPosition = coverClosedPosition + (Vector3)position;
+                renderer.size = fragmentSize * sizeVariation;
+                renderer.sortingOrder = config.boxSortingOrder + 1;
+                ConfigureFragmentArtwork(renderer, sourceRegion);
             }
         }
 
-        private void PlayBoxBurst()
+        private void ConfigureFragmentArtwork(SpriteRenderer renderer, Vector4 region)
         {
-            if (boxCoverRenderer != null)
-                boxCoverRenderer.gameObject.SetActive(false);
+            Sprite sprite = renderer.sprite;
+            if (sprite == null || sprite.texture == null)
+            {
+                Debug.LogWarning($"[BoxRevealAreaView] Missing burst fragment sprite on '{name}'.", this);
+                return;
+            }
+
+            Rect rect = sprite.textureRect;
+            Vector4 spriteUv = new Vector4(
+                rect.x / sprite.texture.width, rect.y / sprite.texture.height,
+                rect.width / sprite.texture.width, rect.height / sprite.texture.height);
+            Vector4 fragmentUv = new Vector4(
+                spriteUv.x + region.x * spriteUv.z, spriteUv.y + region.y * spriteUv.w,
+                region.z * spriteUv.z, region.w * spriteUv.w);
+            renderer.GetPropertyBlock(fragmentProperties);
+            fragmentProperties.SetVector(SpriteUvId, spriteUv);
+            fragmentProperties.SetVector(FragmentUvId, fragmentUv);
+            renderer.SetPropertyBlock(fragmentProperties);
+        }
+
+        private void BeginBoxBurst()
+        {
             if (boxCounter != null)
                 boxCounter.gameObject.SetActive(false);
             if (boxPanelRenderer != null)
                 boxPanelRenderer.gameObject.SetActive(false);
-
-            if (boxBurstFragments == null || boxBurstRenderers == null || config == null)
+            if (boxBurstFragments == null || boxBurstRenderers == null)
                 return;
 
-            int count = Mathf.Min(boxBurstFragments.Length, BoxBurstColumns * BoxBurstRows);
+            int count = Mathf.Min(BoxBurstFragmentCount, Mathf.Min(boxBurstFragments.Length, boxBurstRenderers.Length));
             for (int index = 0; index < count; index++)
             {
                 Transform fragment = boxBurstFragments[index];
-                SpriteRenderer renderer = index < boxBurstRenderers.Length ? boxBurstRenderers[index] : null;
+                SpriteRenderer renderer = boxBurstRenderers[index];
                 if (fragment == null || renderer == null)
                     continue;
 
@@ -328,35 +387,46 @@ namespace GravityPuzzle.Presentation.Views
                 color.a = 1f;
                 renderer.color = color;
                 fragment.gameObject.SetActive(true);
+            }
+        }
 
-                Vector3 startPosition = fragment.localPosition;
-                int row = index / BoxBurstColumns;
-                float horizontalDirection = GetFragmentUnitValue(index, 1) * 2f - 1f;
-                float dropFactor = Mathf.Lerp(.4f, 1f, GetFragmentUnitValue(index, 2));
-                float rotationDirection = GetFragmentUnitValue(index, 3) < .5f ? -1f : 1f;
-                float rotationAmount = Mathf.Lerp(.35f, 1f, GetFragmentUnitValue(index, 4)) * config.boxBreakRotation;
-                float horizontalOffset = horizontalDirection * config.boxBreakScatterDistance;
-                float dropDistance = config.boxBreakDropDistance * dropFactor;
+        private void AddBoxFragmentTweens(Sequence sequence, float burstStart)
+        {
+            if (boxBurstFragments == null || boxBurstRenderers == null || config == null)
+                return;
 
-                if (row > 0)
-                    horizontalOffset += horizontalDirection * config.boxBreakSeparation;
+            int count = Mathf.Min(BoxBurstFragmentCount, Mathf.Min(boxBurstFragments.Length, boxBurstRenderers.Length));
+            for (int index = 0; index < count; index++)
+            {
+                Transform fragment = boxBurstFragments[index];
+                SpriteRenderer renderer = boxBurstRenderers[index];
+                if (fragment == null || renderer == null)
+                    continue;
 
-                fragment.DOLocalMove(
-                    startPosition + new Vector3(horizontalOffset, -dropDistance, 0f),
-                    config.boxBurstDuration)
-                    .SetEase(Ease.OutQuad)
-                    .SetLink(gameObject, LinkBehaviour.KillOnDisable);
+                Vector3 start = fragment.localPosition;
+                float horizontal = Mathf.Sign(start.x - coverClosedPosition.x);
+                if (Mathf.Approximately(start.x, coverClosedPosition.x))
+                    horizontal = GetFragmentUnitValue(index, 1) < .5f ? -1f : 1f;
+                float spread = Mathf.Lerp(.45f, 1f, GetFragmentUnitValue(index, 2)) * config.boxBreakScatterDistance;
+                float lift = Mathf.Lerp(.35f, 1f, GetFragmentUnitValue(index, 3)) * config.boxBreakLiftDistance;
+                float drop = Mathf.Lerp(.5f, 1f, GetFragmentUnitValue(index, 4)) * config.boxBreakDropDistance;
+                float lifetime = config.boxBurstDuration * Mathf.Lerp(.7f, 1f, GetFragmentUnitValue(index, 6));
+                float rotation = horizontal * Mathf.Lerp(.45f, 1f, GetFragmentUnitValue(index, 7)) * config.boxBreakRotation;
+                Vector3 peak = start + new Vector3(horizontal * (spread + config.boxBreakSeparation) * .65f, lift, 0f);
+                Vector3 end = start + new Vector3(horizontal * (spread + config.boxBreakSeparation), -drop, 0f);
 
-                fragment.DORotate(
-                    new Vector3(0f, 0f, rotationDirection * rotationAmount),
-                    config.boxBurstDuration,
-                    RotateMode.LocalAxisAdd)
-                    .SetEase(Ease.OutQuad)
-                    .SetLink(gameObject, LinkBehaviour.KillOnDisable);
-
-                renderer.DOFade(0f, config.boxBurstDuration)
-                    .SetEase(Ease.InQuad)
-                    .SetLink(gameObject, LinkBehaviour.KillOnDisable);
+                Sequence movement = DOTween.Sequence()
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true);
+                movement.Append(fragment.DOLocalMove(peak, lifetime * BurstRiseFraction).SetEase(Ease.OutQuad)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
+                movement.Append(fragment.DOLocalMove(end, lifetime * (1f - BurstRiseFraction)).SetEase(Ease.InQuad)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
+                sequence.Insert(burstStart, movement);
+                sequence.Insert(burstStart, fragment.DOLocalRotate(new Vector3(0f, 0f, rotation), lifetime, RotateMode.LocalAxisAdd).SetEase(Ease.OutQuad)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
+                sequence.Insert(burstStart + lifetime * BurstFadeStartFraction,
+                    renderer.DOFade(0f, lifetime * (1f - BurstFadeStartFraction)).SetEase(Ease.InQuad)
+                        .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
             }
         }
 
@@ -460,6 +530,7 @@ namespace GravityPuzzle.Presentation.Views
                 if (boxBurstRenderers != null && index < boxBurstRenderers.Length &&
                     boxBurstRenderers[index] != null)
                 {
+                    boxBurstRenderers[index].SetPropertyBlock(null);
                     Color fragmentColor = boxBurstRenderers[index].color;
                     fragmentColor.a = 1f;
                     boxBurstRenderers[index].color = fragmentColor;

@@ -28,17 +28,25 @@ MonoBehaviour:
   elevatorLeftDoorSprite: {fileID: -8075455797655948447, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
   elevatorRightDoorSprite: {fileID: 617964189990335555, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
   elevatorDoorSprite: {fileID: 7462321767153245720, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
+  boxFrameThickness: 0.75
   boxOpeningInsets: {x: 31, y: 48, z: 31, w: 56}
   boxBackingColor: {r: 0.035, g: 0.025, b: 0.16, a: 1}
   boxOpenDuration: 0.45
   boxOpenDistance: 0.08
   boxOpenEase: 9
   boxBurstResidualHeight: 0.16
-  boxBurstDuration: 0.22
-  boxBreakSeparation: 0.07
-  boxBreakScatterDistance: 0.18
-  boxBreakDropDistance: 0.16
-  boxBreakRotation: 8
+  boxBreakAnticipationDuration: 0.06
+  boxBreakAnticipationScale: 0.04
+  boxBurstDuration: 0.38
+  boxFragmentTopRegion: {x: 0.15, y: 0.93, z: 0.7, w: 0.055}
+  boxFragmentBottomRegion: {x: 0.15, y: 0.015, z: 0.7, w: 0.055}
+  boxFragmentLeftRegion: {x: 0.015, y: 0.15, z: 0.055, w: 0.7}
+  boxFragmentRightRegion: {x: 0.93, y: 0.15, z: 0.055, w: 0.7}
+  boxBreakLiftDistance: 0.22
+  boxBreakSeparation: 0.12
+  boxBreakScatterDistance: 0.48
+  boxBreakDropDistance: 0.42
+  boxBreakRotation: 70
   elevatorOpenDuration: 0.4
   elevatorDoorDistance: 1.2
   elevatorOpenEase: 6

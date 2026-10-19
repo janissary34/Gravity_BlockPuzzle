@@ -21,6 +21,7 @@ namespace GravityPuzzle.Editor
         private const string BoxFramePath = "Assets/Art/BoxReveal/TunnelFrame.png";
         private const string BoxPanelPath = "Assets/Art/BoxReveal/TunnelShutter.png";
         private const string BoxBackingPath = "Assets/Art/BoxReveal/BoxBacking.png";
+        private const string BoxFragmentMaterialPath = "Assets/Materials/BoxFragment.mat";
         private const string BoxPanelMaterialPath = "Assets/Materials/BoxShutter.mat";
         private const string BoxPrefabPath = "Assets/Prefabs/BoxRevealArea.prefab";
         private const string ElevatorPrefabPath = "Assets/Prefabs/ElevatorRevealArea.prefab";
@@ -80,7 +81,8 @@ namespace GravityPuzzle.Editor
             Sprite panelSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxPanelPath);
             Sprite backingSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxBackingPath);
             Material panelMaterial = AssetDatabase.LoadAssetAtPath<Material>(BoxPanelMaterialPath);
-            if (frameSprite == null || panelSprite == null || backingSprite == null || panelMaterial == null)
+            Material fragmentMaterial = AssetDatabase.LoadAssetAtPath<Material>(BoxFragmentMaterialPath);
+            if (frameSprite == null || panelSprite == null || backingSprite == null || panelMaterial == null || fragmentMaterial == null)
                 throw new System.InvalidOperationException("Box reveal artwork or shutter material is missing; cannot author the box prefab.");
 
             GameObject root = new GameObject("BoxRevealArea");
@@ -142,8 +144,7 @@ namespace GravityPuzzle.Editor
                     frag.transform.SetParent(shutter.transform, false);
                     SpriteRenderer fragRenderer = frag.AddComponent<SpriteRenderer>();
                     fragRenderer.sprite = tunnelSprite;
-                    if (iceMaterial != null)
-                        fragRenderer.material = iceMaterial;
+                    fragRenderer.sharedMaterial = fragmentMaterial;
                     fragRenderer.drawMode = SpriteDrawMode.Sliced;
                     fragRenderer.sortingOrder = 201;
                     frag.SetActive(false);

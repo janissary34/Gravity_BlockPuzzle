@@ -130,6 +130,16 @@ namespace GravityPuzzle.Config
         [Range(0f, 180f)] [SerializeField] private float voxelEjectionSpreadAngle = 40f;
 
         [Header("Piece Feed")]
+        [Tooltip("Duration of the visual spring release when it reaches the cutter.")]
+        [Min(0.01f)] [SerializeField] private float springReleaseDuration = .2f;
+        [Tooltip("World-space sideways distance of the released spring's kick.")]
+        [Min(0f)] [SerializeField] private float springReleaseTravel = .18f;
+        [Tooltip("World-space upward lift of the released spring's kick.")]
+        [Min(0f)] [SerializeField] private float springReleaseLift = .16f;
+        [Tooltip("Maximum rotational flick of the released spring, in degrees.")]
+        [Min(0f)] [SerializeField] private float springReleaseRotation = 55f;
+        [Tooltip("Distance above the clipping seam at which the spring release begins.")]
+        [Min(0f)] [SerializeField] private float springReleaseLead = .3f;
         [Min(0.01f)] [SerializeField] private float feedSpeed = 3.8f;
         [Min(0f)] [SerializeField] private float tremorIntensity = .045f;
         [Min(0f)] [SerializeField] private float tremorFrequency = 55f;
@@ -145,6 +155,11 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float finalPieceTimerGraceSeconds = 1f;
 
         public float WheelRadiusMultiplier => wheelRadiusMultiplier;
+        public float SpringReleaseDuration => springReleaseDuration;
+        public float SpringReleaseTravel => springReleaseTravel;
+        public float SpringReleaseLift => springReleaseLift;
+        public float SpringReleaseRotation => springReleaseRotation;
+        public float SpringReleaseLead => springReleaseLead;
         public ShredderWheel WheelPrefab => wheelPrefab;
         public int WheelPoolCapacity => wheelPoolCapacity;
         public ShredderCatchZone CatchZonePrefab => catchZonePrefab;

@@ -45,6 +45,14 @@ namespace GravityPuzzle.Presentation.Views
         private readonly List<PieceJointGraph.Joint> jointBuffer = new List<PieceJointGraph.Joint>();
         private readonly HashSet<int> currentSpringKeys = new HashSet<int>();
         private readonly List<int> springKeysToRemove = new List<int>();
+        private struct FeedingSpring
+        {
+            public PuzzlePiece Piece;
+            public JointSpringView View;
+        }
+        private readonly List<FeedingSpring> feedingSprings = new List<FeedingSpring>();
+        private readonly List<JointSpringView> releasingSprings = new List<JointSpringView>();
+        private Transform releaseParent;
 
 #if UNITY_EDITOR
         private void OnValidate()
@@ -85,6 +93,7 @@ namespace GravityPuzzle.Presentation.Views
                 springMaterial = customMaterial;
 
             Transform parent = poolParent != null ? poolParent : transform;
+            releaseParent = parent;
             JointSpringPool.Configure(springPrefab, parent, prewarmCapacity);
 
             if (jointGraph != null)
@@ -103,6 +112,8 @@ namespace GravityPuzzle.Presentation.Views
                 boardState.JointSpringPresenter = null;
 
             activeSpringViews.Clear();
+            feedingSprings.Clear();
+            releasingSprings.Clear();
             jointBuffer.Clear();
             springKeysToRemove.Clear();
             JointSpringPool.ResetPool();
@@ -121,6 +132,68 @@ namespace GravityPuzzle.Presentation.Views
         public void OnJointsChanged()
         {
             ReconcileSpringViews();
+        }
+
+        // Transfer presentation ownership before the authoritative joint is removed.
+        public void PrepareForShredder(PuzzlePiece piece)
+        {
+            if (piece == null || boardState == null || !boardState.TryGetPieceModel(piece, out var model))
+                return;
+
+            springKeysToRemove.Clear();
+            foreach (var entry in activeSpringViews)
+            {
+                JointSpringView view = entry.Value;
+                if (view == null || (view.MemberA != model.Id && view.MemberB != model.Id))
+                    continue;
+                view.transform.SetParent(piece.transform, true);
+                feedingSprings.Add(new FeedingSpring { Piece = piece, View = view });
+                springKeysToRemove.Add(entry.Key);
+            }
+            for (int i = 0; i < springKeysToRemove.Count; i++)
+                activeSpringViews.Remove(springKeysToRemove[i]);
+        }
+
+        public void UpdateShredderSprings(PuzzlePiece piece, float seamY, ShredderConfig config)
+        {
+            float lead = config != null ? config.SpringReleaseLead : .3f;
+            for (int i = feedingSprings.Count - 1; i >= 0; i--)
+            {
+                FeedingSpring spring = feedingSprings[i];
+                if (spring.Piece != piece || spring.View == null || spring.View.transform.position.y > seamY + lead)
+                    continue;
+                feedingSprings.RemoveAt(i);
+                ReleaseSpring(spring.View, config);
+            }
+        }
+
+        public void FinishShredderSprings(PuzzlePiece piece)
+        {
+            for (int i = feedingSprings.Count - 1; i >= 0; i--)
+            {
+                if (feedingSprings[i].Piece != piece)
+                    continue;
+                JointSpringView view = feedingSprings[i].View;
+                feedingSprings.RemoveAt(i);
+                if (view != null)
+                    view.Despawn();
+            }
+        }
+
+        private void ReleaseSpring(JointSpringView view, ShredderConfig config)
+        {
+            releasingSprings.Add(view);
+            view.PlayShredderRelease(releaseParent,
+                config != null ? config.SpringReleaseDuration : .2f,
+                config != null ? config.SpringReleaseTravel : .18f,
+                config != null ? config.SpringReleaseLift : .16f,
+                config != null ? config.SpringReleaseRotation : 55f,
+                OnSpringReleaseCompleted);
+        }
+
+        private void OnSpringReleaseCompleted(JointSpringView view)
+        {
+            releasingSprings.Remove(view);
         }
 
         public void ReconcileSpringViews()
@@ -424,6 +497,14 @@ namespace GravityPuzzle.Presentation.Views
 
         private void ClearAll()
         {
+            for (int i = 0; i < feedingSprings.Count; i++)
+                if (feedingSprings[i].View != null)
+                    feedingSprings[i].View.Despawn();
+            feedingSprings.Clear();
+            for (int i = 0; i < releasingSprings.Count; i++)
+                if (releasingSprings[i] != null)
+                    releasingSprings[i].Despawn();
+            releasingSprings.Clear();
             foreach (var kvp in activeSpringViews)
             {
                 if (kvp.Value != null)

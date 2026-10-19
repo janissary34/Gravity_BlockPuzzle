@@ -212,6 +212,7 @@ namespace GravityPuzzle
             // A combined member leaves its graph component only once the
             // shredder handoff has been accepted. Failed capture attempts
             // must leave the authoritative topology untouched.
+            PrototypeBoard.Active?.JointSpringPresenter?.PrepareForShredder(piece);
             PrototypeBoard.Active?.BreakJointsForPiece(piece);
             StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
@@ -268,6 +269,7 @@ namespace GravityPuzzle
 
             // The root is now committed to the feed. Split it from its
             // combined graph before the presentation-only island continues.
+            board.JointSpringPresenter?.PrepareForShredder(root);
             board.BreakJointsForPiece(root);
             StartCoroutine(FeedPieceIntoShredder(root, zone));
             activePhysicsIslands.Add(new ShredderPhysicsIsland(
@@ -440,6 +442,7 @@ namespace GravityPuzzle
                 return false;
             }
 
+            board.JointSpringPresenter?.PrepareForShredder(piece);
             board.BreakJointsForPiece(piece);
             StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
@@ -793,6 +796,7 @@ namespace GravityPuzzle
                 yield return FeedPhysicsStep;
                 float feedDeltaTime = Time.fixedDeltaTime;
                 elapsed += feedDeltaTime;
+                PrototypeBoard.Active?.JointSpringPresenter?.UpdateShredderSprings(piece, clippingSeamY, shredderConfig);
 
                 if (rb != null)
                 {
@@ -1141,6 +1145,7 @@ namespace GravityPuzzle
             }
             finally
             {
+                PrototypeBoard.Active?.JointSpringPresenter?.FinishShredderSprings(piece);
                 IReadOnlyList<ShredderWheel> activeWheels = ShredderWheel.ActiveWheels;
                 for (int w = 0; w < activeWheels.Count; w++)
                 {

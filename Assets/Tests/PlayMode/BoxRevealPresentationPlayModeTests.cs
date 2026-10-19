@@ -78,5 +78,60 @@ namespace GravityPuzzle.Tests.PlayMode
                     UnityEngine.Object.Destroy(instance);
             }
         }
+        [UnityTest]
+        public IEnumerator SimultaneousBurstsRemainIndependentWhenOneViewReturnsToPool()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/BoxRevealArea.prefab");
+            var sourceConfig = AssetDatabase.LoadAssetAtPath("Assets/Config/RevealPresentationConfig.asset", ConfigType);
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(sourceConfig, Is.Not.Null);
+            var config = UnityEngine.Object.Instantiate(sourceConfig);
+            ConfigType.GetField("boxOpenDuration").SetValue(config, .15f);
+            ConfigType.GetField("boxBreakAnticipationDuration").SetValue(config, .05f);
+            ConfigType.GetField("boxBurstDuration").SetValue(config, .35f);
+            var first = UnityEngine.Object.Instantiate(prefab);
+            var second = UnityEngine.Object.Instantiate(prefab);
+            var firstView = first.GetComponent(ViewType);
+            var secondView = second.GetComponent(ViewType);
+            var initialize = ViewType.GetMethod("Initialize");
+            var play = ViewType.GetMethod("PlayOpening");
+            var despawn = ViewType.GetMethod("OnDespawn");
+            bool firstCompleted = false;
+            bool secondCompleted = false;
+            try
+            {
+                initialize.Invoke(firstView, new object[] { "first", Vector2.zero, new Vector2(3f, 2f), config });
+                initialize.Invoke(secondView, new object[] { "second", Vector2.right, new Vector2(2f, 3f), config });
+                object kind = Enum.ToObject(KindType, 0);
+                play.Invoke(firstView, new object[] { kind, (Action)(() => firstCompleted = true) });
+                play.Invoke(secondView, new object[] { kind, (Action)(() => secondCompleted = true) });
+                yield return new WaitForSeconds(.27f);
+
+                Transform firstFragment = first.transform.Find("Shutter/Burst Fragment 1");
+                Transform secondFragment = second.transform.Find("Shutter/Burst Fragment 1");
+                Assert.That(firstFragment.gameObject.activeSelf, Is.True);
+                Assert.That(secondFragment.gameObject.activeSelf, Is.True);
+                Assert.That(firstCompleted, Is.False);
+                despawn.Invoke(firstView, null);
+                Assert.That(firstFragment.gameObject.activeSelf, Is.False);
+                Assert.That(secondFragment.gameObject.activeSelf, Is.True);
+                yield return new WaitForSeconds(.5f);
+                Assert.That(firstCompleted, Is.False);
+                Assert.That(secondCompleted, Is.True);
+
+                initialize.Invoke(firstView, new object[] { "reused", Vector2.zero, new Vector2(2f, 2f), config });
+                Assert.That(firstFragment.gameObject.activeSelf, Is.False);
+                Assert.That(first.transform.Find("Shutter/Box Frame").GetComponent<SpriteRenderer>().color.a, Is.EqualTo(1f));
+                play.Invoke(firstView, new object[] { kind, (Action)(() => firstCompleted = true) });
+                yield return new WaitForSeconds(.8f);
+                Assert.That(firstCompleted, Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(first);
+                UnityEngine.Object.Destroy(second);
+                UnityEngine.Object.Destroy(config);
+            }
+        }
     }
 }

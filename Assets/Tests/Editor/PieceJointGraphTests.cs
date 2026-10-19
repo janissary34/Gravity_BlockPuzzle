@@ -181,6 +181,40 @@ namespace GravityPuzzle.Tests.Editor
             Assert.That(targets, Is.EqualTo(new[] { new GridCoordinate(0, 1), new GridCoordinate(2, 1) }));
         }
 
+        [Test]
+        public void OrdinaryStackCanFallTogetherThroughItsPreviousCells()
+        {
+            GravityBoardGrid grid = new GravityBoardGrid(2, 6);
+            PieceModel lower = CreateSingleCellPiece(10, 0, 3);
+            PieceModel upper = CreateSingleCellPiece(20, 0, 4);
+            Assert.That(grid.TryPlace(lower), Is.True);
+            Assert.That(grid.TryPlace(upper), Is.True);
+            var members = new[] { lower, upper };
+            var targets = new List<GridCoordinate>();
+
+            Assert.That(grid.TryGetGroupFallTarget(members, targets), Is.True);
+            Assert.That(targets, Is.EqualTo(new[] { new GridCoordinate(0, 0), new GridCoordinate(0, 1) }));
+            Assert.That(grid.TryMoveGroupIgnoringMembers(members, targets, out _), Is.True);
+            Assert.That(upper.Anchor.Y - lower.Anchor.Y, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TemporaryGroupDoesNotMoveThroughIndependentSupport()
+        {
+            GravityBoardGrid grid = new GravityBoardGrid(3, 5);
+            PieceModel lower = CreateSingleCellPiece(10, 0, 3);
+            PieceModel other = CreateSingleCellPiece(20, 1, 3);
+            PieceModel support = CreateSingleCellPiece(30, 1, 2);
+            Assert.That(grid.TryPlace(lower), Is.True);
+            Assert.That(grid.TryPlace(other), Is.True);
+            Assert.That(grid.TryPlace(support), Is.True);
+            var targets = new List<GridCoordinate>();
+
+            Assert.That(grid.TryGetGroupFallTarget(new[] { lower, other }, targets), Is.False);
+            Assert.That(grid.TryGetFallTarget(lower, out GridCoordinate lowerTarget), Is.True);
+            Assert.That(lowerTarget, Is.EqualTo(new GridCoordinate(0, 0)));
+        }
+
         private static PieceJointGraph CreateGraph(params PieceJointGraph.Joint[] joints)
         {
             PieceJointGraph graph = new PieceJointGraph();

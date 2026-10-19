@@ -13,9 +13,12 @@ See `Decisions/ADR-001-presentation-is-not-gameplay-authority.md` for the reason
 ## Shredder admission and temporary physics
 
 Grid gravity batches independent falling groups when their occupied grid columns
-are disjoint. Groups sharing columns retain sequential planning, preventing a
-fall from passing through another group's in-flight visual path. Each group is
-still committed through the board's existing gravity and lifecycle APIs.
+are disjoint. Ordinary pieces resting solely on a falling ordinary piece can
+also be committed as a temporary support stack, without changing their joint
+graph. Each included member must have the same safe fall distance and compatible
+fall presentation; independently supported members stay behind. Other groups
+sharing columns retain sequential planning to prevent visual intersections.
+The board commits the stack atomically and owns the lifecycle transitions.
 
 `BlockShredder` owns admission to each authored `ShredderCatchZone`. Feed
 reservations are scoped to an active piece and zone. Their authoritative grid
