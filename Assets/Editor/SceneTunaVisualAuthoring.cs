@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.IO;
+using System.Collections.Generic;
 using GravityPuzzle.Bootstrap;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Pieces;
@@ -42,7 +43,15 @@ namespace GravityPuzzle.Editor
             Material iceMaterial = AssetDatabase.LoadAssetAtPath<Material>(IceMaterialPath);
             TMP_FontAsset fontAsset = LoadTMPFont();
 
-            BoxRevealAreaView boxPrefab = CreateBoxRevealPrefab(tunnelSprite, iceMaterial, fontAsset);
+            RevealPresentationConfig existingRevealConfig = AssetDatabase.LoadAssetAtPath<RevealPresentationConfig>(RevealConfigPath);
+            int previewSlotCapacity = existingRevealConfig != null
+                ? Mathf.Max(1, existingRevealConfig.boxPreviewSlotCapacity)
+                : RevealPresentationConfig.DefaultBoxPreviewSlotCapacity;
+            BoxRevealAreaView boxPrefab = CreateBoxRevealPrefab(
+                tunnelSprite,
+                iceMaterial,
+                fontAsset,
+                previewSlotCapacity);
             ElevatorRevealAreaView elevatorPrefab = CreateElevatorRevealPrefab(
                 elevatorSprite,
                 elevatorDoorSprite,
@@ -75,7 +84,8 @@ namespace GravityPuzzle.Editor
         private static BoxRevealAreaView CreateBoxRevealPrefab(
             Sprite tunnelSprite,
             Material iceMaterial,
-            TMP_FontAsset font)
+            TMP_FontAsset font,
+            int previewSlotCapacity)
         {
             Sprite frameSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxFramePath);
             Sprite panelSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxPanelPath);
@@ -118,6 +128,13 @@ namespace GravityPuzzle.Editor
                 panelRenderer.sharedMaterial = panelMaterial;
                 panelRenderer.sortingOrder = 199;
 
+                CreateBoxPreviewSlots(
+                    shutter.transform,
+                    panelSprite,
+                    previewSlotCapacity,
+                    out SpriteMask previewMask,
+                    out SpriteRenderer[] previewRenderers);
+
                 GameObject counterObj = new GameObject("Counter");
                 counterObj.transform.SetParent(shutter.transform, false);
                 counterObj.transform.localPosition = new Vector3(0f, 0f, -0.1f);
@@ -158,6 +175,12 @@ namespace GravityPuzzle.Editor
                 so.FindProperty("boxBackingRenderer").objectReferenceValue = backingRenderer;
                 so.FindProperty("boxPanelRenderer").objectReferenceValue = panelRenderer;
                 so.FindProperty("boxCounter").objectReferenceValue = counterTmp;
+                so.FindProperty("previewMask").objectReferenceValue = previewMask;
+
+                SerializedProperty previewProp = so.FindProperty("boxPreviewRenderers");
+                previewProp.arraySize = previewRenderers.Length;
+                for (int i = 0; i < previewRenderers.Length; i++)
+                    previewProp.GetArrayElementAtIndex(i).objectReferenceValue = previewRenderers[i];
 
                 SerializedProperty fragsProp = so.FindProperty("boxBurstFragments");
                 fragsProp.arraySize = fragments.Length;
@@ -178,6 +201,123 @@ namespace GravityPuzzle.Editor
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        [MenuItem("Gravity Puzzle/Art/Refresh Box Reveal Preview Slots")]
+        public static void RefreshBoxRevealPreviewSlots()
+        {
+            RevealPresentationConfig config = AssetDatabase.LoadAssetAtPath<RevealPresentationConfig>(RevealConfigPath);
+            BoxRevealAreaView prefab = AssetDatabase.LoadAssetAtPath<BoxRevealAreaView>(BoxPrefabPath);
+            if (config == null || prefab == null)
+            {
+                Debug.LogError("[SceneTunaVisualAuthoring] RevealPresentationConfig or BoxRevealArea prefab is missing.");
+                return;
+            }
+
+            GameObject root = PrefabUtility.LoadPrefabContents(BoxPrefabPath);
+            try
+            {
+                BoxRevealAreaView view = root.GetComponent<BoxRevealAreaView>();
+                Transform shutter = root.transform.Find("Shutter");
+                Sprite panelSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxPanelPath);
+                if (view == null || shutter == null || panelSprite == null)
+                    throw new System.InvalidOperationException("Box preview slots require the authored Box view, Shutter, and shutter sprite.");
+
+                CreateBoxPreviewSlots(
+                    shutter,
+                    panelSprite,
+                    Mathf.Max(1, config.boxPreviewSlotCapacity),
+                    out SpriteMask previewMask,
+                    out SpriteRenderer[] previewRenderers);
+                SerializedObject serializedView = new SerializedObject(view);
+                serializedView.FindProperty("previewMask").objectReferenceValue = previewMask;
+                SerializedProperty previewProp = serializedView.FindProperty("boxPreviewRenderers");
+                previewProp.arraySize = previewRenderers.Length;
+                for (int index = 0; index < previewRenderers.Length; index++)
+                    previewProp.GetArrayElementAtIndex(index).objectReferenceValue = previewRenderers[index];
+                serializedView.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, BoxPrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[SceneTunaVisualAuthoring] Refreshed Box reveal preview slots.");
+        }
+
+        private static void CreateBoxPreviewSlots(
+            Transform shutter,
+            Sprite panelSprite,
+            int capacity,
+            out SpriteMask previewMask,
+            out SpriteRenderer[] previewRenderers)
+        {
+            Transform previewRoot = shutter.Find("Preview Content");
+            if (previewRoot == null)
+            {
+                GameObject previewRootObject = new GameObject("Preview Content");
+                previewRootObject.transform.SetParent(shutter, false);
+                previewRoot = previewRootObject.transform;
+            }
+
+            Transform maskTransform = previewRoot.Find("Aperture Mask");
+            if (maskTransform == null)
+            {
+                GameObject maskObject = new GameObject("Aperture Mask");
+                maskObject.transform.SetParent(previewRoot, false);
+                maskTransform = maskObject.transform;
+            }
+
+            previewMask = maskTransform.GetComponent<SpriteMask>();
+            if (previewMask == null)
+                previewMask = maskTransform.gameObject.AddComponent<SpriteMask>();
+            previewMask.sprite = panelSprite;
+            previewMask.isCustomRangeActive = true;
+            previewMask.backSortingOrder = 198;
+            previewMask.frontSortingOrder = 198;
+
+            List<SpriteRenderer> renderers = new List<SpriteRenderer>(capacity);
+            for (int index = 0; index < capacity; index++)
+            {
+                Transform slot = previewRoot.Find($"Preview Slot {index + 1}");
+                if (slot == null)
+                {
+                    GameObject slotObject = new GameObject($"Preview Slot {index + 1}");
+                    slotObject.transform.SetParent(previewRoot, false);
+                    slot = slotObject.transform;
+                }
+
+                SpriteRenderer renderer = slot.GetComponent<SpriteRenderer>();
+                if (renderer == null)
+                    renderer = slot.gameObject.AddComponent<SpriteRenderer>();
+                renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+                renderer.sortingOrder = 198;
+                renderer.enabled = true;
+                slot.gameObject.SetActive(false);
+                renderers.Add(renderer);
+            }
+
+            for (int index = previewRoot.childCount - 1; index >= 0; index--)
+            {
+                Transform child = previewRoot.GetChild(index);
+                if (child == maskTransform || child.name.StartsWith("Preview Slot ") &&
+                    TryGetPreviewSlotIndex(child.name, out int slotIndex) && slotIndex <= capacity)
+                {
+                    continue;
+                }
+
+                Object.DestroyImmediate(child.gameObject);
+            }
+
+            previewRenderers = renderers.ToArray();
+        }
+
+        private static bool TryGetPreviewSlotIndex(string objectName, out int index)
+        {
+            const string Prefix = "Preview Slot ";
+            return int.TryParse(objectName.Substring(Prefix.Length), out index);
         }
 
         private static ElevatorRevealAreaView CreateElevatorRevealPrefab(

@@ -29,6 +29,15 @@ namespace GravityPuzzle.Gameplay.Gravity
             Predicate<PieceModel> canMove,
             out GridGravityMove move)
         {
+            return TryPlanNextMove(snapshot, canMove, null, out move);
+        }
+
+        public static bool TryPlanNextMove(
+            LevelBoardSnapshot snapshot,
+            Predicate<PieceModel> canMove,
+            Func<PieceModel, GridCoordinate, bool> canMoveToAnchor,
+            out GridGravityMove move)
+        {
             move = default;
             if (snapshot == null)
                 return false;
@@ -40,7 +49,7 @@ namespace GravityPuzzle.Gameplay.Gravity
                 if (canMove != null && !canMove(piece))
                     continue;
 
-                if (!snapshot.Grid.TryGetFallTarget(piece, out GridCoordinate targetAnchor))
+                if (!snapshot.Grid.TryGetFallTarget(piece, out GridCoordinate targetAnchor, canMoveToAnchor))
                     continue;
 
                 GridGravityMove candidate = new GridGravityMove(

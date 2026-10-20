@@ -183,6 +183,13 @@ namespace GravityPuzzle.Presentation.Views
                     if (timer != null)
                         timerBoosterButtonGroup = timer.GetComponent<CanvasGroup>();
                 }
+
+                if (timerBoosterButtonGroup == null)
+                {
+                    BoosterButton timerBtn = BoosterFirstUseTutorialRuntime.GetButton(BoosterRewardType.FreezeTimer);
+                    if (timerBtn != null)
+                        timerBoosterButtonGroup = timerBtn.GetComponent<CanvasGroup>();
+                }
             }
 
             if (rocketBoosterButtonGroup != null &&
@@ -566,12 +573,21 @@ namespace GravityPuzzle.Presentation.Views
 
         private bool IsBoosterButtonHierarchy(Transform t)
         {
+            if (t == null)
+                return false;
+
             if (rocketBoosterButtonGroup != null && (t == rocketBoosterButtonGroup.transform || rocketBoosterButtonGroup.transform.IsChildOf(t) || t.IsChildOf(rocketBoosterButtonGroup.transform)))
                 return true;
             if (hammerBoosterButtonGroup != null && (t == hammerBoosterButtonGroup.transform || hammerBoosterButtonGroup.transform.IsChildOf(t) || t.IsChildOf(hammerBoosterButtonGroup.transform)))
                 return true;
             if (timerBoosterButtonGroup != null && (t == timerBoosterButtonGroup.transform || timerBoosterButtonGroup.transform.IsChildOf(t) || t.IsChildOf(timerBoosterButtonGroup.transform)))
                 return true;
+
+            if (t.GetComponent<BoosterButton>() != null || t.GetComponentInChildren<BoosterButton>(true) != null)
+                return true;
+            if (t.name.IndexOf("Booster", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+
             return false;
         }
 
@@ -748,6 +764,13 @@ namespace GravityPuzzle.Presentation.Views
                         }
                     }
                 }
+            }
+
+            if (timerButtonGlow == null)
+            {
+                BoosterButton timerBtn = BoosterFirstUseTutorialRuntime.GetButton(BoosterRewardType.FreezeTimer);
+                if (timerBtn != null && timerBtn.SelectionGlow != null)
+                    timerButtonGlow = timerBtn.SelectionGlow;
             }
         }
 

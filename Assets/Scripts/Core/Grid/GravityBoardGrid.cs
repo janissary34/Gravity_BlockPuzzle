@@ -389,14 +389,18 @@ namespace GravityPuzzle.Core.Grid
         /// ignored while checking each candidate so its own geometry never
         /// blocks a vertical move.
         /// </summary>
-        public bool TryGetFallTarget(PieceModel piece, out GridCoordinate targetAnchor)
+        public bool TryGetFallTarget(
+            PieceModel piece,
+            out GridCoordinate targetAnchor,
+            System.Func<PieceModel, GridCoordinate, bool> canMovePiece = null)
         {
             targetAnchor = piece != null ? piece.Anchor : default;
             if (piece == null || !piece.IsOnBoard)
                 return false;
 
             GridCoordinate candidate = targetAnchor.Offset(Down);
-            while (CheckPlacementIgnoringPiece(piece, candidate, piece.Id).IsSuccess)
+            while (CheckPlacementIgnoringPiece(piece, candidate, piece.Id).IsSuccess &&
+                   (canMovePiece == null || canMovePiece(piece, candidate)))
             {
                 targetAnchor = candidate;
                 candidate = candidate.Offset(Down);
@@ -412,7 +416,8 @@ namespace GravityPuzzle.Core.Grid
         /// </summary>
         public bool TryGetGroupFallTarget(
             IReadOnlyList<PieceModel> pieces,
-            List<GridCoordinate> targetAnchors)
+            List<GridCoordinate> targetAnchors,
+            System.Func<PieceModel, GridCoordinate, bool> canMovePiece = null)
         {
             if (pieces == null || targetAnchors == null || pieces.Count == 0)
                 return false;
@@ -435,7 +440,20 @@ namespace GravityPuzzle.Core.Grid
                 for (int index = 0; index < targetAnchors.Count; index++)
                     targetAnchors[index] = targetAnchors[index].Offset(Down);
 
-                if (!CheckGroupPlacementIgnoringMembers(pieces, targetAnchors).IsSuccess)
+                bool valid = CheckGroupPlacementIgnoringMembers(pieces, targetAnchors).IsSuccess;
+                if (valid && canMovePiece != null)
+                {
+                    for (int index = 0; index < pieces.Count; index++)
+                    {
+                        if (!canMovePiece(pieces[index], targetAnchors[index]))
+                        {
+                            valid = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (!valid)
                 {
                     for (int index = 0; index < targetAnchors.Count; index++)
                         targetAnchors[index] = targetAnchors[index].Offset(new GridCoordinate(0, 1));

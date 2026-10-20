@@ -8,6 +8,8 @@ namespace GravityPuzzle.Config
     [CreateAssetMenu(fileName = "RevealPresentationConfig", menuName = "Gravity Puzzle/Config/Reveal Presentation")]
     public sealed class RevealPresentationConfig : ScriptableObject
     {
+        public const int DefaultBoxPreviewSlotCapacity = 32;
+
         [Header("Prefabs & Pooling")]
         [Tooltip("Authored prefab for Box reveal presentation.")]
         public BoxRevealAreaView boxPrefab;
@@ -44,6 +46,15 @@ namespace GravityPuzzle.Config
         public Vector4 boxOpeningInsets = new Vector4(31f, 48f, 31f, 56f);
         [Tooltip("Opaque interior and corner backing while the box is locked.")]
         public Color boxBackingColor = new Color(.035f, .025f, .16f, 1f);
+        [Header("Box Hidden Content Preview")]
+        [Tooltip("Pre-authored renderer slots on each Box view. Increase this through the Box preview authoring command if a Box needs more visual parts.")]
+        [Min(1)] public int boxPreviewSlotCapacity = DefaultBoxPreviewSlotCapacity;
+        [Tooltip("Scale used by preview blocks while they are recessed inside a closed Box.")]
+        [Range(.85f, 1f)] public float boxPreviewRecessedScale = .96f;
+        [Tooltip("Downward visual offset applied to preview blocks before the shutter fully opens.")]
+        [Min(0f)] public float boxPreviewRecessDistance = .055f;
+        [Tooltip("Brightness multiplier applied while preview blocks are recessed inside the Box.")]
+        [Range(.4f, 1f)] public float boxPreviewRecessedBrightness = .76f;
         [Min(.01f)] public float boxOpenDuration = .45f;
         [Tooltip("Additional clearance above the fixed shutter top before the final burst.")]
         [Min(0f)] public float boxOpenDistance = .08f;

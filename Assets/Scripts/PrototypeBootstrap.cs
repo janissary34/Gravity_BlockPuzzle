@@ -771,6 +771,20 @@ namespace GravityPuzzle
         public PieceJointGraph PieceJointGraph => pieceJointGraph;
         public Presentation.Views.JointSpringPresenter JointSpringPresenter { get; set; }
 
+        private System.Func<PieceModel, GridCoordinate, bool> cachedCanMovePieceDelegate;
+        public System.Func<PieceModel, GridCoordinate, bool> CanMovePieceDelegate =>
+            cachedCanMovePieceDelegate ?? (cachedCanMovePieceDelegate = CanMovePiece);
+
+        public bool CanMovePiece(PieceModel piece, GridCoordinate targetAnchor)
+        {
+            return revealAreaCoordinator == null || revealAreaCoordinator.CanMovePiece(piece, targetAnchor);
+        }
+
+        public void WakeUpGravity()
+        {
+            PuzzleDragController.WakeUpGravity();
+        }
+
         public void ConfigureRevealAreas(RevealAreaCoordinator coordinator)
         {
             if (revealAreaCoordinator != null)
@@ -1867,7 +1881,7 @@ namespace GravityPuzzle
                 return false;
 
             moves.Clear();
-            if (!BoardSnapshot.Grid.TryGetGroupFallTarget(jointGroupModels, jointGroupTargetAnchors))
+            if (!BoardSnapshot.Grid.TryGetGroupFallTarget(jointGroupModels, jointGroupTargetAnchors, CanMovePieceDelegate))
                 return false;
 
             for (int index = 0; index < jointGroupModels.Count; index++)
@@ -1961,7 +1975,7 @@ namespace GravityPuzzle
                 jointGroupTargetAnchors.Add(move.ToAnchor);
             }
 
-            if (!BoardSnapshot.Grid.TryGetGroupFallTarget(jointGroupModels, jointGroupTargetAnchors) ||
+            if (!BoardSnapshot.Grid.TryGetGroupFallTarget(jointGroupModels, jointGroupTargetAnchors, CanMovePieceDelegate) ||
                 jointGroupTargetAnchors[0].Y != moves[0].ToAnchor.Y ||
                 !BoardSnapshot.Grid.TryMoveGroupIgnoringMembers(jointGroupModels, jointGroupTargetAnchors, out result))
                 return false;

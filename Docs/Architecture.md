@@ -18,6 +18,11 @@ also be committed as a temporary support stack, without changing their joint
 graph. Each included member must have the same safe fall distance and compatible
 fall presentation; independently supported members stay behind. Other groups
 sharing columns retain sequential planning to prevent visual intersections.
+Downwards step traversal in grid gravity planning consults movement legality
+(`RevealAreaCoordinator.CanMovePiece`) at each step, preventing pieces from
+tunneling through or entering closed boxes or locked elevator boundaries.
+If a candidate group fails commit, it is excluded for the batch so unrelated
+independent groups continue to fall without stalling board gravity.
 The board commits the stack atomically and owns the lifecycle transitions.
 
 `BlockShredder` owns admission to each authored `ShredderCatchZone`. Feed

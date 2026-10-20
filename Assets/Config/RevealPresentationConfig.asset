@@ -31,6 +31,10 @@ MonoBehaviour:
   boxFrameThickness: 0.75
   boxOpeningInsets: {x: 31, y: 48, z: 31, w: 56}
   boxBackingColor: {r: 0.035, g: 0.025, b: 0.16, a: 1}
+  boxPreviewSlotCapacity: 32
+  boxPreviewRecessedScale: 0.96
+  boxPreviewRecessDistance: 0.055
+  boxPreviewRecessedBrightness: 0.76
   boxOpenDuration: 0.45
   boxOpenDistance: 0.08
   boxOpenEase: 9

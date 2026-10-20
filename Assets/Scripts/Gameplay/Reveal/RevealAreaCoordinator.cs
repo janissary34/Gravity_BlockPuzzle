@@ -32,6 +32,16 @@ namespace GravityPuzzle.Gameplay.Reveal
     }
 
     /// <summary>
+    /// Optional presentation extension for Boxes that can display the content
+    /// which will be activated when their existing opening contract completes.
+    /// It carries authored data only and never changes reveal authority.
+    /// </summary>
+    public interface IBoxRevealPreviewPresentation
+    {
+        void ConfigureBoxPreview(GravityLevelDefinition level, BoxRevealDefinition definition);
+    }
+
+    /// <summary>
     /// Owns reveal-area state for one level. It consumes board commits rather
     /// than transforms, colliders, or Update polling.
     /// </summary>
@@ -60,6 +70,7 @@ namespace GravityPuzzle.Gameplay.Reveal
         private readonly Dictionary<string, IRevealAreaPresentation> presentations =
             new Dictionary<string, IRevealAreaPresentation>();
         private PrototypeBoard board;
+        private GravityLevelDefinition level;
 
         public event Action<RevealAreaEvent> AreaUnlockStarted;
         public event Action<RevealAreaEvent> AreaUnlocked;
@@ -84,6 +95,7 @@ namespace GravityPuzzle.Gameplay.Reveal
 
         public void Initialize(PrototypeBoard owner, GravityLevelDefinition level)
         {
+            this.level = level;
             board = owner ?? throw new ArgumentNullException(nameof(owner));
             boxes.Clear();
             elevators.Clear();
@@ -111,7 +123,11 @@ namespace GravityPuzzle.Gameplay.Reveal
             {
                 BoxRuntime box = boxes[index];
                 if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
+                {
+                    if (presentation is IBoxRevealPreviewPresentation previewPresentation)
+                        previewPresentation.ConfigureBoxPreview(level, box.Definition);
                     presentation.SetBoxRemaining(box.Definition.targetShredCount, box.Definition.targetShredCount);
+                }
             }
 
             // A zero-target box is deliberately opened from the initialized
@@ -135,7 +151,11 @@ namespace GravityPuzzle.Gameplay.Reveal
             {
                 BoxRuntime box = boxes[index];
                 if (box.Definition.areaId == areaId)
+                {
+                    if (presentation is IBoxRevealPreviewPresentation previewPresentation && level != null)
+                        previewPresentation.ConfigureBoxPreview(level, box.Definition);
                     presentation.SetBoxRemaining(box.Definition.targetShredCount - box.CountedShredPieceIds.Count, box.Definition.targetShredCount);
+                }
             }
         }
 
@@ -164,6 +184,9 @@ namespace GravityPuzzle.Gameplay.Reveal
         {
             if (model == null)
                 return false;
+
+            if (boxes.Count == 0 && elevators.Count == 0)
+                return true;
 
             GridBounds current = GridBounds.From(model, model.Anchor);
             GridBounds target = GridBounds.From(model, targetAnchor);
@@ -237,6 +260,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             box.State = RevealAreaState.Unlocked;
             AreaUnlocked?.Invoke(new RevealAreaEvent(box.Definition.areaId, RevealAreaKind.Box));
             EvaluateElevators();
+            board?.WakeUpGravity();
         }
 
         private void EvaluateElevators()
@@ -269,6 +293,7 @@ namespace GravityPuzzle.Gameplay.Reveal
 
             elevator.State = RevealAreaState.Unlocked;
             AreaUnlocked?.Invoke(new RevealAreaEvent(elevator.Definition.areaId, RevealAreaKind.Elevator));
+            board?.WakeUpGravity();
         }
 
         private void BeginOpening(

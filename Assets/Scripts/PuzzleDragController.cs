@@ -29,6 +29,7 @@ namespace GravityPuzzle
         private readonly List<GridGravityMove> candidateJointGravityMoves = new List<GridGravityMove>();
         private readonly List<GridGravityMove> selectedJointGravityMoves = new List<GridGravityMove>();
         private readonly HashSet<int> gravityBatchColumns = new HashSet<int>();
+        private readonly HashSet<int> rejectedGravityPieceIds = new HashSet<int>();
         private readonly List<PieceModel> gravityStackModels = new List<PieceModel>();
         private readonly List<GridCoordinate> gravityStackTargets = new List<GridCoordinate>();
         private readonly HashSet<int> gravityStackIds = new HashSet<int>();
@@ -428,7 +429,7 @@ namespace GravityPuzzle
                     piece.IsShredderInteractionLocked ||
                     !snapshot.TryGetPiece(piece.SourcePieceId, out PieceModel model) ||
                     model.State != PieceState.Falling ||
-                    !snapshot.Grid.TryGetFallTarget(model, out GridCoordinate targetAnchor) ||
+                    !snapshot.Grid.TryGetFallTarget(model, out GridCoordinate targetAnchor, activeBoard.CanMovePieceDelegate) ||
                     targetAnchor.Equals(model.Anchor))
                     continue;
 
@@ -457,6 +458,7 @@ namespace GravityPuzzle
         {
             gravityBatchColumns.Clear();
             coordinatedFallReleaseMode.Clear();
+            rejectedGravityPieceIds.Clear();
             bool committedAny = false;
             while (TryCommitIndependentGravityGroup(activeBoard, snapshot))
                 committedAny = true;
@@ -467,92 +469,129 @@ namespace GravityPuzzle
             PrototypeBoard activeBoard,
             LevelBoardSnapshot snapshot)
         {
-            selectedJointGravityMoves.Clear();
-            int selectedLandingY = int.MaxValue;
-            int selectedSourceId = int.MaxValue;
-            IReadOnlyList<PieceModel> models = snapshot.Pieces;
-            for (int index = 0; index < models.Count; index++)
+            while (true)
             {
-                PieceModel model = models[index];
-                if (!IsEligibleForGridGravity(model))
-                    continue;
-
-                activeBoard.CollectJointGroupPieces(model.Id, gravityGroupPieces);
-                if (!IsEligibleJointGravityGroup(gravityGroupPieces, model.Id))
-                    continue;
-
-                candidateJointGravityMoves.Clear();
-                if (!activeBoard.TryPlanJointGroupGravityMove(model.Id, candidateJointGravityMoves))
-                    continue;
-
-                bool sharesBatchColumn = false;
-                for (int moveIndex = 0; moveIndex < candidateJointGravityMoves.Count && !sharesBatchColumn; moveIndex++)
+                selectedJointGravityMoves.Clear();
+                int selectedLandingY = int.MaxValue;
+                int selectedSourceId = int.MaxValue;
+                IReadOnlyList<PieceModel> models = snapshot.Pieces;
+                for (int index = 0; index < models.Count; index++)
                 {
-                    if (!snapshot.TryGetPiece(candidateJointGravityMoves[moveIndex].PieceId, out PieceModel member))
+                    PieceModel model = models[index];
+                    if (rejectedGravityPieceIds.Contains(model.Id) || !IsEligibleForGridGravity(model))
+                        continue;
+
+                    activeBoard.CollectJointGroupPieces(model.Id, gravityGroupPieces);
+                    if (!IsEligibleJointGravityGroup(gravityGroupPieces, model.Id))
+                        continue;
+
+                    bool containsRejectedMember = false;
+                    for (int memberIndex = 0; memberIndex < gravityGroupPieces.Count; memberIndex++)
                     {
-                        sharesBatchColumn = true;
-                        break;
+                        if (gravityGroupPieces[memberIndex] != null &&
+                            rejectedGravityPieceIds.Contains(gravityGroupPieces[memberIndex].SourcePieceId))
+                        {
+                            containsRejectedMember = true;
+                            break;
+                        }
                     }
-                    for (int cellIndex = 0; cellIndex < member.LocalCells.Count; cellIndex++)
+                    if (containsRejectedMember)
+                        continue;
+
+                    candidateJointGravityMoves.Clear();
+                    if (!activeBoard.TryPlanJointGroupGravityMove(model.Id, candidateJointGravityMoves))
+                        continue;
+
+                    bool sharesBatchColumn = false;
+                    for (int moveIndex = 0; moveIndex < candidateJointGravityMoves.Count && !sharesBatchColumn; moveIndex++)
                     {
-                        if (gravityBatchColumns.Contains(member.GetWorldCell(cellIndex).X))
+                        if (!snapshot.TryGetPiece(candidateJointGravityMoves[moveIndex].PieceId, out PieceModel member))
                         {
                             sharesBatchColumn = true;
                             break;
                         }
+                        for (int cellIndex = 0; cellIndex < member.LocalCells.Count; cellIndex++)
+                        {
+                            if (gravityBatchColumns.Contains(member.GetWorldCell(cellIndex).X))
+                            {
+                                sharesBatchColumn = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (sharesBatchColumn)
+                        continue;
+
+                    int groupLandingY = int.MaxValue;
+                    int groupSourceId = int.MaxValue;
+                    for (int moveIndex = 0; moveIndex < candidateJointGravityMoves.Count; moveIndex++)
+                    {
+                        GridGravityMove candidate = candidateJointGravityMoves[moveIndex];
+                        groupLandingY = Mathf.Min(groupLandingY, candidate.ToAnchor.Y);
+                        groupSourceId = Mathf.Min(groupSourceId, candidate.PieceId);
+                    }
+
+                    if (groupLandingY > selectedLandingY ||
+                        groupLandingY == selectedLandingY && groupSourceId >= selectedSourceId)
+                    {
+                        continue;
+                    }
+
+                    selectedJointGravityMoves.Clear();
+                    selectedJointGravityMoves.AddRange(candidateJointGravityMoves);
+                    selectedLandingY = groupLandingY;
+                    selectedSourceId = groupSourceId;
+                }
+
+                if (selectedJointGravityMoves.Count == 0)
+                    return false;
+
+                bool coordinated = selectedJointGravityMoves.Count == 1 &&
+                    TryExpandGravitySupportStack(activeBoard, snapshot, selectedJointGravityMoves[0]);
+                bool committed = false;
+                if (coordinated)
+                {
+                    committed = activeBoard.TryCommitCoordinatedGravityMove(selectedJointGravityMoves, out _);
+                    if (!committed)
+                    {
+                        // Fall back to attempting the single unexpanded root move before rejecting the group.
+                        GridGravityMove rootMove = selectedJointGravityMoves[0];
+                        selectedJointGravityMoves.Clear();
+                        selectedJointGravityMoves.Add(rootMove);
+                        coordinated = false;
+                        committed = activeBoard.TryCommitJointGroupGravityMove(selectedJointGravityMoves, out _);
                     }
                 }
-                if (sharesBatchColumn)
-                    continue;
-
-                int groupLandingY = int.MaxValue;
-                int groupSourceId = int.MaxValue;
-                for (int moveIndex = 0; moveIndex < candidateJointGravityMoves.Count; moveIndex++)
+                else
                 {
-                    GridGravityMove candidate = candidateJointGravityMoves[moveIndex];
-                    groupLandingY = Mathf.Min(groupLandingY, candidate.ToAnchor.Y);
-                    groupSourceId = Mathf.Min(groupSourceId, candidate.PieceId);
+                    committed = activeBoard.TryCommitJointGroupGravityMove(selectedJointGravityMoves, out _);
                 }
 
-                if (groupLandingY > selectedLandingY ||
-                    groupLandingY == selectedLandingY && groupSourceId >= selectedSourceId)
+                if (!committed)
                 {
+                    for (int moveIndex = 0; moveIndex < selectedJointGravityMoves.Count; moveIndex++)
+                        rejectedGravityPieceIds.Add(selectedJointGravityMoves[moveIndex].PieceId);
                     continue;
                 }
 
-                selectedJointGravityMoves.Clear();
-                selectedJointGravityMoves.AddRange(candidateJointGravityMoves);
-                selectedLandingY = groupLandingY;
-                selectedSourceId = groupSourceId;
-            }
+                if (coordinated && snapshot.TryGetPiece(selectedJointGravityMoves[0].PieceId, out PieceModel stackRoot))
+                {
+                    bool releaseMode = IsSettlingAboveShredderReservation(snapshot, stackRoot);
+                    for (int index = 0; index < selectedJointGravityMoves.Count; index++)
+                        coordinatedFallReleaseMode[selectedJointGravityMoves[index].PieceId] = releaseMode;
+                }
 
-            if (selectedJointGravityMoves.Count == 0)
-                return false;
-
-            bool coordinated = selectedJointGravityMoves.Count == 1 &&
-                TryExpandGravitySupportStack(activeBoard, snapshot, selectedJointGravityMoves[0]);
-            if (coordinated
-                ? !activeBoard.TryCommitCoordinatedGravityMove(selectedJointGravityMoves, out _)
-                : !activeBoard.TryCommitJointGroupGravityMove(selectedJointGravityMoves, out _))
-                return false;
-
-            if (coordinated && snapshot.TryGetPiece(selectedJointGravityMoves[0].PieceId, out PieceModel stackRoot))
-            {
-                bool releaseMode = IsSettlingAboveShredderReservation(snapshot, stackRoot);
                 for (int index = 0; index < selectedJointGravityMoves.Count; index++)
-                    coordinatedFallReleaseMode[selectedJointGravityMoves[index].PieceId] = releaseMode;
-            }
-
-            for (int index = 0; index < selectedJointGravityMoves.Count; index++)
-            {
-                if (snapshot.TryGetPiece(selectedJointGravityMoves[index].PieceId, out PieceModel member))
                 {
-                    for (int cellIndex = 0; cellIndex < member.LocalCells.Count; cellIndex++)
-                        gravityBatchColumns.Add(member.GetWorldCell(cellIndex).X);
+                    if (snapshot.TryGetPiece(selectedJointGravityMoves[index].PieceId, out PieceModel member))
+                    {
+                        for (int cellIndex = 0; cellIndex < member.LocalCells.Count; cellIndex++)
+                            gravityBatchColumns.Add(member.GetWorldCell(cellIndex).X);
+                    }
+                    pendingGridGravityMoves.Enqueue(selectedJointGravityMoves[index]);
                 }
-                pendingGridGravityMoves.Enqueue(selectedJointGravityMoves[index]);
+                return true;
             }
-            return true;
         }
 
         private bool TryExpandGravitySupportStack(
@@ -611,7 +650,7 @@ namespace GravityPuzzle
                         continue;
 
                     gravityStackModels.Add(candidate);
-                    bool safe = snapshot.Grid.TryGetGroupFallTarget(gravityStackModels, gravityStackTargets) &&
+                    bool safe = snapshot.Grid.TryGetGroupFallTarget(gravityStackModels, gravityStackTargets, board.CanMovePieceDelegate) &&
                         root.Anchor.Y - gravityStackTargets[0].Y == rootDistance;
                     if (!safe)
                     {

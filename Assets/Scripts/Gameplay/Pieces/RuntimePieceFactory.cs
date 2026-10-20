@@ -17,6 +17,46 @@ namespace GravityPuzzle.Gameplay.Pieces
         public Vector2 LocalPosition { get; }
         public Vector2 Size { get; }
     }
+
+    /// <summary>
+    /// Renderer-only description of one part of an intact piece. Reveal-area
+    /// presentations use this to mirror a future pooled piece without renting
+    /// a gameplay root or creating colliders.
+    /// </summary>
+    public readonly struct RuntimePiecePreviewVisual
+    {
+        public RuntimePiecePreviewVisual(
+            Sprite sprite,
+            Material material,
+            Color color,
+            Vector2 localPosition,
+            Vector3 localScale,
+            Quaternion localRotation,
+            SpriteDrawMode drawMode,
+            Vector2 size,
+            bool flipX)
+        {
+            Sprite = sprite;
+            Material = material;
+            Color = color;
+            LocalPosition = localPosition;
+            LocalScale = localScale;
+            LocalRotation = localRotation;
+            DrawMode = drawMode;
+            Size = size;
+            FlipX = flipX;
+        }
+
+        public Sprite Sprite { get; }
+        public Material Material { get; }
+        public Color Color { get; }
+        public Vector2 LocalPosition { get; }
+        public Vector3 LocalScale { get; }
+        public Quaternion LocalRotation { get; }
+        public SpriteDrawMode DrawMode { get; }
+        public Vector2 Size { get; }
+        public bool FlipX { get; }
+    }
     //arda
     public static class RuntimePieceFactory
     {
@@ -51,6 +91,76 @@ namespace GravityPuzzle.Gameplay.Pieces
         public static void SetPresentationMode(bool useVoxelGrid)
         {
             useVoxelShardGrid = useVoxelGrid;
+        }
+
+        /// <summary>
+        /// Appends the same base sprite composition that an unmodified pooled
+        /// piece will receive. This intentionally excludes counters, colliders
+        /// and runtime effects because callers use it only as a transient
+        /// presentation preview before the real piece is activated.
+        /// </summary>
+        public static void AppendPreviewVisuals(
+            GravityLevelDefinition level,
+            PieceDefinition definition,
+            List<RuntimePiecePreviewVisual> results)
+        {
+            if (level == null || definition == null || results == null || !HasBlockCells(definition))
+                return;
+
+            ResolveVisual(
+                definition,
+                out Color visualColor,
+                out Sprite modularSprite,
+                out Material presentationMaterial);
+
+            bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
+                               definition.frozenMoveCount > 0;
+            List<PiecePartGeometry> parts = BuildPartGeometry(
+                level,
+                definition,
+                1f / Mathf.Max(1, level.subdivisions),
+                out _);
+
+            if (TryAppendWholePreviewVisual(
+                    level,
+                    definition,
+                    parts,
+                    visualColor,
+                    presentationMaterial,
+                    isFrozenIce,
+                    results))
+            {
+                return;
+            }
+
+            Sprite sprite = modularSprite != null ? modularSprite : PrototypeBootstrap.GetSquareSprite();
+            if (sprite == null || sprite.bounds.size.x <= 0f || sprite.bounds.size.y <= 0f)
+                return;
+
+            Material material = isFrozenIce && pieceVisualConfig != null
+                ? pieceVisualConfig.IceMaterial
+                : presentationMaterial != null ? presentationMaterial : GetFallbackSpriteMaterial();
+            Color color = isFrozenIce || presentationMaterial != null ? Color.white : visualColor;
+            float iceScale = isFrozenIce && pieceVisualConfig != null
+                ? pieceVisualConfig.ModularIceCellScale
+                : 1f;
+            for (int index = 0; index < parts.Count; index++)
+            {
+                PiecePartGeometry part = parts[index];
+                results.Add(new RuntimePiecePreviewVisual(
+                    sprite,
+                    material,
+                    color,
+                    part.LocalPosition,
+                    new Vector3(
+                        part.Size.x / sprite.bounds.size.x * iceScale,
+                        part.Size.y / sprite.bounds.size.y * iceScale,
+                        1f),
+                    Quaternion.identity,
+                    SpriteDrawMode.Simple,
+                    Vector2.one,
+                    false));
+            }
         }
 
 
@@ -973,6 +1083,87 @@ namespace GravityPuzzle.Gameplay.Pieces
             // visually consistent without letting VoxelShard subdivide the
             // brick image again.
             return fallbackSprite;
+        }
+
+        private static bool TryAppendWholePreviewVisual(
+            GravityLevelDefinition level,
+            PieceDefinition definition,
+            List<PiecePartGeometry> parts,
+            Color visualColor,
+            Material presentationMaterial,
+            bool isFrozenIce,
+            List<RuntimePiecePreviewVisual> results)
+        {
+            if (pieceVisualConfig == null || parts == null || parts.Count == 0)
+                return false;
+
+            List<Vector2Int> moduleCells = new List<Vector2Int>();
+            if (!TryGetUniformModuleShape(level, definition, moduleCells, out string shapeKey) ||
+                !pieceVisualConfig.TryGetShapePresentation(
+                    shapeKey,
+                    out PieceShapeVisualDefinition visual,
+                    out PieceShapeVisualTransform transform))
+            {
+                return false;
+            }
+
+            bool useModularIce = isFrozenIce &&
+                                 (pieceVisualConfig.UseUnifiedModularIce || visual.PreferModularIce);
+            Sprite sprite = isFrozenIce && visual.IceSprite != null && !useModularIce
+                ? visual.IceSprite
+                : visual.NormalSprite;
+            if (sprite == null || visual.PreferModularNormal || useModularIce ||
+                sprite.bounds.size.x <= 0f || sprite.bounds.size.y <= 0f)
+            {
+                return false;
+            }
+
+            GetPiecePartBounds(parts, out Vector2 minimum, out Vector2 maximum);
+            Vector2 size = maximum - minimum;
+            Vector2 center = (minimum + maximum) * .5f;
+            bool swapsDimensions = transform.QuarterTurns % 2 != 0;
+            bool useTiledSprite = sprite == visual.NormalSprite &&
+                                  visual.TileNormalSpriteToBounds &&
+                                  transform.QuarterTurns == 0 &&
+                                  !transform.FlipX;
+            Vector3 scale;
+            Vector2 tiledSize = Vector2.one;
+            SpriteDrawMode drawMode = SpriteDrawMode.Simple;
+            if (useTiledSprite)
+            {
+                float moduleScale = size.x >= size.y
+                    ? size.y / sprite.bounds.size.y
+                    : size.x / sprite.bounds.size.x;
+                if (moduleScale <= 0f)
+                    return false;
+
+                scale = new Vector3(moduleScale, moduleScale, 1f);
+                tiledSize = size / moduleScale;
+                drawMode = SpriteDrawMode.Tiled;
+            }
+            else
+            {
+                scale = new Vector3(
+                    (swapsDimensions ? size.y : size.x) / sprite.bounds.size.x,
+                    (swapsDimensions ? size.x : size.y) / sprite.bounds.size.y,
+                    1f);
+            }
+
+            Material material = isFrozenIce && visual.IceSprite != null
+                ? pieceVisualConfig.IceMaterial
+                : presentationMaterial != null ? presentationMaterial : GetFallbackSpriteMaterial();
+            Color color = isFrozenIce || presentationMaterial != null ? Color.white : visualColor;
+            results.Add(new RuntimePiecePreviewVisual(
+                sprite,
+                material,
+                color,
+                center,
+                scale,
+                Quaternion.Euler(0f, 0f, transform.QuarterTurns * 90f),
+                drawMode,
+                tiledSize,
+                transform.FlipX));
+            return true;
         }
 
         private static void ConfigureWholePiecePresentation(

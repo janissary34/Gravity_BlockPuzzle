@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
@@ -13,6 +14,12 @@ namespace GravityPuzzle.Tests.PlayMode
         private static readonly Type ViewType = Type.GetType("GravityPuzzle.Presentation.Views.BoxRevealAreaView, Assembly-CSharp");
         private static readonly Type KindType = Type.GetType("GravityPuzzle.Gameplay.Reveal.RevealAreaKind, Assembly-CSharp");
         private static readonly Type ConfigType = Type.GetType("GravityPuzzle.Config.RevealPresentationConfig, Assembly-CSharp");
+        private static readonly Type LevelType = Type.GetType("GravityPuzzle.GravityLevelDefinition, Assembly-CSharp");
+        private static readonly Type BoxDefinitionType = Type.GetType("GravityPuzzle.BoxRevealDefinition, Assembly-CSharp");
+        private static readonly Type BoundsType = Type.GetType("GravityPuzzle.RevealAreaBounds, Assembly-CSharp");
+        private static readonly Type PieceDefinitionType = Type.GetType("GravityPuzzle.PieceDefinition, Assembly-CSharp");
+        private static readonly Type PieceCellDefinitionType = Type.GetType("GravityPuzzle.PieceCellDefinition, Assembly-CSharp");
+        private static readonly Type PieceCellType = Type.GetType("GravityPuzzle.PieceCellType, Assembly-CSharp");
 
         [UnityTest]
         public IEnumerator ProgressRetargetsWithoutMovingTheFrameAndCompletesBeforeUnlock()
@@ -132,6 +139,96 @@ namespace GravityPuzzle.Tests.PlayMode
                 UnityEngine.Object.Destroy(second);
                 UnityEngine.Object.Destroy(config);
             }
+        }
+
+        [UnityTest]
+        public IEnumerator HiddenPiecePreviewTracksOpeningAndResetsOnPoolReturn()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/BoxRevealArea.prefab");
+            var sourceConfig = AssetDatabase.LoadAssetAtPath("Assets/Config/RevealPresentationConfig.asset", ConfigType);
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(sourceConfig, Is.Not.Null);
+            var config = UnityEngine.Object.Instantiate(sourceConfig);
+            Assert.That(LevelType, Is.Not.Null);
+            Assert.That(BoxDefinitionType, Is.Not.Null);
+            Assert.That(BoundsType, Is.Not.Null);
+            Assert.That(PieceDefinitionType, Is.Not.Null);
+            Assert.That(PieceCellDefinitionType, Is.Not.Null);
+            Assert.That(PieceCellType, Is.Not.Null);
+            ScriptableObject level = ScriptableObject.CreateInstance(LevelType);
+            LevelType.GetField("boardColumns").SetValue(level, 6);
+            LevelType.GetField("boardRows").SetValue(level, 6);
+            LevelType.GetField("subdivisions").SetValue(level, 4);
+            object definition = Activator.CreateInstance(BoxDefinitionType);
+            object bounds = Activator.CreateInstance(BoundsType);
+            BoundsType.GetField("origin").SetValue(bounds, new Vector2Int(4, 4));
+            BoundsType.GetField("size").SetValue(bounds, new Vector2Int(8, 8));
+            BoxDefinitionType.GetField("bounds").SetValue(definition, bounds);
+            IList hiddenPieces = CreateTypedList(PieceDefinitionType);
+            BoxDefinitionType.GetField("hiddenPieces").SetValue(definition, hiddenPieces);
+            object piece = Activator.CreateInstance(PieceDefinitionType);
+            PieceDefinitionType.GetField("origin").SetValue(piece, new Vector2Int(6, 6));
+            PieceDefinitionType.GetField("color").SetValue(piece, Color.red);
+            IList cells = CreateTypedList(PieceCellDefinitionType);
+            PieceDefinitionType.GetField("cells").SetValue(piece, cells);
+            object blockType = Enum.ToObject(PieceCellType, 0);
+            for (int y = 0; y < 4; y++)
+            {
+                for (int x = 0; x < 4; x++)
+                    cells.Add(Activator.CreateInstance(PieceCellDefinitionType, new Vector2Int(x, y), blockType));
+            }
+            hiddenPieces.Add(piece);
+
+            GameObject instance = UnityEngine.Object.Instantiate(prefab);
+            Component view = instance.GetComponent(ViewType);
+            MethodInfo initialize = ViewType.GetMethod("Initialize");
+            MethodInfo configurePreview = ViewType.GetMethod("ConfigureBoxPreview");
+            MethodInfo applyShutterHeight = ViewType.GetMethod(
+                "ApplyShutterHeight",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo despawn = ViewType.GetMethod("OnDespawn");
+            Transform preview = instance.transform.Find("Shutter/Preview Content/Preview Slot 1");
+            Transform mask = instance.transform.Find("Shutter/Preview Content/Aperture Mask");
+            try
+            {
+                Assert.That(configurePreview, Is.Not.Null);
+                Assert.That(applyShutterHeight, Is.Not.Null);
+                initialize.Invoke(view, new object[] { "preview", Vector2.zero, new Vector2(2f, 2f), config });
+                configurePreview.Invoke(view, new object[] { level, definition });
+
+                var previewRenderer = preview.GetComponent<SpriteRenderer>();
+                Assert.That(preview.gameObject.activeSelf, Is.True);
+                Assert.That(previewRenderer.sprite, Is.Not.Null);
+                Assert.That(previewRenderer.maskInteraction, Is.EqualTo(SpriteMaskInteraction.VisibleInsideMask));
+                Assert.That(mask.GetComponent<SpriteMask>().sprite, Is.Not.Null);
+
+                Vector3 recessedPosition = preview.localPosition;
+                Vector3 recessedScale = preview.localScale;
+                applyShutterHeight.Invoke(view, new object[] { 1f });
+                Vector3 partialScale = preview.localScale;
+                applyShutterHeight.Invoke(view, new object[] { 0f });
+                Vector3 openPosition = preview.localPosition;
+                Vector3 openScale = preview.localScale;
+
+                Assert.That(partialScale.x, Is.GreaterThan(recessedScale.x));
+                Assert.That(partialScale.x, Is.LessThan(openScale.x));
+                Assert.That(openPosition.y, Is.GreaterThan(recessedPosition.y));
+
+                despawn.Invoke(view, null);
+                Assert.That(preview.gameObject.activeSelf, Is.False);
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(instance);
+                UnityEngine.Object.Destroy(config);
+                UnityEngine.Object.Destroy(level);
+            }
+            yield return null;
+        }
+
+        private static IList CreateTypedList(Type itemType)
+        {
+            return (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(itemType));
         }
     }
 }

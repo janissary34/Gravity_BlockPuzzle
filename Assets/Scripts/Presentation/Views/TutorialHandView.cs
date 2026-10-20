@@ -160,25 +160,40 @@ namespace GravityPuzzle.Presentation.Views
 
             Canvas handCanvas = handRoot.GetComponentInParent<Canvas>();
             Camera handCam = handCanvas != null && handCanvas.renderMode != RenderMode.ScreenSpaceOverlay
-                ? (handCanvas.worldCamera != null ? handCanvas.worldCamera : PrototypeBootstrap.SceneCamera)
+                ? (handCanvas.worldCamera != null ? handCanvas.worldCamera : (PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main))
                 : null;
+
+            if (handCanvas != null && handCanvas.renderMode == RenderMode.ScreenSpaceCamera && handCanvas.worldCamera == null && handCam != null)
+                handCanvas.worldCamera = handCam;
 
             Canvas targetCanvas = target.GetComponentInParent<Canvas>();
             Camera targetCam = targetCanvas != null && targetCanvas.renderMode != RenderMode.ScreenSpaceOverlay
-                ? (targetCanvas.worldCamera != null ? targetCanvas.worldCamera : PrototypeBootstrap.SceneCamera)
+                ? (targetCanvas.worldCamera != null ? targetCanvas.worldCamera : (PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main))
                 : null;
 
-            Vector3 worldCenter = target.TransformPoint(target.rect.center);
-            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(targetCam, worldCenter);
+            if (targetCanvas != null && targetCanvas.renderMode == RenderMode.ScreenSpaceCamera && targetCanvas.worldCamera == null && targetCam != null)
+                targetCanvas.worldCamera = targetCam;
 
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, handCam, out Vector2 localTarget))
+            Vector3 worldCenter = target.TransformPoint(target.rect.center);
+            Vector2 localTarget;
+            if (targetCanvas != null && targetCanvas == handCanvas)
             {
                 Vector3 localTarget3D = parent.InverseTransformPoint(worldCenter);
                 localTarget = new Vector2(localTarget3D.x, localTarget3D.y);
             }
+            else
+            {
+                Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(targetCam, worldCenter);
+                if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, handCam, out localTarget))
+                {
+                    Vector3 localTarget3D = parent.InverseTransformPoint(worldCenter);
+                    localTarget = new Vector2(localTarget3D.x, localTarget3D.y);
+                }
+            }
 
-            handRoot.anchorMin = Vector2.zero;
-            handRoot.anchorMax = Vector2.zero;
+            Vector2 anchor = parent != null ? parent.pivot : new Vector2(0.5f, 0.5f);
+            handRoot.anchorMin = anchor;
+            handRoot.anchorMax = anchor;
             handRoot.pivot = new Vector2(0.5f, 0.5f);
 
             // Buttons are in the bottom HUD: the gauntlet should stay above the button and point down
@@ -214,8 +229,9 @@ namespace GravityPuzzle.Presentation.Views
             SetVisible(true);
             handRoot.SetAsLastSibling();
 
-            handRoot.anchorMin = Vector2.zero;
-            handRoot.anchorMax = Vector2.zero;
+            Vector2 anchor = parent != null ? parent.pivot : new Vector2(0.5f, 0.5f);
+            handRoot.anchorMin = anchor;
+            handRoot.anchorMax = anchor;
             handRoot.pivot = new Vector2(0.5f, 0.5f);
 
             // Board targets are above: the gauntlet points up from below

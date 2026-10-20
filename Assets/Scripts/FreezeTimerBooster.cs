@@ -246,16 +246,24 @@ namespace GravityPuzzle
 
         private void RefreshButtonState()
         {
+            EnsureReferences();
+
             if (boosterButton == null)
                 return;
 
             if (BoosterTargetingPresentation.IsBoosterButtonSuppressed(buttonCanvasGroup))
                 return;
 
-            bool isIntroduced = boosterButtonRef != null
+            bool isRequiredFirstUse = BoosterFirstUseTutorialRuntime.Gate != null &&
+                                      (BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(
+                                          BoosterRewardType.FreezeTimer) ||
+                                       BoosterFirstUseTutorialRuntime.Gate.IsFirstUseActive(
+                                          BoosterRewardType.FreezeTimer));
+
+            bool isIntroduced = isRequiredFirstUse || (boosterButtonRef != null
                 ? boosterButtonRef.IsIntroduced
                 : (GravityLevelRuntime.CurrentLevelNumber >= BoosterButton.GetIntroductionLevel(BoosterRewardType.FreezeTimer) &&
-                   (BoosterInventoryRuntime.Current.IsUnlocked(BoosterRewardType.FreezeTimer) || HasUses));
+                   (BoosterInventoryRuntime.Current.IsUnlocked(BoosterRewardType.FreezeTimer) || HasUses)));
 
             if (!isIntroduced)
             {
@@ -274,11 +282,6 @@ namespace GravityPuzzle
             // removing them from the HUD. The whole button is also locked while
             // its timer-freeze sequence owns the board timer.
             bool hasUses = HasUses;
-            bool isRequiredFirstUse = BoosterFirstUseTutorialRuntime.Gate != null &&
-                                      (BoosterFirstUseTutorialRuntime.Gate.IsBoosterHighlighted(
-                                          BoosterRewardType.FreezeTimer) ||
-                                       BoosterFirstUseTutorialRuntime.Gate.IsFirstUseActive(
-                                          BoosterRewardType.FreezeTimer));
             bool isTimerActiveOrTutorial = boundBoard != null &&
                 (boundBoard.IsTimerActive || (isRequiredFirstUse && boundBoard.IsLevelRunning));
             bool canInteract = isRequiredFirstUse ||
@@ -298,9 +301,16 @@ namespace GravityPuzzle
             }
 
             boosterButton.interactable = canInteract;
-            if (isRequiredFirstUse && boosterButtonRef != null)
+            if (isRequiredFirstUse)
             {
-                boosterButtonRef.SetSelectionGlowVisible(true);
+                if (boosterButtonRef != null)
+                    boosterButtonRef.SetSelectionGlowVisible(true);
+                else
+                {
+                    Transform glow = transform.Find("TimerSelectionGlow");
+                    if (glow != null)
+                        glow.gameObject.SetActive(true);
+                }
             }
         }
 
@@ -322,6 +332,14 @@ namespace GravityPuzzle
             if (boosterButton == null && boosterButtonRef != null)
             {
                 boosterButton = boosterButtonRef.ButtonComponent;
+            }
+
+            if (buttonCanvasGroup == null)
+            {
+                if (boosterButton != null)
+                    buttonCanvasGroup = boosterButton.GetComponent<CanvasGroup>();
+                if (buttonCanvasGroup == null)
+                    buttonCanvasGroup = GetComponent<CanvasGroup>();
             }
         }
     }

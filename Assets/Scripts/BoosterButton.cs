@@ -143,7 +143,7 @@ namespace GravityPuzzle
         {
             get
             {
-                if (!hasBoosterType)
+                if (!HasBoosterType)
                     return true;
 
                 if (GravityLevelRuntime.IsEditorLevelPreview && HasLevelPreviewUses())

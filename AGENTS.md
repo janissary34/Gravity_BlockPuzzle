@@ -35,6 +35,43 @@ All production code must be modular, structured, scalable, clean, maintainable, 
 7. Every completed development step must leave the project in a compilable state and preserve unrelated gameplay behaviour.
 8. Report only meaningful implementation completions unless a technical decision, architectural conflict, or permission is required.
 
+## Independent technical review workflow
+
+Codex remains the primary development agent and decision maker. Gemini 4 Argon High,
+invoked through Antigravity CLI, provides an independent critical second opinion; its
+recommendations are advisory and must be evaluated against this contract and the
+repository's actual code before adoption.
+
+* Request a review before a significant architectural change, complex gameplay
+  modification, or risky refactor. Skip the external review for trivial, isolated
+  changes such as spelling, formatting, or a clearly local correction with no
+  meaningful behavioural or contract risk.
+* Run the reviewer from the repository root using:
+
+  ```text
+  agy --model gemini-4-argon-high --mode plan --print "<review prompt>"
+  ```
+
+  Treat `--mode plan` as read-only and explicitly instruct Gemini not to create,
+  edit, delete, or run commands that modify project files.
+* The pre-implementation prompt must include the relevant project constraints,
+  affected code or concise excerpts with paths, the proposed design and state flow,
+  alternatives considered, compatibility requirements, and validation plan. Ask
+  Gemini to identify regressions, unnecessary complexity, hidden risks, contract
+  violations, and simpler alternatives.
+* After a significant implementation, run a second read-only review of the actual
+  scoped code changes. Provide the relevant diff or changed excerpts, the intended
+  behaviour, applicable constraints, and validation evidence. Request the same
+  critical analysis, including whether the implementation matches the approved
+  design.
+* Independently assess every review finding. Adopt only changes that are correct and
+  appropriate for this project; document consequential decisions when required by
+  the documentation workflow.
+* If `agy` is missing, exits unsuccessfully, or returns an unusable review, report
+  the failure explicitly. Diagnose and retry when safe; do not silently treat the
+  review as completed. Do not proceed with work that requires this review until it
+  succeeds or the user explicitly directs otherwise.
+
 ## Documentation workflow
 
 * `AGENTS.md` owns mandatory engineering rules. Files under `Docs/` record durable project knowledge and must not override this contract.

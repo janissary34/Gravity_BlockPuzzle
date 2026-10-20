@@ -6,6 +6,8 @@ namespace GravityPuzzle.Editor
 {
     public sealed class GravityLevelEditorWindow : EditorWindow
     {
+        private static GravityLevelEditorWindow openWindow;
+
         private enum EditTool
         {
             Select,
@@ -87,6 +89,59 @@ namespace GravityPuzzle.Editor
         private static void Open()
         {
             GetWindow<GravityLevelEditorWindow>("Gravity Level Editor");
+        }
+
+        [MenuItem("Gravity Puzzle/Level Authoring/Capture Covered Pieces Into Open Editor Boxes")]
+        private static void CaptureCoveredPiecesIntoOpenEditorBoxes()
+        {
+            if (openWindow == null || openWindow.level == null)
+            {
+                Debug.LogWarning("[GravityLevelEditor] Open a level in the Gravity Level Editor before capturing Box contents.");
+                return;
+            }
+
+            int capturedPieceCount = 0;
+            Undo.RecordObject(openWindow.level, "Capture Box hidden pieces");
+            for (int index = 0; index < openWindow.level.boxes.Count; index++)
+            {
+                BoxRevealDefinition box = openWindow.level.boxes[index];
+                if (box != null)
+                    capturedPieceCount += openWindow.CaptureBoxHiddenPieces(box);
+            }
+
+            if (capturedPieceCount == 0)
+            {
+                Debug.LogWarning("[GravityLevelEditor] No complete board pieces are inside an open editor Box.");
+                return;
+            }
+
+            openWindow.MarkDirty();
+            openWindow.ShowNotification(new GUIContent(
+                $"{capturedPieceCount} piece(s) captured as Box contents."));
+            Debug.Log($"[GravityLevelEditor] Captured {capturedPieceCount} piece(s) as Box contents.");
+        }
+
+        [MenuItem("Gravity Puzzle/Level Authoring/Play Open Editor Level Preview")]
+        private static void PlayOpenEditorLevelPreview()
+        {
+            if (openWindow == null || openWindow.level == null)
+            {
+                Debug.LogWarning("[GravityLevelEditor] Open a level in the Gravity Level Editor before starting its preview.");
+                return;
+            }
+
+            openWindow.PlayPreview();
+        }
+
+        private void OnEnable()
+        {
+            openWindow = this;
+        }
+
+        private void OnDisable()
+        {
+            if (openWindow == this)
+                openWindow = null;
         }
 
         private void OnGUI()
@@ -339,6 +394,16 @@ namespace GravityPuzzle.Editor
             }
 
             DrawHiddenPieces(box.hiddenPieces, box.bounds, "Box");
+            if (GUILayout.Button("Capture Fully Covered Board Pieces"))
+            {
+                Undo.RecordObject(level, "Capture box hidden pieces");
+                int capturedPieceCount = CaptureBoxHiddenPieces(box);
+                MarkDirty();
+                ShowNotification(new GUIContent(
+                    capturedPieceCount > 0
+                        ? $"{capturedPieceCount} piece(s) captured as Box contents."
+                        : "No complete board pieces are inside this Box."));
+            }
             if (GUILayout.Button("Delete Box"))
             {
                 Undo.RecordObject(level, "Delete box reveal area");
@@ -394,6 +459,27 @@ namespace GravityPuzzle.Editor
                 MarkDirty();
             }
             GUILayout.EndVertical();
+        }
+
+        private int CaptureBoxHiddenPieces(BoxRevealDefinition box)
+        {
+            if (box.hiddenPieces == null)
+                box.hiddenPieces = new List<PieceDefinition>();
+
+            List<PieceDefinition> capturedPieces = new List<PieceDefinition>();
+            for (int index = level.pieces.Count - 1; index >= 0; index--)
+            {
+                PieceDefinition piece = level.pieces[index];
+                if (!PieceIsFullyInsideRevealArea(piece, box.bounds))
+                    continue;
+
+                capturedPieces.Insert(0, piece);
+                level.pieces.RemoveAt(index);
+            }
+
+            if (capturedPieces.Count > 0)
+                box.hiddenPieces.AddRange(capturedPieces);
+            return capturedPieces.Count;
         }
 
         private void ToggleElevatorEditorLock(int elevatorIndex)
