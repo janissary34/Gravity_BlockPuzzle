@@ -885,7 +885,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6584243468164097497}
   m_Layer: 5
-  m_Name: Locked Shutter
+  m_Name: Roller Shutter
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1111,7 +1111,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Locked Shutter
+  m_text: Roller Shutter
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 48b7f8e0272844cd6b79dfe6334d19e1, type: 2}
   m_sharedMaterial: {fileID: 7374927986402738804, guid: 48b7f8e0272844cd6b79dfe6334d19e1, type: 2}
