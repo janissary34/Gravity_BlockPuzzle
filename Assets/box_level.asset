@@ -181,7 +181,7 @@ MonoBehaviour:
     visualId: 
     paletteId: Purple
     color: {r: 0.692, g: 0.3, b: 1, a: 1}
-    origin: {x: 12, y: 8}
+    origin: {x: 16, y: 12}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -267,7 +267,7 @@ MonoBehaviour:
     visualId: 
     paletteId: Pink
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
-    origin: {x: 12, y: 16}
+    origin: {x: 16, y: 20}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -365,7 +365,7 @@ MonoBehaviour:
     visualId: 
     paletteId: BlueLight
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
-    origin: {x: 12, y: 20}
+    origin: {x: 16, y: 24}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -413,22 +413,132 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
+  - pieceId: 9068296ad8f348638de96ce6d197de21
+    name: Single 8
+    tutorialTargetId: 
+    visualId: 
+    paletteId: GreenLight
+    color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
+    origin: {x: 0, y: 24}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells: []
+  - pieceId: 8a807c863de84197901d97834ea69308
+    name: Single 9
+    tutorialTargetId: 
+    visualId: 
+    paletteId: BlueLight
+    color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
+    origin: {x: 4, y: 24}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells: []
+  - pieceId: bd39bfc3ac924a1bb8b7e77502590c5b
+    name: Single 10
+    tutorialTargetId: 
+    visualId: 
+    paletteId: Purple
+    color: {r: 0.48199984, g: 0.3, b: 1, a: 1}
+    origin: {x: 0, y: 24}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells: []
+  - pieceId: 8dfa1d1a683444af9bce31081f59f3b5
+    name: Single 11
+    tutorialTargetId: 
+    visualId: 
+    paletteId: Pink
+    color: {r: 1, g: 0.3, b: 0.72000027, a: 1}
+    origin: {x: 4, y: 24}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells: []
+  - pieceId: 455356b9e3174d78af5b930dcc40ff3c
+    name: Single 12
+    tutorialTargetId: 
+    visualId: 
+    paletteId: Orange
+    color: {r: 1, g: 0.6779999, b: 0.3, a: 1}
+    origin: {x: 8, y: 24}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells: []
   joints: []
   boxes:
-  - areaId: 848fdff3-b003-434f-8c8d-1134c6eaf006
+  - areaId: b5350499-8257-42bb-b4c6-7ec8d0845dee
     name: Box 1
     bounds:
       origin: {x: 0, y: 20}
       size: {x: 12, y: 8}
     editorLocked: 1
     hiddenPieces:
-    - pieceId: 
-      name: Piece 1
+    - pieceId: d9d71576f69f429aa7727ade913d7814
+      name: Single 13
       tutorialTargetId: 
       visualId: 
-      paletteId: Red
-      color: {r: 1, g: 0.3, b: 0.3, a: 1}
-      origin: {x: 0, y: 24}
+      paletteId: GreenLight
+      color: {r: 0.5240001, g: 1, b: 0.3, a: 1}
+      origin: {x: 0, y: 20}
       quarterTurns: 0
       specialBlockType: 0
       frozenMoveCount: 0
@@ -476,77 +586,13 @@ MonoBehaviour:
         type: 0
       - localCell: {x: 3, y: 3}
         type: 0
-      - localCell: {x: 0, y: -4}
-        type: 0
-      - localCell: {x: 1, y: -4}
-        type: 0
-      - localCell: {x: 2, y: -4}
-        type: 0
-      - localCell: {x: 3, y: -4}
-        type: 0
-      - localCell: {x: 0, y: -3}
-        type: 0
-      - localCell: {x: 1, y: -3}
-        type: 0
-      - localCell: {x: 2, y: -3}
-        type: 0
-      - localCell: {x: 3, y: -3}
-        type: 0
-      - localCell: {x: 0, y: -2}
-        type: 0
-      - localCell: {x: 1, y: -2}
-        type: 0
-      - localCell: {x: 2, y: -2}
-        type: 0
-      - localCell: {x: 3, y: -2}
-        type: 0
-      - localCell: {x: 0, y: -1}
-        type: 0
-      - localCell: {x: 1, y: -1}
-        type: 0
-      - localCell: {x: 2, y: -1}
-        type: 0
-      - localCell: {x: 3, y: -1}
-        type: 0
-      - localCell: {x: 4, y: -4}
-        type: 0
-      - localCell: {x: 5, y: -4}
-        type: 0
-      - localCell: {x: 6, y: -4}
-        type: 0
-      - localCell: {x: 7, y: -4}
-        type: 0
-      - localCell: {x: 4, y: -3}
-        type: 0
-      - localCell: {x: 5, y: -3}
-        type: 0
-      - localCell: {x: 6, y: -3}
-        type: 0
-      - localCell: {x: 7, y: -3}
-        type: 0
-      - localCell: {x: 4, y: -2}
-        type: 0
-      - localCell: {x: 5, y: -2}
-        type: 0
-      - localCell: {x: 6, y: -2}
-        type: 0
-      - localCell: {x: 7, y: -2}
-        type: 0
-      - localCell: {x: 4, y: -1}
-        type: 0
-      - localCell: {x: 5, y: -1}
-        type: 0
-      - localCell: {x: 6, y: -1}
-        type: 0
-      - localCell: {x: 7, y: -1}
-        type: 0
-    - pieceId: 
-      name: Piece 2
+    - pieceId: ea7c886e200344a6b758f94ef201d842
+      name: Single 14
       tutorialTargetId: 
       visualId: 
-      paletteId: Yellow
-      color: {r: 0.902, g: 1, b: 0.3, a: 1}
-      origin: {x: 4, y: 24}
+      paletteId: BlueLight
+      color: {r: 0.3, g: 1, b: 0.8739998, a: 1}
+      origin: {x: 4, y: 20}
       quarterTurns: 0
       specialBlockType: 0
       frozenMoveCount: 0
@@ -594,69 +640,59 @@ MonoBehaviour:
         type: 0
       - localCell: {x: 3, y: 3}
         type: 0
-      - localCell: {x: 4, y: 0}
+    - pieceId: ceb40fa6ebcc4e6294c2c8b2abd7df65
+      name: Single 15
+      tutorialTargetId: 
+      visualId: 
+      paletteId: Purple
+      color: {r: 0.3, g: 0.32800016, b: 1, a: 1}
+      origin: {x: 8, y: 20}
+      quarterTurns: 0
+      specialBlockType: 0
+      frozenMoveCount: 0
+      iceCounterFontSize: 36
+      iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+      iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+      iceCounterOutlineWidth: 0.18
+      iceCounterOffset: {x: 0, y: 0}
+      bombTimerSeconds: 10
+      bombCounterFontSize: 36
+      bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+      bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+      bombCounterOutlineWidth: 0.18
+      bombCounterOffset: {x: 0, y: 0}
+      cells:
+      - localCell: {x: 0, y: 0}
         type: 0
-      - localCell: {x: 5, y: 0}
+      - localCell: {x: 1, y: 0}
         type: 0
-      - localCell: {x: 6, y: 0}
+      - localCell: {x: 2, y: 0}
         type: 0
-      - localCell: {x: 7, y: 0}
+      - localCell: {x: 3, y: 0}
         type: 0
-      - localCell: {x: 4, y: 1}
+      - localCell: {x: 0, y: 1}
         type: 0
-      - localCell: {x: 5, y: 1}
+      - localCell: {x: 1, y: 1}
         type: 0
-      - localCell: {x: 6, y: 1}
+      - localCell: {x: 2, y: 1}
         type: 0
-      - localCell: {x: 7, y: 1}
+      - localCell: {x: 3, y: 1}
         type: 0
-      - localCell: {x: 4, y: 2}
+      - localCell: {x: 0, y: 2}
         type: 0
-      - localCell: {x: 5, y: 2}
+      - localCell: {x: 1, y: 2}
         type: 0
-      - localCell: {x: 6, y: 2}
+      - localCell: {x: 2, y: 2}
         type: 0
-      - localCell: {x: 7, y: 2}
+      - localCell: {x: 3, y: 2}
         type: 0
-      - localCell: {x: 4, y: 3}
+      - localCell: {x: 0, y: 3}
         type: 0
-      - localCell: {x: 5, y: 3}
+      - localCell: {x: 1, y: 3}
         type: 0
-      - localCell: {x: 6, y: 3}
+      - localCell: {x: 2, y: 3}
         type: 0
-      - localCell: {x: 7, y: 3}
-        type: 0
-      - localCell: {x: 4, y: -4}
-        type: 0
-      - localCell: {x: 5, y: -4}
-        type: 0
-      - localCell: {x: 6, y: -4}
-        type: 0
-      - localCell: {x: 7, y: -4}
-        type: 0
-      - localCell: {x: 4, y: -3}
-        type: 0
-      - localCell: {x: 5, y: -3}
-        type: 0
-      - localCell: {x: 6, y: -3}
-        type: 0
-      - localCell: {x: 7, y: -3}
-        type: 0
-      - localCell: {x: 4, y: -2}
-        type: 0
-      - localCell: {x: 5, y: -2}
-        type: 0
-      - localCell: {x: 6, y: -2}
-        type: 0
-      - localCell: {x: 7, y: -2}
-        type: 0
-      - localCell: {x: 4, y: -1}
-        type: 0
-      - localCell: {x: 5, y: -1}
-        type: 0
-      - localCell: {x: 6, y: -1}
-        type: 0
-      - localCell: {x: 7, y: -1}
+      - localCell: {x: 3, y: 3}
         type: 0
     targetShredCount: 4
   elevators: []

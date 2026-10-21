@@ -32,9 +32,14 @@ MonoBehaviour:
   boxOpeningInsets: {x: 31, y: 48, z: 31, w: 56}
   boxBackingColor: {r: 0.035, g: 0.025, b: 0.16, a: 1}
   boxPreviewSlotCapacity: 32
-  boxPreviewRecessedScale: 0.96
-  boxPreviewRecessDistance: 0.055
-  boxPreviewRecessedBrightness: 0.76
+  boxPreviewRecessedScale: 0.85
+  boxPreviewRecessDistance: 0.1
+  boxPreviewRecessedBrightness: 0.45
+  boxBackingFadeStart: 0.88
+  boxPreviewShadowColor: {r: 0.045, g: 0.035, b: 0.12, a: 0.26}
+  boxPreviewShadowOffset: {x: 0.018, y: -0.026}
+  boxPreviewShadowScale: 1.025
+  boxPreviewShadowBurstFadeFraction: 0.55
   boxOpenDuration: 0.45
   boxOpenDistance: 0.08
   boxOpenEase: 9
@@ -42,6 +47,8 @@ MonoBehaviour:
   boxBreakAnticipationDuration: 0.06
   boxBreakAnticipationScale: 0.04
   boxBurstDuration: 0.38
+  boxBurstEdgeFragmentScale: 1.12
+  boxBurstEdgeHoldFraction: 0.18
   boxFragmentTopRegion: {x: 0.15, y: 0.93, z: 0.7, w: 0.055}
   boxFragmentBottomRegion: {x: 0.15, y: 0.015, z: 0.7, w: 0.055}
   boxFragmentLeftRegion: {x: 0.015, y: 0.15, z: 0.055, w: 0.7}

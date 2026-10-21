@@ -349,7 +349,7 @@ namespace GravityPuzzle.Editor
             GUILayout.EndHorizontal();
 
             EditorGUILayout.HelpBox(
-                "Create one rectangular Box/Elevator: the first click creates it and later clicks expand its bounds. Press + Box or + Elevator again to begin a separate area. Merge Adjacent converts existing tile-by-tile areas into one rectangle. Lock is editor-only and turns the area grey while keeping the grid visible.",
+                "Create one rectangular Box/Elevator: the first click creates it and later clicks expand its bounds. Press + Box or + Elevator again to begin a separate area. Merge Adjacent converts existing tile-by-tile areas into one rectangle. Locking a Box captures every complete board piece inside it as hidden Box content; unlock keeps that authored content intact while making the overlay editable again.",
                 MessageType.None);
 
             for (int index = 0; index < level.boxes.Count; index++)
@@ -371,11 +371,7 @@ namespace GravityPuzzle.Editor
                 selectedBox = index;
             }
             if (GUILayout.Button(box.editorLocked ? "Unlock" : "Lock", GUILayout.Width(64f)))
-            {
-                Undo.RecordObject(level, "Toggle box editor lock");
-                box.editorLocked = !box.editorLocked;
-                MarkDirty();
-            }
+                ToggleBoxEditorLock(index);
             GUILayout.EndHorizontal();
             string name = EditorGUILayout.TextField("Name", box.name);
             Vector2Int origin = EditorGUILayout.Vector2IntField("Origin (fine)", box.bounds.origin);
@@ -480,6 +476,32 @@ namespace GravityPuzzle.Editor
             if (capturedPieces.Count > 0)
                 box.hiddenPieces.AddRange(capturedPieces);
             return capturedPieces.Count;
+        }
+
+        private void ToggleBoxEditorLock(int boxIndex)
+        {
+            if (boxIndex < 0 || boxIndex >= level.boxes.Count)
+                return;
+
+            BoxRevealDefinition box = level.boxes[boxIndex];
+            if (box == null)
+                return;
+
+            bool locking = !box.editorLocked;
+            Undo.RecordObject(level, "Toggle box editor lock");
+            int capturedPieceCount = locking ? CaptureBoxHiddenPieces(box) : 0;
+            box.editorLocked = locking;
+            ClearSelection();
+            selectedBox = boxIndex;
+            MarkDirty();
+
+            if (locking)
+            {
+                ShowNotification(new GUIContent(
+                    capturedPieceCount > 0
+                        ? $"{capturedPieceCount} piece(s) captured as Box contents."
+                        : "No complete board pieces are inside this Box."));
+            }
         }
 
         private void ToggleElevatorEditorLock(int elevatorIndex)
@@ -970,11 +992,7 @@ namespace GravityPuzzle.Editor
                 GUILayout.Label("Selected Box Area", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField("Bounds", $"{box.bounds.origin} / {box.bounds.size} fine cells");
                 if (GUILayout.Button(box.editorLocked ? "Unlock Box Overlay" : "Lock Box Overlay"))
-                {
-                    Undo.RecordObject(level, "Toggle box editor lock");
-                    box.editorLocked = !box.editorLocked;
-                    MarkDirty();
-                }
+                    ToggleBoxEditorLock(selectedBox);
                 return;
             }
 

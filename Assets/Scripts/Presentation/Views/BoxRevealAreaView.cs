@@ -26,6 +26,7 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private SpriteRenderer boxPanelRenderer;
         [SerializeField] private TMP_Text boxCounter;
         [SerializeField] private SpriteMask previewMask;
+        [SerializeField] private SpriteRenderer[] boxPreviewShadowRenderers;
         [SerializeField] private SpriteRenderer[] boxPreviewRenderers;
         [SerializeField] private Transform[] boxBurstFragments;
         [SerializeField] private SpriteRenderer[] boxBurstRenderers;
@@ -55,6 +56,7 @@ namespace GravityPuzzle.Presentation.Views
         private Quaternion[] previewBaseRotations;
         private Color[] previewBaseColors;
         private int activePreviewCount;
+        private float previewShadowBurstAlpha = 1f;
 
         public string AreaId { get; private set; }
 
@@ -109,6 +111,7 @@ namespace GravityPuzzle.Presentation.Views
             config = presentationConfig;
             authoredSize = size;
             currentHeight = Mathf.Max(0f, size.y);
+            previewShadowBurstAlpha = 1f;
             transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
 
             if (boxShutter != null)
@@ -259,6 +262,26 @@ namespace GravityPuzzle.Presentation.Views
                 renderer.transform.localRotation = visual.LocalRotation;
                 renderer.gameObject.SetActive(true);
 
+                if (boxPreviewShadowRenderers != null && index < boxPreviewShadowRenderers.Length)
+                {
+                    SpriteRenderer shadowRenderer = boxPreviewShadowRenderers[index];
+                    if (shadowRenderer != null)
+                    {
+                        shadowRenderer.sprite = visual.Sprite;
+                        shadowRenderer.sharedMaterial = visual.Material;
+                        shadowRenderer.drawMode = visual.DrawMode;
+                        shadowRenderer.size = visual.Size;
+                        shadowRenderer.flipX = visual.FlipX;
+                        shadowRenderer.flipY = false;
+                        shadowRenderer.sortingOrder = config != null ? config.boxSortingOrder - 3 : 197;
+                        shadowRenderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+                        shadowRenderer.transform.localPosition = visual.LocalPosition;
+                        shadowRenderer.transform.localScale = visual.LocalScale;
+                        shadowRenderer.transform.localRotation = visual.LocalRotation;
+                        shadowRenderer.gameObject.SetActive(true);
+                    }
+                }
+
                 previewBasePositions[index] = renderer.transform.localPosition;
                 previewBaseScales[index] = renderer.transform.localScale;
                 previewBaseRotations[index] = renderer.transform.localRotation;
@@ -266,10 +289,6 @@ namespace GravityPuzzle.Presentation.Views
                 activePreviewCount = Mathf.Max(activePreviewCount, index + 1);
             }
 
-            Debug.Log(
-                $"[BoxRevealAreaView] Configured {activePreviewCount} preview renderer(s) for '{AreaId}' from " +
-                $"{definition.hiddenPieces.Count} hidden piece(s).",
-                this);
             ApplyPreviewDepth(authoredSize.y > 0f ? 1f - currentHeight / authoredSize.y : 0f);
         }
 
@@ -329,6 +348,17 @@ namespace GravityPuzzle.Presentation.Views
             if (boxCoverRenderer != null)
                 openingSequence.Insert(burstStart, boxCoverRenderer.DOFade(0f, config.boxBurstDuration * BurstRiseFraction)
                     .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
+            if (boxPreviewShadowRenderers != null && activePreviewCount > 0)
+            {
+                openingSequence.Insert(burstStart, DOVirtual.Float(
+                        previewShadowBurstAlpha,
+                        0f,
+                        config.boxBurstDuration * config.boxPreviewShadowBurstFadeFraction,
+                        ApplyPreviewShadowBurstAlpha)
+                    .SetEase(Ease.OutQuad)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true));
+            }
             AddBoxFragmentTweens(openingSequence, burstStart);
             openingSequence.OnComplete(CompleteOpening);
         }
@@ -366,7 +396,7 @@ namespace GravityPuzzle.Presentation.Views
             Color backingColor = config.boxBackingColor;
             backingColor.a = 1f;
             boxBackingRenderer.color = backingColor;
-            boxBackingRenderer.sortingOrder = config.boxSortingOrder - 3;
+            boxBackingRenderer.sortingOrder = config.boxSortingOrder - 4;
             boxBackingRenderer.gameObject.SetActive(true);
 
             boxPanelRenderer.transform.localPosition = coverClosedPosition + new Vector3((left - right) * .5f, (bottom - top) * .5f, 0f);
@@ -382,8 +412,13 @@ namespace GravityPuzzle.Presentation.Views
                 previewMask.transform.localScale = boxPanelRenderer.transform.localScale;
                 previewMask.transform.localRotation = boxPanelRenderer.transform.localRotation;
                 previewMask.isCustomRangeActive = true;
-                previewMask.backSortingOrder = config.boxSortingOrder - 2;
-                previewMask.frontSortingOrder = config.boxSortingOrder - 2;
+                // SpriteMask's custom range has to straddle the preview
+                // sorting order. A collapsed range at the preview's order
+                // rejects renderers using the real piece Shader Graph
+                // material on some URP versions, leaving only the backing
+                // visible through an opened shutter.
+                previewMask.backSortingOrder = config.boxSortingOrder - 4;
+                previewMask.frontSortingOrder = config.boxSortingOrder - 1;
                 previewMask.gameObject.SetActive(true);
             }
         }
@@ -397,6 +432,14 @@ namespace GravityPuzzle.Presentation.Views
                 boxPanelRenderer.GetPropertyBlock(panelProperties);
                 panelProperties.SetFloat(OpeningId, opening);
                 boxPanelRenderer.SetPropertyBlock(panelProperties);
+            }
+
+            if (boxBackingRenderer != null && config != null)
+            {
+                float backingFade = Mathf.InverseLerp(config.boxBackingFadeStart, 1f, opening);
+                Color backingColor = config.boxBackingColor;
+                backingColor.a *= 1f - backingFade;
+                boxBackingRenderer.color = backingColor;
             }
 
             if (boxCounter != null)
@@ -435,7 +478,33 @@ namespace GravityPuzzle.Presentation.Views
                     color.g * brightness,
                     color.b * brightness,
                     color.a);
+
+                if (boxPreviewShadowRenderers == null || index >= boxPreviewShadowRenderers.Length)
+                    continue;
+
+                SpriteRenderer shadowRenderer = boxPreviewShadowRenderers[index];
+                if (shadowRenderer == null || !shadowRenderer.gameObject.activeSelf)
+                    continue;
+
+                Vector2 shadowOffset = config != null ? config.boxPreviewShadowOffset : Vector2.zero;
+                shadowRenderer.transform.localPosition = previewBasePositions[index] +
+                    Vector3.down * recess + (Vector3)shadowOffset;
+                shadowRenderer.transform.localScale = previewBaseScales[index] * scale *
+                    (config != null ? config.boxPreviewShadowScale : 1f);
+                shadowRenderer.transform.localRotation = previewBaseRotations[index];
+                float shadowFade = config != null
+                    ? 1f - Mathf.InverseLerp(config.boxBackingFadeStart, 1f, progress)
+                    : 1f;
+                Color shadowColor = config != null ? config.boxPreviewShadowColor : Color.clear;
+                shadowColor.a *= shadowFade * previewShadowBurstAlpha;
+                shadowRenderer.color = shadowColor;
             }
+        }
+
+        private void ApplyPreviewShadowBurstAlpha(float alpha)
+        {
+            previewShadowBurstAlpha = Mathf.Clamp01(alpha);
+            ApplyPreviewDepth(authoredSize.y > 0f ? 1f - currentHeight / authoredSize.y : 0f);
         }
 
         private void PrepareBoxBurstFragments()
@@ -481,7 +550,8 @@ namespace GravityPuzzle.Presentation.Views
 
                 float sizeVariation = Mathf.Lerp(.65f, 1f, GetFragmentUnitValue(index, 5));
                 fragment.localPosition = coverClosedPosition + (Vector3)position;
-                renderer.size = fragmentSize * sizeVariation;
+                float edgeScale = IsEdgeFragment(index) ? config.boxBurstEdgeFragmentScale : 1f;
+                renderer.size = fragmentSize * sizeVariation * edgeScale;
                 renderer.sortingOrder = config.boxSortingOrder + 1;
                 ConfigureFragmentArtwork(renderer, sourceRegion);
             }
@@ -515,6 +585,12 @@ namespace GravityPuzzle.Presentation.Views
                 boxCounter.gameObject.SetActive(false);
             if (boxPanelRenderer != null)
                 boxPanelRenderer.gameObject.SetActive(false);
+            if (boxBackingRenderer != null)
+                boxBackingRenderer.gameObject.SetActive(false);
+            ReleasePreviewMasking();
+            if (previewMask != null)
+                previewMask.gameObject.SetActive(false);
+            DisablePreviewShadows();
             if (boxBurstFragments == null || boxBurstRenderers == null)
                 return;
 
@@ -554,23 +630,33 @@ namespace GravityPuzzle.Presentation.Views
                 float lift = Mathf.Lerp(.35f, 1f, GetFragmentUnitValue(index, 3)) * config.boxBreakLiftDistance;
                 float drop = Mathf.Lerp(.5f, 1f, GetFragmentUnitValue(index, 4)) * config.boxBreakDropDistance;
                 float lifetime = config.boxBurstDuration * Mathf.Lerp(.7f, 1f, GetFragmentUnitValue(index, 6));
+                float holdDuration = IsEdgeFragment(index) ? lifetime * config.boxBurstEdgeHoldFraction : 0f;
+                float movementDuration = Mathf.Max(.01f, lifetime - holdDuration);
                 float rotation = horizontal * Mathf.Lerp(.45f, 1f, GetFragmentUnitValue(index, 7)) * config.boxBreakRotation;
                 Vector3 peak = start + new Vector3(horizontal * (spread + config.boxBreakSeparation) * .65f, lift, 0f);
                 Vector3 end = start + new Vector3(horizontal * (spread + config.boxBreakSeparation), -drop, 0f);
 
                 Sequence movement = DOTween.Sequence()
                     .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true);
-                movement.Append(fragment.DOLocalMove(peak, lifetime * BurstRiseFraction).SetEase(Ease.OutQuad)
+                if (holdDuration > 0f)
+                    movement.AppendInterval(holdDuration);
+                movement.Append(fragment.DOLocalMove(peak, movementDuration * BurstRiseFraction).SetEase(Ease.OutQuad)
                     .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
-                movement.Append(fragment.DOLocalMove(end, lifetime * (1f - BurstRiseFraction)).SetEase(Ease.InQuad)
+                movement.Append(fragment.DOLocalMove(end, movementDuration * (1f - BurstRiseFraction)).SetEase(Ease.InQuad)
                     .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
                 sequence.Insert(burstStart, movement);
                 sequence.Insert(burstStart, fragment.DOLocalRotate(new Vector3(0f, 0f, rotation), lifetime, RotateMode.LocalAxisAdd).SetEase(Ease.OutQuad)
                     .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
-                sequence.Insert(burstStart + lifetime * BurstFadeStartFraction,
-                    renderer.DOFade(0f, lifetime * (1f - BurstFadeStartFraction)).SetEase(Ease.InQuad)
+                float fadeStart = holdDuration + movementDuration * BurstFadeStartFraction;
+                sequence.Insert(burstStart + fadeStart,
+                    renderer.DOFade(0f, lifetime - fadeStart).SetEase(Ease.InQuad)
                         .SetLink(gameObject, LinkBehaviour.KillOnDisable).SetAutoKill(true));
             }
+        }
+
+        private static bool IsEdgeFragment(int index)
+        {
+            return index < 10;
         }
 
         private static float GetFragmentUnitValue(int index, int salt)
@@ -600,6 +686,7 @@ namespace GravityPuzzle.Presentation.Views
         public void OnSpawn()
         {
             isComplete = false;
+            previewShadowBurstAlpha = 1f;
             progressTween?.Kill();
             openingSequence?.Kill();
         }
@@ -624,6 +711,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private void ResetVisualState()
         {
+            previewShadowBurstAlpha = 1f;
             if (boxShutter != null)
                 boxShutter.localPosition = shutterClosedPosition;
 
@@ -698,22 +786,66 @@ namespace GravityPuzzle.Presentation.Views
             activePreviewCount = 0;
             previewVisuals.Clear();
             previewPieceVisuals.Clear();
+            if (boxPreviewRenderers != null)
+            {
+                for (int index = 0; index < boxPreviewRenderers.Length; index++)
+                {
+                    SpriteRenderer renderer = boxPreviewRenderers[index];
+                    if (renderer == null)
+                        continue;
+
+                    renderer.gameObject.SetActive(false);
+                    renderer.sprite = null;
+                    renderer.sharedMaterial = null;
+                    renderer.color = Color.white;
+                    renderer.transform.localPosition = Vector3.zero;
+                    renderer.transform.localRotation = Quaternion.identity;
+                    renderer.transform.localScale = Vector3.one;
+                }
+            }
+
+            if (boxPreviewShadowRenderers == null)
+                return;
+
+            for (int index = 0; index < boxPreviewShadowRenderers.Length; index++)
+            {
+                SpriteRenderer shadowRenderer = boxPreviewShadowRenderers[index];
+                if (shadowRenderer == null)
+                    continue;
+
+                shadowRenderer.gameObject.SetActive(false);
+                shadowRenderer.sprite = null;
+                shadowRenderer.sharedMaterial = null;
+                shadowRenderer.color = Color.white;
+                shadowRenderer.transform.localPosition = Vector3.zero;
+                shadowRenderer.transform.localRotation = Quaternion.identity;
+                shadowRenderer.transform.localScale = Vector3.one;
+            }
+        }
+
+        private void DisablePreviewShadows()
+        {
+            if (boxPreviewShadowRenderers == null)
+                return;
+
+            for (int index = 0; index < boxPreviewShadowRenderers.Length; index++)
+            {
+                SpriteRenderer shadowRenderer = boxPreviewShadowRenderers[index];
+                if (shadowRenderer != null)
+                    shadowRenderer.gameObject.SetActive(false);
+            }
+        }
+
+        private void ReleasePreviewMasking()
+        {
             if (boxPreviewRenderers == null)
                 return;
 
-            for (int index = 0; index < boxPreviewRenderers.Length; index++)
+            for (int index = 0; index < activePreviewCount; index++)
             {
-                SpriteRenderer renderer = boxPreviewRenderers[index];
-                if (renderer == null)
-                    continue;
-
-                renderer.gameObject.SetActive(false);
-                renderer.sprite = null;
-                renderer.sharedMaterial = null;
-                renderer.color = Color.white;
-                renderer.transform.localPosition = Vector3.zero;
-                renderer.transform.localRotation = Quaternion.identity;
-                renderer.transform.localScale = Vector3.one;
+                SpriteRenderer previewRenderer = boxPreviewRenderers[index];
+                if (previewRenderer != null)
+                    previewRenderer.maskInteraction = SpriteMaskInteraction.None;
             }
         }
     }

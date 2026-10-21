@@ -50,11 +50,21 @@ namespace GravityPuzzle.Config
         [Tooltip("Pre-authored renderer slots on each Box view. Increase this through the Box preview authoring command if a Box needs more visual parts.")]
         [Min(1)] public int boxPreviewSlotCapacity = DefaultBoxPreviewSlotCapacity;
         [Tooltip("Scale used by preview blocks while they are recessed inside a closed Box.")]
-        [Range(.85f, 1f)] public float boxPreviewRecessedScale = .96f;
+        [Range(.85f, 1f)] public float boxPreviewRecessedScale = .85f;
         [Tooltip("Downward visual offset applied to preview blocks before the shutter fully opens.")]
-        [Min(0f)] public float boxPreviewRecessDistance = .055f;
+        [Min(0f)] public float boxPreviewRecessDistance = .1f;
         [Tooltip("Brightness multiplier applied while preview blocks are recessed inside the Box.")]
-        [Range(.4f, 1f)] public float boxPreviewRecessedBrightness = .76f;
+        [Range(.4f, 1f)] public float boxPreviewRecessedBrightness = .45f;
+        [Tooltip("Shutter-opening progress at which the cavity backing fades out before the Box frame ruptures.")]
+        [Range(.5f, 1f)] public float boxBackingFadeStart = .88f;
+        [Tooltip("Tint and maximum opacity of the block-shaped shadow retained behind previews during the frame burst.")]
+        public Color boxPreviewShadowColor = new Color(.045f, .035f, .12f, .26f);
+        [Tooltip("Local offset applied to the block-shaped preview shadow.")]
+        public Vector2 boxPreviewShadowOffset = new Vector2(.018f, -.026f);
+        [Tooltip("Small scale expansion that keeps the preview shadow visible around a block silhouette.")]
+        [Range(1f, 1.1f)] public float boxPreviewShadowScale = 1.025f;
+        [Tooltip("Fraction of the frame-burst duration used to fade the block-shaped preview shadows.")]
+        [Range(.1f, 1f)] public float boxPreviewShadowBurstFadeFraction = .55f;
         [Min(.01f)] public float boxOpenDuration = .45f;
         [Tooltip("Additional clearance above the fixed shutter top before the final burst.")]
         [Min(0f)] public float boxOpenDistance = .08f;
@@ -66,6 +76,10 @@ namespace GravityPuzzle.Config
         [Tooltip("Frame recoil as a fraction of its current scale.")]
         [Range(0f, .2f)] public float boxBreakAnticipationScale = .04f;
         [Min(.01f)] public float boxBurstDuration = .38f;
+        [Tooltip("Scale multiplier applied to the top and side frame fragments retained around the opening.")]
+        [Range(1f, 1.5f)] public float boxBurstEdgeFragmentScale = 1.12f;
+        [Tooltip("Fraction of each edge fragment's lifetime spent holding at the opening before it scatters.")]
+        [Range(0f, .5f)] public float boxBurstEdgeHoldFraction = .18f;
         [Tooltip("Normalized source-sprite rectangles (x, y, width, height) used for the blue frame fragments.")]
         public Vector4 boxFragmentTopRegion = new Vector4(.15f, .93f, .7f, .055f);
         public Vector4 boxFragmentBottomRegion = new Vector4(.15f, .015f, .7f, .055f);

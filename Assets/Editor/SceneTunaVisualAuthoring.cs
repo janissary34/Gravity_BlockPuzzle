@@ -133,6 +133,7 @@ namespace GravityPuzzle.Editor
                     panelSprite,
                     previewSlotCapacity,
                     out SpriteMask previewMask,
+                    out SpriteRenderer[] previewShadowRenderers,
                     out SpriteRenderer[] previewRenderers);
 
                 GameObject counterObj = new GameObject("Counter");
@@ -176,6 +177,11 @@ namespace GravityPuzzle.Editor
                 so.FindProperty("boxPanelRenderer").objectReferenceValue = panelRenderer;
                 so.FindProperty("boxCounter").objectReferenceValue = counterTmp;
                 so.FindProperty("previewMask").objectReferenceValue = previewMask;
+
+                SerializedProperty previewShadowProp = so.FindProperty("boxPreviewShadowRenderers");
+                previewShadowProp.arraySize = previewShadowRenderers.Length;
+                for (int i = 0; i < previewShadowRenderers.Length; i++)
+                    previewShadowProp.GetArrayElementAtIndex(i).objectReferenceValue = previewShadowRenderers[i];
 
                 SerializedProperty previewProp = so.FindProperty("boxPreviewRenderers");
                 previewProp.arraySize = previewRenderers.Length;
@@ -228,9 +234,14 @@ namespace GravityPuzzle.Editor
                     panelSprite,
                     Mathf.Max(1, config.boxPreviewSlotCapacity),
                     out SpriteMask previewMask,
+                    out SpriteRenderer[] previewShadowRenderers,
                     out SpriteRenderer[] previewRenderers);
                 SerializedObject serializedView = new SerializedObject(view);
                 serializedView.FindProperty("previewMask").objectReferenceValue = previewMask;
+                SerializedProperty previewShadowProp = serializedView.FindProperty("boxPreviewShadowRenderers");
+                previewShadowProp.arraySize = previewShadowRenderers.Length;
+                for (int index = 0; index < previewShadowRenderers.Length; index++)
+                    previewShadowProp.GetArrayElementAtIndex(index).objectReferenceValue = previewShadowRenderers[index];
                 SerializedProperty previewProp = serializedView.FindProperty("boxPreviewRenderers");
                 previewProp.arraySize = previewRenderers.Length;
                 for (int index = 0; index < previewRenderers.Length; index++)
@@ -252,6 +263,7 @@ namespace GravityPuzzle.Editor
             Sprite panelSprite,
             int capacity,
             out SpriteMask previewMask,
+            out SpriteRenderer[] previewShadowRenderers,
             out SpriteRenderer[] previewRenderers)
         {
             Transform previewRoot = shutter.Find("Preview Content");
@@ -275,12 +287,30 @@ namespace GravityPuzzle.Editor
                 previewMask = maskTransform.gameObject.AddComponent<SpriteMask>();
             previewMask.sprite = panelSprite;
             previewMask.isCustomRangeActive = true;
-            previewMask.backSortingOrder = 198;
-            previewMask.frontSortingOrder = 198;
+            previewMask.backSortingOrder = 196;
+            previewMask.frontSortingOrder = 199;
 
+            List<SpriteRenderer> shadowRenderers = new List<SpriteRenderer>(capacity);
             List<SpriteRenderer> renderers = new List<SpriteRenderer>(capacity);
             for (int index = 0; index < capacity; index++)
             {
+                Transform shadowSlot = previewRoot.Find($"Preview Shadow Slot {index + 1}");
+                if (shadowSlot == null)
+                {
+                    GameObject shadowSlotObject = new GameObject($"Preview Shadow Slot {index + 1}");
+                    shadowSlotObject.transform.SetParent(previewRoot, false);
+                    shadowSlot = shadowSlotObject.transform;
+                }
+
+                SpriteRenderer shadowRenderer = shadowSlot.GetComponent<SpriteRenderer>();
+                if (shadowRenderer == null)
+                    shadowRenderer = shadowSlot.gameObject.AddComponent<SpriteRenderer>();
+                shadowRenderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+                shadowRenderer.sortingOrder = 197;
+                shadowRenderer.enabled = true;
+                shadowSlot.gameObject.SetActive(false);
+                shadowRenderers.Add(shadowRenderer);
+
                 Transform slot = previewRoot.Find($"Preview Slot {index + 1}");
                 if (slot == null)
                 {
@@ -302,8 +332,8 @@ namespace GravityPuzzle.Editor
             for (int index = previewRoot.childCount - 1; index >= 0; index--)
             {
                 Transform child = previewRoot.GetChild(index);
-                if (child == maskTransform || child.name.StartsWith("Preview Slot ") &&
-                    TryGetPreviewSlotIndex(child.name, out int slotIndex) && slotIndex <= capacity)
+                if (child == maskTransform || IsPreviewSlot(child.name, "Preview Slot ", capacity) ||
+                    IsPreviewSlot(child.name, "Preview Shadow Slot ", capacity))
                 {
                     continue;
                 }
@@ -311,13 +341,24 @@ namespace GravityPuzzle.Editor
                 Object.DestroyImmediate(child.gameObject);
             }
 
+            previewShadowRenderers = shadowRenderers.ToArray();
             previewRenderers = renderers.ToArray();
         }
 
-        private static bool TryGetPreviewSlotIndex(string objectName, out int index)
+        private static bool IsPreviewSlot(string objectName, string prefix, int capacity)
         {
-            const string Prefix = "Preview Slot ";
-            return int.TryParse(objectName.Substring(Prefix.Length), out index);
+            return TryGetPreviewSlotIndex(objectName, prefix, out int index) && index <= capacity;
+        }
+
+        private static bool TryGetPreviewSlotIndex(string objectName, string prefix, out int index)
+        {
+            if (!objectName.StartsWith(prefix))
+            {
+                index = 0;
+                return false;
+            }
+
+            return int.TryParse(objectName.Substring(prefix.Length), out index);
         }
 
         private static ElevatorRevealAreaView CreateElevatorRevealPrefab(

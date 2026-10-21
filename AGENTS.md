@@ -46,14 +46,23 @@ repository's actual code before adoption.
   modification, or risky refactor. Skip the external review for trivial, isolated
   changes such as spelling, formatting, or a clearly local correction with no
   meaningful behavioural or contract risk.
-* Run the reviewer from the repository root using:
+* For a headless review, do not give Gemini the Unity checkout as its workspace.
+  Codex must prepare a unique temporary context directory outside the repository
+  containing ordinary read-only copies (never symlinks) of only the relevant source,
+  diff, and documentation. Make the copies non-writable, confirm the context contains
+  no symlinks, and pass the material directly in the review prompt. The project must
+  not be supplied with `--add-dir`.
+* Run the reviewer from that isolated context using:
 
   ```text
-  agy --model gemini-4-argon-high --mode plan --print "<review prompt>"
+  agy --sandbox --new-project --model gemini-4-argon-high --mode plan --output-format stream-json --print-timeout 90s --print "<self-contained review prompt>"
   ```
 
-  Treat `--mode plan` as read-only and explicitly instruct Gemini not to create,
-  edit, delete, or run commands that modify project files.
+  Treat `--mode plan` as advisory read-only and explicitly instruct Gemini not to
+  create, edit, delete, or run tools or commands. Do not use
+  `--dangerously-skip-permissions`, and do not grant blanket command permissions.
+  The persistent Antigravity settings may allow only `read_file` for the exact
+  temporary context; direct prompt context is the normal, more reliable path.
 * The pre-implementation prompt must include the relevant project constraints,
   affected code or concise excerpts with paths, the proposed design and state flow,
   alternatives considered, compatibility requirements, and validation plan. Ask
@@ -67,10 +76,15 @@ repository's actual code before adoption.
 * Independently assess every review finding. Adopt only changes that are correct and
   appropriate for this project; document consequential decisions when required by
   the documentation workflow.
-* If `agy` is missing, exits unsuccessfully, or returns an unusable review, report
-  the failure explicitly. Diagnose and retry when safe; do not silently treat the
-  review as completed. Do not proceed with work that requires this review until it
-  succeeds or the user explicitly directs otherwise.
+* Accept a review only when the streaming output identifies the requested model and
+  isolated context, contains a completed substantive final analysis, and contains no
+  permission denial, tool request, timeout, or empty/incomplete response. Exit code
+  zero alone is not success. Capture the review text with the implementation record.
+* If `agy` is missing, exits unsuccessfully, returns an unusable review, attempts a
+  tool, or yields a denial, timeout, empty, or incomplete result, report the failure
+  explicitly. Diagnose and retry when safe; do not silently treat the review as
+  completed. Do not proceed with work that requires this review until it succeeds or
+  the user explicitly directs otherwise.
 
 ## Documentation workflow
 

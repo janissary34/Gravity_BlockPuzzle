@@ -76,6 +76,8 @@ namespace GravityPuzzle.Tests.PlayMode
                 playOpening.Invoke(view, new object[] { Enum.ToObject(KindType, 0), (Action)(() => completed = true) });
                 Assert.That(completed, Is.False);
                 Assert.That(backing.gameObject.activeSelf, Is.True);
+                yield return new WaitForSeconds(.6f);
+                Assert.That(backing.color.a, Is.EqualTo(0f).Within(.01f));
                 yield return new WaitForSeconds(1f);
                 Assert.That(completed, Is.True);
             }
@@ -186,8 +188,10 @@ namespace GravityPuzzle.Tests.PlayMode
             MethodInfo applyShutterHeight = ViewType.GetMethod(
                 "ApplyShutterHeight",
                 BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo playOpening = ViewType.GetMethod("PlayOpening");
             MethodInfo despawn = ViewType.GetMethod("OnDespawn");
             Transform preview = instance.transform.Find("Shutter/Preview Content/Preview Slot 1");
+            Transform shadow = instance.transform.Find("Shutter/Preview Content/Preview Shadow Slot 1");
             Transform mask = instance.transform.Find("Shutter/Preview Content/Aperture Mask");
             try
             {
@@ -197,10 +201,19 @@ namespace GravityPuzzle.Tests.PlayMode
                 configurePreview.Invoke(view, new object[] { level, definition });
 
                 var previewRenderer = preview.GetComponent<SpriteRenderer>();
+                var shadowRenderer = shadow.GetComponent<SpriteRenderer>();
                 Assert.That(preview.gameObject.activeSelf, Is.True);
                 Assert.That(previewRenderer.sprite, Is.Not.Null);
                 Assert.That(previewRenderer.maskInteraction, Is.EqualTo(SpriteMaskInteraction.VisibleInsideMask));
-                Assert.That(mask.GetComponent<SpriteMask>().sprite, Is.Not.Null);
+                Assert.That(shadow.gameObject.activeSelf, Is.True);
+                Assert.That(shadowRenderer.sprite, Is.EqualTo(previewRenderer.sprite));
+                Assert.That(shadowRenderer.sortingOrder, Is.LessThan(previewRenderer.sortingOrder));
+                Assert.That(shadowRenderer.color.a, Is.GreaterThan(0f));
+                SpriteMask previewMask = mask.GetComponent<SpriteMask>();
+                Assert.That(previewMask.sprite, Is.Not.Null);
+                Assert.That(previewMask.isCustomRangeActive, Is.True);
+                Assert.That(previewMask.backSortingOrder, Is.LessThan(previewRenderer.sortingOrder));
+                Assert.That(previewMask.frontSortingOrder, Is.GreaterThan(previewRenderer.sortingOrder));
 
                 Vector3 recessedPosition = preview.localPosition;
                 Vector3 recessedScale = preview.localScale;
@@ -214,8 +227,19 @@ namespace GravityPuzzle.Tests.PlayMode
                 Assert.That(partialScale.x, Is.LessThan(openScale.x));
                 Assert.That(openPosition.y, Is.GreaterThan(recessedPosition.y));
 
+                playOpening.Invoke(view, new object[] { Enum.ToObject(KindType, 0), (Action)null });
+                float burstStart = (float)ConfigType.GetField("boxOpenDuration").GetValue(config) +
+                    (float)ConfigType.GetField("boxBreakAnticipationDuration").GetValue(config);
+                yield return new WaitForSeconds(burstStart + .1f);
+                Assert.That(shadowRenderer.gameObject.activeSelf, Is.False);
+                Assert.That(preview.gameObject.activeSelf, Is.True);
+                Assert.That(previewRenderer.maskInteraction, Is.EqualTo(SpriteMaskInteraction.None));
+                Assert.That(mask.gameObject.activeSelf, Is.False);
+
                 despawn.Invoke(view, null);
                 Assert.That(preview.gameObject.activeSelf, Is.False);
+                Assert.That(shadow.gameObject.activeSelf, Is.False);
+                Assert.That(mask.gameObject.activeSelf, Is.True);
             }
             finally
             {
