@@ -55,7 +55,7 @@ repository's actual code before adoption.
 * Run the reviewer from that isolated context using:
 
   ```text
-  agy --sandbox --new-project --model gemini-4-argon-high --mode plan --output-format stream-json --print-timeout 90s --print "<self-contained review prompt>"
+  agy --sandbox --new-project --model gemini-4-argon-high --mode plan --output-format stream-json --print-timeout 300s --print "<self-contained review prompt>"
   ```
 
   Treat `--mode plan` as advisory read-only and explicitly instruct Gemini not to
