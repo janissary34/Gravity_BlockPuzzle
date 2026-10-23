@@ -287,9 +287,6 @@ namespace GravityPuzzle
         private void ClearInputSelection()
         {
             PrototypeBoard board = PrototypeBoard.Active;
-            if (selectedPiece != null && board != null && board.TryCancelPartialBoxContentDrag(selectedPiece))
-                SnapPieceToCommittedGridPosition(selectedPiece);
-
             board?.CollectJointGroupPieces(selectedPiece, selectedJointGroupPieces);
             for (int index = 0; index < selectedJointGroupPieces.Count; index++)
                 selectedJointGroupPieces[index]?.SetSelected(false);

@@ -174,10 +174,6 @@ namespace GravityPuzzle
         private bool boxRevealPresentationCaptured;
         private bool boxRevealOutlineEnabled;
         private int boxRevealOutlineSortingOrder;
-        // Selection refreshes the outline while a drag starts. Keep the Box
-        // foreground order as a presentation lease so that refresh cannot
-        // put the white contour back behind the shutter.
-        private int boxRevealOutlineForegroundSortingOrder = -1;
         private bool boxRevealIceCounterEnabled;
         private bool boxRevealBombCounterEnabled;
         private List<BoxCollider2D> collisionCells;
@@ -187,7 +183,7 @@ namespace GravityPuzzle
         private Color iceOverlayTint = new Color(1f, 1f, 1f, .42f);
         private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
         private Sprite bombOverlaySprite;
-        private float bombOverlayFill = .82f;
+        private float bombOverlayFill = .936f;
         private Material icePresentationMaterial;
         private IIceBlockParticleVfx iceParticleVfx;
         private IIceBlockParticleVfxHandle iceParticleVfxHandle;
@@ -484,46 +480,11 @@ namespace GravityPuzzle
                 bombCounterText.enabled = false;
         }
 
-        /// <summary>
-        /// Makes an accepted Box drag use the real root's unchanged gameplay
-        /// appearance above the Box. No SpriteMask or shared material is used.
-        /// </summary>
-        public void ShowBoxRevealDragVisual(int sortingOrder)
-        {
-            CaptureBoxRevealPresentation();
-            boxRevealOutlineForegroundSortingOrder = sortingOrder;
-            if (boxRevealRenderers != null)
-            {
-                for (int index = 0; index < boxRevealRenderers.Length; index++)
-                {
-                    SpriteRenderer renderer = boxRevealRenderers[index];
-                    if (renderer == null)
-                        continue;
-
-                    renderer.enabled = boxRevealRendererEnabledStates[index];
-                    renderer.sortingOrder = sortingOrder;
-                    renderer.maskInteraction = SpriteMaskInteraction.None;
-                }
-            }
-
-            if (rootOutline != null)
-            {
-                rootOutline.enabled = boxRevealOutlineEnabled;
-                ApplyOutlinePresentation();
-            }
-            if (iceCounterText != null)
-                iceCounterText.enabled = boxRevealIceCounterEnabled;
-            if (bombCounterText != null)
-                bombCounterText.enabled = boxRevealBombCounterEnabled;
-        }
-
         /// <summary>Releases only the temporary Box visual lease.</summary>
         public void RestoreBoxRevealContentVisual()
         {
             if (!boxRevealPresentationCaptured)
                 return;
-
-            boxRevealOutlineForegroundSortingOrder = -1;
 
             if (boxRevealRenderers != null)
             {
@@ -1367,9 +1328,7 @@ namespace GravityPuzzle
                     ? tutorialTargetSortingOrder
                     : isBoosterTargetingForeground
                         ? boosterTargetingForegroundSortingOrder
-                    : boxRevealOutlineForegroundSortingOrder >= 0
-                        ? boxRevealOutlineForegroundSortingOrder
-                        : useTargetOutline ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
+                    : useTargetOutline ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
             }
         }
 
@@ -1455,7 +1414,7 @@ namespace GravityPuzzle
             iceOverlayTint = new Color(1f, 1f, 1f, .42f);
             iceFrostTint = new Color(1f, 1f, 1f, .18f);
             bombOverlaySprite = null;
-            bombOverlayFill = .82f;
+            bombOverlayFill = .936f;
             shredderReservationCells.Clear();
             shredderCellsReadyToRelease.Clear();
             shredderReservationStartBodyY = 0f;

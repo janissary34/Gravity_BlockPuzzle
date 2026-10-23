@@ -55,7 +55,7 @@ repository's actual code before adoption.
 * Run the reviewer from that isolated context using:
 
   ```text
-  agy --sandbox --new-project --model gemini-4-argon-high --mode plan --output-format stream-json --print-timeout 300s --print "<self-contained review prompt>"
+  agy --sandbox --new-project --model gemini-4-argon-high --mode plan --output-format text --print-timeout 300s --print "<self-contained review prompt>"
   ```
 
   Treat `--mode plan` as advisory read-only and explicitly instruct Gemini not to
@@ -76,8 +76,8 @@ repository's actual code before adoption.
 * Independently assess every review finding. Adopt only changes that are correct and
   appropriate for this project; document consequential decisions when required by
   the documentation workflow.
-* Accept a review only when the streaming output identifies the requested model and
-  isolated context, contains a completed substantive final analysis, and contains no
+* Accept a review only when the execution record identifies the requested model and
+  isolated context, the text response contains a completed substantive final analysis, and no
   permission denial, tool request, timeout, or empty/incomplete response. Exit code
   zero alone is not success. Capture the review text with the implementation record.
 * If `agy` is missing, exits unsuccessfully, returns an unusable review, attempts a

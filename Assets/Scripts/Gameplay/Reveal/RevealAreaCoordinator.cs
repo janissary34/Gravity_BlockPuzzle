@@ -47,7 +47,6 @@ namespace GravityPuzzle.Gameplay.Reveal
     /// </summary>
     public interface IBoxRevealExposurePresentation : IBoxRevealPreviewPresentation
     {
-        int ContentDragSortingOrder { get; }
         void SetBoxExposureChangedHandler(Action<float> handler);
         bool CanPresentContent(int contentIndex);
         void SetContentPreviewVisible(int contentIndex, bool visible);
@@ -245,8 +244,8 @@ namespace GravityPuzzle.Gameplay.Reveal
 
                 // Legacy-authored levels can already contain a normal piece in
                 // a Box footprint. Treat that piece as covered until the Box
-                // opens as well; otherwise it could be dragged out before its
-                // shred requirement is met.
+                // opens as well; otherwise it could move out before its shred
+                // requirement is met.
                 if (current.Intersects(boxBounds) || target.Intersects(boxBounds))
                     return false;
             }
@@ -265,7 +264,10 @@ namespace GravityPuzzle.Gameplay.Reveal
             return true;
         }
 
-        /// <summary>Returns false while a live piece is still concealed by a closed Box.</summary>
+        /// <summary>
+        /// Tunnel content cannot be selected until it has left its partially
+        /// opened Tunnel. Exposure releases it to gravity, never to dragging.
+        /// </summary>
         public bool CanBeginInteraction(PieceModel model)
         {
             if (model == null)
@@ -277,8 +279,7 @@ namespace GravityPuzzle.Gameplay.Reveal
                 if (ownerBox.State == RevealAreaState.Unlocked || ownerContent.HasLeftBox)
                     return true;
 
-                return ownerContent.IsActivated &&
-                       IsModelFullyWithinExposedBoxRows(model, model.Anchor, ownerBox);
+                return false;
             }
 
             for (int index = 0; index < boxes.Count; index++)
@@ -299,66 +300,30 @@ namespace GravityPuzzle.Gameplay.Reveal
             EvaluateElevators();
         }
 
-        /// <summary>Partial Box content stays stable until it has left the Box.</summary>
+        /// <summary>
+        /// A fully exposed Tunnel root is released to the normal grid-gravity
+        /// planner. The planner still owns whether a legal downward path exists.
+        /// </summary>
         public bool CanParticipateInGravity(PieceModel model)
         {
             if (model == null || !TryGetActivatedBoxContent(model.Id, out BoxRuntime box, out BoxContentRuntime content))
                 return true;
 
             return box.State == RevealAreaState.Unlocked || content.HasLeftBox ||
-                   !GridBounds.From(model, model.Anchor).Intersects(GridBounds.From(box.Definition.bounds));
+                   (content.IsActivated &&
+                    IsModelFullyWithinExposedBoxRows(model, model.Anchor, box));
         }
 
-        /// <summary>Partial Box roots are drag-only until their Box fully unlocks.</summary>
+        /// <summary>Inside Tunnel roots cannot receive targeted boosters.</summary>
         public bool CanUseTargetedBooster(PieceModel model)
         {
-            return model == null ||
-                   !TryGetActivatedBoxContent(model.Id, out BoxRuntime box, out _) ||
-                   box.State == RevealAreaState.Unlocked;
-        }
-
-        public void NotifyPieceDragStarted(PuzzlePiece piece)
-        {
-            if (piece == null || board == null || !board.TryGetPieceModel(piece, out PieceModel model) ||
-                !TryGetActivatedBoxContent(model.Id, out BoxRuntime box, out BoxContentRuntime content) ||
-                box.State == RevealAreaState.Unlocked || content.HasLeftBox)
+            if (model == null ||
+                !TryGetActivatedBoxContent(model.Id, out BoxRuntime box, out BoxContentRuntime content))
             {
-                return;
-            }
-
-            if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation) &&
-                presentation is IBoxRevealExposurePresentation exposurePresentation)
-            {
-                exposurePresentation.SetContentPreviewVisible(content.AuthoredIndex, false);
-                piece.ShowBoxRevealDragVisual(exposurePresentation.ContentDragSortingOrder);
-            }
-        }
-
-        public bool TryCancelPartialBoxContentDrag(PuzzlePiece piece)
-        {
-            if (piece == null || board == null || !board.TryGetPieceModel(piece, out PieceModel model) ||
-                !TryGetActivatedBoxContent(model.Id, out BoxRuntime box, out BoxContentRuntime content) ||
-                box.State == RevealAreaState.Unlocked || content.HasLeftBox ||
-                !GridBounds.From(model, model.Anchor).Intersects(GridBounds.From(box.Definition.bounds)))
-            {
-                return false;
-            }
-
-            if (model.State == PieceState.Dragging && !board.TrySetPieceState(piece, PieceState.Placed))
-                return false;
-
-            // During final rupture the Box is no longer allowed to reclaim a
-            // dragged root's recessed presentation. The coordinator still
-            // completes the normal drag lifecycle and snap, but the real
-            // piece stays visible while the remaining Box animation finishes.
-            if (box.State == RevealAreaState.Unlocking)
-            {
-                ReleaseContentPresentation(box, content, piece);
                 return true;
             }
 
-            RestoreInsideBoxPresentation(box, content, piece);
-            return true;
+            return box.State == RevealAreaState.Unlocked || content.HasLeftBox;
         }
 
         private void StartBoxUnlock(BoxRuntime box)
@@ -492,6 +457,7 @@ namespace GravityPuzzle.Gameplay.Reveal
                 return;
             }
 
+            bool activatedAnyContent = false;
             for (int index = 0; index < box.Contents.Count; index++)
             {
                 BoxContentRuntime content = box.Contents[index];
@@ -510,7 +476,14 @@ namespace GravityPuzzle.Gameplay.Reveal
                 activatedBoxContentByPieceId[content.RuntimePieceId] = content;
                 activatedBoxByPieceId[content.RuntimePieceId] = box;
                 RestoreInsideBoxPresentation(box, content, piece);
+                activatedAnyContent = true;
             }
+
+            // Activation commits an authoritative root, but its initial grid
+            // position may already have a clear exit. Wake the owned gravity
+            // path once after the batch so it can plan that fall immediately.
+            if (activatedAnyContent)
+                board?.WakeUpGravity();
         }
 
         private void RefreshBoxContentPresentation()

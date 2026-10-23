@@ -28,9 +28,9 @@ MonoBehaviour:
   debrisSize: {x: 0.12, y: 0.22}
   glowIntensity: 1.4
   sparkEmissionRate: 20
-  debrisUpwardSpeed: 2.4
-  debrisHorizontalSpeed: 1.0
-  debrisGravityModifier: 2.0
+  debrisInitialDownwardSpeed: 2.0
+  debrisHorizontalSpeed: 0.25
+  debrisGravityModifier: 0.35
   debrisAngularVelocity: 540
   debrisSortingOrder: 24
   debrisMaterial: {fileID: 2100000, guid: 7c2f5cdfc9c4450a9938e69f3dd6cee1, type: 2}

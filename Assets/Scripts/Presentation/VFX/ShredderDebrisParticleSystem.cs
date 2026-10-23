@@ -67,7 +67,10 @@ namespace GravityPuzzle.Presentation.VFX
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
             main.maxParticles = config.DebrisParticleCapacity;
-            main.gravityModifier = config.DebrisGravityModifier > 0f ? config.DebrisGravityModifier : 2.0f;
+            main.gravityModifier = Mathf.Max(0f, config.DebrisGravityModifier);
+            main.startSpeed = 0f;
+            float debrisLifetime = config.DebrisLifetime;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(debrisLifetime * .85f, debrisLifetime * 1.15f);
 
             ParticleSystem.EmissionModule emission = particleSystemComponent.emission;
             emission.enabled = false;
@@ -79,21 +82,11 @@ namespace GravityPuzzle.Presentation.VFX
             ParticleSystem.VelocityOverLifetimeModule velocityOverLifetime = particleSystemComponent.velocityOverLifetime;
             velocityOverLifetime.enabled = true;
             velocityOverLifetime.space = ParticleSystemSimulationSpace.World;
-            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(
-                -config.DebrisHorizontalSpeed,
-                config.DebrisHorizontalSpeed);
-
-            // Pop arc: slight initial upward pop then rapid downward gravity drop
-            float upSpeed = config.DebrisUpwardSpeed;
-            AnimationCurve minCurveY = new AnimationCurve(
-                new Keyframe(0f, upSpeed * 0.35f),
-                new Keyframe(0.2f, upSpeed * 0.05f),
-                new Keyframe(1f, -upSpeed * 1.5f));
-            AnimationCurve maxCurveY = new AnimationCurve(
-                new Keyframe(0f, upSpeed * 0.85f),
-                new Keyframe(0.2f, upSpeed * 0.25f),
-                new Keyframe(1f, -upSpeed * 2.2f));
-            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(1f, minCurveY, maxCurveY);
+            float horizontalSpeed = Mathf.Max(0f, config.DebrisHorizontalSpeed);
+            float downwardSpeed = config.DebrisInitialDownwardSpeed;
+            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(-horizontalSpeed, horizontalSpeed);
+            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(-downwardSpeed * 1.15f, -downwardSpeed * .85f);
+            velocityOverLifetime.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = particleSystemComponent.sizeOverLifetime;
             sizeOverLifetime.enabled = true;
@@ -229,7 +222,6 @@ namespace GravityPuzzle.Presentation.VFX
             ParticleSystem.MainModule main = particleSystemComponent.main;
             main.startColor = opaqueColor;
             main.startSize = new ParticleSystem.MinMaxCurve(minSize, maxSize);
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.3f, 0.45f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
 
             ParticleSystem.ShapeModule shape = particleSystemComponent.shape;
@@ -272,6 +264,7 @@ namespace GravityPuzzle.Presentation.VFX
                     main.startSize = new ParticleSystem.MinMaxCurve(minSize * 0.4f, minSize * 0.8f);
                     main.startLifetime = new ParticleSystem.MinMaxCurve(0.12f, 0.22f);
                     particleSystemComponent.Emit(sparkCount);
+                    main.startLifetime = new ParticleSystem.MinMaxCurve(config.DebrisLifetime * .85f, config.DebrisLifetime * 1.15f);
                 }
             }
         }

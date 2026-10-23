@@ -24,7 +24,7 @@ MonoBehaviour:
   coinAmount: 20
   rocketBoosterCount: 0
   hammerBoosterCount: 0
-  timerBoosterCount: 1
+  timerBoosterCount: 2
   useAutomaticCameraFit: 1
   fixedCameraSize: 9
   cameraViewportWidth: 0.88
@@ -35,7 +35,8 @@ MonoBehaviour:
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
-  - name: Piece 1
+  - pieceId: 
+    name: Piece 1
     tutorialTargetId: 
     visualId: 
     paletteId: Red
@@ -88,7 +89,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -7, y: 9}
       type: 0
-  - name: Piece 2
+  - pieceId: 
+    name: Piece 2
     tutorialTargetId: 
     visualId: 
     paletteId: Yellow
@@ -141,6 +143,7 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 13, y: 11}
       type: 0
+  joints: []
   boxes: []
   elevators: []
   pins: []

@@ -127,7 +127,7 @@ MonoBehaviour:
     normalSprite: {fileID: 642778117, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: -1322214796, guid: 540ccf8b79f794c709773a4cbf20410a, type: 3}
   - shapeKey: 0,0;1,0;2,0
-    normalSprite: {fileID: 21300000, guid: 631a6116a97ce4988b6252fe4d4321ff, type: 3}
+    normalSprite: {fileID: -1879458636, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: 0}
     tileNormalSpriteToBounds: 0
   - shapeKey: 0,0;1,0;2,0;3,0
@@ -135,7 +135,7 @@ MonoBehaviour:
     iceSprite: {fileID: 0}
     tileNormalSpriteToBounds: 1
   - shapeKey: 0,0;0,1;0,2
-    normalSprite: {fileID: 21300000, guid: c11cf64027ed341cda173d9442f29340, type: 3}
+    normalSprite: {fileID: 603892465, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
     iceSprite: {fileID: 0}
     tileNormalSpriteToBounds: 0
   - shapeKey: 0,0;0,1;0,2;0,3
@@ -160,7 +160,7 @@ MonoBehaviour:
   bombCounterOffset: {x: -0.055, y: -0.059}
   bombCounterSortingOrder: 50
   bombOverlaySprite: {fileID: 1513006127, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  bombOverlayFill: 1
+  bombOverlayFill: 0.936
   restingOutlineWidth: 0.001
   selectedOutlineWidth: 0.04
   restingOutlineColor: {r: 0, g: 0, b: 0, a: 0}

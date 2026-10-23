@@ -231,7 +231,7 @@ namespace GravityPuzzle.Tests.PlayMode
         }
 
         [Test]
-        public void PartialBoxContent_RequiresFullExposure_StaysStable_AndCannotReenter()
+        public void PartialBoxContent_RequiresFullExposure_FallsWhenReleased_AndCannotReenter()
         {
             GameObject boardGo = new GameObject("BoardGo");
             ScriptableObject level = (ScriptableObject)CreateLevelWithBox(2, 2, 2, 2, 2);
@@ -283,21 +283,42 @@ namespace GravityPuzzle.Tests.PlayMode
                     runtimeBox);
 
                 object model = CreatePieceModel(77, 2, 2, 1, 1);
-                Assert.That((bool)CoordinatorType.GetMethod("CanBeginInteraction").Invoke(coordinator, new[] { model }), Is.True);
-                Assert.That((bool)CoordinatorType.GetMethod("CanParticipateInGravity").Invoke(coordinator, new[] { model }), Is.False,
-                    "An exposed piece must remain stable until the player moves it out of the Box.");
+                Assert.That((bool)CoordinatorType.GetMethod("CanBeginInteraction").Invoke(coordinator, new[] { model }), Is.False,
+                    "An exposed Tunnel piece must not become draggable before it exits.");
+                Assert.That((bool)CoordinatorType.GetMethod("CanParticipateInGravity").Invoke(coordinator, new[] { model }), Is.True,
+                    "A fully exposed Tunnel piece must be released to normal grid gravity.");
                 Assert.That((bool)CoordinatorType.GetMethod("CanUseTargetedBooster").Invoke(coordinator, new[] { model }), Is.False);
+                object concealedModel = CreatePieceModel(77, 2, 3, 1, 1);
+                Assert.That((bool)CoordinatorType.GetMethod("CanParticipateInGravity").Invoke(coordinator, new[] { concealedModel }), Is.False,
+                    "A root with any shutter-covered cell must remain out of gravity.");
                 Assert.That((bool)CoordinatorType.GetMethod("CanMovePiece").Invoke(
                     coordinator,
                     new[] { model, CreateCoordinate(2, 3) }), Is.False,
                     "The hidden row remains inaccessible during a partial reveal.");
                 Assert.That((bool)CoordinatorType.GetMethod("CanMovePiece").Invoke(
                     coordinator,
-                    new[] { model, CreateCoordinate(0, 2) }), Is.True,
-                    "The exposed root may be dragged out through the existing grid path.");
+                    new[] { model, CreateCoordinate(2, 1) }), Is.True,
+                    "The gravity planner may move the exposed root through its legal exit path.");
+
+                object grid = CreateGrid(6, 6);
+                object blocker = CreatePieceModel(78, 2, 1, 1, 1);
+                Assert.That((bool)GridType.GetMethod("TryPlace", new[] { PieceModelType }).Invoke(grid, new[] { model }), Is.True);
+                Assert.That((bool)GridType.GetMethod("TryPlace", new[] { PieceModelType }).Invoke(grid, new[] { blocker }), Is.True);
+                Delegate canMoveDelegate = (Delegate)BoardType.GetProperty("CanMovePieceDelegate").GetValue(board);
+                MethodInfo tryGetFallTarget = GridType.GetMethod(
+                    "TryGetFallTarget",
+                    new[] { PieceModelType, CoordinateType.MakeByRefType(), canMoveDelegate.GetType() });
+                object[] fallParameters = new object[] { model, null, canMoveDelegate };
+                Assert.That((bool)tryGetFallTarget.Invoke(grid, fallParameters), Is.False,
+                    "An exposed Tunnel piece must remain inside while another piece blocks its exit.");
+                GridType.GetMethod("ClearPiece", new[] { PieceModelType }).Invoke(grid, new[] { blocker });
+                Assert.That((bool)tryGetFallTarget.Invoke(grid, fallParameters), Is.True,
+                    "Removing the support must let normal gravity plan the Tunnel exit.");
 
                 contentType.GetField("HasLeftBox").SetValue(content, true);
                 Assert.That((bool)CoordinatorType.GetMethod("CanParticipateInGravity").Invoke(coordinator, new[] { model }), Is.True);
+                Assert.That((bool)CoordinatorType.GetMethod("CanBeginInteraction").Invoke(coordinator, new[] { model }), Is.True,
+                    "A piece that exits the Tunnel must resume normal interaction.");
                 Assert.That((bool)CoordinatorType.GetMethod("CanMovePiece").Invoke(
                     coordinator,
                     new[] { model, CreateCoordinate(2, 2) }), Is.False,

@@ -29,7 +29,7 @@ MonoBehaviour:
   elevatorRightDoorSprite: {fileID: 617964189990335555, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
   elevatorDoorSprite: {fileID: 7462321767153245720, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
   boxFrameThickness: 0.75
-  boxOpeningInsets: {x: 31, y: 48, z: 31, w: 56}
+  boxOpeningInsets: {x: 0, y: 0, z: 0, w: 56}
   boxBackingColor: {r: 0.035, g: 0.025, b: 0.16, a: 1}
   boxPreviewSlotCapacity: 32
   boxPreviewRecessedScale: 0.85

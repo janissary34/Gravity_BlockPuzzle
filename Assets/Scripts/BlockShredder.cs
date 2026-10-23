@@ -746,17 +746,13 @@ namespace GravityPuzzle
             if (cachedCellBoundsBuffer.Count > 0)
                 blockCount = Mathf.Max(blockCount, cachedCellBoundsBuffer.Count);
 
-            // Total flights are strictly and directly proportional to the piece's block count!
-            // 1-block piece -> 28 flights
-            // 2-block piece -> 56 flights
-            // 3-block piece -> 84 flights
-            // 4-block piece -> 112 flights
-            const int BaseFlightsPerBlock = 28;
-            int multiplier = (shredderConfig != null && shredderConfig.ProgressVoxelMultiplier > 0)
-                ? shredderConfig.ProgressVoxelMultiplier
-                : 1;
-            int flightsPerBlock = Mathf.Clamp(BaseFlightsPerBlock * multiplier, 20, 60);
-            int progressFlightCount = blockCount * flightsPerBlock;
+            // Keep the visible progress stream proportional to the authored
+            // piece size. The config owns the direct grains-per-block budget;
+            // multiplying it by a hidden base burst scheduled 180 HUD grains
+            // for one three-block piece.
+            int progressFlightCount = shredderConfig != null
+                ? shredderConfig.GetProgressVoxelFlightCount(blockCount)
+                : blockCount;
 
             float feedSpeed = shredderConfig != null ? shredderConfig.FeedSpeed : 3.8f;
             float maxTime = 6.0f;

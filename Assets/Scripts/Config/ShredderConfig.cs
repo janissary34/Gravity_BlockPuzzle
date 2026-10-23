@@ -12,7 +12,7 @@ namespace GravityPuzzle.Config
         [Range(0f, .5f)] [SerializeField] private float feedMaskMouthInset = .14f;
         [Tooltip("Emits small square debris continuously from the same hidden edge. This is independent from the optional dissolve shader.")]
         [SerializeField] private bool enableContactDebrisPresentation = true;
-        [Tooltip("Visible progress grains emitted for each authored cutter voxel. These use the shared particle flight buffer and all travel to the slider.")]
+        [Tooltip("Visible progress grains emitted for each authored board block. These use the shared particle flight buffer and all travel to the slider.")]
         [Range(1, 8)] [SerializeField] private int progressVoxelMultiplier = 4;
         [Header("Grinding Debris Presentation")]
         [Tooltip("Opt-in gate for the experimental rough-cut shader and continuous debris. Keep disabled until it has been play-tested on target devices.")]
@@ -42,9 +42,10 @@ namespace GravityPuzzle.Config
         [Range(0.1f, 5f)] [SerializeField] private float glowIntensity = 1.4f;
         [Tooltip("Layer B: Number of high-speed stretched friction sparks emitted during contact bursts.")]
         [Range(1, 60)] [SerializeField] private int sparkEmissionRate = 20;
+        [FormerlySerializedAs("debrisUpwardSpeed")]
         [FormerlySerializedAs("debrisDownwardSpeed")]
-        [Tooltip("Initial upward pop speed that sends debris above the cutter mouth to obscure the clipping seam.")]
-        [Range(0f, 8f)] [SerializeField] private float debrisUpwardSpeed = 2.6f;
+        [Tooltip("Initial downward cutter-plume speed in world units per second. Gravity can add further downward acceleration.")]
+        [Range(0f, 8f)] [SerializeField] private float debrisInitialDownwardSpeed = 2f;
         [Tooltip("Small lateral variation applied as fragments leave the cutter line.")]
         [Range(0f, 4f)] [SerializeField] private float debrisHorizontalSpeed = .75f;
         [Tooltip("Particle-system gravity multiplier for the debris after it leaves the wheels.")]
@@ -196,7 +197,17 @@ namespace GravityPuzzle.Config
         public float VoxelEjectionSpreadAngle => voxelEjectionSpreadAngle;
         public float FeedMaskMouthInset => feedMaskMouthInset;
         public bool EnableContactDebrisPresentation => enableContactDebrisPresentation;
-        public int ProgressVoxelMultiplier => progressVoxelMultiplier;
+        public int ProgressVoxelMultiplier => Mathf.Clamp(progressVoxelMultiplier, 1, 8);
+
+        /// <summary>
+        /// Calculates the complete presentation budget for one shredder feed.
+        /// The configured multiplier is a direct grain-per-block value, rather
+        /// than a multiplier for a hidden hard-coded burst size.
+        /// </summary>
+        public int GetProgressVoxelFlightCount(int blockCount)
+        {
+            return Mathf.Max(1, blockCount) * ProgressVoxelMultiplier;
+        }
         public float DebrisPerSecondPerWorldUnit => debrisPerSecondPerWorldUnit;
         public float DebrisEntryBurstPerWorldUnit => debrisEntryBurstPerWorldUnit;
         public int MaxDebrisEntryBurstPerFrame => maxDebrisEntryBurstPerFrame;
@@ -206,7 +217,7 @@ namespace GravityPuzzle.Config
         public int DebrisBurstPerCrossedCell => debrisBurstPerCrossedCell;
         public int MaxDebrisPerFrame => maxDebrisPerFrame;
         public int DebrisParticleCapacity => debrisParticleCapacity;
-        public float DebrisLifetime => debrisLifetime;
+        public float DebrisLifetime => Mathf.Max(.05f, debrisLifetime);
         public Vector2 DebrisSize => debrisSize;
         public Vector2 DebrisSizeRange => debrisSize;
         public float GlowIntensity => glowIntensity;
@@ -214,8 +225,7 @@ namespace GravityPuzzle.Config
         public float GearIdleSpeed => gearIdleSpeed;
         public float GearShredSpeed => gearShredSpeed;
         public float GearClippingRatio => Mathf.Clamp(gearClippingRatio, 0.1f, 0.9f);
-        public float DebrisDownwardSpeed => debrisUpwardSpeed;
-        public float DebrisUpwardSpeed => debrisUpwardSpeed;
+        public float DebrisInitialDownwardSpeed => Mathf.Max(0f, debrisInitialDownwardSpeed);
         public float DebrisHorizontalSpeed => debrisHorizontalSpeed;
         public float DebrisGravityModifier => debrisGravityModifier;
         public float DebrisAngularVelocity => debrisAngularVelocity;

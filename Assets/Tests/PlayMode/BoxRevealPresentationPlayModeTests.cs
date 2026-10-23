@@ -43,6 +43,13 @@ namespace GravityPuzzle.Tests.PlayMode
             bool completed = false;
             try
             {
+                Assert.That(frame.sprite, Is.EqualTo(ConfigType.GetField("boxCoverSprite").GetValue(config)),
+                    "The static frame must use the authored open-bottom Tunnel sprite from the reveal config.");
+                Vector4 tunnelInsets = (Vector4)ConfigType.GetField("boxOpeningInsets").GetValue(config);
+                Assert.That(tunnelInsets.x, Is.Zero);
+                Assert.That(tunnelInsets.y, Is.Zero);
+                Assert.That(tunnelInsets.z, Is.Zero,
+                    "The open-bottom Tunnel shutter must extend under the frame at both sides and the bottom.");
                 initialize.Invoke(view, new object[] { "test", Vector2.zero, new Vector2(3f, 2f), config });
                 Vector2 frameSize = frame.size;
                 Vector3 framePosition = frame.transform.localPosition;

@@ -4,11 +4,28 @@ using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Pieces;
 using NUnit.Framework;
 using UnityEngine;
+using GravityPuzzle.Config;
 
 namespace GravityPuzzle.Tests.Editor
 {
     public sealed class ShredderFeedFootprintTests
     {
+        [Test]
+        public void ProgressVoxelBudget_UsesConfiguredGrainsPerBlockWithoutHiddenBurstMultiplier()
+        {
+            ShredderConfig config = ScriptableObject.CreateInstance<ShredderConfig>();
+            try
+            {
+                SetPrivateField(config, "progressVoxelMultiplier", 4);
+
+                Assert.That(config.GetProgressVoxelFlightCount(3), Is.EqualTo(12));
+            }
+            finally
+            {
+                Object.DestroyImmediate(config);
+            }
+        }
+
         private static readonly MethodInfo Overlap = typeof(BlockShredder).GetMethod(
             "HaveOverlappingHorizontalFootprints", BindingFlags.NonPublic | BindingFlags.Static);
         private static readonly MethodInfo GridOverlap = typeof(BlockShredder).GetMethod(
@@ -76,6 +93,13 @@ namespace GravityPuzzle.Tests.Editor
         {
             Assert.That(GridOverlap, Is.Not.Null);
             return (bool)GridOverlap.Invoke(null, new object[] { first, second });
+        }
+
+        private static void SetPrivateField<T>(ShredderConfig config, string name, T value)
+        {
+            FieldInfo field = typeof(ShredderConfig).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null);
+            field.SetValue(config, value);
         }
     }
 }

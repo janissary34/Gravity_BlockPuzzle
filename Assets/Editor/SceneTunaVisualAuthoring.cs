@@ -19,7 +19,6 @@ namespace GravityPuzzle.Editor
         private const string MapAtlasPath = "Assets/Art/map.png";
         private const string IceMaterialPath = "Assets/Materials/M_Ice.mat";
         private const string TMPFontPath = "Assets/Layer Lab/GUI Pro-CasualGame/ResourcesData/Fonts/LilitaOne-Regular_BlueDark.asset";
-        private const string BoxFramePath = "Assets/Art/BoxReveal/TunnelFrame.png";
         private const string BoxPanelPath = "Assets/Art/BoxReveal/TunnelShutter.png";
         private const string BoxBackingPath = "Assets/Art/BoxReveal/BoxBacking.png";
         private const string BoxFragmentMaterialPath = "Assets/Materials/BoxFragment.mat";
@@ -87,7 +86,9 @@ namespace GravityPuzzle.Editor
             TMP_FontAsset font,
             int previewSlotCapacity)
         {
-            Sprite frameSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxFramePath);
+            // The map atlas's Tunnel sprite is the authored open-bottom frame.
+            // Do not substitute the legacy closed-frame export here.
+            Sprite frameSprite = tunnelSprite;
             Sprite panelSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxPanelPath);
             Sprite backingSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxBackingPath);
             Material panelMaterial = AssetDatabase.LoadAssetAtPath<Material>(BoxPanelMaterialPath);

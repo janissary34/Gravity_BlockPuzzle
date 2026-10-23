@@ -16,7 +16,6 @@ namespace GravityPuzzle.Presentation.Views
         private const int BoxBurstFragmentCount = 12;
         private const float BurstRiseFraction = .35f;
         private const float BurstFadeStartFraction = .45f;
-        private const int ContentDragSortingOrderOffset = 2;
         private static readonly int OpeningId = Shader.PropertyToID("_Opening");
         private static readonly int SpriteUvId = Shader.PropertyToID("_SpriteUV");
         private static readonly int FragmentUvId = Shader.PropertyToID("_FragmentUV");
@@ -62,10 +61,6 @@ namespace GravityPuzzle.Presentation.Views
         private Action<float> exposureChanged;
 
         public string AreaId { get; private set; }
-        public int ContentDragSortingOrder => config != null
-            ? config.boxSortingOrder + ContentDragSortingOrderOffset
-            : 202;
-
         private readonly struct PreviewContentRange
         {
             public PreviewContentRange(int firstSlot, int count)

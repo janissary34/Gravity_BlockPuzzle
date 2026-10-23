@@ -51,7 +51,8 @@ namespace GravityPuzzle.Config
         [Header("Bomb Presentation")]
         [Tooltip("Sprite rendered above Bomb blocks. Leave empty to keep their normal piece visual.")]
         [SerializeField] private Sprite bombOverlaySprite;
-        [SerializeField, Range(.1f, 1f)] private float bombOverlayFill = .82f;
+        [Tooltip("Atlas-fit factor that preserves Scene Tuna's authored 0.30 Bomb scale on a standard one-cell piece.")]
+        [SerializeField, Range(.1f, 1f)] private float bombOverlayFill = .936f;
         [SerializeField] private TMP_FontAsset bombCounterFont;
         [SerializeField, Min(.1f)] private float bombCounterFontSize = .65f;
         [SerializeField] private Color bombCounterTextColor = Color.white;

@@ -791,11 +791,6 @@ namespace GravityPuzzle
                    (revealAreaCoordinator == null || revealAreaCoordinator.CanUseTargetedBooster(model));
         }
 
-        public bool TryCancelPartialBoxContentDrag(PuzzlePiece piece)
-        {
-            return revealAreaCoordinator != null && revealAreaCoordinator.TryCancelPartialBoxContentDrag(piece);
-        }
-
         public void WakeUpGravity()
         {
             PuzzleDragController.WakeUpGravity();
@@ -1087,7 +1082,6 @@ namespace GravityPuzzle
                     return false;
             }
 
-            revealAreaCoordinator?.NotifyPieceDragStarted(piece);
             return true;
         }
 

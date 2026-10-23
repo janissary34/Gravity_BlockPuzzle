@@ -43,7 +43,7 @@ namespace GravityPuzzle.Config
         [Tooltip("Frame border thickness relative to the authored sprite. Lower values make the border thinner. Reload the level to apply changes.")]
         [Range(.25f, 2f)] public float boxFrameThickness = 1f;
         [Tooltip("Insets of the Tunnel opening in source sprite pixels: left, bottom, right, top.")]
-        public Vector4 boxOpeningInsets = new Vector4(31f, 48f, 31f, 56f);
+        public Vector4 boxOpeningInsets = new Vector4(0f, 0f, 0f, 56f);
         [Tooltip("Opaque interior and corner backing while the box is locked.")]
         public Color boxBackingColor = new Color(.035f, .025f, .16f, 1f);
         [Header("Box Hidden Content Preview")]
