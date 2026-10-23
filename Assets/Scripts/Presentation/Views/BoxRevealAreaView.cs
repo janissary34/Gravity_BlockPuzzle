@@ -17,6 +17,7 @@ namespace GravityPuzzle.Presentation.Views
         private const float BurstRiseFraction = .35f;
         private const float BurstFadeStartFraction = .45f;
         private static readonly int OpeningId = Shader.PropertyToID("_Opening");
+        private static readonly int ContentUvRectId = Shader.PropertyToID("_ContentUvRect");
         private static readonly int SpriteUvId = Shader.PropertyToID("_SpriteUV");
         private static readonly int FragmentUvId = Shader.PropertyToID("_FragmentUV");
 
@@ -37,6 +38,7 @@ namespace GravityPuzzle.Presentation.Views
         private Tween progressTween;
         private float currentHeight;
         private float apertureHeight;
+        private Vector4 panelSourceUvRect;
         private MaterialPropertyBlock panelProperties;
         private MaterialPropertyBlock fragmentProperties;
         private Action completion;
@@ -431,43 +433,40 @@ namespace GravityPuzzle.Presentation.Views
                 return;
             }
 
-            Sprite frameSprite = boxCoverRenderer.sprite;
-            float ppu = frameSprite.pixelsPerUnit;
-            float frameScale = boxCoverRenderer.drawMode == SpriteDrawMode.Sliced
-                ? boxCoverRenderer.transform.localScale.x
-                : 1f;
-            Vector4 border = frameSprite.border * (frameScale / ppu);
-            Vector4 insets = config.boxOpeningInsets * (frameScale / ppu);
-            float horizontalScale = Mathf.Min(1f, size.x / Mathf.Max(.001f, border.x + border.z));
-            float verticalScale = Mathf.Min(1f, size.y / Mathf.Max(.001f, border.y + border.w));
-            float left = insets.x * horizontalScale;
-            float right = insets.z * horizontalScale;
-            float bottom = insets.y * verticalScale;
-            float top = insets.w * verticalScale;
-            float width = Mathf.Max(0f, size.x - left - right);
-            apertureHeight = Mathf.Max(0f, size.y - bottom - top);
+            Vector2 panelSize = Vector2.Scale(size, config.boxPanelSizeMultiplier);
+            if (panelSize.x <= 0f || panelSize.y <= 0f)
+            {
+                Debug.LogError($"[BoxRevealAreaView] Box '{AreaId}' has a non-positive panel size.", this);
+                return;
+            }
 
-            boxBackingRenderer.transform.localPosition = coverClosedPosition;
+            panelSourceUvRect = GetValidatedPanelSourceUvRect(config.boxPanelSourceUvRect);
+            Vector3 panelPosition = coverClosedPosition + (Vector3)config.boxPanelOffset;
+            apertureHeight = panelSize.y;
+
+            boxBackingRenderer.transform.localPosition = panelPosition;
             boxBackingRenderer.drawMode = SpriteDrawMode.Simple;
             Vector2 backingSize = boxBackingRenderer.sprite.bounds.size;
-            boxBackingRenderer.transform.localScale = new Vector3(size.x / backingSize.x, size.y / backingSize.y, 1f);
-            Color backingColor = config.boxBackingColor;
-            backingColor.a = 1f;
-            boxBackingRenderer.color = backingColor;
+            boxBackingRenderer.transform.localScale = new Vector3(panelSize.x / backingSize.x, panelSize.y / backingSize.y, 1f);
+            boxBackingRenderer.color = config.boxBackingColor;
             boxBackingRenderer.sortingOrder = config.boxSortingOrder - 4;
             boxBackingRenderer.gameObject.SetActive(true);
 
-            boxPanelRenderer.transform.localPosition = coverClosedPosition + new Vector3((left - right) * .5f, (bottom - top) * .5f, 0f);
+            boxPanelRenderer.transform.localPosition = panelPosition;
             boxPanelRenderer.drawMode = SpriteDrawMode.Simple;
-            Vector2 panelSize = boxPanelRenderer.sprite.bounds.size;
-            boxPanelRenderer.transform.localScale = new Vector3(width / panelSize.x, apertureHeight / panelSize.y, 1f);
+            Vector2 sourcePanelSize = boxPanelRenderer.sprite.bounds.size;
+            boxPanelRenderer.transform.localScale = new Vector3(
+                panelSize.x / sourcePanelSize.x,
+                panelSize.y / sourcePanelSize.y,
+                1f);
             boxPanelRenderer.sortingOrder = config.boxSortingOrder - 1;
             boxPanelRenderer.gameObject.SetActive(true);
 
             if (previewMask != null)
             {
-                previewMask.transform.localPosition = boxPanelRenderer.transform.localPosition;
-                previewMask.transform.localScale = boxPanelRenderer.transform.localScale;
+                previewMask.transform.localPosition = panelPosition;
+                Vector2 maskSize = previewMask.sprite != null ? previewMask.sprite.bounds.size : Vector2.one;
+                previewMask.transform.localScale = new Vector3(panelSize.x / maskSize.x, panelSize.y / maskSize.y, 1f);
                 previewMask.transform.localRotation = boxPanelRenderer.transform.localRotation;
                 previewMask.isCustomRangeActive = true;
                 // SpriteMask's custom range has to straddle the preview
@@ -489,6 +488,7 @@ namespace GravityPuzzle.Presentation.Views
             {
                 boxPanelRenderer.GetPropertyBlock(panelProperties);
                 panelProperties.SetFloat(OpeningId, opening);
+                panelProperties.SetVector(ContentUvRectId, panelSourceUvRect);
                 boxPanelRenderer.SetPropertyBlock(panelProperties);
             }
 
@@ -784,7 +784,6 @@ namespace GravityPuzzle.Presentation.Views
                 boxCoverRenderer.color = coverColor;
                 boxCoverRenderer.gameObject.SetActive(true);
             }
-
             if (boxPanelRenderer != null)
             {
                 boxPanelRenderer.SetPropertyBlock(null);
@@ -830,6 +829,22 @@ namespace GravityPuzzle.Presentation.Views
                     boxBurstRenderers[index].color = fragmentColor;
                 }
             }
+        }
+
+        private Vector4 GetValidatedPanelSourceUvRect(Vector4 sourceUvRect)
+        {
+            if (sourceUvRect.x >= 0f && sourceUvRect.y >= 0f &&
+                sourceUvRect.z > 0f && sourceUvRect.w > 0f &&
+                sourceUvRect.x + sourceUvRect.z <= 1f &&
+                sourceUvRect.y + sourceUvRect.w <= 1f)
+            {
+                return sourceUvRect;
+            }
+
+            Debug.LogError(
+                $"[BoxRevealAreaView] Box '{AreaId}' has an invalid TunnelShutter source UV rectangle {sourceUvRect}.",
+                this);
+            return new Vector4(.02f, .02f, .96f, .96f);
         }
 
         private void CachePreviewState()

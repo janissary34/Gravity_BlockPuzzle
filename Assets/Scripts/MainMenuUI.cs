@@ -46,7 +46,7 @@ namespace GravityPuzzle
 
             if (!string.IsNullOrEmpty(gameSceneName))
             {
-                SceneManager.LoadScene(gameSceneName);
+                GravityPuzzle.Infrastructure.Services.SplashSceneLoader.LoadViaSplash(gameSceneName);
             }
             else
             {

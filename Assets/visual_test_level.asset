@@ -1722,7 +1722,7 @@ MonoBehaviour:
         type: 0
       - localCell: {x: 3, y: -5}
         type: 0
-    targetShredCount: 4
+    targetShredCount: 6
   elevators: []
   pins: []
   obstacles:

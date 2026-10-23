@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   feedMaskMouthInset: 0.16
   enableContactDebrisPresentation: 1
-  progressVoxelMultiplier: 4
+  progressVoxelMultiplier: 24
   enableAdvancedShreddingPresentation: 0
   debrisPerSecondPerWorldUnit: 30
   debrisEntryBurstPerWorldUnit: 18

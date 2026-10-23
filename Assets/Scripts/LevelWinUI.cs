@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using GravityPuzzle.Infrastructure.Services;
 
 namespace GravityPuzzle
 {
@@ -70,12 +71,12 @@ namespace GravityPuzzle
         {
             if (!string.IsNullOrEmpty(gameSceneName))
             {
-                SceneManager.LoadScene(gameSceneName);
+                SplashSceneLoader.LoadViaSplash(gameSceneName);
             }
             else
             {
                 Scene activeScene = SceneManager.GetActiveScene();
-                SceneManager.LoadScene(activeScene.name);
+                SplashSceneLoader.LoadViaSplash(activeScene.name);
             }
         }
     }

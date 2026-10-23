@@ -193,7 +193,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryCapturePiece(PuzzlePiece piece, ShredderCatchZone zone)
         {
-            if (piece == null || zone == null ||
+            if (piece == null || piece.IsFrozen || zone == null ||
                 !zone.ContainsCaptureFootprint(piece))
                 return false;
 

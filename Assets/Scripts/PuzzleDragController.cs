@@ -688,9 +688,7 @@ namespace GravityPuzzle
             for (int index = 0; index < pieces.Count; index++)
             {
                 PuzzlePiece piece = pieces[index];
-                // Frozen prevents player input and shredder capture, not a legal
-                // board fall. Excluding it here leaves ice pieces suspended.
-                if (piece == null || piece.IsShredderInteractionLocked ||
+                if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
                     piece.GridFallView == null || !piece.GridFallView.CanPlay ||
                     !board.TryGetPieceModel(piece, out PieceModel model) ||
                     model.State != PieceState.Placed ||
@@ -709,9 +707,8 @@ namespace GravityPuzzle
         {
             PuzzlePiece piece = FindActivePiece(model.Id);
             PrototypeBoard board = PrototypeBoard.Active;
-            // IsFrozen intentionally is not a gravity gate; the grid remains the
-            // sole authority for whether this piece has support below it.
             return piece != null &&
+                   !piece.IsFrozen &&
                    board != null && board.CanPieceParticipateInGravity(model) &&
                    !piece.IsShredderInteractionLocked &&
                    model.State == PieceState.Placed &&

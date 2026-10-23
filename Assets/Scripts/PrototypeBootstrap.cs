@@ -57,10 +57,12 @@ namespace GravityPuzzle
             {
                 GravityLevelRuntime.ConsumePreviewLaunchRequest();
                 StartAuthoredLevel(authoredLevel);
+                SplashScreenController.Instance?.NotifyLevelReady();
                 return;
             }
 
             Debug.LogError("[Bootstrap] No authored level was resolved. Assign a populated Level Sequence to Runtime Piece Factory Bootstrap.");
+            SplashScreenController.Instance?.NotifyLevelReady();
         }
 
         internal static void ConfigureSceneCamera(Camera camera)
@@ -777,11 +779,25 @@ namespace GravityPuzzle
 
         public bool CanMovePiece(PieceModel piece, GridCoordinate targetAnchor)
         {
+            if (piece == null)
+                return false;
+
+            PuzzlePiece activePiece = FindActivePiece(piece.Id);
+            if (activePiece != null && activePiece.IsFrozen)
+                return false;
+
             return revealAreaCoordinator == null || revealAreaCoordinator.CanMovePiece(piece, targetAnchor);
         }
 
         public bool CanPieceParticipateInGravity(PieceModel piece)
         {
+            if (piece == null)
+                return false;
+
+            PuzzlePiece activePiece = FindActivePiece(piece.Id);
+            if (activePiece != null && activePiece.IsFrozen)
+                return false;
+
             return revealAreaCoordinator == null || revealAreaCoordinator.CanParticipateInGravity(piece);
         }
 
@@ -1092,7 +1108,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryReservePieceInGrid(PuzzlePiece piece, PieceState state)
         {
-            if (!TryGetPieceModel(piece, out PieceModel model))
+            if (piece == null || piece.IsFrozen || !TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
             bool wasAlreadyReserved = BoardSnapshot.Grid.IsFullyReservedBy(model);
@@ -1126,6 +1142,7 @@ namespace GravityPuzzle
             {
                 PuzzlePiece piece = pieces[index];
                 if (piece == null ||
+                    piece.IsFrozen ||
                     !TryGetPieceModel(piece, out PieceModel model) ||
                     !ids.Add(model.Id) ||
                     !CanEnterPhysicsIsland(model.State))
@@ -1942,6 +1959,12 @@ namespace GravityPuzzle
             if (moves == null || !TryCollectJointGroupModels(sourcePieceId, jointGroupModels))
                 return false;
 
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                if (!CanPieceParticipateInGravity(jointGroupModels[index]))
+                    return false;
+            }
+
             moves.Clear();
             if (!BoardSnapshot.Grid.TryGetGroupFallTarget(jointGroupModels, jointGroupTargetAnchors, CanMovePieceDelegate))
                 return false;
@@ -1978,8 +2001,7 @@ namespace GravityPuzzle
                 GridGravityMove move = moves[index];
                 if (member.Id != move.PieceId || !member.Anchor.Equals(move.FromAnchor) ||
                     member.State != PieceState.Placed ||
-                    (revealAreaCoordinator != null &&
-                     !revealAreaCoordinator.CanMovePiece(member, move.ToAnchor)))
+                    !CanMovePiece(member, move.ToAnchor))
                 {
                     return false;
                 }
@@ -2027,7 +2049,7 @@ namespace GravityPuzzle
                     member.State != PieceState.Placed || !member.Anchor.Equals(move.FromAnchor) ||
                     move.ToAnchor.X != move.FromAnchor.X ||
                     move.FromAnchor.Y - move.ToAnchor.Y != distance ||
-                    (revealAreaCoordinator != null && !revealAreaCoordinator.CanMovePiece(member, move.ToAnchor)))
+                    !CanMovePiece(member, move.ToAnchor))
                     return false;
 
                 pieceJointGraph.CollectGroupMembers(member.Id, jointGroupMemberIds);
@@ -2455,8 +2477,7 @@ namespace GravityPuzzle
                 return false;
             }
 
-            if (revealAreaCoordinator != null &&
-                !revealAreaCoordinator.CanMovePiece(piece, move.ToAnchor))
+            if (!CanMovePiece(piece, move.ToAnchor))
                 return false;
 
             bool moved = BoardSnapshot.Grid.TryMoveIgnoringPiece(
@@ -2533,15 +2554,22 @@ namespace GravityPuzzle
             if (destroyedPiece.IsBeingShredded)
                 BlockShredded?.Invoke(destroyedPiece.SourcePieceId);
             DestroyedPieceCount++;
-            if (!keepsGridReservation)
-                PuzzleDragController.WakeUpGravity();
+            bool anyThawed = false;
             IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
             for (int i = 0; i < pieces.Count; i++)
             {
                 PuzzlePiece piece = pieces[i];
                 if (piece != null && piece != destroyedPiece)
+                {
+                    bool wasFrozen = piece.IsFrozen;
                     piece.RefreshFreezeState(DestroyedPieceCount);
+                    if (wasFrozen && !piece.IsFrozen)
+                        anyThawed = true;
+                }
             }
+
+            if (!keepsGridReservation || anyThawed)
+                PuzzleDragController.WakeUpGravity();
         }
 
         public void AddTime(float seconds)
@@ -2971,7 +2999,7 @@ namespace GravityPuzzle
             }
 
             Scene activeScene = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(activeScene.name);
+            SplashSceneLoader.LoadViaSplash(activeScene.name);
         }
 
         private static void PlayParticleEffect(ParticleSystem particleEffect)
@@ -3027,7 +3055,7 @@ namespace GravityPuzzle
                 yield break;
 
             Scene activeScene = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(activeScene.name);
+            SplashSceneLoader.LoadViaSplash(activeScene.name);
         }
 
         private IEnumerator EnterResultAfterDelay()

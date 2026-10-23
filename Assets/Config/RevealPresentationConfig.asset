@@ -17,20 +17,22 @@ MonoBehaviour:
   elevatorPrefab: {fileID: 2002, guid: c31b82d4e12645af9814ea67b1239a13, type: 3}
   elevatorPoolCapacity: 4
   boxCounterFont: {fileID: 11400000, guid: 0e1847d847368439f88be6c09b488ce3, type: 2}
-  boxCounterFontSize: 0.55
+  boxCounterFontSize: 6
   boxCounterTextColor: {r: 1, g: 1, b: 1, a: 1}
   boxCounterOutlineColor: {r: 0.055, g: 0.08, b: 0.28, a: 1}
   boxCounterOutlineWidth: 0.22
   boxCounterOffset: {x: 0, y: 0}
   boxCounterSortingOrder: 201
   boxCoverSprite: {fileID: 1117477795, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
-  elevatorFrameSprite: {fileID: 7462321767153245720, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
-  elevatorLeftDoorSprite: {fileID: -8075455797655948447, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
-  elevatorRightDoorSprite: {fileID: 617964189990335555, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
-  elevatorDoorSprite: {fileID: 7462321767153245720, guid: 12cefc8508d83432682ecb67259a7739, type: 3}
+  elevatorFrameSprite: {fileID: 429497369, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  elevatorLeftDoorSprite: {fileID: 2066327055, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  elevatorRightDoorSprite: {fileID: 2066327055, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  elevatorDoorSprite: {fileID: 429497369, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   boxFrameThickness: 0.75
-  boxOpeningInsets: {x: 0, y: 0, z: 0, w: 56}
-  boxBackingColor: {r: 0.035, g: 0.025, b: 0.16, a: 1}
+  boxPanelSizeMultiplier: {x: 1, y: 1}
+  boxPanelOffset: {x: 0, y: 0}
+  boxPanelSourceUvRect: {x: 0.02, y: 0.02, z: 0.96, w: 0.96}
+  boxBackingColor: {r: 0.035, g: 0.025, b: 0.16, a: 0.18}
   boxPreviewSlotCapacity: 32
   boxPreviewRecessedScale: 0.85
   boxPreviewRecessDistance: 0.1

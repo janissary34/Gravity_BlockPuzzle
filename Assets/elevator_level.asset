@@ -35,7 +35,8 @@ MonoBehaviour:
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
-  - name: Piece 1
+  - pieceId: 
+    name: Piece 1
     tutorialTargetId: 
     visualId: 
     paletteId: Red
@@ -56,7 +57,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 2
+  - pieceId: 
+    name: Piece 2
     tutorialTargetId: 
     visualId: 
     paletteId: Yellow
@@ -173,7 +175,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: -1}
       type: 0
-  - name: Piece 3
+  - pieceId: 
+    name: Piece 3
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -290,7 +293,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: -1}
       type: 0
-  - name: Piece 4
+  - pieceId: 
+    name: Piece 4
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -311,7 +315,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 5
+  - pieceId: 
+    name: Piece 5
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
@@ -332,7 +337,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Piece 6
+  - pieceId: 
+    name: Piece 6
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -353,7 +359,8 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells: []
-  - name: Z Horizontal 7
+  - pieceId: 
+    name: Z Horizontal 7
     tutorialTargetId: 
     visualId: 
     paletteId: Orange
@@ -470,7 +477,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 11, y: 3}
       type: 0
-  - name: Z Vertical 8
+  - pieceId: 
+    name: Z Vertical 8
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -619,7 +627,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
-  - name: T 9
+  - pieceId: 
+    name: T 9
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -736,6 +745,7 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
+  joints: []
   boxes: []
   elevators:
   - areaId: 3069efe2-1eac-416c-844d-66908b273d31
@@ -745,7 +755,8 @@ MonoBehaviour:
       size: {x: 12, y: 8}
     editorLocked: 1
     hiddenPieces:
-    - name: Piece 10
+    - pieceId: 
+      name: Piece 10
       tutorialTargetId: 
       visualId: 
       paletteId: Purple
@@ -862,7 +873,8 @@ MonoBehaviour:
         type: 0
       - localCell: {x: 7, y: 7}
         type: 0
-    - name: Piece 11
+    - pieceId: 
+      name: Piece 11
       tutorialTargetId: 
       visualId: 
       paletteId: Pink
@@ -947,7 +959,8 @@ MonoBehaviour:
         type: 0
       - localCell: {x: 3, y: -1}
         type: 0
-    - name: Piece 12
+    - pieceId: 
+      name: Piece 12
       tutorialTargetId: 
       visualId: 
       paletteId: Orange
@@ -1007,7 +1020,8 @@ MonoBehaviour:
       size: {x: 12, y: 12}
     editorLocked: 1
     hiddenPieces:
-    - name: Piece 13
+    - pieceId: 
+      name: Piece 13
       tutorialTargetId: 
       visualId: 
       paletteId: GreenLight
@@ -1124,7 +1138,8 @@ MonoBehaviour:
         type: 0
       - localCell: {x: 7, y: -1}
         type: 0
-    - name: Piece 14
+    - pieceId: 
+      name: Piece 14
       tutorialTargetId: 
       visualId: 
       paletteId: BlueLight
@@ -1241,7 +1256,8 @@ MonoBehaviour:
         type: 0
       - localCell: {x: 7, y: -1}
         type: 0
-    - name: Piece 15
+    - pieceId: 
+      name: Piece 15
       tutorialTargetId: 
       visualId: 
       paletteId: Purple

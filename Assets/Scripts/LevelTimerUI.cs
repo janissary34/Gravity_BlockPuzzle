@@ -520,7 +520,7 @@ namespace GravityPuzzle
             GravityLevelRuntime.RequestRestart();
             // Reload the current level from scratch
             Scene activeScene = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(activeScene.name);
+            GravityPuzzle.Infrastructure.Services.SplashSceneLoader.LoadViaSplash(activeScene.name);
         }
 
         private void PauseTimerForRetryConfirmation()

@@ -23,7 +23,7 @@ namespace GravityPuzzle
         {
             if (board == null || board.BoardSnapshot == null || root == null || zone == null ||
                 members == null || !board.TryGetPieceModel(root, out PieceModel rootModel) ||
-                root.IsShredderInteractionLocked ||
+                root.IsShredderInteractionLocked || root.IsFrozen ||
                 root.GridFallView != null && root.GridFallView.IsAnimating ||
                 !CanBecomeDynamic(rootModel.State))
                 return false;
@@ -48,7 +48,7 @@ namespace GravityPuzzle
                 {
                     PuzzlePiece candidate = activePieces[index];
                     if (candidate == null || memberIds.Contains(candidate.SourcePieceId) ||
-                        candidate.IsShredderInteractionLocked ||
+                        candidate.IsShredderInteractionLocked || candidate.IsFrozen ||
                         candidate.GridFallView != null && candidate.GridFallView.IsAnimating ||
                         !board.TryGetPieceModel(candidate, out PieceModel model) ||
                         !CanBecomeDynamic(model.State))

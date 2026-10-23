@@ -31,5 +31,6 @@ Material:
     m_Floats:
     - _Opening: 0
     m_Colors:
+    - _ContentUvRect: {r: 0.02, g: 0.02, b: 0.96, a: 0.96}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

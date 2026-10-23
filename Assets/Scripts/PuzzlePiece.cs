@@ -2799,7 +2799,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryBeginShredderHandoff(bool reportDestructionImmediately = true)
         {
-            if (IsShredderInteractionLocked)
+            if (IsShredderInteractionLocked || IsFrozen)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
@@ -2822,7 +2822,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryEnterShredderPhysicsIslandHandoff()
         {
-            if (IsShredderInteractionLocked)
+            if (IsShredderInteractionLocked || IsFrozen)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;

@@ -55,7 +55,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool ContainsCaptureFootprint(PuzzlePiece piece)
         {
-            if (piece == null || piece.IsShredderInteractionLocked)
+            if (piece == null || piece.IsShredderInteractionLocked || piece.IsFrozen)
                 return false;
 
             if (piece.GridFallView != null && piece.GridFallView.IsAnimating)
@@ -137,6 +137,8 @@ namespace GravityPuzzle
             GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
             if (piece.IsShredderInteractionLocked)
                 reason = "interaction_locked";
+            else if (piece.IsFrozen)
+                reason = "frozen";
             else if (piece.GridFallView != null && piece.GridFallView.IsAnimating)
                 reason = "grid_fall_animating";
             else if (outsideCorridor)

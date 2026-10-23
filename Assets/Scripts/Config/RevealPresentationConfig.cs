@@ -20,7 +20,7 @@ namespace GravityPuzzle.Config
 
         [Header("Box Counter Presentation")]
         public TMP_FontAsset boxCounterFont;
-        public float boxCounterFontSize = 0.55f;
+        public float boxCounterFontSize = 1.2f;
         public Color boxCounterTextColor = Color.white;
         public Color boxCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);
         [Range(0f, 1f)] public float boxCounterOutlineWidth = .22f;
@@ -42,10 +42,14 @@ namespace GravityPuzzle.Config
         [Header("Box")]
         [Tooltip("Frame border thickness relative to the authored sprite. Lower values make the border thinner. Reload the level to apply changes.")]
         [Range(.25f, 2f)] public float boxFrameThickness = 1f;
-        [Tooltip("Insets of the Tunnel opening in source sprite pixels: left, bottom, right, top.")]
-        public Vector4 boxOpeningInsets = new Vector4(0f, 0f, 0f, 56f);
-        [Tooltip("Opaque interior and corner backing while the box is locked.")]
-        public Color boxBackingColor = new Color(.035f, .025f, .16f, 1f);
+        [Tooltip("Independent size multiplier for the rectangular shutter interior. This is not derived from the Tunnel frame's 9-slice border.")]
+        public Vector2 boxPanelSizeMultiplier = Vector2.one;
+        [Tooltip("Independent local alignment of the shutter interior behind the static Tunnel frame.")]
+        public Vector2 boxPanelOffset = Vector2.zero;
+        [Tooltip("Normalized x, y, width, height source rectangle sampled from TunnelShutter. It excludes that artwork's rounded perimeter so the outer Tunnel remains the only visible frame.")]
+        public Vector4 boxPanelSourceUvRect = new Vector4(.02f, .02f, .96f, .96f);
+        [Tooltip("Translucent tint of the cavity behind an opened shutter. Keep alpha low so the board grid stays visible.")]
+        public Color boxBackingColor = new Color(.035f, .025f, .16f, .18f);
         [Header("Box Hidden Content Preview")]
         [Tooltip("Pre-authored renderer slots on each Box view. Increase this through the Box preview authoring command if a Box needs more visual parts.")]
         [Min(1)] public int boxPreviewSlotCapacity = DefaultBoxPreviewSlotCapacity;

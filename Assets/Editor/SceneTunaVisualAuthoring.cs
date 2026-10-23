@@ -86,8 +86,8 @@ namespace GravityPuzzle.Editor
             TMP_FontAsset font,
             int previewSlotCapacity)
         {
-            // The map atlas's Tunnel sprite is the authored open-bottom frame.
-            // Do not substitute the legacy closed-frame export here.
+            // The map atlas supplies the authored open-bottom Tunnel frame.
+            // It is the only frame renderer in this composition.
             Sprite frameSprite = tunnelSprite;
             Sprite panelSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxPanelPath);
             Sprite backingSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxBackingPath);
@@ -104,7 +104,7 @@ namespace GravityPuzzle.Editor
                 GameObject shutter = new GameObject("Shutter");
                 shutter.transform.SetParent(root.transform, false);
 
-                GameObject cover = new GameObject("Garage Shutter Cover");
+                GameObject cover = new GameObject("Tunnel Frame");
                 cover.transform.SetParent(shutter.transform, false);
                 SpriteRenderer coverRenderer = cover.AddComponent<SpriteRenderer>();
                 coverRenderer.sprite = frameSprite;
@@ -131,7 +131,7 @@ namespace GravityPuzzle.Editor
 
                 CreateBoxPreviewSlots(
                     shutter.transform,
-                    panelSprite,
+                    backingSprite,
                     previewSlotCapacity,
                     out SpriteMask previewMask,
                     out SpriteRenderer[] previewShadowRenderers,
@@ -226,13 +226,13 @@ namespace GravityPuzzle.Editor
             {
                 BoxRevealAreaView view = root.GetComponent<BoxRevealAreaView>();
                 Transform shutter = root.transform.Find("Shutter");
-                Sprite panelSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxPanelPath);
-                if (view == null || shutter == null || panelSprite == null)
-                    throw new System.InvalidOperationException("Box preview slots require the authored Box view, Shutter, and shutter sprite.");
+                Sprite backingSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxBackingPath);
+                if (view == null || shutter == null || backingSprite == null)
+                    throw new System.InvalidOperationException("Box preview slots require the authored Box view, Shutter, and opaque mask sprite.");
 
                 CreateBoxPreviewSlots(
                     shutter,
-                    panelSprite,
+                    backingSprite,
                     Mathf.Max(1, config.boxPreviewSlotCapacity),
                     out SpriteMask previewMask,
                     out SpriteRenderer[] previewShadowRenderers,
@@ -261,7 +261,7 @@ namespace GravityPuzzle.Editor
 
         private static void CreateBoxPreviewSlots(
             Transform shutter,
-            Sprite panelSprite,
+            Sprite maskSprite,
             int capacity,
             out SpriteMask previewMask,
             out SpriteRenderer[] previewShadowRenderers,
@@ -286,7 +286,10 @@ namespace GravityPuzzle.Editor
             previewMask = maskTransform.GetComponent<SpriteMask>();
             if (previewMask == null)
                 previewMask = maskTransform.gameObject.AddComponent<SpriteMask>();
-            previewMask.sprite = panelSprite;
+            // Preview content is clipped to the rectangular reveal area, not
+            // the rounded shutter artwork. The static outer Tunnel is the only
+            // visible frame and remains above these renderers.
+            previewMask.sprite = maskSprite;
             previewMask.isCustomRangeActive = true;
             previewMask.backSortingOrder = 196;
             previewMask.frontSortingOrder = 199;
@@ -483,7 +486,7 @@ namespace GravityPuzzle.Editor
 
             if (font != null)
                 so.FindProperty("boxCounterFont").objectReferenceValue = font;
-            so.FindProperty("boxCounterFontSize").floatValue = .55f;
+            so.FindProperty("boxCounterFontSize").floatValue = 1.2f;
             so.FindProperty("boxCounterTextColor").colorValue = Color.white;
             so.FindProperty("boxCounterOutlineColor").colorValue = new Color(0.055f, 0.08f, 0.28f, 1f);
             so.FindProperty("boxCounterOutlineWidth").floatValue = 0.22f;

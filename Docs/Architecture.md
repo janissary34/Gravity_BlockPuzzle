@@ -12,6 +12,21 @@ Partially opened Tunnels use the explicit content-activation and presentation-le
 
 See `Decisions/ADR-001-presentation-is-not-gameplay-authority.md` for the reasoning behind the presentation boundary.
 
+## Startup splash and transition cover
+
+`Splash.unity` is the build's entry scene. Its `LoadingScreen` prefab uses the
+art-authored `SplashScreen` sprites and `SplashScreenController`. The controller
+marks its root GameObject with `DontDestroyOnLoad` so it persists across subsequent
+scene loads as a transition cover. During game boot, `Scene1` loads asynchronously
+and activates immediately without artificial display holds. For subsequent level
+advances, retries, and transitions, `SplashSceneLoader` routes directly through
+`SplashScreenController`'s transition cover: the loading overlay displays over
+the active scene, `Scene1` reloads asynchronously in a single hop, and
+`PrototypeBootstrap.StartForActiveScene` calls `NotifyLevelReady` once the board
+is completely constructed to dismiss the cover. Legacy gameplay bootstrap objects in
+`Splash.unity` remain disabled so `RuntimePieceFactoryBootstrap` in `Scene1` is the
+sole composition root.
+
 ## Shredder admission and temporary physics
 
 Grid gravity batches independent falling groups when their occupied grid columns
@@ -39,12 +54,12 @@ still delay admission when a body is displaced or the conservative bounds overla
 
 `ShredderCatchZone` validates physical capture using per-cell geometry and then
 confirms the authoritative grid state. `CollisionBounds` is not used to decide
-capture or candidate order for irregular shapes. A temporary
-`ShredderPhysicsIsland` still owns only the board-derived dependent stack: its
-members remain grid-reserved while Unity renders their short-lived contact
-reaction. The pooled `ShredderPhysicsMouth` retains its shelf and guides; when
-independent islands share a zone, the guides can grow upward without moving the
-cutter or shelf plane.
+capture or candidate order for irregular shapes. A feed reservation belongs only
+to the piece that has been admitted to the cutter. Pieces supported above it stay
+in their normal `Placed`/occupied grid state; as the active feed releases crossed
+cells, the regular grid-gravity owner moves them through newly legal space and
+they are admitted independently when they reach the catch zone. Temporary Unity
+physics never owns shredder queue progress, reservations, or admission.
 
 ## Current level construction
 

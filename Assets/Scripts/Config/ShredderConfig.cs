@@ -13,7 +13,7 @@ namespace GravityPuzzle.Config
         [Tooltip("Emits small square debris continuously from the same hidden edge. This is independent from the optional dissolve shader.")]
         [SerializeField] private bool enableContactDebrisPresentation = true;
         [Tooltip("Visible progress grains emitted for each authored board block. These use the shared particle flight buffer and all travel to the slider.")]
-        [Range(1, 8)] [SerializeField] private int progressVoxelMultiplier = 4;
+        [Range(1, 48)] [SerializeField] private int progressVoxelMultiplier = 24;
         [Header("Grinding Debris Presentation")]
         [Tooltip("Opt-in gate for the experimental rough-cut shader and continuous debris. Keep disabled until it has been play-tested on target devices.")]
         [SerializeField] private bool enableAdvancedShreddingPresentation;
@@ -197,7 +197,7 @@ namespace GravityPuzzle.Config
         public float VoxelEjectionSpreadAngle => voxelEjectionSpreadAngle;
         public float FeedMaskMouthInset => feedMaskMouthInset;
         public bool EnableContactDebrisPresentation => enableContactDebrisPresentation;
-        public int ProgressVoxelMultiplier => Mathf.Clamp(progressVoxelMultiplier, 1, 8);
+        public int ProgressVoxelMultiplier => Mathf.Clamp(progressVoxelMultiplier, 1, 48);
 
         /// <summary>
         /// Calculates the complete presentation budget for one shredder feed.

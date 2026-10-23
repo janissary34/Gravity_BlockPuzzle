@@ -36,23 +36,30 @@ namespace GravityPuzzle.Tests.PlayMode
             var initialize = ViewType.GetMethod("Initialize");
             var setRemaining = ViewType.GetMethod("SetBoxRemaining");
             var playOpening = ViewType.GetMethod("PlayOpening");
-            var frame = instance.transform.Find("Shutter/Box Frame").GetComponent<SpriteRenderer>();
+            var frame = instance.transform.Find("Shutter/Tunnel Frame").GetComponent<SpriteRenderer>();
             var panel = instance.transform.Find("Shutter/Box Moving Shutter").GetComponent<SpriteRenderer>();
             var backing = instance.transform.Find("Shutter/Box Opaque Backing").GetComponent<SpriteRenderer>();
+            var previewMask = instance.transform.Find("Shutter/Preview Content/Aperture Mask").GetComponent<SpriteMask>();
             var properties = new MaterialPropertyBlock();
             bool completed = false;
             try
             {
                 Assert.That(frame.sprite, Is.EqualTo(ConfigType.GetField("boxCoverSprite").GetValue(config)),
                     "The static frame must use the authored open-bottom Tunnel sprite from the reveal config.");
-                Vector4 tunnelInsets = (Vector4)ConfigType.GetField("boxOpeningInsets").GetValue(config);
-                Assert.That(tunnelInsets.x, Is.Zero);
-                Assert.That(tunnelInsets.y, Is.Zero);
-                Assert.That(tunnelInsets.z, Is.Zero,
-                    "The open-bottom Tunnel shutter must extend under the frame at both sides and the bottom.");
+                Assert.That(instance.transform.Find("Shutter/Tunnel Bottom Frame"), Is.Null,
+                    "The authored Tunnel sprite is an open-bottom U and must be the only frame renderer.");
+                Assert.That(previewMask.sprite, Is.EqualTo(backing.sprite),
+                    "Preview masking must use the rectangular backing, not the rounded shutter sprite.");
                 initialize.Invoke(view, new object[] { "test", Vector2.zero, new Vector2(3f, 2f), config });
                 Vector2 frameSize = frame.size;
                 Vector3 framePosition = frame.transform.localPosition;
+                Assert.That(panel.bounds.size.x, Is.EqualTo(3f).Within(.001f));
+                Assert.That(panel.bounds.size.y, Is.EqualTo(2f).Within(.001f));
+                Assert.That(previewMask.bounds.size.x, Is.EqualTo(3f).Within(.001f));
+                Assert.That(previewMask.bounds.size.y, Is.EqualTo(2f).Within(.001f));
+                panel.GetPropertyBlock(properties);
+                Assert.That(properties.GetVector("_ContentUvRect"),
+                    Is.EqualTo((Vector4)ConfigType.GetField("boxPanelSourceUvRect").GetValue(config)));
                 foreach (int remaining in new[] { 4, 3, 2, 1 })
                 {
                     setRemaining.Invoke(view, new object[] { remaining, 5 });
@@ -137,7 +144,7 @@ namespace GravityPuzzle.Tests.PlayMode
 
                 initialize.Invoke(firstView, new object[] { "reused", Vector2.zero, new Vector2(2f, 2f), config });
                 Assert.That(firstFragment.gameObject.activeSelf, Is.False);
-                Assert.That(first.transform.Find("Shutter/Box Frame").GetComponent<SpriteRenderer>().color.a, Is.EqualTo(1f));
+                Assert.That(first.transform.Find("Shutter/Tunnel Frame").GetComponent<SpriteRenderer>().color.a, Is.EqualTo(1f));
                 play.Invoke(firstView, new object[] { kind, (Action)(() => firstCompleted = true) });
                 yield return new WaitForSeconds(.8f);
                 Assert.That(firstCompleted, Is.True);

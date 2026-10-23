@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 192f4262e12394ede980977f66dd47bc, type: 3}
   m_Name: PoolConfig
   m_EditorClassIdentifier: 
-  blockPieceCapacity: 50
-  shredVoxelCapacity: 1200
+  blockPieceCapacity: 20
+  shredVoxelCapacity: 256
   progressVoxelCapacity: 1024
   useVoxelShardGrid: 1
   voxelSubdivisions: 8
