@@ -167,6 +167,19 @@ namespace GravityPuzzle
         private readonly List<PiecePartSlot> partSlots = new List<PiecePartSlot>();
         private CompositeCollider2D compositeCollider;
         private LineRenderer rootOutline;
+        private SpriteRenderer[] boxRevealRenderers;
+        private bool[] boxRevealRendererEnabledStates;
+        private int[] boxRevealRendererSortingOrders;
+        private SpriteMaskInteraction[] boxRevealRendererMaskInteractions;
+        private bool boxRevealPresentationCaptured;
+        private bool boxRevealOutlineEnabled;
+        private int boxRevealOutlineSortingOrder;
+        // Selection refreshes the outline while a drag starts. Keep the Box
+        // foreground order as a presentation lease so that refresh cannot
+        // put the white contour back behind the shutter.
+        private int boxRevealOutlineForegroundSortingOrder = -1;
+        private bool boxRevealIceCounterEnabled;
+        private bool boxRevealBombCounterEnabled;
         private List<BoxCollider2D> collisionCells;
         private List<Vector2> fullCollisionCellSizes;
         private List<SpriteRenderer> collisionCellVisuals;
@@ -225,10 +238,14 @@ namespace GravityPuzzle
         // changing piece state or normal booster targeting presentation.
         private bool isTutorialTargeted;
         private int tutorialTargetSortingOrder;
-        private SpriteRenderer[] tutorialTargetRenderers;
-        private int[] tutorialTargetOriginalSortingOrders;
-        private TextMeshPro[] tutorialTargetTexts;
-        private int[] tutorialTargetTextOriginalSortingOrders;
+        // Normal Hammer and Rocket targeting use the same presentation lease
+        // so every board piece remains readable above the world dimmer.
+        private bool isBoosterTargetingForeground;
+        private int boosterTargetingForegroundSortingOrder;
+        private SpriteRenderer[] targetingForegroundRenderers;
+        private int[] targetingForegroundOriginalSortingOrders;
+        private TextMeshPro[] targetingForegroundTexts;
+        private int[] targetingForegroundTextOriginalSortingOrders;
         private bool destructionReported;
         private bool iceReleaseAnimating;
         private int frozenUntilDestroyedCount;
@@ -304,6 +321,7 @@ namespace GravityPuzzle
             for (int index = 0; index < cachedPartSlots.Length; index++)
                 partSlots.Add(cachedPartSlots[index]);
             SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            boxRevealRenderers = renderers;
             for (int index = 0; index < renderers.Length; index++)
             {
                 SpriteRenderer renderer = renderers[index];
@@ -389,6 +407,7 @@ namespace GravityPuzzle
 
         public void OnSpawn()
         {
+            RestoreBoxRevealContentVisual();
             RestoreShredderPresentation();
             RestoreDefaultPhysicsLayers();
             shredderHandoffMode = ShredderHandoffMode.None;
@@ -401,6 +420,8 @@ namespace GravityPuzzle
             isSelected = false;
             isBoosterTargeted = false;
             isTutorialTargeted = false;
+            isBoosterTargetingForeground = false;
+            RestoreTargetingForegroundSorting();
             IsFrozen = false;
             IsBombDefused = false;
             SourcePieceId = -1;
@@ -423,7 +444,9 @@ namespace GravityPuzzle
             isSelected = false;
             isBoosterTargeted = false;
             isTutorialTargeted = false;
-            RestoreTutorialTargetSorting();
+            isBoosterTargetingForeground = false;
+            RestoreBoxRevealContentVisual();
+            RestoreTargetingForegroundSorting();
             ApplyOutlinePresentation();
             returnToPool = null;
             ClearIceVisuals();
@@ -434,6 +457,132 @@ namespace GravityPuzzle
             RestoreDefaultCollisionMaterials();
             RuntimePieceFactory.ResetPooledPiece(this);
             InvalidateVoxelCache();
+        }
+
+        /// <summary>
+        /// Keeps a partially revealed root in the authoritative grid while its
+        /// Box preview owns the recessed visual. It never changes materials,
+        /// colours, colliders, or gameplay state.
+        /// </summary>
+        public void HideBoxRevealContentVisual()
+        {
+            CaptureBoxRevealPresentation();
+            if (boxRevealRenderers != null)
+            {
+                for (int index = 0; index < boxRevealRenderers.Length; index++)
+                {
+                    if (boxRevealRenderers[index] != null)
+                        boxRevealRenderers[index].enabled = false;
+                }
+            }
+
+            if (rootOutline != null)
+                rootOutline.enabled = false;
+            if (iceCounterText != null)
+                iceCounterText.enabled = false;
+            if (bombCounterText != null)
+                bombCounterText.enabled = false;
+        }
+
+        /// <summary>
+        /// Makes an accepted Box drag use the real root's unchanged gameplay
+        /// appearance above the Box. No SpriteMask or shared material is used.
+        /// </summary>
+        public void ShowBoxRevealDragVisual(int sortingOrder)
+        {
+            CaptureBoxRevealPresentation();
+            boxRevealOutlineForegroundSortingOrder = sortingOrder;
+            if (boxRevealRenderers != null)
+            {
+                for (int index = 0; index < boxRevealRenderers.Length; index++)
+                {
+                    SpriteRenderer renderer = boxRevealRenderers[index];
+                    if (renderer == null)
+                        continue;
+
+                    renderer.enabled = boxRevealRendererEnabledStates[index];
+                    renderer.sortingOrder = sortingOrder;
+                    renderer.maskInteraction = SpriteMaskInteraction.None;
+                }
+            }
+
+            if (rootOutline != null)
+            {
+                rootOutline.enabled = boxRevealOutlineEnabled;
+                ApplyOutlinePresentation();
+            }
+            if (iceCounterText != null)
+                iceCounterText.enabled = boxRevealIceCounterEnabled;
+            if (bombCounterText != null)
+                bombCounterText.enabled = boxRevealBombCounterEnabled;
+        }
+
+        /// <summary>Releases only the temporary Box visual lease.</summary>
+        public void RestoreBoxRevealContentVisual()
+        {
+            if (!boxRevealPresentationCaptured)
+                return;
+
+            boxRevealOutlineForegroundSortingOrder = -1;
+
+            if (boxRevealRenderers != null)
+            {
+                for (int index = 0; index < boxRevealRenderers.Length; index++)
+                {
+                    SpriteRenderer renderer = boxRevealRenderers[index];
+                    if (renderer == null)
+                        continue;
+
+                    renderer.enabled = boxRevealRendererEnabledStates[index];
+                    renderer.sortingOrder = boxRevealRendererSortingOrders[index];
+                    renderer.maskInteraction = boxRevealRendererMaskInteractions[index];
+                }
+            }
+
+            if (rootOutline != null)
+            {
+                rootOutline.enabled = boxRevealOutlineEnabled;
+                rootOutline.sortingOrder = boxRevealOutlineSortingOrder;
+            }
+            if (iceCounterText != null)
+                iceCounterText.enabled = boxRevealIceCounterEnabled;
+            if (bombCounterText != null)
+                bombCounterText.enabled = boxRevealBombCounterEnabled;
+
+            boxRevealPresentationCaptured = false;
+            boxRevealRendererEnabledStates = null;
+            boxRevealRendererSortingOrders = null;
+            boxRevealRendererMaskInteractions = null;
+        }
+
+        private void CaptureBoxRevealPresentation()
+        {
+            if (boxRevealPresentationCaptured)
+                return;
+
+            int rendererCount = boxRevealRenderers != null ? boxRevealRenderers.Length : 0;
+            boxRevealRendererEnabledStates = new bool[rendererCount];
+            boxRevealRendererSortingOrders = new int[rendererCount];
+            boxRevealRendererMaskInteractions = new SpriteMaskInteraction[rendererCount];
+            for (int index = 0; index < rendererCount; index++)
+            {
+                SpriteRenderer renderer = boxRevealRenderers[index];
+                if (renderer == null)
+                    continue;
+
+                boxRevealRendererEnabledStates[index] = renderer.enabled;
+                boxRevealRendererSortingOrders[index] = renderer.sortingOrder;
+                boxRevealRendererMaskInteractions[index] = renderer.maskInteraction;
+            }
+
+            if (rootOutline != null)
+            {
+                boxRevealOutlineEnabled = rootOutline.enabled;
+                boxRevealOutlineSortingOrder = rootOutline.sortingOrder;
+            }
+            boxRevealIceCounterEnabled = iceCounterText != null && iceCounterText.enabled;
+            boxRevealBombCounterEnabled = bombCounterText != null && bombCounterText.enabled;
+            boxRevealPresentationCaptured = true;
         }
 
         /// <summary>
@@ -1026,82 +1175,125 @@ namespace GravityPuzzle
 
             isTutorialTargeted = isTargeted;
             tutorialTargetSortingOrder = sortingOrder;
-
-            if (isTargeted)
-                ApplyTutorialTargetSorting(sortingOrder);
-            else
-                RestoreTutorialTargetSorting();
-
+            RefreshTargetingForegroundSorting();
             ApplyOutlinePresentation();
         }
 
-        private void ApplyTutorialTargetSorting(int sortingOrder)
+        /// <summary>
+        /// Keeps a piece's authored visuals in front of the world-space
+        /// targeting dimmer. This is presentation-only: it neither marks the
+        /// piece as a target nor affects board, input, or lifecycle state.
+        /// </summary>
+        public void SetBoosterTargetingForeground(bool isForeground, int sortingOrder = 0)
         {
-            RestoreTutorialTargetSorting();
-
-            SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
-            if (renderers != null && renderers.Length > 0)
+            if (isBoosterTargetingForeground == isForeground &&
+                boosterTargetingForegroundSortingOrder == sortingOrder)
             {
-                tutorialTargetRenderers = renderers;
-                tutorialTargetOriginalSortingOrders = new int[renderers.Length];
-                int targetOrder = Mathf.Max(0, sortingOrder - 1);
-                for (int i = 0; i < renderers.Length; i++)
+                return;
+            }
+
+            isBoosterTargetingForeground = isForeground;
+            boosterTargetingForegroundSortingOrder = sortingOrder;
+            RefreshTargetingForegroundSorting();
+            ApplyOutlinePresentation();
+        }
+
+        private void RefreshTargetingForegroundSorting()
+        {
+            bool shouldRenderInForeground = isTutorialTargeted || isBoosterTargetingForeground;
+            if (!shouldRenderInForeground)
+            {
+                RestoreTargetingForegroundSorting();
+                return;
+            }
+
+            int sortingOrder = isTutorialTargeted
+                ? tutorialTargetSortingOrder
+                : boosterTargetingForegroundSortingOrder;
+            ApplyTargetingForegroundSorting(sortingOrder);
+        }
+
+        private void ApplyTargetingForegroundSorting(int sortingOrder)
+        {
+            if (targetingForegroundRenderers == null)
+            {
+                SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+                if (renderers != null && renderers.Length > 0)
                 {
-                    SpriteRenderer r = renderers[i];
-                    if (r != null)
+                    targetingForegroundRenderers = renderers;
+                    targetingForegroundOriginalSortingOrders = new int[renderers.Length];
+                    for (int i = 0; i < renderers.Length; i++)
                     {
-                        tutorialTargetOriginalSortingOrders[i] = r.sortingOrder;
-                        r.sortingOrder = targetOrder;
+                        SpriteRenderer renderer = renderers[i];
+                        if (renderer != null)
+                            targetingForegroundOriginalSortingOrders[i] = renderer.sortingOrder;
+                    }
+                }
+
+                TextMeshPro[] texts = GetComponentsInChildren<TextMeshPro>(true);
+                if (texts != null && texts.Length > 0)
+                {
+                    targetingForegroundTexts = texts;
+                    targetingForegroundTextOriginalSortingOrders = new int[texts.Length];
+                    for (int i = 0; i < texts.Length; i++)
+                    {
+                        TextMeshPro text = texts[i];
+                        if (text != null && text.renderer != null)
+                            targetingForegroundTextOriginalSortingOrders[i] = text.renderer.sortingOrder;
                     }
                 }
             }
 
-            TextMeshPro[] texts = GetComponentsInChildren<TextMeshPro>(true);
-            if (texts != null && texts.Length > 0)
+            int targetOrder = Mathf.Max(0, sortingOrder - 1);
+            if (targetingForegroundRenderers != null)
             {
-                tutorialTargetTexts = texts;
-                tutorialTargetTextOriginalSortingOrders = new int[texts.Length];
-                int targetOrder = Mathf.Max(0, sortingOrder - 1);
-                for (int i = 0; i < texts.Length; i++)
+                for (int i = 0; i < targetingForegroundRenderers.Length; i++)
                 {
-                    TextMeshPro t = texts[i];
-                    if (t != null && t.renderer != null)
-                    {
-                        tutorialTargetTextOriginalSortingOrders[i] = t.renderer.sortingOrder;
-                        t.renderer.sortingOrder = targetOrder;
-                    }
+                    SpriteRenderer renderer = targetingForegroundRenderers[i];
+                    if (renderer != null && renderer.transform.IsChildOf(transform))
+                        renderer.sortingOrder = targetOrder;
+                }
+            }
+
+            if (targetingForegroundTexts != null)
+            {
+                for (int i = 0; i < targetingForegroundTexts.Length; i++)
+                {
+                    TextMeshPro text = targetingForegroundTexts[i];
+                    if (text != null && text.renderer != null && text.transform.IsChildOf(transform))
+                        text.renderer.sortingOrder = targetOrder;
                 }
             }
         }
 
-        private void RestoreTutorialTargetSorting()
+        private void RestoreTargetingForegroundSorting()
         {
-            if (tutorialTargetRenderers != null && tutorialTargetOriginalSortingOrders != null)
+            if (targetingForegroundRenderers != null && targetingForegroundOriginalSortingOrders != null)
             {
-                for (int i = 0; i < tutorialTargetRenderers.Length; i++)
+                for (int i = 0; i < targetingForegroundRenderers.Length; i++)
                 {
-                    SpriteRenderer r = tutorialTargetRenderers[i];
-                    if (r != null && r.transform.IsChildOf(transform))
+                    SpriteRenderer renderer = targetingForegroundRenderers[i];
+                    if (renderer != null && renderer.transform.IsChildOf(transform))
                     {
-                        r.sortingOrder = tutorialTargetOriginalSortingOrders[i];
+                        renderer.sortingOrder = targetingForegroundOriginalSortingOrders[i];
                     }
                 }
-                tutorialTargetRenderers = null;
-                tutorialTargetOriginalSortingOrders = null;
+                targetingForegroundRenderers = null;
+                targetingForegroundOriginalSortingOrders = null;
             }
 
-            if (tutorialTargetTexts != null && tutorialTargetTextOriginalSortingOrders != null)
+            if (targetingForegroundTexts != null && targetingForegroundTextOriginalSortingOrders != null)
             {
-                for (int i = 0; i < tutorialTargetTexts.Length; i++)
+                for (int i = 0; i < targetingForegroundTexts.Length; i++)
                 {
-                    TextMeshPro t = tutorialTargetTexts[i];
-                    if (t != null && t.renderer != null && t.transform.IsChildOf(transform))
+                    TextMeshPro text = targetingForegroundTexts[i];
+                    if (text != null && text.renderer != null && text.transform.IsChildOf(transform))
                     {
-                        t.renderer.sortingOrder = tutorialTargetTextOriginalSortingOrders[i];
+                        text.renderer.sortingOrder = targetingForegroundTextOriginalSortingOrders[i];
                     }
                 }
-                tutorialTargetTexts = null;
-                tutorialTargetTextOriginalSortingOrders = null;
+                targetingForegroundTexts = null;
+                targetingForegroundTextOriginalSortingOrders = null;
             }
         }
 
@@ -1173,7 +1365,11 @@ namespace GravityPuzzle
                 rootOutline.endColor = outlineColor;
                 rootOutline.sortingOrder = isTutorialTargeted
                     ? tutorialTargetSortingOrder
-                    : useTargetOutline ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
+                    : isBoosterTargetingForeground
+                        ? boosterTargetingForegroundSortingOrder
+                    : boxRevealOutlineForegroundSortingOrder >= 0
+                        ? boxRevealOutlineForegroundSortingOrder
+                        : useTargetOutline ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
             }
         }
 
@@ -1271,7 +1467,8 @@ namespace GravityPuzzle
             isSelected = false;
             isBoosterTargeted = false;
             isTutorialTargeted = false;
-            RestoreTutorialTargetSorting();
+            isBoosterTargetingForeground = false;
+            RestoreTargetingForegroundSorting();
             IsFrozen = false;
             IsBomb = false;
             IsBombDefused = false;

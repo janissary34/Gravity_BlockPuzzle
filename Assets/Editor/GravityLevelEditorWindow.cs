@@ -349,7 +349,7 @@ namespace GravityPuzzle.Editor
             GUILayout.EndHorizontal();
 
             EditorGUILayout.HelpBox(
-                "Create one rectangular Box/Elevator: the first click creates it and later clicks expand its bounds. Press + Box or + Elevator again to begin a separate area. Merge Adjacent converts existing tile-by-tile areas into one rectangle. Locking a Box captures every complete board piece inside it as hidden Box content; unlock keeps that authored content intact while making the overlay editable again.",
+                "Create one rectangular Box/Elevator: the first click creates it and later clicks expand its bounds. Press + Box or + Elevator again to begin a separate area. Merge Adjacent converts existing tile-by-tile areas into one rectangle. Locking a Box captures every complete board piece inside it as hidden Box content; unlocking restores those pieces to the editable board.",
                 MessageType.None);
 
             for (int index = 0; index < level.boxes.Count; index++)
@@ -489,7 +489,9 @@ namespace GravityPuzzle.Editor
 
             bool locking = !box.editorLocked;
             Undo.RecordObject(level, "Toggle box editor lock");
-            int capturedPieceCount = locking ? CaptureBoxHiddenPieces(box) : 0;
+            int capturedPieceCount = locking
+                ? CaptureBoxHiddenPieces(box)
+                : RestoreRevealAreaInteriorPieces(box);
             box.editorLocked = locking;
             ClearSelection();
             selectedBox = boxIndex;
@@ -501,6 +503,11 @@ namespace GravityPuzzle.Editor
                     capturedPieceCount > 0
                         ? $"{capturedPieceCount} piece(s) captured as Box contents."
                         : "No complete board pieces are inside this Box."));
+            }
+            else if (capturedPieceCount > 0)
+            {
+                ShowNotification(new GUIContent(
+                    $"{capturedPieceCount} piece(s) restored to the board for editing."));
             }
         }
 
@@ -517,7 +524,7 @@ namespace GravityPuzzle.Editor
             Undo.RecordObject(level, "Toggle elevator editor lock");
             int capturedPieceCount = locking
                 ? CaptureElevatorInteriorPieces(elevator)
-                : RestoreElevatorInteriorPieces(elevator);
+                : RestoreRevealAreaInteriorPieces(elevator);
             elevator.editorLocked = locking;
             ClearSelection();
             selectedElevator = elevatorIndex;
@@ -556,15 +563,15 @@ namespace GravityPuzzle.Editor
             return capturedPieces.Count;
         }
 
-        private int RestoreElevatorInteriorPieces(ElevatorRevealDefinition elevator)
+        private int RestoreRevealAreaInteriorPieces(RevealAreaDefinition area)
         {
-            if (elevator.hiddenPieces == null || elevator.hiddenPieces.Count == 0)
+            if (area.hiddenPieces == null || area.hiddenPieces.Count == 0)
                 return 0;
 
             int restoredCount = 0;
-            for (int index = 0; index < elevator.hiddenPieces.Count; index++)
+            for (int index = 0; index < area.hiddenPieces.Count; index++)
             {
-                PieceDefinition piece = elevator.hiddenPieces[index];
+                PieceDefinition piece = area.hiddenPieces[index];
                 if (piece == null)
                     continue;
 
@@ -572,7 +579,7 @@ namespace GravityPuzzle.Editor
                 restoredCount++;
             }
 
-            elevator.hiddenPieces.Clear();
+            area.hiddenPieces.Clear();
             return restoredCount;
         }
 

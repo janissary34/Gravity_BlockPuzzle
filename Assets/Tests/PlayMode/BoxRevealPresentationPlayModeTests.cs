@@ -250,9 +250,82 @@ namespace GravityPuzzle.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator PreviewOwnershipAndExposureCallbackAreScopedPerHiddenDefinition()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/BoxRevealArea.prefab");
+            var sourceConfig = AssetDatabase.LoadAssetAtPath("Assets/Config/RevealPresentationConfig.asset", ConfigType);
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(sourceConfig, Is.Not.Null);
+            var config = UnityEngine.Object.Instantiate(sourceConfig);
+            ScriptableObject level = ScriptableObject.CreateInstance(LevelType);
+            LevelType.GetField("boardColumns").SetValue(level, 4);
+            LevelType.GetField("boardRows").SetValue(level, 4);
+            LevelType.GetField("subdivisions").SetValue(level, 1);
+            object definition = Activator.CreateInstance(BoxDefinitionType);
+            object bounds = Activator.CreateInstance(BoundsType);
+            BoundsType.GetField("origin").SetValue(bounds, Vector2Int.zero);
+            BoundsType.GetField("size").SetValue(bounds, new Vector2Int(2, 2));
+            BoxDefinitionType.GetField("bounds").SetValue(definition, bounds);
+            IList hiddenPieces = CreateTypedList(PieceDefinitionType);
+            BoxDefinitionType.GetField("hiddenPieces").SetValue(definition, hiddenPieces);
+            hiddenPieces.Add(CreateSingleBlockPiece(new Vector2Int(0, 0), Color.red));
+            hiddenPieces.Add(CreateSingleBlockPiece(new Vector2Int(0, 1), Color.blue));
+
+            GameObject instance = UnityEngine.Object.Instantiate(prefab);
+            Component view = instance.GetComponent(ViewType);
+            MethodInfo initialize = ViewType.GetMethod("Initialize");
+            MethodInfo configurePreview = ViewType.GetMethod("ConfigureBoxPreview");
+            MethodInfo setExposure = ViewType.GetMethod("SetBoxExposureChangedHandler");
+            MethodInfo canPresent = ViewType.GetMethod("CanPresentContent");
+            MethodInfo setPreviewVisible = ViewType.GetMethod("SetContentPreviewVisible");
+            MethodInfo applyShutterHeight = ViewType.GetMethod(
+                "ApplyShutterHeight",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Transform preview = instance.transform.Find("Shutter/Preview Content/Preview Slot 1");
+            try
+            {
+                initialize.Invoke(view, new object[] { "ownership", Vector2.zero, new Vector2(2f, 2f), config });
+                configurePreview.Invoke(view, new object[] { level, definition });
+                Assert.That((bool)canPresent.Invoke(view, new object[] { 0 }), Is.True);
+                Assert.That((bool)canPresent.Invoke(view, new object[] { 1 }), Is.True);
+
+                float observedExposure = -1f;
+                setExposure.Invoke(view, new object[] { (Action<float>)(value => observedExposure = value) });
+                applyShutterHeight.Invoke(view, new object[] { 1f });
+                Assert.That(observedExposure, Is.EqualTo(.5f).Within(.001f));
+
+                setPreviewVisible.Invoke(view, new object[] { 0, false });
+                Assert.That(preview.gameObject.activeSelf, Is.False);
+                setPreviewVisible.Invoke(view, new object[] { 0, true });
+                Assert.That(preview.gameObject.activeSelf, Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(instance);
+                UnityEngine.Object.Destroy(config);
+                UnityEngine.Object.Destroy(level);
+            }
+            yield return null;
+        }
+
         private static IList CreateTypedList(Type itemType)
         {
             return (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(itemType));
+        }
+
+        private static object CreateSingleBlockPiece(Vector2Int origin, Color color)
+        {
+            object piece = Activator.CreateInstance(PieceDefinitionType);
+            PieceDefinitionType.GetField("origin").SetValue(piece, origin);
+            PieceDefinitionType.GetField("color").SetValue(piece, color);
+            IList cells = CreateTypedList(PieceCellDefinitionType);
+            PieceDefinitionType.GetField("cells").SetValue(piece, cells);
+            cells.Add(Activator.CreateInstance(
+                PieceCellDefinitionType,
+                Vector2Int.zero,
+                Enum.ToObject(PieceCellType, 0)));
+            return piece;
         }
     }
 }

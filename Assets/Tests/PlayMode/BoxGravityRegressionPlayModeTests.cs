@@ -26,6 +26,14 @@ namespace GravityPuzzle.Tests.PlayMode
             "GravityPuzzle.BoxRevealDefinition, Assembly-CSharp");
         private static readonly Type BoundsType = Type.GetType(
             "GravityPuzzle.RevealAreaBounds, Assembly-CSharp");
+        private static readonly Type RevealAreaStateType = Type.GetType(
+            "GravityPuzzle.RevealAreaState, Assembly-CSharp");
+        private static readonly Type PieceDefinitionType = Type.GetType(
+            "GravityPuzzle.PieceDefinition, Assembly-CSharp");
+        private static readonly Type PieceCellDefinitionType = Type.GetType(
+            "GravityPuzzle.PieceCellDefinition, Assembly-CSharp");
+        private static readonly Type PieceCellType = Type.GetType(
+            "GravityPuzzle.PieceCellType, Assembly-CSharp");
 
         private object CreateCoordinate(int x, int y)
         {
@@ -72,6 +80,27 @@ namespace GravityPuzzle.Tests.PlayMode
 
             boxList.Add(box);
             return level;
+        }
+
+        private object CreateBlockPieceDefinition(int originX, int originY, int width, int height)
+        {
+            object definition = Activator.CreateInstance(PieceDefinitionType);
+            PieceDefinitionType.GetField("origin").SetValue(definition, new Vector2Int(originX, originY));
+            IList cells = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(PieceCellDefinitionType));
+            PieceDefinitionType.GetField("cells").SetValue(definition, cells);
+            object blockCellType = Enum.ToObject(PieceCellType, 0);
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                    cells.Add(Activator.CreateInstance(PieceCellDefinitionType, new Vector2Int(x, y), blockCellType));
+            }
+
+            return definition;
+        }
+
+        private static void AddToPrivateDictionary(object dictionary, int key, object value)
+        {
+            dictionary.GetType().GetMethod("Add").Invoke(dictionary, new[] { (object)key, value });
         }
 
         [Test]
@@ -193,6 +222,89 @@ namespace GravityPuzzle.Tests.PlayMode
                 bool moved = (bool)tryGetFallTarget.Invoke(grid, parameters);
 
                 Assert.That(moved, Is.False, "A piece covered by a locked box must not plan any gravity move.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(boardGo);
+                UnityEngine.Object.DestroyImmediate(level);
+            }
+        }
+
+        [Test]
+        public void PartialBoxContent_RequiresFullExposure_StaysStable_AndCannotReenter()
+        {
+            GameObject boardGo = new GameObject("BoardGo");
+            ScriptableObject level = (ScriptableObject)CreateLevelWithBox(2, 2, 2, 2, 2);
+            try
+            {
+                Assert.That(RevealAreaStateType, Is.Not.Null);
+                Assert.That(PieceDefinitionType, Is.Not.Null);
+                object bottomPiece = CreateBlockPieceDefinition(2, 2, 1, 1);
+                object twoRowPiece = CreateBlockPieceDefinition(2, 2, 1, 2);
+                object boxDefinition = ((IList)LevelType.GetField("boxes").GetValue(level))[0];
+                IList hiddenPieces = (IList)BoxDefinitionType.GetField("hiddenPieces").GetValue(boxDefinition);
+                hiddenPieces.Add(bottomPiece);
+
+                Component board = boardGo.AddComponent(BoardType);
+                object coordinator = Activator.CreateInstance(CoordinatorType);
+                CoordinatorType.GetMethod("Initialize").Invoke(coordinator, new object[] { board, level });
+
+                IList runtimes = (IList)CoordinatorType.GetField("boxes", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .GetValue(coordinator);
+                object runtimeBox = runtimes[0];
+                Type runtimeBoxType = runtimeBox.GetType();
+                runtimeBoxType.GetField("State").SetValue(
+                    runtimeBox,
+                    Enum.Parse(RevealAreaStateType, "PartiallyRevealed"));
+                runtimeBoxType.GetField("Exposure").SetValue(runtimeBox, .5f);
+
+                MethodInfo fullyExposed = CoordinatorType.GetMethod(
+                    "IsDefinitionFullyExposed",
+                    BindingFlags.Static | BindingFlags.NonPublic);
+                Assert.That((bool)fullyExposed.Invoke(null, new[] { twoRowPiece, runtimeBox, (object).5f }), Is.False,
+                    "A combined definition must wait until its highest cell is exposed.");
+                Assert.That((bool)fullyExposed.Invoke(null, new[] { twoRowPiece, runtimeBox, (object)1f }), Is.True);
+
+                IList contents = (IList)runtimeBoxType.GetField("Contents").GetValue(runtimeBox);
+                object content = contents[0];
+                Type contentType = content.GetType();
+                contentType.GetField("IsActivated").SetValue(content, true);
+                contentType.GetField("RuntimePieceId").SetValue(content, 77);
+
+                AddToPrivateDictionary(
+                    CoordinatorType.GetField("activatedBoxContentByPieceId", BindingFlags.Instance | BindingFlags.NonPublic)
+                        .GetValue(coordinator),
+                    77,
+                    content);
+                AddToPrivateDictionary(
+                    CoordinatorType.GetField("activatedBoxByPieceId", BindingFlags.Instance | BindingFlags.NonPublic)
+                        .GetValue(coordinator),
+                    77,
+                    runtimeBox);
+
+                object model = CreatePieceModel(77, 2, 2, 1, 1);
+                Assert.That((bool)CoordinatorType.GetMethod("CanBeginInteraction").Invoke(coordinator, new[] { model }), Is.True);
+                Assert.That((bool)CoordinatorType.GetMethod("CanParticipateInGravity").Invoke(coordinator, new[] { model }), Is.False,
+                    "An exposed piece must remain stable until the player moves it out of the Box.");
+                Assert.That((bool)CoordinatorType.GetMethod("CanUseTargetedBooster").Invoke(coordinator, new[] { model }), Is.False);
+                Assert.That((bool)CoordinatorType.GetMethod("CanMovePiece").Invoke(
+                    coordinator,
+                    new[] { model, CreateCoordinate(2, 3) }), Is.False,
+                    "The hidden row remains inaccessible during a partial reveal.");
+                Assert.That((bool)CoordinatorType.GetMethod("CanMovePiece").Invoke(
+                    coordinator,
+                    new[] { model, CreateCoordinate(0, 2) }), Is.True,
+                    "The exposed root may be dragged out through the existing grid path.");
+
+                contentType.GetField("HasLeftBox").SetValue(content, true);
+                Assert.That((bool)CoordinatorType.GetMethod("CanParticipateInGravity").Invoke(coordinator, new[] { model }), Is.True);
+                Assert.That((bool)CoordinatorType.GetMethod("CanMovePiece").Invoke(
+                    coordinator,
+                    new[] { model, CreateCoordinate(2, 2) }), Is.False,
+                    "A piece that left a partial Box must not re-enter it.");
+
+                runtimeBoxType.GetField("State").SetValue(runtimeBox, Enum.Parse(RevealAreaStateType, "Unlocked"));
+                Assert.That((bool)CoordinatorType.GetMethod("CanUseTargetedBooster").Invoke(coordinator, new[] { model }), Is.True);
             }
             finally
             {

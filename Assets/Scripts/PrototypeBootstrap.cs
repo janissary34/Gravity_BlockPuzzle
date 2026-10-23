@@ -780,6 +780,22 @@ namespace GravityPuzzle
             return revealAreaCoordinator == null || revealAreaCoordinator.CanMovePiece(piece, targetAnchor);
         }
 
+        public bool CanPieceParticipateInGravity(PieceModel piece)
+        {
+            return revealAreaCoordinator == null || revealAreaCoordinator.CanParticipateInGravity(piece);
+        }
+
+        public bool CanUseTargetedBooster(PuzzlePiece piece)
+        {
+            return piece != null && TryGetPieceModel(piece, out PieceModel model) &&
+                   (revealAreaCoordinator == null || revealAreaCoordinator.CanUseTargetedBooster(model));
+        }
+
+        public bool TryCancelPartialBoxContentDrag(PuzzlePiece piece)
+        {
+            return revealAreaCoordinator != null && revealAreaCoordinator.TryCancelPartialBoxContentDrag(piece);
+        }
+
         public void WakeUpGravity()
         {
             PuzzleDragController.WakeUpGravity();
@@ -1071,6 +1087,7 @@ namespace GravityPuzzle
                     return false;
             }
 
+            revealAreaCoordinator?.NotifyPieceDragStarted(piece);
             return true;
         }
 
@@ -1501,33 +1518,16 @@ namespace GravityPuzzle
             if (BoardSnapshot == null || definitions == null)
                 return false;
 
-            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
-            if (level == null)
-                return false;
-
             List<PuzzlePiece> createdPieces = new List<PuzzlePiece>(definitions.Count);
             List<PieceModel> createdModels = new List<PieceModel>(definitions.Count);
             for (int index = 0; index < definitions.Count; index++)
             {
                 PieceDefinition definition = definitions[index];
-                if (definition == null)
+                if (!HasBlockCells(definition))
                     continue;
 
-                int pieceId = BoardSnapshot.NextPieceId;
-                PieceModel authoredModel = LevelBoardSnapshotBuilder.CreatePieceModel(pieceId, definition);
-                PuzzlePiece piece = RuntimePieceFactory.Create(level, definition, pieceId);
-                if (piece == null)
-                    continue;
-
-                Physics2D.SyncTransforms();
-                if (!piece.TryCreateGridModel(level, pieceId, out PieceModel model) ||
-                    !HasMatchingGeometry(authoredModel, model) ||
-                    !BoardSnapshot.Grid.TryPlace(model) ||
-                    !BoardSnapshot.TryRegisterPlacedPiece(model))
+                if (!TryCreateAndRegisterRevealPiece(definition, out PuzzlePiece piece, out PieceModel model))
                 {
-                    if (model != null)
-                        BoardSnapshot.Grid.ClearPiece(model);
-                    piece.ReleaseInstance();
                     RollbackRevealActivation(createdPieces, createdModels);
                     Debug.LogWarning(
                         $"[Reveal] Could not activate hidden piece '{definition.name}'.",
@@ -1544,6 +1544,74 @@ namespace GravityPuzzle
 
             BoardOccupancyChanged?.Invoke();
             return true;
+        }
+
+        /// <summary>
+        /// Activates one exposed Box definition through the same pooled-root
+        /// and authoritative-grid transaction used by final reveal activation.
+        /// </summary>
+        public bool TryActivateRevealPiece(PieceDefinition definition, out PuzzlePiece piece)
+        {
+            piece = null;
+            if (!HasBlockCells(definition) ||
+                !TryCreateAndRegisterRevealPiece(definition, out PuzzlePiece createdPiece, out PieceModel model))
+                return false;
+
+            pieceJointGraph.RegisterMember(model.Id);
+            piece = createdPiece;
+            BoardOccupancyChanged?.Invoke();
+            return true;
+        }
+
+        private bool TryCreateAndRegisterRevealPiece(
+            PieceDefinition definition,
+            out PuzzlePiece piece,
+            out PieceModel model)
+        {
+            piece = null;
+            model = null;
+            if (BoardSnapshot == null || definition == null)
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null)
+                return false;
+
+            int pieceId = BoardSnapshot.NextPieceId;
+            PieceModel authoredModel = LevelBoardSnapshotBuilder.CreatePieceModel(pieceId, definition);
+            piece = RuntimePieceFactory.Create(level, definition, pieceId);
+            if (piece == null)
+                return false;
+
+            Physics2D.SyncTransforms();
+            if (piece.TryCreateGridModel(level, pieceId, out model) &&
+                HasMatchingGeometry(authoredModel, model) &&
+                BoardSnapshot.Grid.TryPlace(model) &&
+                BoardSnapshot.TryRegisterPlacedPiece(model))
+            {
+                return true;
+            }
+
+            if (model != null)
+                BoardSnapshot.Grid.ClearPiece(model);
+            piece.ReleaseInstance();
+            piece = null;
+            model = null;
+            return false;
+        }
+
+        private static bool HasBlockCells(PieceDefinition definition)
+        {
+            if (definition == null || definition.cells == null)
+                return false;
+
+            for (int index = 0; index < definition.cells.Count; index++)
+            {
+                if (definition.cells[index].type == PieceCellType.Block)
+                    return true;
+            }
+
+            return false;
         }
 
         private void RollbackRevealActivation(

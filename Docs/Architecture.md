@@ -8,6 +8,8 @@
 * Runtime piece roots come from the typed `BlockPiece` pool and must fully reset presentation, physics, subscriptions, and temporary state when returned.
 * `GravityLevelDefinition` and the associated ScriptableObject configs own authored level and tuning data. Mutable session state belongs to runtime objects.
 
+Partially opened Boxes use the explicit content-activation and presentation-lease contract in `Decisions/ADR-003-partial-box-content-activation.md`. The reveal coordinator owns content activation records; a Box view may report only monotonic shutter exposure. A renderer, collider, or transform never decides whether a content piece exists, may move, or participates in gravity.
+
 See `Decisions/ADR-001-presentation-is-not-gameplay-authority.md` for the reasoning behind the presentation boundary.
 
 ## Shredder admission and temporary physics

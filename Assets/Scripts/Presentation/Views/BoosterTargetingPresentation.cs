@@ -73,6 +73,8 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private string rocketInstruction = "Select a piece to eliminate";
         [SerializeField] private string hammerTitle = "Hammer";
         [SerializeField] private string hammerInstruction = "Select a block to break";
+        [SerializeField] private string freezeTimerTitle = "Freeze Timer";
+        [SerializeField] private string freezeTimerInstruction = "Tap the Freeze Timer booster";
 
         private readonly Stack<HammerTargetCellOutlineView> availableHammerOutlines =
             new Stack<HammerTargetCellOutlineView>();
@@ -322,14 +324,7 @@ namespace GravityPuzzle.Presentation.Views
             SetVisible(true);
 
             bool isRocket = mode == Mode.Rocket;
-            if (titleText != null)
-                titleText.text = isRocket ? rocketTitle : hammerTitle;
-            if (instructionText != null)
-                instructionText.text = isRocket ? rocketInstruction : hammerInstruction;
-            if (rocketIcon != null)
-                rocketIcon.gameObject.SetActive(isRocket);
-            if (hammerIcon != null)
-                hammerIcon.gameObject.SetActive(!isRocket);
+            ConfigureTargetingHeader(isRocket ? BoosterRewardType.Rocket : BoosterRewardType.Hammer);
 
             SetSelectionGlow(isRocket);
             PlaySelectionSparkles(isRocket);
@@ -338,6 +333,11 @@ namespace GravityPuzzle.Presentation.Views
                 ApplyRocketPieceHighlights();
             else
                 ShowHammerCellOutlines();
+
+            // Hammer outline setup clears the previous Rocket/Tutorial state,
+            // so acquire the shared foreground lease only after either mode's
+            // mode-specific feedback has been rebuilt.
+            SetBoardPiecesInForeground(true);
         }
 
         private void ShowFirstUseBoosterFocusInternal(BoosterRewardType boosterType)
@@ -350,8 +350,14 @@ namespace GravityPuzzle.Presentation.Views
             HideInactiveBoosterButtons(boosterType);
             if (boardDimBackdrop != null)
                 boardDimBackdrop.SetActive(true);
+
+            // The feature panel is part of the tutorial contract: leaving it
+            // inactive while its dark backdrop is visible strands the player
+            // without the booster prompt. Target validity remains owned by the
+            // individual booster, not by this presentation.
             if (targetingUi != null)
-                targetingUi.SetActive(false);
+                targetingUi.SetActive(true);
+            ConfigureTargetingHeader(boosterType);
 
             CanvasGroup activeGroup = boosterType == BoosterRewardType.Rocket
                 ? rocketBoosterButtonGroup
@@ -368,6 +374,31 @@ namespace GravityPuzzle.Presentation.Views
 
             SetSelectionGlow(boosterType);
             PlaySelectionSparkles(boosterType);
+        }
+
+        private void ConfigureTargetingHeader(BoosterRewardType boosterType)
+        {
+            bool isRocket = boosterType == BoosterRewardType.Rocket;
+            bool isHammer = boosterType == BoosterRewardType.Hammer;
+
+            if (titleText != null)
+            {
+                titleText.text = isRocket
+                    ? rocketTitle
+                    : isHammer ? hammerTitle : freezeTimerTitle;
+            }
+
+            if (instructionText != null)
+            {
+                instructionText.text = isRocket
+                    ? rocketInstruction
+                    : isHammer ? hammerInstruction : freezeTimerInstruction;
+            }
+
+            if (rocketIcon != null)
+                rocketIcon.gameObject.SetActive(isRocket);
+            if (hammerIcon != null)
+                hammerIcon.gameObject.SetActive(isHammer);
         }
 
         private void ShowFirstUseBoardTargetInternal(
@@ -917,6 +948,17 @@ namespace GravityPuzzle.Presentation.Views
             }
         }
 
+        private void SetBoardPiecesInForeground(bool isForeground)
+        {
+            var pieces = PuzzlePiece.ActivePieces;
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                PuzzlePiece piece = pieces[index];
+                if (piece != null)
+                    piece.SetBoosterTargetingForeground(isForeground, tutorialDimSortingOrder + 2);
+            }
+        }
+
         private void PrewarmHammerOutlines()
         {
             if (hammerCellOutlinePrefab == null)
@@ -957,7 +999,9 @@ namespace GravityPuzzle.Presentation.Views
                 piece.CollectTargetableCells(targetableCellBuffer);
                 LineRenderer sourceOutline = piece.Outline;
                 Material material = sourceOutline != null ? sourceOutline.sharedMaterial : null;
-                int sortingOrder = sourceOutline != null ? sourceOutline.sortingOrder : 0;
+                int sortingOrder = Mathf.Max(
+                    tutorialDimSortingOrder + 2,
+                    sourceOutline != null ? sourceOutline.sortingOrder : 0);
                 for (int cellIndex = 0; cellIndex < targetableCellBuffer.Count; cellIndex++)
                 {
                     if (availableHammerOutlines.Count == 0)
@@ -1024,6 +1068,7 @@ namespace GravityPuzzle.Presentation.Views
                 {
                     piece.SetBoosterTargeted(false);
                     piece.SetTutorialTargeted(false);
+                    piece.SetBoosterTargetingForeground(false);
                 }
             }
         }

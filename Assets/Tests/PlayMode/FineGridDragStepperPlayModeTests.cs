@@ -143,6 +143,86 @@ namespace GravityPuzzle.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator RealController_NormalDragStopsSmoothlyAtClosedBoxAndRecoversAwayFromIt()
+        {
+            DragRuntimeFixture fixture = new DragRuntimeFixture();
+            try
+            {
+                fixture.Create();
+                yield return null;
+                fixture.ConfigureBoxAdjacentToDraggedPiece(false, false, false);
+                fixture.BeginDrag(false);
+
+                for (int index = 0; index < 5; index++)
+                {
+                    fixture.MoveSelectedByWorld(.1f, 0f);
+                    Assert.That(fixture.AnchorX(false), Is.EqualTo(fixture.InitialAnchorX(false)));
+                    Assert.That(fixture.BodyMatchesCommittedPivot(false), Is.True,
+                        "A Box rejection must not leave a fractional visual offset past its virtual boundary.");
+                }
+
+                fixture.MoveSelectedByWorld(-.1f, 0f);
+                Assert.That(fixture.BodyDelta(8).x, Is.EqualTo(-.1f).Within(.0001f),
+                    "Moving away from the Box must immediately restore continuous drag.");
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RealController_NormalDragStopsSmoothlyAtVerticalAndPartialBoxBoundaries()
+        {
+            DragRuntimeFixture fixture = new DragRuntimeFixture();
+            try
+            {
+                fixture.Create();
+                yield return null;
+                fixture.ConfigureBoxAdjacentToDraggedPiece(false, true, false);
+                fixture.BeginDrag(false);
+                fixture.MoveSelectedByWorld(0f, .1f);
+                Assert.That(fixture.AnchorY(false), Is.EqualTo(fixture.InitialAnchorY(false)));
+                Assert.That(fixture.BodyMatchesCommittedPivot(false), Is.True);
+
+                fixture.Dispose();
+                fixture = new DragRuntimeFixture();
+                fixture.Create();
+                yield return null;
+                fixture.ConfigureBoxAdjacentToDraggedPiece(false, false, true);
+                fixture.BeginDrag(false);
+                fixture.MoveSelectedByWorld(.1f, 0f);
+                Assert.That(fixture.BodyMatchesCommittedPivot(false), Is.True,
+                    "External pieces must see a partial Box as the same solid boundary as a closed Box.");
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RealController_CombinedDragUsesTheSameVirtualBoxBoundary()
+        {
+            DragRuntimeFixture fixture = new DragRuntimeFixture();
+            try
+            {
+                fixture.Create();
+                yield return null;
+                fixture.ConfigureBoxAdjacentToDraggedPiece(true, false, false);
+                fixture.BeginDrag(true);
+                fixture.MoveSelectedByWorld(.1f, 0f);
+
+                Assert.That(fixture.CombinedDeltaIsPreserved(), Is.True);
+                Assert.That(fixture.BodyMatchesCommittedPivot(true), Is.True);
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
         public IEnumerator PointerWithOneFineCellCrossOffset_SlidesAlongNarrowChannel()
         {
             // A one-cell-high corridor: the pointer is one fine cell above
@@ -255,6 +335,14 @@ namespace GravityPuzzle.Tests.PlayMode
             private static readonly Type SnapshotBuilderType = Type.GetType("GravityPuzzle.Core.Grid.LevelBoardSnapshotBuilder, Assembly-CSharp");
             private static readonly Type PieceModelType = Type.GetType("GravityPuzzle.Gameplay.Pieces.PieceModel, Assembly-CSharp");
             private static readonly Type RuntimeType = Type.GetType("GravityPuzzle.GravityLevelRuntime, Assembly-CSharp");
+            private static readonly Type CoordinatorType = Type.GetType(
+                "GravityPuzzle.Gameplay.Reveal.RevealAreaCoordinator, Assembly-CSharp");
+            private static readonly Type BoxDefinitionType = Type.GetType(
+                "GravityPuzzle.BoxRevealDefinition, Assembly-CSharp");
+            private static readonly Type BoundsType = Type.GetType(
+                "GravityPuzzle.RevealAreaBounds, Assembly-CSharp");
+            private static readonly Type RevealAreaStateType = Type.GetType(
+                "GravityPuzzle.RevealAreaState, Assembly-CSharp");
 
             private readonly List<GameObject> objects = new List<GameObject>();
             private object level;
@@ -265,6 +353,7 @@ namespace GravityPuzzle.Tests.PlayMode
             private readonly Dictionary<int, Component> pieces = new Dictionary<int, Component>();
             private readonly Dictionary<int, Vector2> initialPositions = new Dictionary<int, Vector2>();
             private readonly Dictionary<int, Vector2Int> initialAnchors = new Dictionary<int, Vector2Int>();
+            private Vector2 dragPointer;
 
             public void Create()
             {
@@ -275,8 +364,9 @@ namespace GravityPuzzle.Tests.PlayMode
                 Assert.That(SnapshotType, Is.Not.Null);
                 Assert.That(PieceModelType, Is.Not.Null);
 
-                level = AssetDatabase.LoadAssetAtPath<ScriptableObject>(CombinedLevelPath);
-                Assert.That(level, Is.Not.Null, "The regression fixture must use the authored combined-block level.");
+                ScriptableObject sourceLevel = AssetDatabase.LoadAssetAtPath<ScriptableObject>(CombinedLevelPath);
+                Assert.That(sourceLevel, Is.Not.Null, "The regression fixture must use the authored combined-block level.");
+                level = UnityEngine.Object.Instantiate(sourceLevel);
                 ConfigureRuntimeLevel(level);
 
                 int fineColumns = (int)level.GetType().GetProperty("FineColumns").GetValue(level);
@@ -315,13 +405,76 @@ namespace GravityPuzzle.Tests.PlayMode
 
             public void DragByWorld(float deltaX, float deltaY, bool combined)
             {
+                BeginDrag(combined);
+                MoveSelectedByWorld(deltaX, deltaY);
+            }
+
+            public void BeginDrag(bool combined)
+            {
                 int id = combined ? 5 : 8;
                 Component piece = pieces[id];
-                Rigidbody2D body = piece.GetComponent<Rigidbody2D>();
-                Vector2 pointer = body.position;
-                Invoke(controller, "TrySelectPiece", pointer, .01f);
-                Invoke(controller, "UpdateDragTarget", pointer + new Vector2(deltaX, deltaY));
-                Invoke(controller, "TryMoveSelectedPieceOnGrid", piece);
+                dragPointer = piece.GetComponent<Rigidbody2D>().position;
+                Invoke(controller, "TrySelectPiece", dragPointer, .01f);
+            }
+
+            public void MoveSelectedByWorld(float deltaX, float deltaY)
+            {
+                dragPointer += new Vector2(deltaX, deltaY);
+                Invoke(controller, "UpdateDragTarget", dragPointer);
+                Invoke(controller, "TryMoveSelectedPieceOnGrid", SelectedPiece());
+            }
+
+            public void ConfigureBoxAdjacentToDraggedPiece(bool combined, bool vertical, bool partial)
+            {
+                Assert.That(CoordinatorType, Is.Not.Null);
+                Assert.That(BoxDefinitionType, Is.Not.Null);
+                Assert.That(BoundsType, Is.Not.Null);
+                Assert.That(RevealAreaStateType, Is.Not.Null);
+
+                int[] ids = combined ? new[] { 5, 6 } : new[] { 8 };
+                int minX = int.MaxValue;
+                int minY = int.MaxValue;
+                int maxX = int.MinValue;
+                int maxY = int.MinValue;
+                for (int idIndex = 0; idIndex < ids.Length; idIndex++)
+                {
+                    object model = models[ids[idIndex]];
+                    Vector2Int anchor = Anchor(ids[idIndex]);
+                    foreach (object localCell in (IEnumerable)PieceModelType.GetProperty("LocalCells").GetValue(model))
+                    {
+                        Vector2Int local = ToVector2Int(localCell);
+                        minX = Mathf.Min(minX, anchor.x + local.x);
+                        minY = Mathf.Min(minY, anchor.y + local.y);
+                        maxX = Mathf.Max(maxX, anchor.x + local.x);
+                        maxY = Mathf.Max(maxY, anchor.y + local.y);
+                    }
+                }
+
+                object box = Activator.CreateInstance(BoxDefinitionType);
+                BoxDefinitionType.GetField("areaId").SetValue(box, Guid.NewGuid().ToString());
+                BoxDefinitionType.GetField("targetShredCount").SetValue(box, int.MaxValue);
+                object bounds = BoxDefinitionType.GetField("bounds").GetValue(box);
+                BoundsType.GetField("origin").SetValue(
+                    bounds,
+                    vertical ? new Vector2Int(minX, maxY + 1) : new Vector2Int(maxX + 1, minY));
+                BoundsType.GetField("size").SetValue(
+                    bounds,
+                    vertical ? new Vector2Int(maxX - minX + 1, 1) : new Vector2Int(1, maxY - minY + 1));
+                BoxDefinitionType.GetField("bounds").SetValue(box, bounds);
+                ((IList)level.GetType().GetField("boxes").GetValue(level)).Add(box);
+
+                object coordinator = Activator.CreateInstance(CoordinatorType);
+                Invoke(coordinator, "Initialize", board, level);
+                Invoke(board, "ConfigureRevealAreas", coordinator);
+                if (!partial)
+                    return;
+
+                IList runtimes = (IList)CoordinatorType.GetField("boxes", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .GetValue(coordinator);
+                object runtimeBox = runtimes[runtimes.Count - 1];
+                runtimeBox.GetType().GetField("State").SetValue(
+                    runtimeBox,
+                    Enum.Parse(RevealAreaStateType, "PartiallyRevealed"));
             }
 
             public void ReleaseCurrentDrag()
@@ -376,6 +529,9 @@ namespace GravityPuzzle.Tests.PlayMode
                 }
                 objects.Clear();
                 ResetRuntimeLevel();
+                if (level is UnityEngine.Object levelObject)
+                    UnityEngine.Object.DestroyImmediate(levelObject);
+                level = null;
             }
 
             private void AddModel(IList runtimeModels, object authoredSnapshot, int id, Vector2Int anchor)
@@ -424,6 +580,14 @@ namespace GravityPuzzle.Tests.PlayMode
             }
 
             private Vector2Int Anchor(int id) => ToVector2Int(PieceModelType.GetProperty("Anchor").GetValue(models[id]));
+
+            private Component SelectedPiece()
+            {
+                FieldInfo selectedPiece = ControllerType.GetField(
+                    "selectedPiece",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                return selectedPiece != null ? selectedPiece.GetValue(controller) as Component : null;
+            }
 
             private Vector2Int FirstLocalCell(int id)
             {

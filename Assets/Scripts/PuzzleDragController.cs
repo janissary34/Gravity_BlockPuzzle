@@ -286,7 +286,11 @@ namespace GravityPuzzle
 
         private void ClearInputSelection()
         {
-            PrototypeBoard.Active?.CollectJointGroupPieces(selectedPiece, selectedJointGroupPieces);
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (selectedPiece != null && board != null && board.TryCancelPartialBoxContentDrag(selectedPiece))
+                SnapPieceToCommittedGridPosition(selectedPiece);
+
+            board?.CollectJointGroupPieces(selectedPiece, selectedJointGroupPieces);
             for (int index = 0; index < selectedJointGroupPieces.Count; index++)
                 selectedJointGroupPieces[index]?.SetSelected(false);
 
@@ -692,7 +696,8 @@ namespace GravityPuzzle
                 if (piece == null || piece.IsShredderInteractionLocked ||
                     piece.GridFallView == null || !piece.GridFallView.CanPlay ||
                     !board.TryGetPieceModel(piece, out PieceModel model) ||
-                    model.State != PieceState.Placed)
+                    model.State != PieceState.Placed ||
+                    !board.CanPieceParticipateInGravity(model))
                 {
                     return false;
                 }
@@ -706,9 +711,11 @@ namespace GravityPuzzle
         private static bool IsEligibleForGridGravity(PieceModel model)
         {
             PuzzlePiece piece = FindActivePiece(model.Id);
+            PrototypeBoard board = PrototypeBoard.Active;
             // IsFrozen intentionally is not a gravity gate; the grid remains the
             // sole authority for whether this piece has support below it.
             return piece != null &&
+                   board != null && board.CanPieceParticipateInGravity(model) &&
                    !piece.IsShredderInteractionLocked &&
                    model.State == PieceState.Placed &&
                    (Instance == null ||
@@ -901,7 +908,12 @@ namespace GravityPuzzle
             Vector2 selectedGridPosition = GravityLevelGridCoordinates.FineCellToWorld(level, selectedPivot);
             Vector2 selectedPresentationOffset = isCombined
                 ? GetContinuousGroupPresentationOffset(board, piece, level, fineDragRemainder)
-                : GetContinuousDragPresentationOffset(snapshot.Grid, model, level, fineDragRemainder);
+                : GetContinuousDragPresentationOffset(
+                    board,
+                    snapshot.Grid,
+                    model,
+                    level,
+                    fineDragRemainder);
             Vector2 selectedPresentationPosition = selectedGridPosition + selectedPresentationOffset;
             piece.Body.position = selectedPresentationPosition;
 
@@ -971,6 +983,7 @@ namespace GravityPuzzle
         }
 
         private static Vector2 GetContinuousDragPresentationOffset(
+            PrototypeBoard board,
             GravityBoardGrid grid,
             PieceModel model,
             GravityLevelDefinition level,
@@ -978,12 +991,18 @@ namespace GravityPuzzle
         {
             int horizontalStep = remainder.x > 0f ? 1 : remainder.x < 0f ? -1 : 0;
             int verticalStep = remainder.y > 0f ? 1 : remainder.y < 0f ? -1 : 0;
+            // A Box is a reveal-owned virtual obstacle, so it has no blocked
+            // cells in GravityBoardGrid. Presentation must use the same board
+            // predicate as the committed drag step or it can ease past a Box
+            // and snap back when the next fine-grid commit is rejected.
             bool horizontalLegal = horizontalStep != 0 &&
+                board.CanMovePiece(model, model.Anchor.Offset(new GridCoordinate(horizontalStep, 0))) &&
                 grid.CheckPlacementIgnoringPiece(
                     model,
                     model.Anchor.Offset(new GridCoordinate(horizontalStep, 0)),
                     model.Id).IsSuccess;
             bool verticalLegal = verticalStep != 0 &&
+                board.CanMovePiece(model, model.Anchor.Offset(new GridCoordinate(0, verticalStep))) &&
                 grid.CheckPlacementIgnoringPiece(
                     model,
                     model.Anchor.Offset(new GridCoordinate(0, verticalStep)),
@@ -993,7 +1012,8 @@ namespace GravityPuzzle
             if (horizontalLegal && verticalLegal && horizontalStep != 0 && verticalStep != 0)
             {
                 GridCoordinate diagonal = new GridCoordinate(horizontalStep, verticalStep);
-                if (grid.CheckPlacementIgnoringPiece(
+                if (board.CanMovePiece(model, model.Anchor.Offset(diagonal)) &&
+                    grid.CheckPlacementIgnoringPiece(
                         model,
                         model.Anchor.Offset(diagonal),
                         model.Id).IsSuccess)

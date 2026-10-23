@@ -1,12 +1,59 @@
 using System.Collections.Generic;
 using System.Reflection;
 using GravityPuzzle;
+using GravityPuzzle.Presentation.Views;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
 
 public sealed class BombPresentationTests
 {
+    [Test]
+    public void BoosterForeground_RendersAboveDimmerAndRestoresAuthoredSorting()
+    {
+        var root = new GameObject("Booster foreground test");
+        try
+        {
+            var piece = root.AddComponent<PuzzlePiece>();
+            var visual = new GameObject("Visual").AddComponent<SpriteRenderer>();
+            visual.transform.SetParent(root.transform);
+            visual.sortingOrder = 7;
+
+            piece.SetBoosterTargetingForeground(true, 102);
+            Assert.That(visual.sortingOrder, Is.EqualTo(101));
+
+            piece.SetBoosterTargetingForeground(false);
+            Assert.That(visual.sortingOrder, Is.EqualTo(7));
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void BoosterRewardContent_ReactivatesItsAuthoredVisualWhenShown()
+    {
+        GameObject contentObject = new GameObject("Reward Content");
+        GameObject visualObject = new GameObject("Rocket Visual");
+
+        try
+        {
+            visualObject.transform.SetParent(contentObject.transform, false);
+            visualObject.AddComponent<BoosterVisualView>();
+            BoosterRewardContentView content = contentObject.AddComponent<BoosterRewardContentView>();
+
+            visualObject.SetActive(false);
+            content.SetVisible(true);
+
+            Assert.That(visualObject.activeSelf, Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(contentObject);
+        }
+    }
+
     [Test]
     public void IceRefresh_ClearsIceWithoutClearingBombPresentation()
     {

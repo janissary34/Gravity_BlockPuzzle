@@ -7,6 +7,7 @@ namespace GravityPuzzle
     public enum RevealAreaState
     {
         Locked,
+        PartiallyRevealed,
         Unlocking,
         Unlocked
     }

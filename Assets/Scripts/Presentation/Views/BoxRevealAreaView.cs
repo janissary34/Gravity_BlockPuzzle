@@ -10,12 +10,13 @@ using UnityEngine;
 
 namespace GravityPuzzle.Presentation.Views
 {
-    public sealed class BoxRevealAreaView : MonoBehaviour, IRevealAreaPresentation, IBoxRevealPreviewPresentation, IPoolable, IPoolReturnReceiver<BoxRevealAreaView>
+    public sealed class BoxRevealAreaView : MonoBehaviour, IRevealAreaPresentation, IBoxRevealExposurePresentation, IPoolable, IPoolReturnReceiver<BoxRevealAreaView>
     {
         private const int BoxBurstTopCount = 6;
         private const int BoxBurstFragmentCount = 12;
         private const float BurstRiseFraction = .35f;
         private const float BurstFadeStartFraction = .45f;
+        private const int ContentDragSortingOrderOffset = 2;
         private static readonly int OpeningId = Shader.PropertyToID("_Opening");
         private static readonly int SpriteUvId = Shader.PropertyToID("_SpriteUV");
         private static readonly int FragmentUvId = Shader.PropertyToID("_FragmentUV");
@@ -51,14 +52,31 @@ namespace GravityPuzzle.Presentation.Views
         private Vector3[] fragmentClosedScales;
         private readonly List<RuntimePiecePreviewVisual> previewVisuals = new List<RuntimePiecePreviewVisual>();
         private readonly List<RuntimePiecePreviewVisual> previewPieceVisuals = new List<RuntimePiecePreviewVisual>();
+        private readonly List<PreviewContentRange> previewContentRanges = new List<PreviewContentRange>();
         private Vector3[] previewBasePositions;
         private Vector3[] previewBaseScales;
         private Quaternion[] previewBaseRotations;
         private Color[] previewBaseColors;
         private int activePreviewCount;
         private float previewShadowBurstAlpha = 1f;
+        private Action<float> exposureChanged;
 
         public string AreaId { get; private set; }
+        public int ContentDragSortingOrder => config != null
+            ? config.boxSortingOrder + ContentDragSortingOrderOffset
+            : 202;
+
+        private readonly struct PreviewContentRange
+        {
+            public PreviewContentRange(int firstSlot, int count)
+            {
+                FirstSlot = firstSlot;
+                Count = count;
+            }
+
+            public int FirstSlot { get; }
+            public int Count { get; }
+        }
 
         private void Awake()
         {
@@ -205,31 +223,36 @@ namespace GravityPuzzle.Presentation.Views
             for (int pieceIndex = 0; pieceIndex < definition.hiddenPieces.Count; pieceIndex++)
             {
                 PieceDefinition piece = definition.hiddenPieces[pieceIndex];
-                if (piece == null)
-                    continue;
-
+                int firstSlot = previewVisuals.Count;
                 previewPieceVisuals.Clear();
-                RuntimePieceFactory.AppendPreviewVisuals(level, piece, previewPieceVisuals);
-                Vector2 pieceOrigin = new Vector2(
-                    -level.boardColumns * .5f +
-                    (piece.origin.x + .5f) / Mathf.Max(1, level.subdivisions),
-                    -level.boardRows * .5f +
-                    (piece.origin.y + .5f) / Mathf.Max(1, level.subdivisions));
-                Vector2 localOrigin = pieceOrigin - (Vector2)transform.position;
-                for (int visualIndex = 0; visualIndex < previewPieceVisuals.Count; visualIndex++)
+                if (piece != null)
                 {
-                    RuntimePiecePreviewVisual visual = previewPieceVisuals[visualIndex];
-                    previewVisuals.Add(new RuntimePiecePreviewVisual(
-                        visual.Sprite,
-                        visual.Material,
-                        visual.Color,
-                        localOrigin + visual.LocalPosition,
-                        visual.LocalScale,
-                        visual.LocalRotation,
-                        visual.DrawMode,
-                        visual.Size,
-                        visual.FlipX));
+                    RuntimePieceFactory.AppendPreviewVisuals(level, piece, previewPieceVisuals);
+                    Vector2 pieceOrigin = new Vector2(
+                        -level.boardColumns * .5f +
+                        (piece.origin.x + .5f) / Mathf.Max(1, level.subdivisions),
+                        -level.boardRows * .5f +
+                        (piece.origin.y + .5f) / Mathf.Max(1, level.subdivisions));
+                    Vector2 localOrigin = pieceOrigin - (Vector2)transform.position;
+                    for (int visualIndex = 0; visualIndex < previewPieceVisuals.Count; visualIndex++)
+                    {
+                        RuntimePiecePreviewVisual visual = previewPieceVisuals[visualIndex];
+                        previewVisuals.Add(new RuntimePiecePreviewVisual(
+                            visual.Sprite,
+                            visual.Material,
+                            visual.Color,
+                            localOrigin + visual.LocalPosition,
+                            visual.LocalScale,
+                            visual.LocalRotation,
+                            visual.DrawMode,
+                            visual.Size,
+                            visual.FlipX));
+                    }
                 }
+
+                previewContentRanges.Add(new PreviewContentRange(
+                    firstSlot,
+                    previewVisuals.Count - firstSlot));
             }
 
             if (previewVisuals.Count > boxPreviewRenderers.Length)
@@ -290,6 +313,46 @@ namespace GravityPuzzle.Presentation.Views
             }
 
             ApplyPreviewDepth(authoredSize.y > 0f ? 1f - currentHeight / authoredSize.y : 0f);
+        }
+
+        public void SetBoxExposureChangedHandler(Action<float> handler)
+        {
+            exposureChanged = handler;
+        }
+
+        public bool CanPresentContent(int contentIndex)
+        {
+            if (contentIndex < 0 || contentIndex >= previewContentRanges.Count ||
+                boxPreviewRenderers == null)
+            {
+                return false;
+            }
+
+            PreviewContentRange range = previewContentRanges[contentIndex];
+            return range.Count > 0 && range.FirstSlot + range.Count <= boxPreviewRenderers.Length;
+        }
+
+        public void SetContentPreviewVisible(int contentIndex, bool visible)
+        {
+            if (!CanPresentContent(contentIndex))
+                return;
+
+            PreviewContentRange range = previewContentRanges[contentIndex];
+            for (int index = range.FirstSlot; index < range.FirstSlot + range.Count; index++)
+            {
+                SpriteRenderer renderer = boxPreviewRenderers[index];
+                if (renderer != null)
+                    renderer.gameObject.SetActive(visible);
+
+                if (boxPreviewShadowRenderers != null && index < boxPreviewShadowRenderers.Length &&
+                    boxPreviewShadowRenderers[index] != null)
+                {
+                    boxPreviewShadowRenderers[index].gameObject.SetActive(visible);
+                }
+            }
+
+            if (visible)
+                ApplyPreviewDepth(authoredSize.y > 0f ? 1f - currentHeight / authoredSize.y : 0f);
         }
 
         public void SetBoxRemaining(int remaining, int target)
@@ -448,6 +511,7 @@ namespace GravityPuzzle.Presentation.Views
                     Vector3.up * (opening * apertureHeight * .5f);
 
             ApplyPreviewDepth(opening);
+            exposureChanged?.Invoke(opening);
         }
 
         private void ApplyPreviewDepth(float opening)
@@ -699,6 +763,7 @@ namespace GravityPuzzle.Presentation.Views
             openingSequence = null;
             completion = null;
             ClearPreviewVisuals();
+            exposureChanged = null;
             ResetVisualState();
             AreaId = null;
             config = null;
@@ -786,6 +851,7 @@ namespace GravityPuzzle.Presentation.Views
             activePreviewCount = 0;
             previewVisuals.Clear();
             previewPieceVisuals.Clear();
+            previewContentRanges.Clear();
             if (boxPreviewRenderers != null)
             {
                 for (int index = 0; index < boxPreviewRenderers.Length; index++)

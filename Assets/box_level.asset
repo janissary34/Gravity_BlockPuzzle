@@ -532,8 +532,8 @@ MonoBehaviour:
       size: {x: 12, y: 8}
     editorLocked: 1
     hiddenPieces:
-    - pieceId: d9d71576f69f429aa7727ade913d7814
-      name: Single 13
+    - pieceId: cc96dafbc8804ebfa2777a1164facdb0
+      name: Double 13
       tutorialTargetId: 
       visualId: 
       paletteId: GreenLight
@@ -586,66 +586,44 @@ MonoBehaviour:
         type: 0
       - localCell: {x: 3, y: 3}
         type: 0
-    - pieceId: ea7c886e200344a6b758f94ef201d842
+      - localCell: {x: 4, y: 0}
+        type: 0
+      - localCell: {x: 5, y: 0}
+        type: 0
+      - localCell: {x: 6, y: 0}
+        type: 0
+      - localCell: {x: 7, y: 0}
+        type: 0
+      - localCell: {x: 4, y: 1}
+        type: 0
+      - localCell: {x: 5, y: 1}
+        type: 0
+      - localCell: {x: 6, y: 1}
+        type: 0
+      - localCell: {x: 7, y: 1}
+        type: 0
+      - localCell: {x: 4, y: 2}
+        type: 0
+      - localCell: {x: 5, y: 2}
+        type: 0
+      - localCell: {x: 6, y: 2}
+        type: 0
+      - localCell: {x: 7, y: 2}
+        type: 0
+      - localCell: {x: 4, y: 3}
+        type: 0
+      - localCell: {x: 5, y: 3}
+        type: 0
+      - localCell: {x: 6, y: 3}
+        type: 0
+      - localCell: {x: 7, y: 3}
+        type: 0
+    - pieceId: 2c64787d7a6f4f769a1878af4ce65f14
       name: Single 14
       tutorialTargetId: 
       visualId: 
       paletteId: BlueLight
       color: {r: 0.3, g: 1, b: 0.8739998, a: 1}
-      origin: {x: 4, y: 20}
-      quarterTurns: 0
-      specialBlockType: 0
-      frozenMoveCount: 0
-      iceCounterFontSize: 36
-      iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
-      iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
-      iceCounterOutlineWidth: 0.18
-      iceCounterOffset: {x: 0, y: 0}
-      bombTimerSeconds: 10
-      bombCounterFontSize: 36
-      bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
-      bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
-      bombCounterOutlineWidth: 0.18
-      bombCounterOffset: {x: 0, y: 0}
-      cells:
-      - localCell: {x: 0, y: 0}
-        type: 0
-      - localCell: {x: 1, y: 0}
-        type: 0
-      - localCell: {x: 2, y: 0}
-        type: 0
-      - localCell: {x: 3, y: 0}
-        type: 0
-      - localCell: {x: 0, y: 1}
-        type: 0
-      - localCell: {x: 1, y: 1}
-        type: 0
-      - localCell: {x: 2, y: 1}
-        type: 0
-      - localCell: {x: 3, y: 1}
-        type: 0
-      - localCell: {x: 0, y: 2}
-        type: 0
-      - localCell: {x: 1, y: 2}
-        type: 0
-      - localCell: {x: 2, y: 2}
-        type: 0
-      - localCell: {x: 3, y: 2}
-        type: 0
-      - localCell: {x: 0, y: 3}
-        type: 0
-      - localCell: {x: 1, y: 3}
-        type: 0
-      - localCell: {x: 2, y: 3}
-        type: 0
-      - localCell: {x: 3, y: 3}
-        type: 0
-    - pieceId: ceb40fa6ebcc4e6294c2c8b2abd7df65
-      name: Single 15
-      tutorialTargetId: 
-      visualId: 
-      paletteId: Purple
-      color: {r: 0.3, g: 0.32800016, b: 1, a: 1}
       origin: {x: 8, y: 20}
       quarterTurns: 0
       specialBlockType: 0

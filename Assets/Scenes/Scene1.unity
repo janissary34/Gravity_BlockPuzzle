@@ -6331,6 +6331,8 @@ MonoBehaviour:
   rocketInstruction: Select a piece to eliminate
   hammerTitle: Hammer
   hammerInstruction: Select a block to break
+  freezeTimerTitle: Freeze Timer
+  freezeTimerInstruction: Tap the Freeze Timer booster
 --- !u!1 &423769075
 GameObject:
   m_ObjectHideFlags: 0
@@ -9042,6 +9044,14 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2051187515963499954, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 350
+      objectReference: {fileID: 0}
+    - target: {fileID: 2051187515963499954, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 350
+      objectReference: {fileID: 0}
     - target: {fileID: 2305426653993942447, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -9062,6 +9072,14 @@ PrefabInstance:
       propertyPath: m_AnchorMin.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2944595220977757720, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 312
+      objectReference: {fileID: 0}
+    - target: {fileID: 2944595220977757720, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 468
+      objectReference: {fileID: 0}
     - target: {fileID: 3128882906529715425, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_Sprite
       value: 
@@ -9071,6 +9089,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3957696953994294684, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4016712018989953893, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
@@ -9085,6 +9107,10 @@ PrefabInstance:
     - target: {fileID: 5041031913454430662, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5250246861476129150, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5503337025959346117, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: closeButton
@@ -9296,7 +9322,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8309235720915810289, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8852425979387003172, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_SizeDelta.x
@@ -9313,6 +9339,14 @@ PrefabInstance:
     - target: {fileID: 8852425979387003172, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0.000017166
+      objectReference: {fileID: 0}
+    - target: {fileID: 8894204700919204805, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 312
+      objectReference: {fileID: 0}
+    - target: {fileID: 8894204700919204805, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 468
       objectReference: {fileID: 0}
     - target: {fileID: 8898197906398417599, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
@@ -9343,7 +9377,16 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3377347733666749527, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       insertIndex: 5
       addedObject: {fileID: 659935349}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5371451733770572201, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 8634187603197557653, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 5427027648375492105, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
   m_SourcePrefab: {fileID: 100100000, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
 --- !u!114 &1749646596 stripped
 MonoBehaviour:
@@ -10584,6 +10627,10 @@ PrefabInstance:
     - target: {fileID: 4921923021978202238, guid: 4851ee2845ced4b3f9aa4012fdd9dc4b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5635123099021385138, guid: 4851ee2845ced4b3f9aa4012fdd9dc4b, type: 3}
+      propertyPath: m_ColliderPaths.Array.size
+      value: 52
       objectReference: {fileID: 0}
     - target: {fileID: 7597851660546034200, guid: 4851ee2845ced4b3f9aa4012fdd9dc4b, type: 3}
       propertyPath: m_Color.b

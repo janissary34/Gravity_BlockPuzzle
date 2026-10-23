@@ -42,6 +42,18 @@ namespace GravityPuzzle.Gameplay.Reveal
     }
 
     /// <summary>
+    /// Explicit one-way shutter boundary. The view reports visual aperture
+    /// progress only; the coordinator remains the gameplay authority.
+    /// </summary>
+    public interface IBoxRevealExposurePresentation : IBoxRevealPreviewPresentation
+    {
+        int ContentDragSortingOrder { get; }
+        void SetBoxExposureChangedHandler(Action<float> handler);
+        bool CanPresentContent(int contentIndex);
+        void SetContentPreviewVisible(int contentIndex, bool visible);
+    }
+
+    /// <summary>
     /// Owns reveal-area state for one level. It consumes board commits rather
     /// than transforms, colliders, or Update polling.
     /// </summary>
@@ -53,6 +65,17 @@ namespace GravityPuzzle.Gameplay.Reveal
             public BoxRevealDefinition Definition;
             public RevealAreaState State = RevealAreaState.Locked;
             public readonly HashSet<int> CountedShredPieceIds = new HashSet<int>();
+            public readonly List<BoxContentRuntime> Contents = new List<BoxContentRuntime>();
+            public float Exposure;
+        }
+
+        private sealed class BoxContentRuntime
+        {
+            public int AuthoredIndex;
+            public PieceDefinition Definition;
+            public bool IsActivated;
+            public bool HasLeftBox;
+            public int RuntimePieceId = -1;
         }
 
         private sealed class ElevatorRuntime
@@ -69,6 +92,11 @@ namespace GravityPuzzle.Gameplay.Reveal
         private readonly List<ElevatorRuntime> elevators = new List<ElevatorRuntime>();
         private readonly Dictionary<string, IRevealAreaPresentation> presentations =
             new Dictionary<string, IRevealAreaPresentation>();
+        private readonly Dictionary<int, BoxContentRuntime> activatedBoxContentByPieceId =
+            new Dictionary<int, BoxContentRuntime>();
+        private readonly Dictionary<int, BoxRuntime> activatedBoxByPieceId =
+            new Dictionary<int, BoxRuntime>();
+        private readonly List<PieceDefinition> remainingBoxContent = new List<PieceDefinition>();
         private PrototypeBoard board;
         private GravityLevelDefinition level;
 
@@ -99,6 +127,8 @@ namespace GravityPuzzle.Gameplay.Reveal
             board = owner ?? throw new ArgumentNullException(nameof(owner));
             boxes.Clear();
             elevators.Clear();
+            activatedBoxContentByPieceId.Clear();
+            activatedBoxByPieceId.Clear();
 
             if (level == null)
                 return;
@@ -108,7 +138,11 @@ namespace GravityPuzzle.Gameplay.Reveal
             {
                 BoxRevealDefinition definition = level.boxes[index];
                 if (ValidateDefinition(definition, RevealAreaKind.Box, index))
-                    boxes.Add(new BoxRuntime { Definition = definition });
+                {
+                    BoxRuntime box = new BoxRuntime { Definition = definition };
+                    CreateBoxContentRecords(box);
+                    boxes.Add(box);
+                }
             }
 
             int elevatorCount = level.elevators != null ? level.elevators.Count : 0;
@@ -124,9 +158,7 @@ namespace GravityPuzzle.Gameplay.Reveal
                 BoxRuntime box = boxes[index];
                 if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
                 {
-                    if (presentation is IBoxRevealPreviewPresentation previewPresentation)
-                        previewPresentation.ConfigureBoxPreview(level, box.Definition);
-                    presentation.SetBoxRemaining(box.Definition.targetShredCount, box.Definition.targetShredCount);
+                    ConfigureBoxPresentation(box, presentation);
                 }
             }
 
@@ -152,9 +184,7 @@ namespace GravityPuzzle.Gameplay.Reveal
                 BoxRuntime box = boxes[index];
                 if (box.Definition.areaId == areaId)
                 {
-                    if (presentation is IBoxRevealPreviewPresentation previewPresentation && level != null)
-                        previewPresentation.ConfigureBoxPreview(level, box.Definition);
-                    presentation.SetBoxRemaining(box.Definition.targetShredCount - box.CountedShredPieceIds.Count, box.Definition.targetShredCount);
+                    ConfigureBoxPresentation(box, presentation);
                 }
             }
         }
@@ -165,7 +195,8 @@ namespace GravityPuzzle.Gameplay.Reveal
             for (int index = 0; index < boxes.Count; index++)
             {
                 BoxRuntime box = boxes[index];
-                if (box.State != RevealAreaState.Locked || !box.CountedShredPieceIds.Add(pieceId))
+                if ((box.State != RevealAreaState.Locked && box.State != RevealAreaState.PartiallyRevealed) ||
+                    !box.CountedShredPieceIds.Add(pieceId))
                     continue;
 
                 if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
@@ -190,6 +221,7 @@ namespace GravityPuzzle.Gameplay.Reveal
 
             GridBounds current = GridBounds.From(model, model.Anchor);
             GridBounds target = GridBounds.From(model, targetAnchor);
+            bool isBoxContent = TryGetActivatedBoxContent(model.Id, out BoxRuntime ownerBox, out BoxContentRuntime ownerContent);
             for (int index = 0; index < boxes.Count; index++)
             {
                 BoxRuntime box = boxes[index];
@@ -197,6 +229,20 @@ namespace GravityPuzzle.Gameplay.Reveal
                     continue;
 
                 GridBounds boxBounds = GridBounds.From(box.Definition.bounds);
+                if (isBoxContent && ReferenceEquals(box, ownerBox))
+                {
+                    if (ownerContent.HasLeftBox)
+                    {
+                        if (target.Intersects(boxBounds))
+                            return false;
+                        continue;
+                    }
+
+                    if (!CanContentTraversePartialBox(model, targetAnchor, box))
+                        return false;
+                    continue;
+                }
+
                 // Legacy-authored levels can already contain a normal piece in
                 // a Box footprint. Treat that piece as covered until the Box
                 // opens as well; otherwise it could be dragged out before its
@@ -226,6 +272,15 @@ namespace GravityPuzzle.Gameplay.Reveal
                 return false;
 
             GridBounds current = GridBounds.From(model, model.Anchor);
+            if (TryGetActivatedBoxContent(model.Id, out BoxRuntime ownerBox, out BoxContentRuntime ownerContent))
+            {
+                if (ownerBox.State == RevealAreaState.Unlocked || ownerContent.HasLeftBox)
+                    return true;
+
+                return ownerContent.IsActivated &&
+                       IsModelFullyWithinExposedBoxRows(model, model.Anchor, ownerBox);
+            }
+
             for (int index = 0; index < boxes.Count; index++)
             {
                 BoxRuntime box = boxes[index];
@@ -240,12 +295,75 @@ namespace GravityPuzzle.Gameplay.Reveal
         /// <summary>Called after every authoritative occupancy or lifecycle commit.</summary>
         public void NotifyBoardChanged()
         {
+            RefreshBoxContentPresentation();
             EvaluateElevators();
+        }
+
+        /// <summary>Partial Box content stays stable until it has left the Box.</summary>
+        public bool CanParticipateInGravity(PieceModel model)
+        {
+            if (model == null || !TryGetActivatedBoxContent(model.Id, out BoxRuntime box, out BoxContentRuntime content))
+                return true;
+
+            return box.State == RevealAreaState.Unlocked || content.HasLeftBox ||
+                   !GridBounds.From(model, model.Anchor).Intersects(GridBounds.From(box.Definition.bounds));
+        }
+
+        /// <summary>Partial Box roots are drag-only until their Box fully unlocks.</summary>
+        public bool CanUseTargetedBooster(PieceModel model)
+        {
+            return model == null ||
+                   !TryGetActivatedBoxContent(model.Id, out BoxRuntime box, out _) ||
+                   box.State == RevealAreaState.Unlocked;
+        }
+
+        public void NotifyPieceDragStarted(PuzzlePiece piece)
+        {
+            if (piece == null || board == null || !board.TryGetPieceModel(piece, out PieceModel model) ||
+                !TryGetActivatedBoxContent(model.Id, out BoxRuntime box, out BoxContentRuntime content) ||
+                box.State == RevealAreaState.Unlocked || content.HasLeftBox)
+            {
+                return;
+            }
+
+            if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation) &&
+                presentation is IBoxRevealExposurePresentation exposurePresentation)
+            {
+                exposurePresentation.SetContentPreviewVisible(content.AuthoredIndex, false);
+                piece.ShowBoxRevealDragVisual(exposurePresentation.ContentDragSortingOrder);
+            }
+        }
+
+        public bool TryCancelPartialBoxContentDrag(PuzzlePiece piece)
+        {
+            if (piece == null || board == null || !board.TryGetPieceModel(piece, out PieceModel model) ||
+                !TryGetActivatedBoxContent(model.Id, out BoxRuntime box, out BoxContentRuntime content) ||
+                box.State == RevealAreaState.Unlocked || content.HasLeftBox ||
+                !GridBounds.From(model, model.Anchor).Intersects(GridBounds.From(box.Definition.bounds)))
+            {
+                return false;
+            }
+
+            if (model.State == PieceState.Dragging && !board.TrySetPieceState(piece, PieceState.Placed))
+                return false;
+
+            // During final rupture the Box is no longer allowed to reclaim a
+            // dragged root's recessed presentation. The coordinator still
+            // completes the normal drag lifecycle and snap, but the real
+            // piece stays visible while the remaining Box animation finishes.
+            if (box.State == RevealAreaState.Unlocking)
+            {
+                ReleaseContentPresentation(box, content, piece);
+                return true;
+            }
+
+            RestoreInsideBoxPresentation(box, content, piece);
+            return true;
         }
 
         private void StartBoxUnlock(BoxRuntime box)
         {
-            if (box.State != RevealAreaState.Locked)
+            if (box.State != RevealAreaState.Locked && box.State != RevealAreaState.PartiallyRevealed)
                 return;
 
             box.State = RevealAreaState.Unlocking;
@@ -254,10 +372,25 @@ namespace GravityPuzzle.Gameplay.Reveal
 
         private void CompleteBoxUnlock(BoxRuntime box)
         {
-            if (box.State != RevealAreaState.Unlocking || !ActivateContent(box.Definition.hiddenPieces ?? EmptyPieces))
+            if (box.State != RevealAreaState.Unlocking)
                 return;
 
+            remainingBoxContent.Clear();
+            for (int index = 0; index < box.Contents.Count; index++)
+            {
+                BoxContentRuntime content = box.Contents[index];
+                if (!content.IsActivated && content.Definition != null)
+                    remainingBoxContent.Add(content.Definition);
+            }
+
+            if (remainingBoxContent.Count > 0 && !ActivateContent(remainingBoxContent))
+                return;
+
+            for (int index = 0; index < box.Contents.Count; index++)
+                box.Contents[index].IsActivated = true;
+
             box.State = RevealAreaState.Unlocked;
+            ReleaseBoxContentPresentation(box);
             AreaUnlocked?.Invoke(new RevealAreaEvent(box.Definition.areaId, RevealAreaKind.Box));
             EvaluateElevators();
             board?.WakeUpGravity();
@@ -316,6 +449,225 @@ namespace GravityPuzzle.Gameplay.Reveal
             return board != null && board.TryActivateRevealPieces(pieces);
         }
 
+        private void ConfigureBoxPresentation(BoxRuntime box, IRevealAreaPresentation presentation)
+        {
+            if (presentation is IBoxRevealPreviewPresentation previewPresentation && level != null)
+                previewPresentation.ConfigureBoxPreview(level, box.Definition);
+
+            if (presentation is IBoxRevealExposurePresentation exposurePresentation)
+                exposurePresentation.SetBoxExposureChangedHandler(opening => HandleBoxExposure(box, opening));
+
+            presentation.SetBoxRemaining(
+                box.Definition.targetShredCount - box.CountedShredPieceIds.Count,
+                box.Definition.targetShredCount);
+        }
+
+        private void CreateBoxContentRecords(BoxRuntime box)
+        {
+            if (box.Definition.hiddenPieces == null)
+                return;
+
+            for (int index = 0; index < box.Definition.hiddenPieces.Count; index++)
+            {
+                box.Contents.Add(new BoxContentRuntime
+                {
+                    AuthoredIndex = index,
+                    Definition = box.Definition.hiddenPieces[index]
+                });
+            }
+        }
+
+        private void HandleBoxExposure(BoxRuntime box, float opening)
+        {
+            if (box == null || box.State == RevealAreaState.Unlocked)
+                return;
+
+            box.Exposure = Mathf.Clamp01(opening);
+            if (box.State == RevealAreaState.Locked && box.Exposure > 0f)
+                box.State = RevealAreaState.PartiallyRevealed;
+
+            if (!presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation) ||
+                !(presentation is IBoxRevealExposurePresentation exposurePresentation))
+            {
+                return;
+            }
+
+            for (int index = 0; index < box.Contents.Count; index++)
+            {
+                BoxContentRuntime content = box.Contents[index];
+                if (content.IsActivated || content.Definition == null ||
+                    !exposurePresentation.CanPresentContent(content.AuthoredIndex) ||
+                    !IsDefinitionFullyExposed(content.Definition, box, box.Exposure))
+                {
+                    continue;
+                }
+
+                if (!board.TryActivateRevealPiece(content.Definition, out PuzzlePiece piece))
+                    continue;
+
+                content.IsActivated = true;
+                content.RuntimePieceId = piece.SourcePieceId;
+                activatedBoxContentByPieceId[content.RuntimePieceId] = content;
+                activatedBoxByPieceId[content.RuntimePieceId] = box;
+                RestoreInsideBoxPresentation(box, content, piece);
+            }
+        }
+
+        private void RefreshBoxContentPresentation()
+        {
+            for (int boxIndex = 0; boxIndex < boxes.Count; boxIndex++)
+            {
+                BoxRuntime box = boxes[boxIndex];
+                if (box.State == RevealAreaState.Unlocked)
+                    continue;
+
+                for (int contentIndex = 0; contentIndex < box.Contents.Count; contentIndex++)
+                {
+                    BoxContentRuntime content = box.Contents[contentIndex];
+                    if (!content.IsActivated || content.RuntimePieceId < 0 || board == null ||
+                        !board.BoardSnapshot.TryGetPiece(content.RuntimePieceId, out PieceModel model))
+                    {
+                        continue;
+                    }
+
+                    PuzzlePiece piece = board.FindActivePiece(content.RuntimePieceId);
+                    if (piece == null || model.State == PieceState.Despawned)
+                        continue;
+
+                    if (!GridBounds.From(model, model.Anchor).Intersects(GridBounds.From(box.Definition.bounds)))
+                    {
+                        content.HasLeftBox = true;
+                        ReleaseContentPresentation(box, content, piece);
+                        continue;
+                    }
+
+                    if (box.State == RevealAreaState.Unlocking && model.State != PieceState.Dragging)
+                    {
+                        ReleaseContentPresentation(box, content, piece);
+                    }
+                    else if (!content.HasLeftBox && model.State != PieceState.Dragging)
+                        RestoreInsideBoxPresentation(box, content, piece);
+                }
+            }
+        }
+
+        private void RestoreInsideBoxPresentation(
+            BoxRuntime box,
+            BoxContentRuntime content,
+            PuzzlePiece piece)
+        {
+            if (piece == null)
+                return;
+
+            if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation) &&
+                presentation is IBoxRevealExposurePresentation exposurePresentation)
+            {
+                exposurePresentation.SetContentPreviewVisible(content.AuthoredIndex, true);
+                piece.HideBoxRevealContentVisual();
+            }
+        }
+
+        private void ReleaseContentPresentation(
+            BoxRuntime box,
+            BoxContentRuntime content,
+            PuzzlePiece piece)
+        {
+            if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation) &&
+                presentation is IBoxRevealExposurePresentation exposurePresentation)
+            {
+                exposurePresentation.SetContentPreviewVisible(content.AuthoredIndex, false);
+            }
+
+            piece?.RestoreBoxRevealContentVisual();
+        }
+
+        private void ReleaseBoxContentPresentation(BoxRuntime box)
+        {
+            for (int index = 0; index < box.Contents.Count; index++)
+            {
+                BoxContentRuntime content = box.Contents[index];
+                if (content.RuntimePieceId >= 0 && board != null)
+                {
+                    // The Box view returns to its pool before the opening
+                    // completion callback runs. ClearPreviewVisuals already
+                    // owns its slots, so only release the live root here.
+                    // Touching the pooled view could otherwise alter a new
+                    // Box that rented the same visual in the same frame.
+                    board.FindActivePiece(content.RuntimePieceId)?.RestoreBoxRevealContentVisual();
+                }
+            }
+        }
+
+        private bool TryGetActivatedBoxContent(
+            int pieceId,
+            out BoxRuntime box,
+            out BoxContentRuntime content)
+        {
+            // Short-circuiting the two lookups can leave the second out
+            // parameter untouched when the Box mapping is absent. Initialize
+            // both so callers always receive a valid failure result.
+            box = null;
+            content = null;
+            return activatedBoxByPieceId.TryGetValue(pieceId, out box) &&
+                   activatedBoxContentByPieceId.TryGetValue(pieceId, out content);
+        }
+
+        private static bool IsDefinitionFullyExposed(
+            PieceDefinition definition,
+            BoxRuntime box,
+            float exposure)
+        {
+            if (definition == null || definition.cells == null)
+                return false;
+
+            int height = Mathf.Max(1, box.Definition.bounds.size.y);
+            bool hasBlock = false;
+            for (int index = 0; index < definition.cells.Count; index++)
+            {
+                PieceCellDefinition cell = definition.cells[index];
+                if (cell.type != PieceCellType.Block)
+                    continue;
+
+                hasBlock = true;
+                Vector2Int absolute = definition.origin + QuarterTurnUtility.Rotate(
+                    cell.localCell,
+                    definition.quarterTurns);
+                float requiredExposure = (absolute.y + 1 - box.Definition.bounds.YMin) / (float)height;
+                if (exposure + .0001f < requiredExposure)
+                    return false;
+            }
+
+            return hasBlock;
+        }
+
+        private static bool CanContentTraversePartialBox(
+            PieceModel model,
+            GridCoordinate targetAnchor,
+            BoxRuntime box)
+        {
+            return IsModelFullyWithinExposedBoxRows(model, targetAnchor, box);
+        }
+
+        private static bool IsModelFullyWithinExposedBoxRows(
+            PieceModel model,
+            GridCoordinate anchor,
+            BoxRuntime box)
+        {
+            RevealAreaBounds bounds = box.Definition.bounds;
+            int exposedYExclusive = bounds.YMin + Mathf.FloorToInt(
+                Mathf.Clamp01(box.Exposure) * Mathf.Max(1, bounds.size.y) + .0001f);
+            for (int index = 0; index < model.LocalCells.Count; index++)
+            {
+                GridCoordinate cell = anchor.Offset(model.LocalCells[index]);
+                bool insideBox = cell.X >= bounds.XMin && cell.X < bounds.XMaxExclusive &&
+                                 cell.Y >= bounds.YMin && cell.Y < bounds.YMaxExclusive;
+                if (insideBox && cell.Y >= exposedYExclusive)
+                    return false;
+            }
+
+            return true;
+        }
+
         private bool RefreshElevatorOccupancy(ElevatorRuntime elevator)
         {
             GridBounds bounds = GridBounds.From(elevator.Definition.bounds);
@@ -344,13 +696,11 @@ namespace GravityPuzzle.Gameplay.Reveal
                 if (box.State == RevealAreaState.Unlocked)
                     continue;
 
-                if (box.Definition.hiddenPieces == null)
-                    continue;
-
-                for (int pieceIndex = 0; pieceIndex < box.Definition.hiddenPieces.Count; pieceIndex++)
+                for (int pieceIndex = 0; pieceIndex < box.Contents.Count; pieceIndex++)
                 {
-                    PieceDefinition piece = box.Definition.hiddenPieces[pieceIndex];
-                    if (piece != null && GridBounds.From(piece).Intersects(bounds))
+                    BoxContentRuntime content = box.Contents[pieceIndex];
+                    if (!content.IsActivated && content.Definition != null &&
+                        GridBounds.From(content.Definition).Intersects(bounds))
                         return true;
                 }
             }

@@ -142,7 +142,7 @@ namespace GravityPuzzle.Presentation.Views
                     continue;
 
                 bool shouldShow = content.RewardConfig == targetConfig;
-                content.gameObject.SetActive(shouldShow);
+                content.SetVisible(shouldShow);
                 foundMatch |= shouldShow;
             }
 
@@ -163,7 +163,7 @@ namespace GravityPuzzle.Presentation.Views
             {
                 BoosterRewardContentView content = rewardContents[index];
                 if (content != null)
-                    content.gameObject.SetActive(false);
+                    content.SetVisible(false);
             }
         }
 
