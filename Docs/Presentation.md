@@ -23,6 +23,13 @@ hiding the slot disables it. This prevents a Rocket, Hammer, or Timer visual
 from inheriting an inactive state from an earlier reward presentation. These
 objects remain presentation-only and are never runtime-instantiated.
 
+## Modal action buttons
+
+`PanelEntrancePresentation` can list direct children in `Center Scale Excluded
+Content`. Those controls keep their authored scale while the modal enters. The
+Fullscreen Success Claim and x2 action buttons use this path so modal entry
+does not look like a button press or collapse their button artwork.
+
 ## Piece renderer ownership
 
 `PuzzlePiece` keeps authored presentation renderers in `Ice Presentation Slots` on the pooled `BlockPiece` prefab.

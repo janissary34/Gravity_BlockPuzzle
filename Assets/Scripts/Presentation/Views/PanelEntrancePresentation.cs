@@ -22,6 +22,8 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private EntranceStyle entranceStyle;
         [Tooltip("A direct child backdrop that is visible immediately and excluded from the scale reveal.")]
         [SerializeField] private RectTransform immediateBackdrop;
+        [Tooltip("Direct children that remain at their authored scale while the modal content enters.")]
+        [SerializeField] private RectTransform[] centerScaleExcludedContent;
         [Tooltip("Ordered panel elements used only by Sequential Scale.")]
         [SerializeField] private RectTransform[] sequentialContent;
         [Tooltip("Pulse components that start only after this panel finishes its entrance.")]
@@ -98,7 +100,8 @@ namespace GravityPuzzle.Presentation.Views
             int revealCount = 0;
             for (int childIndex = 0; childIndex < childCount; childIndex++)
             {
-                if (panelRect.GetChild(childIndex) != immediateBackdrop)
+                Transform child = panelRect.GetChild(childIndex);
+                if (child != immediateBackdrop && !IsCenterScaleExcluded(child))
                     revealCount++;
             }
 
@@ -110,7 +113,7 @@ namespace GravityPuzzle.Presentation.Views
             for (int childIndex = 0; childIndex < childCount; childIndex++)
             {
                 Transform child = panelRect.GetChild(childIndex);
-                if (child == immediateBackdrop)
+                if (child == immediateBackdrop || IsCenterScaleExcluded(child))
                     continue;
 
                 revealedChildren[revealIndex] = child;
@@ -120,6 +123,20 @@ namespace GravityPuzzle.Presentation.Views
                     revealedChildRestingAnchoredPositions[revealIndex] = childRect.anchoredPosition;
                 revealIndex++;
             }
+        }
+
+        private bool IsCenterScaleExcluded(Transform child)
+        {
+            if (centerScaleExcludedContent == null)
+                return false;
+
+            for (int index = 0; index < centerScaleExcludedContent.Length; index++)
+            {
+                if (centerScaleExcludedContent[index] == child)
+                    return true;
+            }
+
+            return false;
         }
 
         private void PlaySlideFromTop()

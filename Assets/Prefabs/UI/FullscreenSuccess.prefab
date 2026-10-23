@@ -405,7 +405,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -443,14 +443,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
-  pressScale: 0.95
-  usePunchBounce: 1
-  punchScaleStrength: {x: 0.08, y: 0.08, z: 0}
-  punchVibrato: 4
-  punchElasticity: 0.8
-  useRotationPunch: 0
-  maxRotationAngle: 2
-  rotationVibrato: 3
+  pressScale: 0.9
+  usePunchBounce: 0
+  punchScaleStrength: {x: 0.02, y: 0.02, z: 0}
+  punchVibrato: 2
+  punchElasticity: 0.5
+  useRotationPunch: 1
+  maxRotationAngle: 2.5
+  rotationVibrato: 2
   ignoreTimeScale: 1
 --- !u!1 &1900661072560204830
 GameObject:
@@ -687,6 +687,9 @@ MonoBehaviour:
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   entranceStyle: 0
   immediateBackdrop: {fileID: 5529110629857311242}
+  centerScaleExcludedContent:
+  - {fileID: 5125774701865285288}
+  - {fileID: 1931724073039428635}
   sequentialContent: []
   pulseComponentsAfterEntrance:
   - {fileID: 5879698448775260358}
