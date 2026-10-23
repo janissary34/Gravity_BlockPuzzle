@@ -123,7 +123,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Icon_Train_Gold
+      name: HammerGrey
       rect:
         serializedVersion: 2
         x: 1639
@@ -186,27 +186,6 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Icon_Timer_Gray
-      rect:
-        serializedVersion: 2
-        x: 1628
-        y: 1530
-        width: 197
-        height: 161
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: f5b76fd1b65c84927ae304ed78ce88a4
-      internalID: 797907828
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
       name: Icon_Heart_Broken
       rect:
         serializedVersion: 2
@@ -223,27 +202,6 @@ TextureImporter:
       bones: []
       spriteID: 0eb2e7b479b514e3a8b664a2796a5730
       internalID: -1674250854
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_11
-      rect:
-        serializedVersion: 2
-        x: 1612
-        y: 1612
-        width: 4
-        height: 4
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: c7b565b43de0a49f1a4e69ce896c3677
-      internalID: 149986834
       vertices: []
       indices: 
       edges: []
@@ -1089,11 +1047,11 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_2
+      name: GreyBG
       rect:
         serializedVersion: 2
         x: 704
-        y: 189
+        y: 188
         width: 174
         height: 174
       alignment: 0
@@ -1110,10 +1068,10 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: CommonAssets_UI_LionPack (1)_4
+      name: greyButton
       rect:
         serializedVersion: 2
-        x: 884
+        x: 881
         y: 189
         width: 174
         height: 174
@@ -1592,6 +1550,48 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: TimerGrey
+      rect:
+        serializedVersion: 2
+        x: 1637
+        y: 1537
+        width: 151
+        height: 161
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5711e31bec42545e89291c63ba5f2018
+      internalID: -1192552316
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: RockeyGrey
+      rect:
+        serializedVersion: 2
+        x: 1652
+        y: 1344
+        width: 180
+        height: 180
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eb30ef91782a049e085481486f2ce362
+      internalID: -2000993857
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -1631,14 +1631,12 @@ TextureImporter:
       CommonAssets_UI_LionPack (1)_15: 848656935
       CommonAssets_UI_LionPack (1)_16: -1136639585
       CommonAssets_UI_LionPack (1)_17: -440439094
-      CommonAssets_UI_LionPack (1)_2: 511417721
       CommonAssets_UI_LionPack (1)_25: -1297332372
       CommonAssets_UI_LionPack (1)_27: 577381881
       CommonAssets_UI_LionPack (1)_29: -930586199
       CommonAssets_UI_LionPack (1)_31: 2138732412
       CommonAssets_UI_LionPack (1)_35: 1215103335
       CommonAssets_UI_LionPack (1)_37: 973131638
-      CommonAssets_UI_LionPack (1)_4: 329255896
       CommonAssets_UI_LionPack (1)_6: -763147038
       CommonAssets_UI_LionPack (1)_8: 496005527
       CommonAssets_UI_LionPack (1)_9: -774148210
@@ -1646,7 +1644,9 @@ TextureImporter:
       Effect_Glow_White: 813511280
       Field_Blue_White: -95687652
       Good: 2106901203
+      GreyBG: 511417721
       Hammer: 965006765
+      HammerGrey: 1959921019
       HapticOff: 148027651
       HapticOn: 1255934614
       Header_Yellow: 559792640
@@ -1666,7 +1666,6 @@ TextureImporter:
       Icon_Timer_Frozen: -1475679262
       Icon_Timer_Gray: 797907828
       Icon_Timer_Short: -388365328
-      Icon_Train_Gold: 1959921019
       Icon_Vibration: -973268096
       Level: -2144175335
       Panel_Blue_Large: -1433657032
@@ -1678,6 +1677,7 @@ TextureImporter:
       Rainbow: 1173381308
       Restart: -1047580450
       Rocket: -384717997
+      RockeyGrey: -2000993857
       Rw: 1144794793
       SettingsButon: 1758562834
       SettingsIcon: 1892906906
@@ -1685,9 +1685,11 @@ TextureImporter:
       SoundOff: 1264333357
       SoundOn: 222430232
       Timer: -822564375
+      TimerGrey: -1192552316
       Toggle_Green: 399107936
       Toggle_Purple: -722621198
       banner2: 890847462
+      greyButton: 329255896
       levelBG: 1321129205
       redButton: -1020483702
       settingsBG: 2118190454
