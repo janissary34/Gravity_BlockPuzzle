@@ -598,9 +598,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2f1400596db24156a5edc4760672461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initialCount: 3
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
+  buttonCanvasGroup: {fileID: 0}
+  lockRoot: {fileID: 0}
+  lockImage: {fileID: 0}
+  unlockLevelTmpText: {fileID: 0}
+  unlockLevelUiText: {fileID: 0}
+  unlockLevelFormat: Level {0}
+  countRoot: {fileID: 0}
+  selectionGlow: {fileID: 0}
   onBoosterClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -619,10 +626,11 @@ MonoBehaviour:
   boosterButtonRef: {fileID: 4825691057261913314}
   boosterButton: {fileID: 5817890513203303818}
   buttonCanvasGroup: {fileID: 7551495038175468201}
+  selectionGlow: {fileID: 0}
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
   initialCount: 9
-  rocketVisualPrefab: {fileID: 4589897246359763626, guid: 12d907748e4f84b8585c8cc374be6014, type: 3}
+  rocketVisualPrefab: {fileID: 7493041916773665842, guid: 1aecc361d76654386a4eea2ba1adca2e, type: 3}
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   gameplayCamera: {fileID: 0}
   rocketScale: {x: 1, y: 1, z: 1}

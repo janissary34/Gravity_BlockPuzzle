@@ -9056,6 +9056,14 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2641848191979812727, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2865506912553904521, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2933958996750662730, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
@@ -9093,6 +9101,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4016712018989953893, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4443712202455552421, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
@@ -9324,6 +9336,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 8415721363587598079, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8852425979387003172, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_SizeDelta.x
       value: 344.1416
@@ -9377,16 +9393,7 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3377347733666749527, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       insertIndex: 5
       addedObject: {fileID: 659935349}
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 5371451733770572201, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
-    - targetCorrespondingSourceObject: {fileID: 8634187603197557653, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
-    - targetCorrespondingSourceObject: {fileID: 5427027648375492105, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
 --- !u!114 &1749646596 stripped
 MonoBehaviour:
