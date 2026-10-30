@@ -37,8 +37,8 @@ MonoBehaviour:
   pieces:
   - pieceId: piece-ccb10276dfb7145dca0f82d81bf0974d-0000-00
     name: Piece 1
-    tutorialTargetId: 
-    visualId: 
+    tutorialTargetId:
+    visualId:
     paletteId: Red
     color: {r: 1, g: 0.3, b: 0.3, a: 1}
     origin: {x: 2, y: 14}
@@ -175,38 +175,6 @@ MonoBehaviour:
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
     cells:
-    - localCell: {x: -18, y: -16}
-      type: 0
-    - localCell: {x: -17, y: -16}
-      type: 0
-    - localCell: {x: -16, y: -16}
-      type: 0
-    - localCell: {x: -15, y: -16}
-      type: 0
-    - localCell: {x: -18, y: -15}
-      type: 0
-    - localCell: {x: -17, y: -15}
-      type: 0
-    - localCell: {x: -16, y: -15}
-      type: 0
-    - localCell: {x: -15, y: -15}
-      type: 0
-    - localCell: {x: -18, y: -14}
-      type: 0
-    - localCell: {x: -17, y: -14}
-      type: 0
-    - localCell: {x: -16, y: -14}
-      type: 0
-    - localCell: {x: -15, y: -14}
-      type: 0
-    - localCell: {x: -18, y: -13}
-      type: 0
-    - localCell: {x: -17, y: -13}
-      type: 0
-    - localCell: {x: -16, y: -13}
-      type: 0
-    - localCell: {x: -15, y: -13}
-      type: 0
     - localCell: {x: -18, y: -8}
       type: 0
     - localCell: {x: -17, y: -8}
@@ -238,38 +206,6 @@ MonoBehaviour:
     - localCell: {x: -16, y: -5}
       type: 0
     - localCell: {x: -15, y: -5}
-      type: 0
-    - localCell: {x: -18, y: -12}
-      type: 0
-    - localCell: {x: -17, y: -12}
-      type: 0
-    - localCell: {x: -16, y: -12}
-      type: 0
-    - localCell: {x: -15, y: -12}
-      type: 0
-    - localCell: {x: -18, y: -11}
-      type: 0
-    - localCell: {x: -17, y: -11}
-      type: 0
-    - localCell: {x: -16, y: -11}
-      type: 0
-    - localCell: {x: -15, y: -11}
-      type: 0
-    - localCell: {x: -18, y: -10}
-      type: 0
-    - localCell: {x: -17, y: -10}
-      type: 0
-    - localCell: {x: -16, y: -10}
-      type: 0
-    - localCell: {x: -15, y: -10}
-      type: 0
-    - localCell: {x: -18, y: -9}
-      type: 0
-    - localCell: {x: -17, y: -9}
-      type: 0
-    - localCell: {x: -16, y: -9}
-      type: 0
-    - localCell: {x: -15, y: -9}
       type: 0
     - localCell: {x: -14, y: -8}
       type: 0
@@ -1987,6 +1923,92 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 11, y: 3}
       type: 0
+  - pieceId: 79eef3ad38a948d69c587a270a14eb19
+    name: Piece 17
+    tutorialTargetId:
+    visualId:
+    paletteId: Orange
+    color: {r: 1, g: 0.46799985, b: 0.3, a: 1}
+    origin: {x: 0, y: 12}
+    quarterTurns: 0
+    specialBlockType: 0
+    frozenMoveCount: 0
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterFontSize: 36
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    cells:
+    - localCell: {x: 0, y: 0}
+      type: 0
+    - localCell: {x: 1, y: 0}
+      type: 0
+    - localCell: {x: 2, y: 0}
+      type: 0
+    - localCell: {x: 3, y: 0}
+      type: 0
+    - localCell: {x: 0, y: 1}
+      type: 0
+    - localCell: {x: 1, y: 1}
+      type: 0
+    - localCell: {x: 2, y: 1}
+      type: 0
+    - localCell: {x: 3, y: 1}
+      type: 0
+    - localCell: {x: 0, y: 2}
+      type: 0
+    - localCell: {x: 1, y: 2}
+      type: 0
+    - localCell: {x: 2, y: 2}
+      type: 0
+    - localCell: {x: 3, y: 2}
+      type: 0
+    - localCell: {x: 0, y: 3}
+      type: 0
+    - localCell: {x: 1, y: 3}
+      type: 0
+    - localCell: {x: 2, y: 3}
+      type: 0
+    - localCell: {x: 3, y: 3}
+      type: 0
+    - localCell: {x: 0, y: -4}
+      type: 0
+    - localCell: {x: 1, y: -4}
+      type: 0
+    - localCell: {x: 2, y: -4}
+      type: 0
+    - localCell: {x: 3, y: -4}
+      type: 0
+    - localCell: {x: 0, y: -3}
+      type: 0
+    - localCell: {x: 1, y: -3}
+      type: 0
+    - localCell: {x: 2, y: -3}
+      type: 0
+    - localCell: {x: 3, y: -3}
+      type: 0
+    - localCell: {x: 0, y: -2}
+      type: 0
+    - localCell: {x: 1, y: -2}
+      type: 0
+    - localCell: {x: 2, y: -2}
+      type: 0
+    - localCell: {x: 3, y: -2}
+      type: 0
+    - localCell: {x: 0, y: -1}
+      type: 0
+    - localCell: {x: 1, y: -1}
+      type: 0
+    - localCell: {x: 2, y: -1}
+      type: 0
+    - localCell: {x: 3, y: -1}
+      type: 0
   joints:
   - jointId: e06b7e85dc444ed8a5fb18d82f309976
     endpointA:
@@ -2008,6 +2030,13 @@ MonoBehaviour:
       localBlockOrigin: {x: 6, y: -2}
     endpointB:
       pieceId: 93107d4f5bd745d5b7d6e07e6597eebc
+      localBlockOrigin: {x: 0, y: 0}
+  - jointId: 81daa8290c774ddc817a1b5d55a2eab3
+    endpointA:
+      pieceId: piece-ccb10276dfb7145dca0f82d81bf0974d-0001-00
+      localBlockOrigin: {x: -18, y: -8}
+    endpointB:
+      pieceId: 79eef3ad38a948d69c587a270a14eb19
       localBlockOrigin: {x: 0, y: 0}
   boxes: []
   elevators: []
