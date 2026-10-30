@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GravityPuzzle.Config
 {
@@ -68,16 +69,13 @@ namespace GravityPuzzle.Config
         [Header("Lower Screen Continuation")]
         [Tooltip("Extends the solid environment background and side walls from the shredder to the bottom of the gameplay viewport.")]
         [SerializeField] private bool extendPresentationToViewportBottom = true;
-        [Tooltip("Continues checker tiles below the shredder. Scene Tuna uses a clean solid lower area, so this is normally disabled.")]
+        [Tooltip("Continues the same checker tiles below the shredder to the bottom of the gameplay viewport.")]
         [SerializeField] private bool renderGridBelowShredder;
         [Tooltip("Extra world-space coverage below the camera edge so aspect-ratio rounding cannot expose a seam.")]
         [SerializeField, Min(0f)] private float viewportBottomPadding = .35f;
-        [Tooltip("Darkest colour reached at the viewport bottom. The gradient begins at Exterior Color directly below the shredder.")]
-        [SerializeField] private Color lowerGradientTint = new Color(.01f, .015f, .09f, 1f);
-        [Tooltip("Black overlay opacity reached at the bottom of the lower checker grid. This is separate from material tint because authored grid shaders may not multiply SpriteRenderer colour.")]
-        [SerializeField, Range(0f, 1f)] private float lowerGridBottomOverlayAlpha = .78f;
-        [Tooltip("Transparent sprite material used only by the lower-grid darkening overlay.")]
-        [SerializeField] private Material lowerGridDarkeningMaterial;
+        [Tooltip("Transparent material used for the presentation-only glow around the board edges.")]
+        [FormerlySerializedAs("lowerGridDarkeningMaterial")]
+        [SerializeField] private Material boardEdgeGlowMaterial;
 
         [Header("Grid Geometry")]
         [Tooltip("Presentation-only scale of each authored grid tile inside its logical cell. Scene Tuna's tiles use 0.96, exposing the dark board interior in the seams without changing grid rules.")]
@@ -86,6 +84,8 @@ namespace GravityPuzzle.Config
         [Header("Camera Framing")]
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
         [SerializeField, Min(1f)] private float cameraSizeMultiplier = 1.2f;
+        [Tooltip("Shared empty-space fraction above the board, measured from the top of the gameplay viewport. Lower values move every board upward while preserving a consistent screen position across different board sizes.")]
+        [SerializeField, Range(.05f, .45f)] private float boardTopViewportInset = .24f;
 
         [Header("Scene Tuna Frame Atlas")]
         [SerializeField] private Sprite topEdge;
@@ -153,6 +153,7 @@ namespace GravityPuzzle.Config
         public Color ExteriorColor => exteriorColor;
         public Color EnvironmentTint => environmentTint;
         public float CameraSizeMultiplier => Mathf.Max(1f, cameraSizeMultiplier);
+        public float BoardTopViewportInset => Mathf.Clamp(boardTopViewportInset, .05f, .45f);
         public Material EnvironmentBackdropMaterial => environmentBackdropMaterial;
         public Material ExteriorEdgeDarkeningMaterial => exteriorEdgeDarkeningMaterial;
         public float ExteriorEdgeDarkeningWidth => Mathf.Max(.1f, exteriorEdgeDarkeningWidth);
@@ -175,9 +176,7 @@ namespace GravityPuzzle.Config
         public bool ExtendPresentationToViewportBottom => extendPresentationToViewportBottom;
         public bool RenderGridBelowShredder => renderGridBelowShredder;
         public float ViewportBottomPadding => Mathf.Max(0f, viewportBottomPadding);
-        public Color LowerGradientTint => lowerGradientTint;
-        public float LowerGridBottomOverlayAlpha => Mathf.Clamp01(lowerGridBottomOverlayAlpha);
-        public Material LowerGridDarkeningMaterial => lowerGridDarkeningMaterial;
+        public Material BoardEdgeGlowMaterial => boardEdgeGlowMaterial;
         public float GridCellVisualScale => Mathf.Clamp(gridCellVisualScale, .8f, 1.05f);
         public bool RenderBottomEdgeSegments => renderBottomEdgeSegments;
         public Material FrameMaterial => frameMaterial;

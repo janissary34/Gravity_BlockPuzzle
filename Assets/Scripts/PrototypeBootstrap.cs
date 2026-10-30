@@ -211,7 +211,7 @@ namespace GravityPuzzle
         internal static void ConfigureCamera(
             float orthographicSize,
             Color backgroundColor,
-            float boardVerticalScreenOffset)
+            float cameraVerticalPosition)
         {
             if (sceneCamera == null)
             {
@@ -221,7 +221,7 @@ namespace GravityPuzzle
 
             sceneCamera.orthographic = true;
             sceneCamera.orthographicSize = orthographicSize;
-            sceneCamera.transform.position = new Vector3(0f, -boardVerticalScreenOffset, -10f);
+            sceneCamera.transform.position = new Vector3(0f, cameraVerticalPosition, -10f);
             sceneCamera.backgroundColor = backgroundColor;
         }
 
@@ -2537,8 +2537,9 @@ namespace GravityPuzzle
                 return;
 
             // A bomb's contract is stricter than ordinary piece removal: it
-            // must enter a shredder or be explicitly defused by a hammer.
-            // Falling off the board or another destruction path cannot
+            // must enter a shredder or be completely removed by a hammer.
+            // A partial hammer edit preserves the armed bomb on its surviving
+            // root. Falling off the board or another destruction path cannot
             // silently satisfy its objective.
             if (destroyedPiece.IsBomb && !destroyedPiece.IsBombDefused && !destroyedPiece.IsBeingShredded)
             {

@@ -97,8 +97,6 @@ namespace GravityPuzzle
         [Min(.1f)] public float fixedCameraSize = 6f;
         [Range(.1f, 1f)] public float cameraViewportWidth = GravityGridMetrics.BoardViewportWidth;
         [Range(.1f, 1f)] public float cameraViewportHeight = GravityGridMetrics.BoardViewportHeight;
-        [Tooltip("Moves the gameplay board vertically on screen after camera fitting. Positive values move the board upward; zero preserves the centred framing.")]
-        public float boardVerticalScreenOffset;
         [Tooltip("Enable only if the camera should react to the current device safe area. Off keeps editor/simulator framing stable across machines.")]
         public bool useRuntimeSafeAreaForCameraFit;
 

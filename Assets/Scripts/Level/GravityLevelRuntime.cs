@@ -311,7 +311,7 @@ namespace GravityPuzzle
             PrototypeBootstrap.ConfigureCamera(
                 cameraSize,
                 ResolveExteriorColor(level),
-                level.boardVerticalScreenOffset);
+                ResolveCameraVerticalPosition(level, cameraSize));
 
             PrototypeBoard boardState = configuredBoard;
             boardState.SetRemovalHeight(-halfHeight - 15f);
@@ -398,6 +398,17 @@ namespace GravityPuzzle
                 ? configuredBoardPresentationConfig.CameraSizeMultiplier
                 : 1f;
             return levelCameraSize * presentationMargin;
+        }
+
+        private static float ResolveCameraVerticalPosition(
+            GravityLevelDefinition level,
+            float cameraSize)
+        {
+            float boardTop = level.boardRows * .5f;
+            float topInset = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.BoardTopViewportInset
+                : .24f;
+            return boardTop - (0.5f - topInset) * cameraSize * 2f;
         }
 
         private static void ValidateLevelSnapshotRuntimeState(
@@ -578,22 +589,26 @@ namespace GravityPuzzle
                                      configuredBoardPresentationConfig.ViewportBottomPadding;
             float height = cameraHalfHeight * 2f;
             float width = height * CameraAspect();
+            float cameraVerticalPosition = ResolveCameraVerticalPosition(
+                level,
+                ResolveCameraSize(level));
             GameObject backdrop = CreateAuthoredVisualBlock(
                 "Viewport Environment Backdrop",
-                Vector2.zero,
+                new Vector2(0f, cameraVerticalPosition),
                 new Vector2(width, height),
                 configuredBoardPresentationConfig.EnvironmentTint,
                 configuredBoardPresentationConfig.EnvironmentBackdropMaterial,
                 -20);
             backdrop.transform.SetParent(parent, true);
 
-            CreateViewportEdgeDarkening(parent, width, height);
+            CreateViewportEdgeDarkening(parent, width, height, cameraVerticalPosition);
         }
 
         private static void CreateViewportEdgeDarkening(
             Transform parent,
             float viewportWidth,
-            float viewportHeight)
+            float viewportHeight,
+            float cameraVerticalPosition)
         {
             Material material = configuredBoardPresentationConfig.ExteriorEdgeDarkeningMaterial;
             float alpha = configuredBoardPresentationConfig.ExteriorEdgeDarkeningAlpha;
@@ -610,7 +625,7 @@ namespace GravityPuzzle
             CreateEdgeDarkeningStrip(
                 parent,
                 "Exterior Top Darkening",
-                new Vector2(0f, halfHeight - fadeWidth * .5f),
+                new Vector2(0f, cameraVerticalPosition + halfHeight - fadeWidth * .5f),
                 new Vector2(viewportWidth, fadeWidth),
                 180f,
                 tint,
@@ -618,7 +633,7 @@ namespace GravityPuzzle
             CreateEdgeDarkeningStrip(
                 parent,
                 "Exterior Bottom Darkening",
-                new Vector2(0f, -halfHeight + fadeWidth * .5f),
+                new Vector2(0f, cameraVerticalPosition - halfHeight + fadeWidth * .5f),
                 new Vector2(viewportWidth, fadeWidth),
                 0f,
                 tint,
@@ -626,7 +641,7 @@ namespace GravityPuzzle
             CreateEdgeDarkeningStrip(
                 parent,
                 "Exterior Left Darkening",
-                new Vector2(-halfWidth + fadeWidth * .5f, 0f),
+                new Vector2(-halfWidth + fadeWidth * .5f, cameraVerticalPosition),
                 new Vector2(fadeWidth, viewportHeight),
                 -90f,
                 tint,
@@ -634,7 +649,7 @@ namespace GravityPuzzle
             CreateEdgeDarkeningStrip(
                 parent,
                 "Exterior Right Darkening",
-                new Vector2(halfWidth - fadeWidth * .5f, 0f),
+                new Vector2(halfWidth - fadeWidth * .5f, cameraVerticalPosition),
                 new Vector2(fadeWidth, viewportHeight),
                 90f,
                 tint,
@@ -686,7 +701,7 @@ namespace GravityPuzzle
 
         private static void CreateBoardEdgeGlow(Transform parent, GravityLevelDefinition level)
         {
-            Material material = configuredBoardPresentationConfig.LowerGridDarkeningMaterial;
+            Material material = configuredBoardPresentationConfig.BoardEdgeGlowMaterial;
             Color glowColor = configuredBoardPresentationConfig.BoardEdgeGlowColor;
             if (material == null || glowColor.a <= .001f)
                 return;
@@ -745,30 +760,19 @@ namespace GravityPuzzle
 
             if (configuredBoardPresentationConfig.RenderGridBelowShredder)
             {
-                Color bottomColor = configuredBoardPresentationConfig.LowerGradientTint;
-                bottomColor.a = 1f;
                 int rowCount = Mathf.Max(1, Mathf.CeilToInt(extension));
                 for (int row = 0; row < rowCount; row++)
                 {
-                    float normalizedDepth = Mathf.Clamp01((row + .5f) / extension);
-                    float delayedDepth = normalizedDepth * normalizedDepth * normalizedDepth;
-                    float smoothDepth = delayedDepth * delayedDepth * (3f - 2f * delayedDepth);
-                    Color depthTint = Color.Lerp(Color.white, bottomColor, smoothDepth);
                     float centreY = -halfHeight - row - .5f;
                     for (int column = 0; column < level.boardColumns; column++)
                     {
                         bool isAlternateCell = (column - row - 1) % 2 != 0;
                         Color gridTint = configuredBoardPresentationConfig.GetGridTint(isAlternateCell);
-                        Color presentationTint = new Color(
-                            gridTint.r * depthTint.r,
-                            gridTint.g * depthTint.g,
-                            gridTint.b * depthTint.b,
-                            gridTint.a * (1f - smoothDepth));
                         GameObject cell = CreateAuthoredVisualBlock(
                             $"Lower Grid Cell {column}, {-row - 1}",
                             new Vector2(-level.boardColumns * .5f + column + .5f, centreY),
                             Vector2.one * ResolveGridCellVisualScale(),
-                            presentationTint,
+                            gridTint,
                             GetGridMaterial(isAlternateCell),
                             -10,
                             configuredBoardPresentationConfig.GridSprite,
@@ -777,20 +781,6 @@ namespace GravityPuzzle
                     }
                 }
             }
-
-            Color overlayColor = new Color(
-                0f,
-                0f,
-                0f,
-                configuredBoardPresentationConfig.LowerGridBottomOverlayAlpha);
-            GameObject overlay = CreateAuthoredVisualBlock(
-                "Lower Grid Darkening Gradient",
-                new Vector2(0f, -halfHeight - extension * .5f),
-                new Vector2(level.boardColumns, extension + .02f),
-                overlayColor,
-                configuredBoardPresentationConfig.LowerGridDarkeningMaterial,
-                -9);
-            overlay.transform.SetParent(parent, true);
         }
 
         private static float ResolveGridCellVisualScale()
@@ -1019,9 +1009,11 @@ namespace GravityPuzzle
                 return 0f;
 
             float halfHeight = level.boardRows * .5f;
+            float cameraSize = ResolveCameraSize(level);
+            float cameraVerticalPosition = ResolveCameraVerticalPosition(level, cameraSize);
             return Mathf.Max(
                 0f,
-                ResolveCameraSize(level) - halfHeight +
+                cameraSize - halfHeight - cameraVerticalPosition +
                 configuredBoardPresentationConfig.ViewportBottomPadding);
         }
 

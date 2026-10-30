@@ -82,11 +82,10 @@ MonoBehaviour:
   extendPresentationToViewportBottom: 1
   renderGridBelowShredder: 1
   viewportBottomPadding: 0.35
-  lowerGradientTint: {r: 0.0025, g: 0.002, b: 0.018, a: 1}
-  lowerGridBottomOverlayAlpha: 0.68
-  lowerGridDarkeningMaterial: {fileID: 2100000, guid: b9cf6272a86e4c8cbd13c5d1a848c72a, type: 2}
+  boardEdgeGlowMaterial: {fileID: 2100000, guid: b9cf6272a86e4c8cbd13c5d1a848c72a, type: 2}
   gridCellVisualScale: 0.96
   cameraSizeMultiplier: 1.1
+  boardTopViewportInset: 0.24
   topEdge: {fileID: -448638201, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bottomEdge: {fileID: 1112318756, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   leftEdge: {fileID: -188560374, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
