@@ -91,6 +91,30 @@ public sealed class BombPresentationTests
         }
     }
 
+    [TestCase(true, true, 2, false)]
+    [TestCase(true, true, 0, true)]
+    [TestCase(false, true, 0, false)]
+    [TestCase(true, false, 0, false)]
+    public void HammerBombDefuse_RequiresFinalCellRemoval(
+        bool hammerImpact,
+        bool isBomb,
+        int remainingCellCount,
+        bool expected)
+    {
+        MethodInfo method = typeof(PuzzlePiece).GetMethod(
+            "ShouldDefuseBombAfterCellRemoval",
+            BindingFlags.Static | BindingFlags.NonPublic);
+
+        bool actual = (bool)method.Invoke(null, new object[]
+        {
+            hammerImpact,
+            isBomb,
+            remainingCellCount
+        });
+
+        Assert.That(actual, Is.EqualTo(expected));
+    }
+
     private static void SetField<T>(PuzzlePiece piece, string name, T value)
     {
         typeof(PuzzlePiece).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(piece, value);

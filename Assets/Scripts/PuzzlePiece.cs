@@ -2353,9 +2353,9 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Applies a hammer hit to a visible cell. A successful hammer impact
-        /// defuses a bomb before reporting its removal, so the bomb is an
-        /// intentional booster resolution rather than a failed board exit.
+        /// Applies a hammer hit to a visible cell. A bomb is defused only when
+        /// the impact removes its final cell; a surviving piece retains its
+        /// armed bomb state through the topology rebuild.
         /// </summary>
         public bool TryRemoveCellWithHammer(Vector2 worldPosition, out RemovedCell removedCell)
         {
@@ -2366,7 +2366,7 @@ namespace GravityPuzzle
             if (!TryGetCellIndexAt(worldPosition, out int targetIndex))
                 return false;
 
-            return TryRemoveCellAtIndex(targetIndex, out removedCell, IsBomb);
+            return TryRemoveCellAtIndex(targetIndex, out removedCell, true);
         }
 
         /// <summary>
@@ -2400,10 +2400,6 @@ namespace GravityPuzzle
             // topology. A damaged visual with the old grid footprint is never
             // a valid gameplay state: it causes suspended fragments, overlap
             // with obstacles and an incomplete selection outline.
-            bool defusedBomb = defuseBombWithHammer && IsBomb;
-            if (defusedBomb)
-                SetBombDefused(true);
-
             List<int> preHitIndices = new List<int>(collisionCells.Count);
             for (int index = 0; index < collisionCells.Count; index++)
                 preHitIndices.Add(index);
@@ -2453,6 +2449,15 @@ namespace GravityPuzzle
 
             if (collisionCells.Count == 0)
             {
+                // A hammer remains a valid explicit resolution for a bomb
+                // only when it removes that bomb completely. Defusing before
+                // this point used to make a partially damaged bomb harmless
+                // and left its surviving cells without their bomb overlay.
+                if (ShouldDefuseBombAfterCellRemoval(
+                        defuseBombWithHammer,
+                        IsBomb,
+                        collisionCells.Count))
+                    SetBombDefused(true);
                 ReportDestroyed();
                 ReleaseInstance();
             }
@@ -2473,8 +2478,6 @@ namespace GravityPuzzle
                 if (!topologyCommitted)
                 {
                     RestoreRejectedHammerHit(preHitCells, remainingBeforeHit);
-                    if (defusedBomb)
-                        SetBombDefused(false);
                     removedCell = default;
                     return false;
                 }
@@ -2501,9 +2504,23 @@ namespace GravityPuzzle
                     PrototypeBoard board = PrototypeBoard.Active;
                     RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
                 }
+
+                // Clearing the pre-hit overlay avoids sizing it from stale
+                // cells. Recreate it only after the surviving root has its
+                // accepted retained-cell geometry. Split-off roots are normal
+                // fragments; the original root remains the sole bomb owner.
+                RefreshBombState();
             }
 
             return true;
+        }
+
+        private static bool ShouldDefuseBombAfterCellRemoval(
+            bool hammerImpact,
+            bool isBomb,
+            int remainingCellCount)
+        {
+            return hammerImpact && isBomb && remainingCellCount == 0;
         }
 
         private void SetBombDefused(bool isDefused)

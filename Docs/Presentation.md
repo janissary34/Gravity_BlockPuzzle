@@ -48,7 +48,11 @@ the active overlay list is empty.
 
 Bomb and ice overlays have separate ownership and cleanup. Ice refresh and release
 must not fade or clear the bomb icon or its counter; bomb cleanup is performed
-explicitly on presentation rebuild, defuse/fragment handling, and pool reset.
+explicitly on presentation rebuild, full-piece defuse/destruction, and pool reset.
+A partial Hammer edit keeps the original surviving root armed and recreates its bomb
+presentation from the retained cells after the grid accepts the topology change.
+When a Hammer split creates additional roots, those new fragments do not duplicate
+the bomb; the original root remains its sole owner.
 
 Presentation slots are pooled state. Every renter must receive reset sprite, material, colour, transform, sorting, mask, enabled state, and property-block state.
 
