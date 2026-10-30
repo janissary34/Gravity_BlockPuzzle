@@ -2493,6 +2493,8 @@ namespace GravityPuzzle
                         collisionCells.Count))
                     SetBombDefused(true);
                 ReportDestroyed();
+                if (defuseBombWithHammer)
+                    PrototypeBoard.Active?.NotifyPieceHammerDestroyed(SourcePieceId);
                 ReleaseInstance();
             }
             else

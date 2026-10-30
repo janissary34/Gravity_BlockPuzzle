@@ -151,14 +151,24 @@ namespace GravityPuzzle.Presentation.Views
 
             completed = true;
             if (visualKind == RevealAreaKind.Elevator)
-                SetElevatorDoorsVisible(false);
+                SetElevatorVisualsVisible(false);
             Action completion = pendingCompletion;
             pendingCompletion = null;
             completion?.Invoke();
         }
 
-        private void SetElevatorDoorsVisible(bool visible)
+        private void SetElevatorVisualsVisible(bool visible)
         {
+            if (sortingRenderers != null)
+            {
+                for (int index = 0; index < sortingRenderers.Length; index++)
+                {
+                    SpriteRenderer renderer = sortingRenderers[index];
+                    if (renderer != null)
+                        renderer.gameObject.SetActive(visible);
+                }
+            }
+
             if (elevatorDoorRenderers == null)
                 return;
 

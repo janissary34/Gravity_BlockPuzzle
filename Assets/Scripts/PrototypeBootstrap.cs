@@ -2576,6 +2576,16 @@ namespace GravityPuzzle
                 PuzzleDragController.WakeUpGravity();
         }
 
+        /// <summary>
+        /// Forwards a completed hammer removal after the board has committed
+        /// the piece destruction. The reveal coordinator remains the sole
+        /// owner of Box counter state.
+        /// </summary>
+        public void NotifyPieceHammerDestroyed(int pieceId)
+        {
+            revealAreaCoordinator?.NotifyPieceHammerDestroyed(pieceId);
+        }
+
         public void AddTime(float seconds)
         {
             if (seconds > 0f && TimeLimit > 0f)

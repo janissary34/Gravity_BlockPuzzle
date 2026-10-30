@@ -63,7 +63,11 @@ namespace GravityPuzzle.Gameplay.Reveal
         {
             public BoxRevealDefinition Definition;
             public RevealAreaState State = RevealAreaState.Locked;
-            public readonly HashSet<int> CountedShredPieceIds = new HashSet<int>();
+            // A Box requirement is met once per fully removed runtime piece,
+            // whether its removal was committed by the shredder or by a
+            // hammer. The set keeps split/removal paths from double counting
+            // the same authoritative piece id.
+            public readonly HashSet<int> CountedRemovedPieceIds = new HashSet<int>();
             public readonly List<BoxContentRuntime> Contents = new List<BoxContentRuntime>();
             public float Exposure;
         }
@@ -191,17 +195,31 @@ namespace GravityPuzzle.Gameplay.Reveal
         /// <summary>Called only for a shredder-committed piece destruction.</summary>
         public void NotifyPieceShredded(int pieceId)
         {
+            NotifyPieceRemoved(pieceId);
+        }
+
+        /// <summary>
+        /// Called after a hammer has fully removed an authoritative runtime
+        /// piece. Partial hammer edits keep the piece active and do not count.
+        /// </summary>
+        public void NotifyPieceHammerDestroyed(int pieceId)
+        {
+            NotifyPieceRemoved(pieceId);
+        }
+
+        private void NotifyPieceRemoved(int pieceId)
+        {
             for (int index = 0; index < boxes.Count; index++)
             {
                 BoxRuntime box = boxes[index];
                 if ((box.State != RevealAreaState.Locked && box.State != RevealAreaState.PartiallyRevealed) ||
-                    !box.CountedShredPieceIds.Add(pieceId))
+                    !box.CountedRemovedPieceIds.Add(pieceId))
                     continue;
 
                 if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
-                    presentation.SetBoxRemaining(box.Definition.targetShredCount - box.CountedShredPieceIds.Count, box.Definition.targetShredCount);
+                    presentation.SetBoxRemaining(box.Definition.targetShredCount - box.CountedRemovedPieceIds.Count, box.Definition.targetShredCount);
 
-                if (box.CountedShredPieceIds.Count >= box.Definition.targetShredCount)
+                if (box.CountedRemovedPieceIds.Count >= box.Definition.targetShredCount)
                     StartBoxUnlock(box);
             }
         }
@@ -423,7 +441,7 @@ namespace GravityPuzzle.Gameplay.Reveal
                 exposurePresentation.SetBoxExposureChangedHandler(opening => HandleBoxExposure(box, opening));
 
             presentation.SetBoxRemaining(
-                box.Definition.targetShredCount - box.CountedShredPieceIds.Count,
+                box.Definition.targetShredCount - box.CountedRemovedPieceIds.Count,
                 box.Definition.targetShredCount);
         }
 

@@ -8,7 +8,7 @@
 * Runtime piece roots come from the typed `BlockPiece` pool and must fully reset presentation, physics, subscriptions, and temporary state when returned.
 * `GravityLevelDefinition` and the associated ScriptableObject configs own authored level and tuning data. Mutable session state belongs to runtime objects. Each level also owns its authored difficulty label (`Normal`, `Hard`, or `Very Hard`); this is presentation metadata, with `Normal` reserved for the future Easy UI indicator. Level definitions own viewport coverage; `BoardPresentationConfig` owns the shared board-top viewport inset, which runtime applies through the gameplay camera when it builds every level.
 
-Partially opened Tunnels use the explicit content-activation and presentation-lease contract in `Decisions/ADR-003-partial-box-content-activation.md`. The reveal coordinator owns content activation records; a Tunnel view may report only monotonic shutter exposure. A renderer, collider, or transform never decides whether a content piece exists, may move, or participates in gravity.
+Partially opened Tunnels use the explicit content-activation and presentation-lease contract in `Decisions/ADR-003-partial-box-content-activation.md`. The reveal coordinator owns content activation records and Box progress counters. A completed shredder handoff or a Hammer removal of an entire authoritative piece reports its stable piece ID to that coordinator; partial Hammer topology edits do not count. A Tunnel view may report only monotonic shutter exposure. A renderer, collider, or transform never decides whether a content piece exists, may move, or participates in gravity.
 
 See `Decisions/ADR-001-presentation-is-not-gameplay-authority.md` for the reasoning behind the presentation boundary.
 

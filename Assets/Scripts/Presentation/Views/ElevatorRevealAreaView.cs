@@ -210,12 +210,21 @@ namespace GravityPuzzle.Presentation.Views
             isComplete = true;
             Action callback = completion;
             completion = null;
-            SetDoorsVisible(false);
+            SetElevatorVisualsVisible(false);
+            // The elevator is a pooled transient presentation. Returning its root
+            // guarantees that no part of the source frame sprite can remain over
+            // the revealed board after the door-collapse animation finishes.
+            Despawn();
             callback?.Invoke();
         }
 
-        private void SetDoorsVisible(bool visible)
+        private void SetElevatorVisualsVisible(bool visible)
         {
+            if (frameRenderer != null)
+                frameRenderer.gameObject.SetActive(visible);
+            if (openingRenderer != null)
+                openingRenderer.gameObject.SetActive(visible);
+
             if (doorRenderers == null)
                 return;
 

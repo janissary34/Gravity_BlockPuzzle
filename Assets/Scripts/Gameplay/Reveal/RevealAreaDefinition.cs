@@ -46,7 +46,7 @@ namespace GravityPuzzle
     public sealed class BoxRevealDefinition : RevealAreaDefinition
     {
         [Min(0)]
-        [Tooltip("Number of successfully shredder-committed pieces required to open this box.")]
+        [Tooltip("Number of pieces fully removed by the shredder or Hammer required to open this box.")]
         public int targetShredCount = 1;
     }
 
