@@ -253,6 +253,11 @@ namespace GravityPuzzle.Editor
         private void DrawLevelProperties()
         {
             string newName = EditorGUILayout.TextField("Name", level.levelName);
+            LevelDifficulty newDifficulty = (LevelDifficulty)EditorGUILayout.EnumPopup(
+                new GUIContent(
+                    "Difficulty",
+                    "Level UI challenge label. Normal will use the Easy indicator when the UI artwork is wired."),
+                level.difficulty);
             float newTimeLimit = Mathf.Max(0f, EditorGUILayout.FloatField(new GUIContent("Time Limit (0=infinite)", "Time limit in seconds. 0 for unlimited time."), level.timeLimit));
             int newColumns = Mathf.Max(3, EditorGUILayout.IntField("Columns", level.boardColumns));
             int newRows = Mathf.Max(3, EditorGUILayout.IntField("Rows", level.boardRows));
@@ -294,7 +299,8 @@ namespace GravityPuzzle.Editor
             float estimatedCellPoints = GravityGridMetrics.EstimatedCellSizeInPoints(newColumns, newRows);
             EditorGUILayout.LabelField("Approx. Cell on Phone", $"{estimatedCellPoints:0} pt");
 
-            if (newName != level.levelName || newColumns != level.boardColumns ||
+            if (newName != level.levelName || newDifficulty != level.difficulty ||
+                newColumns != level.boardColumns ||
                 newRows != level.boardRows ||
                 !Mathf.Approximately(newTimeLimit, level.timeLimit) ||
                 !Mathf.Approximately(newGravity, level.gravityScale) ||
@@ -308,6 +314,7 @@ namespace GravityPuzzle.Editor
             {
                 Undo.RecordObject(level, "Edit map settings");
                 level.levelName = newName;
+                level.difficulty = newDifficulty;
                 level.timeLimit = newTimeLimit;
                 level.boardColumns = newColumns;
                 level.boardRows = newRows;

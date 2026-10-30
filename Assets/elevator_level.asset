@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: elevator_level
   m_EditorClassIdentifier: 
   levelName: New Level
+  difficulty: 0
   timeLimit: 60
   boardColumns: 7
   boardRows: 9

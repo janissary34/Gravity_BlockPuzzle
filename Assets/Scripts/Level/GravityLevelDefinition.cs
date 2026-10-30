@@ -4,6 +4,17 @@ using UnityEngine;
 
 namespace GravityPuzzle
 {
+    /// <summary>
+    /// Author-selected challenge label for the active level. This is presentation
+    /// metadata; it does not alter board rules or gameplay tuning by itself.
+    /// </summary>
+    public enum LevelDifficulty
+    {
+        Normal,
+        Hard,
+        VeryHard
+    }
+
     public static class GravityGridMetrics
     {
         public const int FineCellsPerGridCell = 4;
@@ -63,6 +74,8 @@ namespace GravityPuzzle
     public sealed class GravityLevelDefinition : ScriptableObject
     {
         public string levelName = "New Level";
+        [Tooltip("Challenge label shown by the level UI. Normal is presented by the Easy UI indicator.")]
+        public LevelDifficulty difficulty = LevelDifficulty.Normal;
         [Tooltip("Time limit in seconds. Set to 0 for unlimited time.")]
         [Min(0f)] public float timeLimit = 60f;
         [Min(3)] public int boardColumns = 5;
