@@ -30,13 +30,13 @@ namespace GravityPuzzle.Config
         [Header("Art")]
         [Tooltip("Sprite shown on generated Box reveal covers.")]
         public Sprite boxCoverSprite;
-        [Tooltip("Scene Tuna Elevator sprite fitted to the authored Elevator area and kept static while its doors open.")]
+        [Tooltip("Elevator cabinet sprite from map.png, fitted to the authored Elevator area behind its doors.")]
         public Sprite elevatorFrameSprite;
-        [Tooltip("Scene Tuna Elevator door panel used by the opening animation.")]
+        [Tooltip("Shared Elevator door panel from map.png; the left renderer is mirrored when both panel references are the same.")]
         public Sprite elevatorLeftDoorSprite;
-        [Tooltip("Cropped right Elevator door panel used by the opening animation.")]
+        [Tooltip("Right Elevator door panel. Assign the same map.png door sprite to use the mirrored shared-panel pair.")]
         public Sprite elevatorRightDoorSprite;
-        [Tooltip("Legacy full Elevator sprite. Used only when split door art is unavailable.")]
+        [Tooltip("Legacy Elevator cabinet fallback used when the primary cabinet sprite is unavailable.")]
         public Sprite elevatorDoorSprite;
 
         [Header("Box")]
@@ -100,17 +100,15 @@ namespace GravityPuzzle.Config
         [Min(0f)] public float boxBreakRotation = 70f;
         [Header("Elevator")]
         [Min(.01f)] public float elevatorOpenDuration = .4f;
-        [Min(0f)] public float elevatorDoorDistance = 1.2f;
         public Ease elevatorOpenEase = Ease.OutQuad;
-        [Min(.01f)] public float elevatorFadeDuration = .2f;
         [Tooltip("Door aperture width as a fraction of the authored Elevator area.")]
-        [Range(.1f, .9f)] public float elevatorDoorWidthRatio = .44f;
+        [Range(.1f, .9f)] public float elevatorDoorWidthRatio = .86f;
         [Tooltip("Door aperture height as a fraction of the authored Elevator area.")]
-        [Range(.1f, .9f)] public float elevatorDoorHeightRatio = .62f;
+        [Range(.1f, .9f)] public float elevatorDoorHeightRatio = .83f;
         [Tooltip("Vertical position of the two door panels within the authored Elevator area.")]
-        [Range(-.4f, .4f)] public float elevatorDoorCenterYOffset = -.04f;
-        [Tooltip("Small horizontal correction for the tall source artwork when it is shown inside a wide authored Elevator area.")]
-        [Range(.8f, 1.4f)] public float elevatorVisualWidthScale = 1.15f;
+        [Range(-.4f, .4f)] public float elevatorDoorCenterYOffset;
+        [Tooltip("Optional horizontal fit correction for the authored Elevator cabinet.")]
+        [Range(.8f, 1.4f)] public float elevatorVisualWidthScale = 1f;
         [Tooltip("Colour shown in the doorway while the fixed interior content is being activated.")]
         public Color elevatorOpeningColor = new Color(.04f, .08f, .14f, 1f);
         [Tooltip("The Elevator is board decoration: frame, opening and both doors render behind normal piece visuals (which render at order 5).")]

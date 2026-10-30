@@ -61,12 +61,10 @@ MonoBehaviour:
   boxBreakDropDistance: 0.42
   boxBreakRotation: 70
   elevatorOpenDuration: 0.4
-  elevatorDoorDistance: 1.2
   elevatorOpenEase: 6
-  elevatorFadeDuration: 0.2
-  elevatorDoorWidthRatio: 0.44
-  elevatorDoorHeightRatio: 0.62
-  elevatorDoorCenterYOffset: -0.04
+  elevatorDoorWidthRatio: 0.86
+  elevatorDoorHeightRatio: 0.83
+  elevatorDoorCenterYOffset: 0
   elevatorVisualWidthScale: 1
   elevatorOpeningColor: {r: 0.04, g: 0.08, b: 0.14, a: 1}
   elevatorSortingOrder: 1

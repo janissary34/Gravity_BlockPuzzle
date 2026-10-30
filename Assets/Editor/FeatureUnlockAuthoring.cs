@@ -20,11 +20,11 @@ namespace GravityPuzzle.Editor
         private const string PieceVisualConfigPath = "Assets/PieceVisualConfig.asset";
         private const string RevealPresentationConfigPath = "Assets/Config/RevealPresentationConfig.asset";
         private const string BombSpritePath = "Assets/Art/Parlak Altın Bantlı Bomba.png";
-        // The source filename on disk uses macOS's decomposed umlaut form.
-        // Keep that exact asset path so AssetDatabase can import the door slices.
-        private const string ElevatorSpritePath = "Assets/Art/asanso\u0308r.png";
+        private const string ElevatorSpritePath = "Assets/Art/map.png";
         private const string BoxSpritePath = "Assets/Art/map.png";
         private const string BoxCoverSpriteName = "Tunnel";
+        private const string ElevatorFrameSpriteName = "Elevator";
+        private const string ElevatorDoorSpriteName = "Elevator_Door";
 
         [InitializeOnLoadMethod]
         private static void RestoreRevealArtSlicesAfterAssemblyReload()
@@ -42,12 +42,7 @@ namespace GravityPuzzle.Editor
 
             RevealPresentationConfig revealConfig =
                 AssetDatabase.LoadAssetAtPath<RevealPresentationConfig>(RevealPresentationConfigPath);
-            if (revealConfig == null ||
-                (revealConfig.boxCoverSprite != null &&
-                 revealConfig.boxCoverSprite.name == BoxCoverSpriteName &&
-                 revealConfig.elevatorFrameSprite != null &&
-                 revealConfig.elevatorLeftDoorSprite != null &&
-                 revealConfig.elevatorRightDoorSprite != null))
+            if (revealConfig == null || HasExpectedRevealArtSprites(revealConfig))
             {
                 return;
             }
@@ -64,6 +59,21 @@ namespace GravityPuzzle.Editor
             serializedRevealConfig.FindProperty("elevatorDoorSprite").objectReferenceValue = elevatorFrame;
             serializedRevealConfig.ApplyModifiedPropertiesWithoutUndo();
             AssetDatabase.SaveAssets();
+        }
+
+        private static bool HasExpectedRevealArtSprites(RevealPresentationConfig revealConfig)
+        {
+            return IsExpectedSprite(revealConfig.boxCoverSprite, BoxSpritePath, BoxCoverSpriteName) &&
+                   IsExpectedSprite(revealConfig.elevatorFrameSprite, ElevatorSpritePath, ElevatorFrameSpriteName) &&
+                   IsExpectedSprite(revealConfig.elevatorLeftDoorSprite, ElevatorSpritePath, ElevatorDoorSpriteName) &&
+                   IsExpectedSprite(revealConfig.elevatorRightDoorSprite, ElevatorSpritePath, ElevatorDoorSpriteName);
+        }
+
+        private static bool IsExpectedSprite(Sprite sprite, string expectedAssetPath, string expectedName)
+        {
+            return sprite != null &&
+                   sprite.name == expectedName &&
+                   AssetDatabase.GetAssetPath(sprite) == expectedAssetPath;
         }
 
         [MenuItem("Gravity Puzzle/Boosters/Configure Feature Unlocks")]
@@ -149,9 +159,8 @@ namespace GravityPuzzle.Editor
         }
 
         /// <summary>
-        /// The supplied art is sliced once in the editor: a trimmed 9-slice cover
-        /// for Garage, a static Elevator frame, and only the two glass door panels.
-        /// Runtime code receives stable Sprite references and never crops art.
+        /// Runtime receives the authored Tunnel and Elevator sprites directly;
+        /// the Elevator uses one shared panel mirrored by its view.
         /// </summary>
         private static void ConfigureRevealArtSprites(
             out Sprite boxCover,
@@ -160,55 +169,14 @@ namespace GravityPuzzle.Editor
             out Sprite rightDoor)
         {
             boxCover = ConfigureBoxCoverSprite();
-            ConfigureElevatorDoorSprites(out elevatorFrame, out leftDoor, out rightDoor);
+            elevatorFrame = FindSprite(ElevatorSpritePath, ElevatorFrameSpriteName);
+            leftDoor = FindSprite(ElevatorSpritePath, ElevatorDoorSpriteName);
+            rightDoor = leftDoor;
         }
 
         private static Sprite ConfigureBoxCoverSprite()
         {
             return FindSprite(BoxSpritePath, BoxCoverSpriteName);
-        }
-
-        private static void ConfigureElevatorDoorSprites(
-            out Sprite elevatorFrame,
-            out Sprite leftDoor,
-            out Sprite rightDoor)
-        {
-            elevatorFrame = null;
-            leftDoor = null;
-            rightDoor = null;
-            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ElevatorSpritePath);
-            TextureImporter importer = AssetImporter.GetAtPath(ElevatorSpritePath) as TextureImporter;
-            if (texture == null || importer == null)
-            {
-                Debug.LogWarning("[Feature Unlocks] Elevator art could not be imported for door animation.");
-                return;
-            }
-
-            importer.spriteImportMode = SpriteImportMode.Multiple;
-#pragma warning disable CS0618
-            importer.spritesheet = new[]
-            {
-                CreateSpriteMetaData("ElevatorFrame", new Rect(145f, 65f, texture.width - 290f, texture.height - 130f), new Vector4(145f, 125f, 145f, 190f)),
-                CreateSpriteMetaData("ElevatorDoorLeft", new Rect(368f, 205f, 258f, 745f), new Vector4(20f, 20f, 20f, 20f)),
-                CreateSpriteMetaData("ElevatorDoorRight", new Rect(628f, 205f, 258f, 745f), new Vector4(20f, 20f, 20f, 20f))
-            };
-#pragma warning restore CS0618
-            importer.SaveAndReimport();
-            elevatorFrame = FindSprite(ElevatorSpritePath, "ElevatorFrame");
-            leftDoor = FindSprite(ElevatorSpritePath, "ElevatorDoorLeft");
-            rightDoor = FindSprite(ElevatorSpritePath, "ElevatorDoorRight");
-        }
-
-        private static SpriteMetaData CreateSpriteMetaData(string name, Rect rect, Vector4 border)
-        {
-            return new SpriteMetaData
-            {
-                name = name,
-                rect = rect,
-                alignment = (int)SpriteAlignment.Center,
-                pivot = new Vector2(.5f, .5f),
-                border = border
-            };
         }
 
         private static Sprite FindSprite(string assetPath, string spriteName)

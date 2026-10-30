@@ -492,6 +492,9 @@ namespace GravityPuzzle.Editor
             so.FindProperty("boxCounterOutlineWidth").floatValue = 0.22f;
             so.FindProperty("boxCounterSortingOrder").intValue = 201;
             so.FindProperty("elevatorVisualWidthScale").floatValue = 1f;
+            so.FindProperty("elevatorDoorWidthRatio").floatValue = .86f;
+            so.FindProperty("elevatorDoorHeightRatio").floatValue = .83f;
+            so.FindProperty("elevatorDoorCenterYOffset").floatValue = 0f;
 
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(config);

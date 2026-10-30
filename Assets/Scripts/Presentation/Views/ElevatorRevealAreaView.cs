@@ -20,20 +20,8 @@ namespace GravityPuzzle.Presentation.Views
         private Sequence openingSequence;
         private Action completion;
         private bool isComplete;
-        private Vector3 leftDoorClosedPosition;
-        private Vector3 rightDoorClosedPosition;
-        private float doorOpenDistance;
-        private Vector2 authoredSize;
 
         public string AreaId { get; private set; }
-
-        private void Awake()
-        {
-            if (elevatorLeftDoor != null)
-                leftDoorClosedPosition = elevatorLeftDoor.localPosition;
-            if (elevatorRightDoor != null)
-                rightDoorClosedPosition = elevatorRightDoor.localPosition;
-        }
 
         public void SetPoolReturnHandler(Action<ElevatorRevealAreaView> handler)
         {
@@ -50,34 +38,36 @@ namespace GravityPuzzle.Presentation.Views
             AreaId = areaId;
             config = presentationConfig;
             transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
-            authoredSize = new Vector2(Mathf.Max(.01f, size.x), Mathf.Max(.01f, size.y));
+            Vector2 areaSize = new Vector2(Mathf.Max(.01f, size.x), Mathf.Max(.01f, size.y));
 
             float widthScale = config != null ? config.elevatorVisualWidthScale : 1f;
-            float frameWidth = authoredSize.x * widthScale;
-            float doorApertureWidth = authoredSize.x *
-                (config != null ? config.elevatorDoorWidthRatio : .44f);
-            float doorApertureHeight = authoredSize.y *
-                (config != null ? config.elevatorDoorHeightRatio : .62f);
-            float doorCenterY = authoredSize.y *
-                (config != null ? config.elevatorDoorCenterYOffset : -.04f);
+            float frameWidth = areaSize.x * widthScale;
+            float doorApertureWidth = areaSize.x *
+                (config != null ? config.elevatorDoorWidthRatio : .86f);
+            float doorApertureHeight = areaSize.y *
+                (config != null ? config.elevatorDoorHeightRatio : .83f);
+            float doorCenterY = areaSize.y *
+                (config != null ? config.elevatorDoorCenterYOffset : 0f);
             float doorWidth = doorApertureWidth * .5f;
 
             if (elevatorLeftDoor != null)
             {
-                leftDoorClosedPosition = new Vector3(-doorWidth * .5f, doorCenterY, 0f);
-                elevatorLeftDoor.localPosition = leftDoorClosedPosition;
+                elevatorLeftDoor.localPosition = new Vector3(-doorWidth * .5f, doorCenterY, 0f);
                 elevatorLeftDoor.gameObject.SetActive(true);
             }
 
             if (elevatorRightDoor != null)
             {
-                rightDoorClosedPosition = new Vector3(doorWidth * .5f, doorCenterY, 0f);
-                elevatorRightDoor.localPosition = rightDoorClosedPosition;
+                elevatorRightDoor.localPosition = new Vector3(doorWidth * .5f, doorCenterY, 0f);
                 elevatorRightDoor.gameObject.SetActive(true);
             }
 
             if (doorRenderers != null)
             {
+                bool usesSharedDoorSprite = config == null ||
+                                            config.elevatorLeftDoorSprite == null ||
+                                            config.elevatorRightDoorSprite == null ||
+                                            config.elevatorLeftDoorSprite == config.elevatorRightDoorSprite;
                 for (int i = 0; i < doorRenderers.Length; i++)
                 {
                     if (doorRenderers[i] != null)
@@ -96,7 +86,7 @@ namespace GravityPuzzle.Presentation.Views
                         }
                         doorRenderers[i].drawMode = SpriteDrawMode.Sliced;
                         doorRenderers[i].size = new Vector2(doorWidth, doorApertureHeight);
-                        doorRenderers[i].flipX = i == 0;
+                        doorRenderers[i].flipX = usesSharedDoorSprite && i == 0;
                     }
                 }
             }
@@ -113,7 +103,7 @@ namespace GravityPuzzle.Presentation.Views
                     frameRenderer.sortingOrder = config.elevatorSortingOrder;
                 }
                 frameRenderer.drawMode = SpriteDrawMode.Sliced;
-                frameRenderer.size = new Vector2(frameWidth, authoredSize.y);
+                frameRenderer.size = new Vector2(frameWidth, areaSize.y);
             }
 
             if (openingRenderer != null)
@@ -131,8 +121,6 @@ namespace GravityPuzzle.Presentation.Views
                 openingRenderer.transform.localPosition = new Vector3(0f, doorCenterY, 0f);
             }
 
-            float configuredDistance = config != null ? config.elevatorDoorDistance : 1.2f;
-            doorOpenDistance = Mathf.Max(configuredDistance, authoredSize.x * .5f + doorWidth * .5f);
             isComplete = false;
         }
 
@@ -157,44 +145,59 @@ namespace GravityPuzzle.Presentation.Views
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
 
-            bool hasDoorMotion = false;
-            if (elevatorLeftDoor != null)
+            bool hasDoorCollapse = false;
+            SpriteRenderer leftDoorRenderer = GetDoorRenderer(0);
+            if (elevatorLeftDoor != null && leftDoorRenderer != null)
             {
-                openingSequence.Append(elevatorLeftDoor.DOLocalMoveX(
-                    leftDoorClosedPosition.x - doorOpenDistance,
-                    config.elevatorOpenDuration).SetEase(config.elevatorOpenEase));
-                hasDoorMotion = true;
+                Vector3 closedPosition = elevatorLeftDoor.localPosition;
+                float closedWidth = leftDoorRenderer.size.x;
+                float closedHeight = leftDoorRenderer.size.y;
+                float fixedLeftEdge = closedPosition.x - closedWidth * .5f;
+                openingSequence.Append(DOTween.To(
+                        () => leftDoorRenderer.size.x,
+                        width =>
+                        {
+                            leftDoorRenderer.size = new Vector2(width, closedHeight);
+                            elevatorLeftDoor.localPosition = new Vector3(
+                                fixedLeftEdge + width * .5f,
+                                closedPosition.y,
+                                closedPosition.z);
+                        },
+                        .001f,
+                        config.elevatorOpenDuration)
+                    .SetEase(config.elevatorOpenEase));
+                hasDoorCollapse = true;
             }
 
-            if (elevatorRightDoor != null)
+            SpriteRenderer rightDoorRenderer = GetDoorRenderer(1);
+            if (elevatorRightDoor != null && rightDoorRenderer != null)
             {
-                Tween rightDoorTween = elevatorRightDoor.DOLocalMoveX(
-                    rightDoorClosedPosition.x + doorOpenDistance,
-                    config.elevatorOpenDuration).SetEase(config.elevatorOpenEase);
-                if (hasDoorMotion)
+                Vector3 closedPosition = elevatorRightDoor.localPosition;
+                float closedWidth = rightDoorRenderer.size.x;
+                float closedHeight = rightDoorRenderer.size.y;
+                float fixedRightEdge = closedPosition.x + closedWidth * .5f;
+                Tween rightDoorTween = DOTween.To(
+                        () => rightDoorRenderer.size.x,
+                        width =>
+                        {
+                            rightDoorRenderer.size = new Vector2(width, closedHeight);
+                            elevatorRightDoor.localPosition = new Vector3(
+                                fixedRightEdge - width * .5f,
+                                closedPosition.y,
+                                closedPosition.z);
+                        },
+                        .001f,
+                        config.elevatorOpenDuration)
+                    .SetEase(config.elevatorOpenEase);
+                if (hasDoorCollapse)
                     openingSequence.Join(rightDoorTween);
                 else
                     openingSequence.Append(rightDoorTween);
-                hasDoorMotion = true;
+                hasDoorCollapse = true;
             }
 
-            bool hasFade = false;
-            if (doorRenderers != null)
-            {
-                for (int index = 0; index < doorRenderers.Length; index++)
-                {
-                    SpriteRenderer renderer = doorRenderers[index];
-                    if (renderer == null)
-                        continue;
-
-                    Tween fadeTween = renderer.DOFade(0f, config.elevatorFadeDuration);
-                    if (hasFade)
-                        openingSequence.Join(fadeTween);
-                    else
-                        openingSequence.Append(fadeTween);
-                    hasFade = true;
-                }
-            }
+            if (!hasDoorCollapse)
+                openingSequence.AppendInterval(config.elevatorOpenDuration);
 
             openingSequence.OnComplete(CompleteOpening);
         }
@@ -207,8 +210,28 @@ namespace GravityPuzzle.Presentation.Views
             isComplete = true;
             Action callback = completion;
             completion = null;
-            Despawn();
+            SetDoorsVisible(false);
             callback?.Invoke();
+        }
+
+        private void SetDoorsVisible(bool visible)
+        {
+            if (doorRenderers == null)
+                return;
+
+            for (int index = 0; index < doorRenderers.Length; index++)
+            {
+                SpriteRenderer renderer = doorRenderers[index];
+                if (renderer != null)
+                    renderer.gameObject.SetActive(visible);
+            }
+        }
+
+        private SpriteRenderer GetDoorRenderer(int index)
+        {
+            return doorRenderers != null && index >= 0 && index < doorRenderers.Length
+                ? doorRenderers[index]
+                : null;
         }
 
         public void OnSpawn()

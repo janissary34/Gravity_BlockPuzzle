@@ -43,7 +43,6 @@ namespace GravityPuzzle.Presentation.Views
                 leftDoorClosedPosition = elevatorLeftDoor.localPosition;
             if (elevatorRightDoor != null)
                 rightDoorClosedPosition = elevatorRightDoor.localPosition;
-
             ApplySorting();
         }
 
@@ -89,28 +88,57 @@ namespace GravityPuzzle.Presentation.Views
             }
             else
             {
-                if (elevatorLeftDoor != null)
+                bool hasDoorCollapse = false;
+                SpriteRenderer leftDoorRenderer = GetDoorRenderer(0);
+                if (elevatorLeftDoor != null && leftDoorRenderer != null)
                 {
-                    openingSequence.Join(elevatorLeftDoor.DOLocalMoveX(
-                        leftDoorClosedPosition.x - config.elevatorDoorDistance,
-                        config.elevatorOpenDuration).SetEase(config.elevatorOpenEase));
-                }
-                if (elevatorRightDoor != null)
-                {
-                    openingSequence.Join(elevatorRightDoor.DOLocalMoveX(
-                        rightDoorClosedPosition.x + config.elevatorDoorDistance,
-                        config.elevatorOpenDuration).SetEase(config.elevatorOpenEase));
+                    float closedWidth = leftDoorRenderer.size.x;
+                    float closedHeight = leftDoorRenderer.size.y;
+                    float fixedLeftEdge = leftDoorClosedPosition.x - closedWidth * .5f;
+                    openingSequence.Append(DOTween.To(
+                            () => leftDoorRenderer.size.x,
+                            width =>
+                            {
+                                leftDoorRenderer.size = new Vector2(width, closedHeight);
+                                elevatorLeftDoor.localPosition = new Vector3(
+                                    fixedLeftEdge + width * .5f,
+                                    leftDoorClosedPosition.y,
+                                    leftDoorClosedPosition.z);
+                            },
+                            .001f,
+                            config.elevatorOpenDuration)
+                        .SetEase(config.elevatorOpenEase));
+                    hasDoorCollapse = true;
                 }
 
-                int rendererCount = elevatorDoorRenderers != null ? elevatorDoorRenderers.Length : 0;
-                for (int index = 0; index < rendererCount; index++)
+                SpriteRenderer rightDoorRenderer = GetDoorRenderer(1);
+                if (elevatorRightDoor != null && rightDoorRenderer != null)
                 {
-                    SpriteRenderer renderer = elevatorDoorRenderers[index];
-                    if (renderer == null)
-                        continue;
-                    Color color = renderer.color;
-                    openingSequence.Join(renderer.DOFade(0f, config.elevatorFadeDuration));
+                    float closedWidth = rightDoorRenderer.size.x;
+                    float closedHeight = rightDoorRenderer.size.y;
+                    float fixedRightEdge = rightDoorClosedPosition.x + closedWidth * .5f;
+                    Tween rightDoorTween = DOTween.To(
+                            () => rightDoorRenderer.size.x,
+                            width =>
+                            {
+                                rightDoorRenderer.size = new Vector2(width, closedHeight);
+                                elevatorRightDoor.localPosition = new Vector3(
+                                    fixedRightEdge - width * .5f,
+                                    rightDoorClosedPosition.y,
+                                    rightDoorClosedPosition.z);
+                            },
+                            .001f,
+                            config.elevatorOpenDuration)
+                        .SetEase(config.elevatorOpenEase);
+                    if (hasDoorCollapse)
+                        openingSequence.Join(rightDoorTween);
+                    else
+                        openingSequence.Append(rightDoorTween);
+                    hasDoorCollapse = true;
                 }
+
+                if (!hasDoorCollapse)
+                    openingSequence.AppendInterval(config.elevatorOpenDuration);
             }
 
             openingSequence.OnComplete(CompleteOpening);
@@ -122,9 +150,35 @@ namespace GravityPuzzle.Presentation.Views
                 return;
 
             completed = true;
+            if (visualKind == RevealAreaKind.Elevator)
+                SetElevatorDoorsVisible(false);
             Action completion = pendingCompletion;
             pendingCompletion = null;
             completion?.Invoke();
+        }
+
+        private void SetElevatorDoorsVisible(bool visible)
+        {
+            if (elevatorDoorRenderers == null)
+                return;
+
+            for (int index = 0; index < elevatorDoorRenderers.Length; index++)
+            {
+                SpriteRenderer renderer = elevatorDoorRenderers[index];
+                if (renderer != null)
+                    renderer.gameObject.SetActive(visible);
+            }
+        }
+
+        private SpriteRenderer GetDoorRenderer(int index)
+        {
+            if (elevatorDoorRenderers == null || index < 0 || index >= elevatorDoorRenderers.Length ||
+                elevatorDoorRenderers[index] == null)
+            {
+                return null;
+            }
+
+            return elevatorDoorRenderers[index];
         }
 
         private void ApplySorting()
