@@ -13,7 +13,7 @@ namespace GravityPuzzle
     /// Animates timer_obj from screen bottom at native scale to screen center,
     /// pauses for 1 second while performing a 360-degree DOFillAmount freeze transition on frozenClockImage,
     /// flies strictly vertically to timer_txt's location, triggers a blue particle explosion VFX on arrival,
-    /// deactivates timer_obj upon arrival, and freezes the timer for 8 seconds.
+    /// deactivates timer_obj upon arrival, and freezes the timer for 10 seconds.
     /// Uses direct Inspector assigned references only.
     /// </summary>
     public class TimerBooster : MonoBehaviour
@@ -197,7 +197,7 @@ namespace GravityPuzzle
 
         [Header("Timer Freeze Settings")]
         [SerializeField, Tooltip("How many real-time seconds the countdown remains frozen after the animation completes.")]
-        private float freezeDuration = 8.0f;
+        private float freezeDuration = 10.0f;
 
         private Vector3 originalScale = Vector3.one;
         private Sequence activeSequence;

@@ -442,7 +442,7 @@ namespace GravityPuzzle
             float pillHeight = 42f * scale;
             float firstPillX = profileRect.xMax + 12f * scale;
             GUI.Box(new Rect(firstPillX, top + 4f * scale, 100f * scale, pillHeight), "HP  5 / 5", pillStyle);
-            GUI.Box(new Rect(firstPillX + 108f * scale, top + 4f * scale, 112f * scale, pillHeight), "GOLD  2000", pillStyle);
+            GUI.Box(new Rect(firstPillX + 108f * scale, top + 4f * scale, 112f * scale, pillHeight), "GOLD  1000", pillStyle);
 
             Rect settingsRect = new Rect(
                 safe.xMax - margin - 48f * scale,
@@ -2683,7 +2683,10 @@ namespace GravityPuzzle
             }
 
             IReadOnlyList<PuzzlePiece> pieces = PuzzlePiece.ActivePieces;
-            if (IsTimerStarted && !boardCleared && !boardFailed)
+            // Bombs share the board timer's owner-scoped pause contract. This
+            // keeps their remaining-time presentation and expiry aligned with
+            // a Freeze Timer booster's authoritative pause window.
+            if (IsTimerStarted && !boardCleared && !boardFailed && !IsTimerPaused)
             {
                 bombElapsedSeconds += Time.deltaTime;
                 if (UpdateBombTimers(pieces))

@@ -21,7 +21,7 @@ MonoBehaviour:
   frameColor: {r: 0.18632075, g: 0.25448683, b: 0.745283, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
-  coinAmount: 20
+  coinAmount: 40
   rocketBoosterCount: 3
   hammerBoosterCount: 3
   timerBoosterCount: 3

@@ -25,7 +25,7 @@ namespace GravityPuzzle
 
         [Tooltip("How many real-time seconds the countdown remains frozen.")]
         [Min(.1f)]
-        public float freezeDuration = 5f;
+        public float freezeDuration = 10f;
 
         public bool IsFreezeActive => freezeRoutine != null;
         public bool HasBeenUsedThisLevel => usedThisLevel;

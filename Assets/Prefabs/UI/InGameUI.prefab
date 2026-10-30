@@ -5353,7 +5353,7 @@ MonoBehaviour:
   liveAddsButton: {fileID: 4520693379649865734}
   playOnButton: {fileID: 5969124909035696759}
   closeKeepOnPlayingButton: {fileID: 7532168781206999765}
-  continueTimeSeconds: 20
+  continueTimeSeconds: 60
   retryButton: {fileID: 5067800990691057563}
   mainMenuButton: {fileID: 0}
   retryConfirmationPanel: {fileID: 3688310434957058167}

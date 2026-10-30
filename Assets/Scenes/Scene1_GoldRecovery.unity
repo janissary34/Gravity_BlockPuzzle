@@ -328,7 +328,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boosterButton: {fileID: 14698314}
   boosterButtonRef: {fileID: 0}
-  freezeDuration: 5
+  freezeDuration: 10
 --- !u!114 &14698314
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7386,7 +7386,7 @@ MonoBehaviour:
   liveAddsButton: {fileID: 0}
   playOnButton: {fileID: 0}
   closeKeepOnPlayingButton: {fileID: 0}
-  continueTimeSeconds: 20
+  continueTimeSeconds: 60
   retryButton: {fileID: 1496174224}
   mainMenuButton: {fileID: 872485037}
   retryConfirmationPanel: {fileID: 0}
@@ -8009,7 +8009,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boosterButton: {fileID: 1313681590}
   boosterButtonRef: {fileID: 0}
-  freezeDuration: 5
+  freezeDuration: 10
 --- !u!114 &1313681590
 MonoBehaviour:
   m_ObjectHideFlags: 0

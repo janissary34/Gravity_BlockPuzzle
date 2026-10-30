@@ -56,7 +56,7 @@ namespace GravityPuzzle
         [SerializeField] private Button closeKeepOnPlayingButton;
 
         [Tooltip("Seconds granted after the player accepts the continue offer.")]
-        [Min(0.01f)] [SerializeField] private float continueTimeSeconds = 20f;
+        [Min(0.01f)] [SerializeField] private float continueTimeSeconds = 60f;
 
         [Header("Buttons")]
         [Tooltip("Drag your Retry button here")]
