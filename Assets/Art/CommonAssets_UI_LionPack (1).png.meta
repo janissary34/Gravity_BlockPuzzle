@@ -942,13 +942,13 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Rainbow
+      name: headerHard
       rect:
         serializedVersion: 2
-        x: 363
-        y: 295
-        width: 294
-        height: 329
+        x: 357
+        y: 475
+        width: 334
+        height: 133
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -1592,6 +1592,48 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: headerSuperHard
+      rect:
+        serializedVersion: 2
+        x: 351
+        y: 326
+        width: 340
+        height: 133
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f9ebb25be067e41b284543c830d483db
+      internalID: -1555243204
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Purple
+      rect:
+        serializedVersion: 2
+        x: 1643
+        y: 916
+        width: 397
+        height: 102
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 58dc16ac289984ad2a696ddde589d73b
+      internalID: 1277133791
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -1674,7 +1716,7 @@ TextureImporter:
       Panel_Red_Base: 483412611
       Pill_White_Large: 1986154679
       Pill_White_Small: 1108933010
-      Rainbow: 1173381308
+      Purple: 1277133791
       Restart: -1047580450
       Rocket: -384717997
       RockeyGrey: -2000993857
@@ -1690,6 +1732,8 @@ TextureImporter:
       Toggle_Purple: -722621198
       banner2: 890847462
       greyButton: 329255896
+      headerHard: 1173381308
+      headerSuperHard: -1555243204
       levelBG: 1321129205
       redButton: -1020483702
       settingsBG: 2118190454

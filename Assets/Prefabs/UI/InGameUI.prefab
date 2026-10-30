@@ -49070,22 +49070,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: UI_Progress_Slider
       objectReference: {fileID: 0}
-    - target: {fileID: 3114365470682090942, guid: be08c492bf499448886933971c6f58c7, type: 3}
-      propertyPath: m_AnchorMax.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3114365470682090942, guid: be08c492bf499448886933971c6f58c7, type: 3}
-      propertyPath: m_AnchorMax.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3114365470682090942, guid: be08c492bf499448886933971c6f58c7, type: 3}
-      propertyPath: m_AnchorMin.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4477926550438895697, guid: be08c492bf499448886933971c6f58c7, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 5777589405527845067, guid: be08c492bf499448886933971c6f58c7, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -50310,6 +50294,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 6016220375648943809}
     m_Modifications:
+    - target: {fileID: 903892387130129633, guid: fcececb46b09e4d1885fc5827fa4937c, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2269657715702155757, guid: fcececb46b09e4d1885fc5827fa4937c, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -50518,13 +50506,25 @@ PrefabInstance:
       propertyPath: m_SortingLayer
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4772884169119145437, guid: fcececb46b09e4d1885fc5827fa4937c, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5276405116741883028, guid: fcececb46b09e4d1885fc5827fa4937c, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7651408179020417641, guid: fcececb46b09e4d1885fc5827fa4937c, type: 3}
       propertyPath: m_SortingLayer
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7699506039128494810, guid: fcececb46b09e4d1885fc5827fa4937c, type: 3}
       propertyPath: m_Name
       value: Boosters
+      objectReference: {fileID: 0}
+    - target: {fileID: 9032375037883216443, guid: fcececb46b09e4d1885fc5827fa4937c, type: 3}
+      propertyPath: m_SortingLayer
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -51532,6 +51532,10 @@ PrefabInstance:
     - target: {fileID: 6995592392967016193, guid: 588ffa8f9c8e7406b9d8086faf21bd75, type: 3}
       propertyPath: m_Name
       value: UI_Settings
+      objectReference: {fileID: 0}
+    - target: {fileID: 6995592392967016193, guid: 588ffa8f9c8e7406b9d8086faf21bd75, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8328717665740241440, guid: 588ffa8f9c8e7406b9d8086faf21bd75, type: 3}
       propertyPath: m_Pivot.x
