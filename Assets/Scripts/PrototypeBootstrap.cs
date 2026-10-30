@@ -205,10 +205,13 @@ namespace GravityPuzzle
 
         internal static void ConfigureCamera()
         {
-            ConfigureCamera(5.4f, new Color(.06f, .07f, .14f));
+            ConfigureCamera(5.4f, new Color(.06f, .07f, .14f), 0f);
         }
 
-        internal static void ConfigureCamera(float orthographicSize, Color backgroundColor)
+        internal static void ConfigureCamera(
+            float orthographicSize,
+            Color backgroundColor,
+            float boardVerticalScreenOffset)
         {
             if (sceneCamera == null)
             {
@@ -218,7 +221,7 @@ namespace GravityPuzzle
 
             sceneCamera.orthographic = true;
             sceneCamera.orthographicSize = orthographicSize;
-            sceneCamera.transform.position = new Vector3(0f, 0f, -10f);
+            sceneCamera.transform.position = new Vector3(0f, -boardVerticalScreenOffset, -10f);
             sceneCamera.backgroundColor = backgroundColor;
         }
 

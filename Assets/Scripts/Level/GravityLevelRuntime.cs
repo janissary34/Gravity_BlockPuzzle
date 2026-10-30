@@ -308,7 +308,10 @@ namespace GravityPuzzle
 
             float halfHeight = level.boardRows * .5f;
             float cameraSize = ResolveCameraSize(level);
-            PrototypeBootstrap.ConfigureCamera(cameraSize, ResolveExteriorColor(level));
+            PrototypeBootstrap.ConfigureCamera(
+                cameraSize,
+                ResolveExteriorColor(level),
+                level.boardVerticalScreenOffset);
 
             PrototypeBoard boardState = configuredBoard;
             boardState.SetRemovalHeight(-halfHeight - 15f);

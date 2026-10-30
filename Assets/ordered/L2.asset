@@ -29,13 +29,15 @@ MonoBehaviour:
   fixedCameraSize: 9
   cameraViewportWidth: 0.88
   cameraViewportHeight: 0.7
+  boardVerticalScreenOffset: 1
   useRuntimeSafeAreaForCameraFit: 0
   exitWidth: 2
   shredderCount: 2
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
-  - name: Piece 2
+  - pieceId:
+    name: Piece 2
     tutorialTargetId: 
     visualId: 
     paletteId: Yellow
@@ -120,7 +122,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 9}
       type: 0
-  - name: Piece 4
+  - pieceId:
+    name: Piece 4
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -173,7 +176,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: -1}
       type: 0
-  - name: Piece 5
+  - pieceId:
+    name: Piece 5
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
@@ -258,6 +262,7 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
+  joints: []
   boxes: []
   elevators: []
   pins: []
