@@ -112,7 +112,7 @@ namespace GravityPuzzle
         // the authoritative capture decision or emitting per-frame logs.
         internal void LogCaptureRejection(PuzzlePiece piece, BlockShredder shredder)
         {
-            if (piece == null || shredder == null || !shredder.DebugHasFeedInZone(this))
+            if (piece == null || shredder == null)
                 return;
 
             piece.GetActiveCellBounds(activeCellBoundsBuffer);

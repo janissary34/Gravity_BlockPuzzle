@@ -142,7 +142,8 @@ namespace GravityPuzzle
 
     /// <summary>
     /// Owns only temporary Unity physics for support-chain pieces. Board cells
-    /// remain reserved until each member's coordinate-based cutter capture.
+    /// remain reserved until each member independently crosses the
+    /// coordinate-based cutter capture plane.
     /// </summary>
     internal sealed class ShredderPhysicsIsland
     {
@@ -186,7 +187,29 @@ namespace GravityPuzzle
         public void FixedTick()
         {
             elapsed += Time.fixedDeltaTime;
-            int captureIndex = -1;
+            // Promote every member already in the capture band. They are
+            // ordered bottom-first only for deterministic lifecycle logs; a
+            // member never waits for another feed to finish. Their colliders
+            // remain real until their own cells cross the cutter.
+            while (TryFindLowestEligibleMember(out int captureIndex) &&
+                   owner.TryCapturePhysicsIslandMember(dynamicMembers[captureIndex], zone))
+            {
+                dynamicMembers.RemoveAt(captureIndex);
+            }
+
+            if (!stallWarningReported && config != null &&
+                elapsed >= config.PhysicsIslandMaximumDuration && dynamicMembers.Count > 0)
+            {
+                stallWarningReported = true;
+                Debug.LogWarning(
+                    "[ShredderPhysicsIsland] A support chain remains physically blocked after the configured observation window. " +
+                    "It stays outside the shredder feed until it reaches the real mouth gate.");
+            }
+        }
+
+        private bool TryFindLowestEligibleMember(out int captureIndex)
+        {
+            captureIndex = -1;
             float lowestY = float.PositiveInfinity;
             int lowestId = int.MaxValue;
 
@@ -202,11 +225,11 @@ namespace GravityPuzzle
                 if (zone == null || config == null ||
                     !zone.ContainsPhysicsIslandCaptureFootprint(
                         member,
-                        config.PhysicsIslandCaptureDistance))
+                        config.PhysicsIslandCaptureDistance) ||
+                    !zone.TryGetPhysicsIslandCaptureFloorY(member, out float memberLowestY))
+                {
                     continue;
-
-                if (!zone.TryGetPhysicsIslandCaptureFloorY(member, out float memberLowestY))
-                    continue;
+                }
 
                 bool isLower = memberLowestY < lowestY - .0001f;
                 bool breaksTie = Mathf.Abs(memberLowestY - lowestY) <= .0001f &&
@@ -219,24 +242,7 @@ namespace GravityPuzzle
                 lowestId = member.SourcePieceId;
             }
 
-            // A member may enter only when its real horizontal material
-            // footprint has no active-feed conflict. Leave a conflicting
-            // member on the real throat shelf/contacts; never force an
-            // out-of-mouth member into Shredding.
-            if (captureIndex >= 0 &&
-                owner.TryCapturePhysicsIslandMember(dynamicMembers[captureIndex], zone))
-            {
-                dynamicMembers.RemoveAt(captureIndex);
-            }
-
-            if (!stallWarningReported && config != null &&
-                elapsed >= config.PhysicsIslandMaximumDuration && dynamicMembers.Count > 0)
-            {
-                stallWarningReported = true;
-                Debug.LogWarning(
-                    "[ShredderPhysicsIsland] A support chain remains physically blocked after the configured observation window. " +
-                    "It stays outside the shredder feed until it reaches the real mouth gate.");
-            }
+            return captureIndex >= 0;
         }
     }
 }

@@ -1652,9 +1652,10 @@ namespace GravityPuzzle
             Body.useFullKinematicContacts = true;
             Body.velocity = Vector2.zero;
             Body.angularDrag = config.FeedAngularDrag;
-            Body.angularVelocity = UnityEngine.Random.Range(
-                -config.TumbleTorque,
-                config.TumbleTorque);
+            // Preserve the pose reached during the dynamic support handoff,
+            // but stop rotation once this piece becomes a kinematic feed.
+            // A wide active feed must not sweep into another simultaneous feed.
+            Body.angularVelocity = 0f;
         }
 
         /// <summary>

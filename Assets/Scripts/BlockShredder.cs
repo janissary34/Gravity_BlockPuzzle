@@ -40,20 +40,6 @@ namespace GravityPuzzle
 
         private ShredderFeedMask activeFeedMask;
         private int activeFeedCount;
-        // A feed reservation owns one horizontal material footprint in an
-        // authored mouth. Multiple non-overlapping bodies may use the same
-        // mouth, while material that could physically meet remains serial.
-        // This is intentionally local to the existing shredder owner rather
-        // than a second routing or column-management system.
-        private readonly List<FeedReservation> activeFeedReservations =
-            new List<FeedReservation>(4);
-        private readonly HashSet<PuzzlePiece> feedStraighteningRequests =
-            new HashSet<PuzzlePiece>();
-        private static readonly Comparison<BoxCollider2D> CompareCellsByCenterX = (a, b) =>
-        {
-            if (a == null || b == null) return 0;
-            return a.bounds.center.x.CompareTo(b.bounds.center.x);
-        };
         private float nextParticleShredSoundTime;
         private readonly List<ShredderPhysicsIsland> activePhysicsIslands =
             new List<ShredderPhysicsIsland>();
@@ -85,26 +71,12 @@ namespace GravityPuzzle
         private readonly CutterContactSegment[] activeSegmentsBuffer = new CutterContactSegment[16];
         private readonly Vector2[] rawContactBoundsBuffer = new Vector2[32];
         private readonly List<Bounds> cachedCellBoundsBuffer = new List<Bounds>(32);
-        private readonly List<Bounds> candidateFeedCellBoundsBuffer = new List<Bounds>(32);
-        private readonly List<Bounds> reservedFeedCellBoundsBuffer = new List<Bounds>(32);
         private readonly List<Bounds> guideDepthCellBoundsBuffer = new List<Bounds>(32);
 
 #if UNITY_EDITOR
         private readonly Dictionary<int, string> admissionDiagnosticStates =
             new Dictionary<int, string>();
 #endif
-
-        private readonly struct FeedReservation
-        {
-            public readonly PuzzlePiece Piece;
-            public readonly ShredderCatchZone Zone;
-
-            public FeedReservation(PuzzlePiece piece, ShredderCatchZone zone)
-            {
-                Piece = piece;
-                Zone = zone;
-            }
-        }
 
         private void Awake()
         {
@@ -197,17 +169,11 @@ namespace GravityPuzzle
                 !zone.ContainsCaptureFootprint(piece))
                 return false;
 
-            if (!TryAcquireFeedGate(piece, zone))
-                return false;
-
             if (TryStartPhysicsIsland(piece, zone))
                 return true;
 
             if (!piece.TryBeginShredderHandoff())
-            {
-                ReleaseFeedGate(piece, zone);
                 return false;
-            }
 
             // A combined member leaves its graph component only once the
             // shredder handoff has been accepted. Failed capture attempts
@@ -373,8 +339,7 @@ namespace GravityPuzzle
 
         private void ReleasePhysicsMouthIfIdle(ShredderCatchZone zone)
         {
-            if (zone == null || HasActiveFeedReservationForZone(zone) ||
-                HasActivePhysicsIslandForZone(zone) ||
+            if (zone == null || HasActivePhysicsIslandForZone(zone) ||
                 !activePhysicsMouths.TryGetValue(zone, out ShredderPhysicsMouth mouth))
             {
                 return;
@@ -432,15 +397,11 @@ namespace GravityPuzzle
 
             PrototypeBoard board = PrototypeBoard.Active;
             if (board == null || !board.TryGetPieceModel(piece, out PieceModel model) ||
-                model.State != PieceState.HandoffToPhysics ||
-                !TryAcquireFeedGate(piece, zone))
+                model.State != PieceState.HandoffToPhysics)
                 return false;
 
             if (!piece.TryBeginShredderFeedFromPhysicsIsland())
-            {
-                ReleaseFeedGate(piece, zone);
                 return false;
-            }
 
             board.JointSpringPresenter?.PrepareForShredder(piece);
             board.BreakJointsForPiece(piece);
@@ -448,106 +409,7 @@ namespace GravityPuzzle
             return true;
         }
 
-        private bool TryAcquireFeedGate(PuzzlePiece piece, ShredderCatchZone zone)
-        {
-            if (piece == null || zone == null)
-                return false;
-
-            PrototypeBoard board = PrototypeBoard.Active;
-            if (board == null || !board.TryGetPieceModel(piece, out PieceModel candidateModel))
-                return false;
-
-            piece.GetActiveCellBounds(candidateFeedCellBoundsBuffer);
-            if (candidateFeedCellBoundsBuffer.Count == 0)
-            {
 #if UNITY_EDITOR
-                DebugLogAdmission(piece, zone, "gate_rejected", "candidate_no_cells", null);
-#endif
-                return false;
-            }
-
-            for (int index = 0; index < activeFeedReservations.Count; index++)
-            {
-                FeedReservation reservation = activeFeedReservations[index];
-                if (reservation.Zone != zone || reservation.Piece == null)
-                    continue;
-
-                if (!board.TryGetPieceModel(reservation.Piece, out PieceModel reservedModel) ||
-                    HaveOverlappingGridColumns(candidateModel, reservedModel))
-                {
-#if UNITY_EDITOR
-                    DebugLogAdmission(piece, zone, "gate_rejected", "grid_columns_overlap_or_model_missing", reservation.Piece);
-#endif
-                    return false;
-                }
-
-                reservation.Piece.GetActiveCellBounds(reservedFeedCellBoundsBuffer);
-                if (reservedFeedCellBoundsBuffer.Count == 0)
-                {
-#if UNITY_EDITOR
-                    DebugLogAdmission(piece, zone, "gate_rejected", "reservation_no_cells", reservation.Piece);
-#endif
-                    return false;
-                }
-
-                if (HaveOverlappingHorizontalFootprints(
-                        candidateFeedCellBoundsBuffer,
-                        reservedFeedCellBoundsBuffer))
-                {
-                    // The grid paths are independent, but a tilted or displaced
-                    // body can still overlap the other feed's physical space.
-                    // Re-align the existing feed before allowing both motors.
-                    feedStraighteningRequests.Add(reservation.Piece);
-#if UNITY_EDITOR
-                    DebugLogAdmission(piece, zone, "gate_rejected", "straightening_for_physical_clearance", reservation.Piece);
-#endif
-                    return false;
-                }
-            }
-
-            activeFeedReservations.Add(new FeedReservation(piece, zone));
-#if UNITY_EDITOR
-            DebugLogAdmission(piece, zone, "gate_acquired", "accepted", null);
-#endif
-            return true;
-        }
-
-        private void ReleaseFeedGate(PuzzlePiece piece, ShredderCatchZone zone)
-        {
-            if (zone == null)
-                return;
-
-            for (int index = activeFeedReservations.Count - 1; index >= 0; index--)
-            {
-                FeedReservation reservation = activeFeedReservations[index];
-                if (reservation.Zone == zone && ReferenceEquals(reservation.Piece, piece))
-                {
-                    feedStraighteningRequests.Remove(piece);
-#if UNITY_EDITOR
-                    DebugLogAdmission(piece, zone, "gate_released", "feed_finished_or_cancelled", null);
-#endif
-                    activeFeedReservations.RemoveAt(index);
-                    break;
-                }
-            }
-
-            ReleasePhysicsMouthIfIdle(zone);
-        }
-
-        private bool HasActiveFeedReservationForZone(ShredderCatchZone zone)
-        {
-            for (int index = 0; index < activeFeedReservations.Count; index++)
-            {
-                if (activeFeedReservations[index].Zone == zone)
-                    return true;
-            }
-
-            return false;
-        }
-
-#if UNITY_EDITOR
-        internal bool DebugHasFeedInZone(ShredderCatchZone zone) => HasActiveFeedReservationForZone(zone);
-
         internal void DebugLogAdmission(
             PuzzlePiece piece, ShredderCatchZone zone, string stage, string reason, PuzzlePiece blocker)
         {
@@ -597,58 +459,6 @@ namespace GravityPuzzle
         }
 #endif
 
-        private bool HasConcurrentFeed(ShredderCatchZone zone)
-        {
-            int count = 0;
-            for (int index = 0; index < activeFeedReservations.Count; index++)
-            {
-                if (activeFeedReservations[index].Zone == zone &&
-                    activeFeedReservations[index].Piece != null && ++count > 1)
-                    return true;
-            }
-            return false;
-        }
-
-        private static bool HaveOverlappingGridColumns(PieceModel first, PieceModel second)
-        {
-            for (int firstIndex = 0; firstIndex < first.LocalCells.Count; firstIndex++)
-            {
-                int firstColumn = first.GetWorldCell(firstIndex).X;
-                for (int secondIndex = 0; secondIndex < second.LocalCells.Count; secondIndex++)
-                {
-                    if (firstColumn == second.GetWorldCell(secondIndex).X)
-                        return true;
-                }
-            }
-            return false;
-        }
-
-        private static bool HaveOverlappingHorizontalFootprints(
-            List<Bounds> first,
-            List<Bounds> second)
-        {
-            const float TouchingEpsilon = .0001f;
-            for (int firstIndex = 0; firstIndex < first.Count; firstIndex++)
-            {
-                Bounds firstBounds = first[firstIndex];
-                float firstMin = firstBounds.min.x;
-                float firstMax = firstBounds.max.x;
-                for (int secondIndex = 0; secondIndex < second.Count; secondIndex++)
-                {
-                    Bounds secondBounds = second[secondIndex];
-                    float secondMin = secondBounds.min.x;
-                    float secondMax = secondBounds.max.x;
-                    if (firstMax > secondMin + TouchingEpsilon &&
-                        secondMax > firstMin + TouchingEpsilon)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
         private void AcquireFeedMask(float shredderY)
         {
             if (activeFeedMask == null && !ShredderFeedMaskPool.TryRent(out activeFeedMask))
@@ -685,7 +495,6 @@ namespace GravityPuzzle
         {
             if (piece == null || zone == null)
             {
-                ReleaseFeedGate(piece, zone);
                 yield break;
             }
 
@@ -778,8 +587,6 @@ namespace GravityPuzzle
             Vector2 lastContactCenter = Vector2.zero;
             float lastContactWidth = 0f;
             bool isShreddingSoundActive = false;
-            bool feedRotationSuspended = false;
-            float suspendedAngularVelocity = 0f;
             ShredderContactGlowView activeGlowView = null;
             ShredderContactGlowPool.TryRent(out activeGlowView);
 
@@ -799,54 +606,18 @@ namespace GravityPuzzle
                     // The feed is kinematic, so commit its position steadily downwards.
                     rb.MovePosition(rb.position + new Vector2(0f, -feedSpeed * feedDeltaTime));
 
-                    // Kinematic bodies do not integrate torque. Advance the
-                    // authored feed angular velocity explicitly so a dynamic
-                    // support above reacts to the same tilted collider the
-                    // player sees.
-                    // Concurrent feeds have disjoint current footprints. Hold
-                    // their angles until only one remains so the kinematic
-                    // motors cannot rotate into a neighbour after admission.
-                    bool straightenFeed = feedStraighteningRequests.Contains(piece);
-                    if (HasConcurrentFeed(zone) || straightenFeed)
-                    {
-                        if (!feedRotationSuspended)
-                        {
-                            suspendedAngularVelocity = rb.angularVelocity;
-                            feedRotationSuspended = true;
-                        }
-                        rb.angularVelocity = 0f;
-                        float currentAngle = Mathf.DeltaAngle(0f, rb.rotation);
-                        if (straightenFeed)
-                        {
-                            float straightenSpeed = Mathf.Max(feedSpeed,
-                                Mathf.Max(maxTiltAngle, Mathf.Abs(suspendedAngularVelocity)));
-                            float nextAngle = Mathf.MoveTowardsAngle(
-                                currentAngle, 0f, straightenSpeed * feedDeltaTime);
-                            rb.MoveRotation(nextAngle);
-                            if (Mathf.Approximately(nextAngle, 0f))
-                                feedStraighteningRequests.Remove(piece);
-                        }
-                        else
-                        {
-                            rb.MoveRotation(currentAngle);
-                        }
-                    }
-                    else
-                    {
-                        if (feedRotationSuspended)
-                        {
-                            rb.angularVelocity = suspendedAngularVelocity;
-                            feedRotationSuspended = false;
-                        }
-                        float currentAngle = Mathf.DeltaAngle(0f, rb.rotation);
-                        float nextAngle = currentAngle + rb.angularVelocity * feedDeltaTime;
-                        if (Mathf.Abs(nextAngle) > maxTiltAngle)
-                        {
-                            nextAngle = Mathf.Clamp(nextAngle, -maxTiltAngle, maxTiltAngle);
-                            rb.angularVelocity = -rb.angularVelocity * 0.5f;
-                        }
-                        rb.MoveRotation(nextAngle);
-                    }
+                    // Keep the contact pose fixed while the kinematic motor
+                    // pulls the piece through the cutter. Dynamic pieces can
+                    // settle and rotate above the capture plane, but an active
+                    // feed is constrained to the configured envelope so a
+                    // wide shape cannot sweep into the mouth walls or another
+                    // simultaneous feed.
+                    rb.angularVelocity = 0f;
+                    float clampedAngle = Mathf.Clamp(
+                        Mathf.DeltaAngle(0f, rb.rotation),
+                        -maxTiltAngle,
+                        maxTiltAngle);
+                    rb.MoveRotation(clampedAngle);
                 }
 
                 // Sample active block cells directly so concave/notched pieces (L, U, etc.)
@@ -1203,7 +974,6 @@ namespace GravityPuzzle
             }
 
             ReleaseFeedMask();
-            ReleaseFeedGate(piece, zone);
         }
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);

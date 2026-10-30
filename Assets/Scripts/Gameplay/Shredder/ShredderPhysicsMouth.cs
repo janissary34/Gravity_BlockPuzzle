@@ -6,9 +6,9 @@ namespace GravityPuzzle
 {
     /// <summary>
     /// Pooled static guides plus a hidden throat shelf for the short-lived
-    /// shredder physics island. The shelf sits inside the cutter artwork, so
-    /// a member waiting for a conflicting feed footprint rests on a real
-    /// mechanism instead of falling below the mouth or hovering in board space.
+    /// shredder physics island. The shelf sits strictly below the coordinate
+    /// capture plane: it catches only a body that has already become eligible
+    /// for its own feed, never a global admission queue.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody2D))]
@@ -78,6 +78,17 @@ namespace GravityPuzzle
                 Mathf.Max(.01f, rightEdge - leftEdge + clearance * 2f),
                 thickness,
                 config.FeedPhysicsMaterial);
+            // The shelf is a presentation containment fallback only. Its top
+            // is constructed at cutterY, while dynamic members become eligible
+            // at cutterY + PhysicsIslandCaptureDistance, so it can never be a
+            // gameplay admission barrier.
+            if (config.PhysicsIslandCaptureDistance <= 0f)
+            {
+                Debug.LogError(
+                    "[ShredderPhysicsMouth] The coordinate capture plane must remain above the throat shelf.",
+                    this);
+                return false;
+            }
             GuideDepth = depth;
             Physics2D.SyncTransforms();
             return true;

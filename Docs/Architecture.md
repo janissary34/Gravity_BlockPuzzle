@@ -42,24 +42,24 @@ If a candidate group fails commit, it is excluded for the batch so unrelated
 independent groups continue to fall without stalling board gravity.
 The board commits the stack atomically and owns the lifecycle transitions.
 
-`BlockShredder` owns admission to each authored `ShredderCatchZone`. Feed
-reservations are scoped to an active piece and zone. Their authoritative grid
-columns must be disjoint for concurrent admission; overlapping columns remain
-serial. Current cell bounds additionally guard physical clearance. If an
-independent candidate encounters a tilted active feed, the active feed is
-straightened toward its grid orientation before retrying admission. While
-multiple feeds share a zone, their feed rotation is held at its current angle;
-once only one remains, its configured rotation resumes. Physical bounds can
-still delay admission when a body is displaced or the conservative bounds overlap.
+`BlockShredder` owns admission to each authored `ShredderCatchZone`, but does
+not reserve a queue, lane, or grid column. Every piece that satisfies its own
+coordinate-defined capture predicate may begin a feed, including multiple
+pieces in the same mouth on the same tick. The temporary physics island keeps
+unshredded members Dynamic until each independently reaches that predicate;
+per-cell colliders remain active until their individual cells cross the cutter.
+Active feeds use one constant downward kinematic speed and clamp their contact
+pose to the configured feed-tilt envelope, so physics prevents visible pieces
+from interpenetrating without turning physical contact into gameplay admission
+authority.
 
 `ShredderCatchZone` validates physical capture using per-cell geometry and then
 confirms the authoritative grid state. `CollisionBounds` is not used to decide
-capture or candidate order for irregular shapes. A feed reservation belongs only
-to the piece that has been admitted to the cutter. Pieces supported above it stay
-in their normal `Placed`/occupied grid state; as the active feed releases crossed
-cells, the regular grid-gravity owner moves them through newly legal space and
-they are admitted independently when they reach the catch zone. Temporary Unity
-physics never owns shredder queue progress, reservations, or admission.
+capture or candidate order for irregular shapes. Pieces supported above a feed
+may remain in normal `Placed`/occupied grid state or enter a prevalidated
+temporary physics island. In both cases each piece is admitted independently
+when its own coordinate reaches the catch zone. Temporary Unity physics never
+owns gameplay admission or queue progress.
 
 ## Current level construction
 
