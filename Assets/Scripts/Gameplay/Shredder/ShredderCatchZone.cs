@@ -212,9 +212,10 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// The dynamic island may enter the feed only when the real collider
-        /// lies fully inside the mouth and intersects the authored capture band.
-        /// This is a coordinate gate, not a trigger callback.
+        /// A dynamic island member enters the feed once its lowest real cell
+        /// crosses the authored capture half-space. This is a coordinate gate,
+        /// not a trigger callback; a fast body that crosses below the former
+        /// finite band must not remain in an unrecoverable handoff state.
         /// </summary>
         public bool ContainsPhysicsIslandCaptureFootprint(
             PuzzlePiece piece,
@@ -224,10 +225,13 @@ namespace GravityPuzzle
                 return false;
 
             float captureTop = ShredY + Mathf.Max(0f, captureDistance);
-            float escapeBottom = ShredY - Mathf.Max(0f, captureDistance);
-            return TryGetCellExtents(piece, out float lowestCellY, out float highestCellY) &&
-                   lowestCellY <= captureTop &&
-                   highestCellY >= escapeBottom;
+            // The approach corridor was validated from authoritative cells
+            // before the island was reserved, and its body is now kinematic
+            // with X frozen. Rechecking renderer/collider X extents here is
+            // both redundant and unsafe: tiny artwork bounds may otherwise
+            // leave a valid reserved member permanently locked above the cut.
+            return TryGetCellVerticalExtents(piece, out float lowestCellY, out _) &&
+                   lowestCellY <= captureTop;
         }
 
         /// <summary>
@@ -239,7 +243,28 @@ namespace GravityPuzzle
             PuzzlePiece piece,
             out float lowestCellY)
         {
-            return TryGetCellExtents(piece, out lowestCellY, out _);
+            return TryGetCellVerticalExtents(piece, out lowestCellY, out _);
+        }
+
+        private bool TryGetCellVerticalExtents(
+            PuzzlePiece piece,
+            out float lowestCellY,
+            out float highestCellY)
+        {
+            lowestCellY = float.PositiveInfinity;
+            highestCellY = float.NegativeInfinity;
+            if (piece == null)
+                return false;
+
+            piece.GetActiveCellBounds(activeCellBoundsBuffer);
+            for (int index = 0; index < activeCellBoundsBuffer.Count; index++)
+            {
+                Bounds bounds = activeCellBoundsBuffer[index];
+                lowestCellY = Mathf.Min(lowestCellY, bounds.min.y);
+                highestCellY = Mathf.Max(highestCellY, bounds.max.y);
+            }
+
+            return lowestCellY != float.PositiveInfinity;
         }
 
         private bool TryGetCellExtents(

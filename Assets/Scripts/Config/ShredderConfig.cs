@@ -86,8 +86,6 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float physicsIslandAngularDrag = 4f;
         [Tooltip("Distance above the cutter at which a dynamic island member is captured by the motorized feed.")]
         [Range(0.01f, 1f)] [SerializeField] private float physicsIslandCaptureDistance = .12f;
-        [Tooltip("Observation window after which a physically blocked island emits one diagnostic warning. It never forces a member into the feed.")]
-        [Range(.1f, 10f)] [SerializeField] private float physicsIslandMaximumDuration = 3f;
         [Tooltip("Extra horizontal room between the board edge and each invisible containment guide.")]
         [Range(0f, 2f)] [SerializeField] private float physicsIslandGuideClearance = .25f;
         [Tooltip("Thickness of each static containment guide.")]
@@ -178,7 +176,6 @@ namespace GravityPuzzle.Config
         public float PhysicsIslandGravityScale => physicsIslandGravityScale;
         public float PhysicsIslandAngularDrag => physicsIslandAngularDrag;
         public float PhysicsIslandCaptureDistance => physicsIslandCaptureDistance;
-        public float PhysicsIslandMaximumDuration => physicsIslandMaximumDuration;
         public float PhysicsIslandGuideClearance => physicsIslandGuideClearance;
         public float PhysicsIslandGuideThickness => physicsIslandGuideThickness;
         public float PhysicsIslandGuideDepth => physicsIslandGuideDepth;

@@ -51,7 +51,6 @@ MonoBehaviour:
   physicsIslandGravityScale: 1
   physicsIslandAngularDrag: 4
   physicsIslandCaptureDistance: 0.12
-  physicsIslandMaximumDuration: 3
   physicsIslandGuideClearance: 0.25
   physicsIslandGuideThickness: 0.12
   physicsIslandGuideDepth: 6

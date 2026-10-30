@@ -1678,7 +1678,12 @@ namespace GravityPuzzle
             Body.bodyType = RigidbodyType2D.Dynamic;
             Body.gravityScale = config.PhysicsIslandGravityScale;
             Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            Body.constraints = RigidbodyConstraints2D.None;
+            // A planner-approved support member already fits the authored
+            // mouth in its grid pose. Let it fall and collide vertically, but
+            // never rotate or drift sideways into a guide and become a shelf
+            // queue before reaching its own coordinate capture plane.
+            Body.constraints = RigidbodyConstraints2D.FreezePositionX |
+                               RigidbodyConstraints2D.FreezeRotation;
             Body.useFullKinematicContacts = false;
             Body.velocity = Vector2.zero;
             Body.angularVelocity = 0f;
@@ -1686,6 +1691,34 @@ namespace GravityPuzzle
             Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
             ApplyShredderCollisionMaterial(config.FeedPhysicsMaterial);
             Body.WakeUp();
+        }
+
+        /// <summary>
+        /// Takes a prevalidated support member through the controlled approach
+        /// corridor. This is intentionally kinematic: Unity contacts may still
+        /// render the final feed, but no unowned Dynamic body may wedge itself
+        /// between the cutter guides and leave the gameplay lifecycle locked.
+        /// </summary>
+        public void EnterShredderApproachPhysics(ShredderConfig config)
+        {
+            if (config == null)
+                return;
+
+            PrepareForShredderPhysics();
+            ApplyShredderPhysicsLayer();
+            if (Body == null)
+                return;
+
+            Body.simulated = true;
+            Body.bodyType = RigidbodyType2D.Kinematic;
+            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            Body.constraints = RigidbodyConstraints2D.FreezePositionX |
+                               RigidbodyConstraints2D.FreezeRotation;
+            Body.gravityScale = 0f;
+            Body.useFullKinematicContacts = true;
+            Body.velocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+            Body.angularDrag = config.FeedAngularDrag;
         }
 
         /// <summary>

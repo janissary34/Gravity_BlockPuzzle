@@ -5,10 +5,9 @@ using UnityEngine;
 namespace GravityPuzzle
 {
     /// <summary>
-    /// Pooled static guides plus a hidden throat shelf for the short-lived
-    /// shredder physics island. The shelf sits strictly below the coordinate
-    /// capture plane: it catches only a body that has already become eligible
-    /// for its own feed, never a global admission queue.
+    /// Pooled vertical containment guides for the short-lived shredder physics
+    /// island. The legacy horizontal shelf is explicitly disabled: a static
+    /// floor below the cutter turns a recoverable physics handoff into a queue.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody2D))]
@@ -39,7 +38,7 @@ namespace GravityPuzzle
             float requiredGuideDepth)
         {
             if (config == null || staticBody == null || leftGuide == null ||
-                rightGuide == null || throatShelf == null)
+                rightGuide == null)
                 return false;
 
             float thickness = config.PhysicsIslandGuideThickness;
@@ -71,24 +70,8 @@ namespace GravityPuzzle
                 thickness,
                 depth,
                 config.FeedPhysicsMaterial);
-            ConfigureGuide(
-                throatShelf,
-                (leftEdge + rightEdge) * .5f,
-                cutterY - thickness * .5f,
-                Mathf.Max(.01f, rightEdge - leftEdge + clearance * 2f),
-                thickness,
-                config.FeedPhysicsMaterial);
-            // The shelf is a presentation containment fallback only. Its top
-            // is constructed at cutterY, while dynamic members become eligible
-            // at cutterY + PhysicsIslandCaptureDistance, so it can never be a
-            // gameplay admission barrier.
-            if (config.PhysicsIslandCaptureDistance <= 0f)
-            {
-                Debug.LogError(
-                    "[ShredderPhysicsMouth] The coordinate capture plane must remain above the throat shelf.",
-                    this);
-                return false;
-            }
+            if (throatShelf != null)
+                throatShelf.enabled = false;
             GuideDepth = depth;
             Physics2D.SyncTransforms();
             return true;

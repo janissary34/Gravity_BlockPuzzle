@@ -141,7 +141,7 @@ namespace GravityPuzzle
     }
 
     /// <summary>
-    /// Owns only temporary Unity physics for support-chain pieces. Board cells
+    /// Owns the controlled approach for support-chain pieces. Board cells
     /// remain reserved until each member independently crosses the
     /// coordinate-based cutter capture plane.
     /// </summary>
@@ -151,8 +151,6 @@ namespace GravityPuzzle
         private readonly ShredderConfig config;
         private readonly ShredderCatchZone zone;
         private readonly List<PuzzlePiece> dynamicMembers;
-        private float elapsed;
-        private bool stallWarningReported;
 
         public bool IsComplete => dynamicMembers.Count == 0;
         public ShredderCatchZone Zone => zone;
@@ -168,16 +166,16 @@ namespace GravityPuzzle
             this.zone = zone;
             dynamicMembers = new List<PuzzlePiece>(Mathf.Max(0, members.Count - 1));
 
-            // Index zero is the kinematic root that the existing feed motor
-            // owns. Every remaining member is a Dynamic body until it reaches
-            // the cutter capture plane.
+            // Index zero is the existing feed. Every remaining member enters
+            // the same deterministic approach stream, so a physics contact can
+            // never turn into an unbounded queue or a stuck lifecycle state.
             for (int index = 1; index < members.Count; index++)
             {
                 PuzzlePiece member = members[index];
                 if (member == null)
                     continue;
 
-                member.EnterShredderSupportPhysics(config);
+                member.EnterShredderApproachPhysics(config);
                 dynamicMembers.Add(member);
             }
 
@@ -186,63 +184,22 @@ namespace GravityPuzzle
 
         public void FixedTick()
         {
-            elapsed += Time.fixedDeltaTime;
-            // Promote every member already in the capture band. They are
-            // ordered bottom-first only for deterministic lifecycle logs; a
-            // member never waits for another feed to finish. Their colliders
-            // remain real until their own cells cross the cutter.
-            while (TryFindLowestEligibleMember(out int captureIndex) &&
-                   owner.TryCapturePhysicsIslandMember(dynamicMembers[captureIndex], zone))
-            {
-                dynamicMembers.RemoveAt(captureIndex);
-            }
-
-            if (!stallWarningReported && config != null &&
-                elapsed >= config.PhysicsIslandMaximumDuration && dynamicMembers.Count > 0)
-            {
-                stallWarningReported = true;
-                Debug.LogWarning(
-                    "[ShredderPhysicsIsland] A support chain remains physically blocked after the configured observation window. " +
-                    "It stays outside the shredder feed until it reaches the real mouth gate.");
-            }
-        }
-
-        private bool TryFindLowestEligibleMember(out int captureIndex)
-        {
-            captureIndex = -1;
-            float lowestY = float.PositiveInfinity;
-            int lowestId = int.MaxValue;
-
+            // There is deliberately no mouth-side waiting state. Every member
+            // was already grid-validated into the same clear vertical corridor;
+            // the established feed moves it down at a constant speed and starts
+            // cutter presentation only when its cells reach the cutter line.
+            // This removes the only state in which a visible piece could remain
+            // indefinitely suspended and interaction-locked above the mouth.
             for (int index = dynamicMembers.Count - 1; index >= 0; index--)
             {
                 PuzzlePiece member = dynamicMembers[index];
-                if (member == null || !member.gameObject.activeInHierarchy)
+                if (member == null || !member.gameObject.activeInHierarchy ||
+                    owner.TryBeginPhysicsIslandApproachFeed(member, zone))
                 {
                     dynamicMembers.RemoveAt(index);
-                    continue;
                 }
-
-                if (zone == null || config == null ||
-                    !zone.ContainsPhysicsIslandCaptureFootprint(
-                        member,
-                        config.PhysicsIslandCaptureDistance) ||
-                    !zone.TryGetPhysicsIslandCaptureFloorY(member, out float memberLowestY))
-                {
-                    continue;
-                }
-
-                bool isLower = memberLowestY < lowestY - .0001f;
-                bool breaksTie = Mathf.Abs(memberLowestY - lowestY) <= .0001f &&
-                                 member.SourcePieceId < lowestId;
-                if (!isLower && !breaksTie)
-                    continue;
-
-                captureIndex = index;
-                lowestY = memberLowestY;
-                lowestId = member.SourcePieceId;
             }
-
-            return captureIndex >= 0;
         }
+
     }
 }

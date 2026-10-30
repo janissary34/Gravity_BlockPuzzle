@@ -45,13 +45,13 @@ The board commits the stack atomically and owns the lifecycle transitions.
 `BlockShredder` owns admission to each authored `ShredderCatchZone`, but does
 not reserve a queue, lane, or grid column. Every piece that satisfies its own
 coordinate-defined capture predicate may begin a feed, including multiple
-pieces in the same mouth on the same tick. The temporary physics island keeps
-unshredded members Dynamic until each independently reaches that predicate;
-per-cell colliders remain active until their individual cells cross the cutter.
-Active feeds use one constant downward kinematic speed and clamp their contact
-pose to the configured feed-tilt envelope, so physics prevents visible pieces
-from interpenetrating without turning physical contact into gameplay admission
-authority.
+pieces in the same mouth on the same tick. A prevalidated support island has
+no separate mouth-side waiting state: every reserved member immediately enters
+the established kinematic feed at the configured speed. Per-cell colliders
+remain active until their individual cells cross the cutter, which is also the
+first point at which cutter presentation occurs. This prevents a Unity contact
+wedge or a failed secondary capture from becoming a gameplay queue or a
+permanently locked piece.
 
 `ShredderCatchZone` validates physical capture using per-cell geometry and then
 confirms the authoritative grid state. `CollisionBounds` is not used to decide
@@ -59,7 +59,10 @@ capture or candidate order for irregular shapes. Pieces supported above a feed
 may remain in normal `Placed`/occupied grid state or enter a prevalidated
 temporary physics island. In both cases each piece is admitted independently
 when its own coordinate reaches the catch zone. Temporary Unity physics never
-owns gameplay admission or queue progress.
+owns gameplay admission or queue progress. The physics mouth has vertical guides
+only: support members freeze lateral movement and rotation on handoff, and their
+lowest cell crossing the capture half-space promotes them immediately. No
+horizontal shelf may retain a member below the cutter.
 
 ## Current level construction
 

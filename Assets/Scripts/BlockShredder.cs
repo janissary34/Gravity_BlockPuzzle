@@ -409,6 +409,34 @@ namespace GravityPuzzle
             return true;
         }
 
+        /// <summary>
+        /// Starts the existing kinematic feed for a support member whose full
+        /// vertical route was validated before the island reservation. Unlike
+        /// ordinary capture, this must not add a second mouth-approach wait:
+        /// the feed itself owns the controlled descent and only shreds cells
+        /// when they cross the cutter.
+        /// </summary>
+        internal bool TryBeginPhysicsIslandApproachFeed(
+            PuzzlePiece piece,
+            ShredderCatchZone zone)
+        {
+            if (piece == null || zone == null || !piece.IsInShredderPhysicsHandoff)
+                return false;
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board == null || !board.TryGetPieceModel(piece, out PieceModel model) ||
+                model.State != PieceState.HandoffToPhysics ||
+                !piece.TryBeginShredderFeedFromPhysicsIsland())
+            {
+                return false;
+            }
+
+            board.JointSpringPresenter?.PrepareForShredder(piece);
+            board.BreakJointsForPiece(piece);
+            StartCoroutine(FeedPieceIntoShredder(piece, zone));
+            return true;
+        }
+
 #if UNITY_EDITOR
         internal void DebugLogAdmission(
             PuzzlePiece piece, ShredderCatchZone zone, string stage, string reason, PuzzlePiece blocker)
