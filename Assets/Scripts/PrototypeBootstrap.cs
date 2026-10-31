@@ -1128,6 +1128,19 @@ namespace GravityPuzzle
             return false;
         }
 
+        public bool TryReleaseShredderExitReservation(PuzzlePiece piece)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model) ||
+                model.State != PieceState.HandoffToPhysics ||
+                !BoardSnapshot.Grid.IsFullyReservedBy(model))
+                return false;
+
+            BoardSnapshot.Grid.ClearPiece(model);
+            BoardOccupancyChanged?.Invoke();
+            PuzzleDragController.WakeUpGravity();
+            return true;
+        }
+
         /// <summary>
         /// Atomically reserves a root and its board-derived support chain for
         /// the temporary shredder physics island. The grid remains authoritative:

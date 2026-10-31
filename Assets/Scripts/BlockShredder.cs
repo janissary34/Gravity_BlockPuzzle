@@ -43,6 +43,15 @@ namespace GravityPuzzle
         private float nextParticleShredSoundTime;
         private readonly List<ShredderPhysicsIsland> activePhysicsIslands =
             new List<ShredderPhysicsIsland>();
+        private readonly List<ExitHandoff> activeExitHandoffs = new List<ExitHandoff>();
+        private readonly List<ExitHandoff> activeFreefallPieces = new List<ExitHandoff>();
+        private float physicsHandoffLineY;
+
+        private sealed class ExitHandoff
+        {
+            public PuzzlePiece Piece;
+            public ShredderCatchZone Zone;
+        }
         private readonly List<PuzzlePiece> physicsIslandMemberBuffer =
             new List<PuzzlePiece>(8);
         // One pooled mouth is owned by each authored catch zone while its
@@ -127,6 +136,8 @@ namespace GravityPuzzle
 
         private void FixedUpdate()
         {
+            TickExitHandoffs();
+            TickFreefallPieces();
             for (int index = activePhysicsIslands.Count - 1; index >= 0; index--)
             {
                 ShredderPhysicsIsland island = activePhysicsIslands[index];
@@ -136,6 +147,59 @@ namespace GravityPuzzle
 
                 activePhysicsIslands.RemoveAt(index);
                 ReleasePhysicsMouthIfIdle(island.Zone);
+            }
+        }
+
+        public void ConfigurePhysicsHandoffLine(float mapBottomY)
+        {
+            float distance = shredderConfig != null ? shredderConfig.PhysicsHandoffDistanceBelowMap : 0f;
+            physicsHandoffLineY = mapBottomY - Mathf.Max(0f, distance);
+        }
+
+        private void TickExitHandoffs()
+        {
+            float speed = shredderConfig != null ? shredderConfig.FeedSpeed : 3.8f;
+            for (int index = activeExitHandoffs.Count - 1; index >= 0; index--)
+            {
+                ExitHandoff handoff = activeExitHandoffs[index];
+                if (handoff.Piece == null || !handoff.Piece.IsInShredderPhysicsHandoff)
+                {
+                    activeExitHandoffs.RemoveAt(index);
+                    continue;
+                }
+
+                Vector3 position = handoff.Piece.transform.position;
+                position.y = Mathf.Max(physicsHandoffLineY, position.y - speed * Time.fixedDeltaTime);
+                handoff.Piece.transform.position = position;
+                if (position.y > physicsHandoffLineY)
+                    continue;
+
+                PrototypeBoard board = PrototypeBoard.Active;
+                if (board == null || !board.TryReleaseShredderExitReservation(handoff.Piece))
+                {
+                    Debug.LogError("[ShredderHandoff] Could not release the grid reservation at the physics line.", handoff.Piece);
+                    continue;
+                }
+
+                handoff.Piece.EnterShredderFreefallPhysics(shredderConfig, speed);
+                activeFreefallPieces.Add(handoff);
+                activeExitHandoffs.RemoveAt(index);
+            }
+        }
+
+        private void TickFreefallPieces()
+        {
+            for (int index = activeFreefallPieces.Count - 1; index >= 0; index--)
+            {
+                ExitHandoff freefall = activeFreefallPieces[index];
+                if (freefall.Piece == null || !freefall.Piece.IsInShredderPhysicsHandoff)
+                {
+                    activeFreefallPieces.RemoveAt(index);
+                    continue;
+                }
+
+                if (TryCapturePhysicsIslandMember(freefall.Piece, freefall.Zone))
+                    activeFreefallPieces.RemoveAt(index);
             }
         }
 
@@ -169,18 +233,10 @@ namespace GravityPuzzle
                 !zone.ContainsCaptureFootprint(piece))
                 return false;
 
-            if (TryStartPhysicsIsland(piece, zone))
-                return true;
-
-            if (!piece.TryBeginShredderHandoff())
+            if (!piece.TryBeginShredderExitHandoff())
                 return false;
 
-            // A combined member leaves its graph component only once the
-            // shredder handoff has been accepted. Failed capture attempts
-            // must leave the authoritative topology untouched.
-            PrototypeBoard.Active?.JointSpringPresenter?.PrepareForShredder(piece);
-            PrototypeBoard.Active?.BreakJointsForPiece(piece);
-            StartCoroutine(FeedPieceIntoShredder(piece, zone));
+            activeExitHandoffs.Add(new ExitHandoff { Piece = piece, Zone = zone });
             return true;
         }
 

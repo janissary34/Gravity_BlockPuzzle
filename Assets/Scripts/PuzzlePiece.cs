@@ -66,6 +66,8 @@ namespace GravityPuzzle
         public PieceGridFallView GridFallView { get; private set; }
         public CompositeCollider2D CompositeCollider => compositeCollider;
         public LineRenderer Outline => rootOutline;
+        internal RuntimePieceOutlineGrid OutlineGrid => outlineGrid;
+        internal int OutlineRendererCount => outlineRenderers.Count;
         public bool IsSelected => isSelected;
         /// <summary>
         /// True only after this piece has won a physical shredder-mouth feed.
@@ -167,13 +169,17 @@ namespace GravityPuzzle
         private readonly List<PiecePartSlot> partSlots = new List<PiecePartSlot>();
         private CompositeCollider2D compositeCollider;
         private LineRenderer rootOutline;
+        // The prefab owns these renderers. They are cached once because a grid
+        // silhouette can have an outer loop plus interior or island loops.
+        private readonly List<LineRenderer> outlineRenderers = new List<LineRenderer>(8);
+        private RuntimePieceOutlineGrid outlineGrid;
         private SpriteRenderer[] boxRevealRenderers;
         private bool[] boxRevealRendererEnabledStates;
         private int[] boxRevealRendererSortingOrders;
         private SpriteMaskInteraction[] boxRevealRendererMaskInteractions;
         private bool boxRevealPresentationCaptured;
-        private bool boxRevealOutlineEnabled;
-        private int boxRevealOutlineSortingOrder;
+        private bool[] boxRevealOutlineEnabledStates;
+        private int[] boxRevealOutlineSortingOrders;
         private bool boxRevealIceCounterEnabled;
         private bool boxRevealBombCounterEnabled;
         private List<BoxCollider2D> collisionCells;
@@ -313,6 +319,15 @@ namespace GravityPuzzle
             shredderDissolvePresentation = GetComponent<ShredderDissolvePresentation>();
             compositeCollider = GetComponent<CompositeCollider2D>();
             rootOutline = GetComponent<LineRenderer>();
+            if (rootOutline != null)
+                outlineRenderers.Add(rootOutline);
+            LineRenderer[] cachedOutlineRenderers = GetComponentsInChildren<LineRenderer>(true);
+            for (int index = 0; index < cachedOutlineRenderers.Length; index++)
+            {
+                LineRenderer outline = cachedOutlineRenderers[index];
+                if (outline != null && outline != rootOutline)
+                    outlineRenderers.Add(outline);
+            }
             PiecePartSlot[] cachedPartSlots = GetComponentsInChildren<PiecePartSlot>(true);
             for (int index = 0; index < cachedPartSlots.Length; index++)
                 partSlots.Add(cachedPartSlots[index]);
@@ -356,6 +371,71 @@ namespace GravityPuzzle
         {
             return index >= 0 && index < partSlots.Count ? partSlots[index] : null;
         }
+
+        internal LineRenderer GetOutlineRenderer(int index)
+        {
+            return index >= 0 && index < outlineRenderers.Count ? outlineRenderers[index] : null;
+        }
+
+        internal void ConfigureOutlineGrid(RuntimePieceOutlineGrid grid)
+        {
+            outlineGrid = grid;
+        }
+
+        internal void ClearOutlineRenderers(int activeRendererCount = 0)
+        {
+            for (int index = 0; index < outlineRenderers.Count; index++)
+            {
+                LineRenderer outline = outlineRenderers[index];
+                if (outline == null)
+                    continue;
+
+                outline.positionCount = 0;
+                outline.enabled = index < activeRendererCount;
+            }
+        }
+
+        private void SetOutlineRenderersEnabled(bool enabled)
+        {
+            for (int index = 0; index < outlineRenderers.Count; index++)
+            {
+                LineRenderer outline = outlineRenderers[index];
+                if (outline != null)
+                    outline.enabled = enabled && outline.positionCount >= 3;
+            }
+        }
+
+        private void SetOutlineRenderersSortingOrder(int sortingOrder)
+        {
+            for (int index = 0; index < outlineRenderers.Count; index++)
+            {
+                LineRenderer outline = outlineRenderers[index];
+                if (outline != null)
+                    outline.sortingOrder = sortingOrder;
+            }
+        }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.color = Color.magenta;
+            for (int outlineIndex = 0; outlineIndex < outlineRenderers.Count; outlineIndex++)
+            {
+                LineRenderer outline = outlineRenderers[outlineIndex];
+                if (outline == null || outline.positionCount < 2)
+                    continue;
+
+                for (int index = 0; index < outline.positionCount; index++)
+                {
+                    Vector3 point = outline.transform.TransformPoint(outline.GetPosition(index));
+                    Vector3 next = outline.transform.TransformPoint(
+                        outline.GetPosition((index + 1) % outline.positionCount));
+                    Gizmos.DrawSphere(point, .015f);
+                    Gizmos.DrawLine(point, next);
+                }
+            }
+        }
+#endif
 
         private PiecePartSlot FindPartSlot(BoxCollider2D collision, SpriteRenderer visual)
         {
@@ -421,8 +501,7 @@ namespace GravityPuzzle
             IsFrozen = false;
             IsBombDefused = false;
             SourcePieceId = -1;
-            if (rootOutline != null)
-                rootOutline.enabled = true;
+            SetOutlineRenderersEnabled(true);
             ApplyOutlinePresentation();
             if (compositeCollider != null)
                 compositeCollider.enabled = true;
@@ -472,8 +551,7 @@ namespace GravityPuzzle
                 }
             }
 
-            if (rootOutline != null)
-                rootOutline.enabled = false;
+            SetOutlineRenderersEnabled(false);
             if (iceCounterText != null)
                 iceCounterText.enabled = false;
             if (bombCounterText != null)
@@ -500,11 +578,7 @@ namespace GravityPuzzle
                 }
             }
 
-            if (rootOutline != null)
-            {
-                rootOutline.enabled = boxRevealOutlineEnabled;
-                rootOutline.sortingOrder = boxRevealOutlineSortingOrder;
-            }
+            RestoreBoxRevealOutlines();
             if (iceCounterText != null)
                 iceCounterText.enabled = boxRevealIceCounterEnabled;
             if (bombCounterText != null)
@@ -514,6 +588,8 @@ namespace GravityPuzzle
             boxRevealRendererEnabledStates = null;
             boxRevealRendererSortingOrders = null;
             boxRevealRendererMaskInteractions = null;
+            boxRevealOutlineEnabledStates = null;
+            boxRevealOutlineSortingOrders = null;
         }
 
         private void CaptureBoxRevealPresentation()
@@ -536,14 +612,40 @@ namespace GravityPuzzle
                 boxRevealRendererMaskInteractions[index] = renderer.maskInteraction;
             }
 
-            if (rootOutline != null)
+            int outlineCount = outlineRenderers.Count;
+            boxRevealOutlineEnabledStates = new bool[outlineCount];
+            boxRevealOutlineSortingOrders = new int[outlineCount];
+            for (int index = 0; index < outlineCount; index++)
             {
-                boxRevealOutlineEnabled = rootOutline.enabled;
-                boxRevealOutlineSortingOrder = rootOutline.sortingOrder;
+                LineRenderer outline = outlineRenderers[index];
+                if (outline == null)
+                    continue;
+
+                boxRevealOutlineEnabledStates[index] = outline.enabled;
+                boxRevealOutlineSortingOrders[index] = outline.sortingOrder;
             }
             boxRevealIceCounterEnabled = iceCounterText != null && iceCounterText.enabled;
             boxRevealBombCounterEnabled = bombCounterText != null && bombCounterText.enabled;
             boxRevealPresentationCaptured = true;
+        }
+
+        private void RestoreBoxRevealOutlines()
+        {
+            if (boxRevealOutlineEnabledStates == null || boxRevealOutlineSortingOrders == null)
+                return;
+
+            int count = Mathf.Min(
+                outlineRenderers.Count,
+                Mathf.Min(boxRevealOutlineEnabledStates.Length, boxRevealOutlineSortingOrders.Length));
+            for (int index = 0; index < count; index++)
+            {
+                LineRenderer outline = outlineRenderers[index];
+                if (outline == null)
+                    continue;
+
+                outline.enabled = boxRevealOutlineEnabledStates[index];
+                outline.sortingOrder = boxRevealOutlineSortingOrders[index];
+            }
         }
 
         /// <summary>
@@ -1315,20 +1417,25 @@ namespace GravityPuzzle
 
         private void ApplyOutlinePresentation()
         {
-            if (rootOutline != null)
-            {
-                bool useTargetOutline = isSelected || isBoosterTargeted || isTutorialTargeted;
-                float outlineWidth = useTargetOutline ? selectedOutlineWidth : restingOutlineWidth;
-                rootOutline.startWidth = outlineWidth;
-                rootOutline.endWidth = outlineWidth;
-                Color outlineColor = useTargetOutline ? selectedOutlineColor : restingOutlineColor;
-                rootOutline.startColor = outlineColor;
-                rootOutline.endColor = outlineColor;
-                rootOutline.sortingOrder = isTutorialTargeted
-                    ? tutorialTargetSortingOrder
-                    : isBoosterTargetingForeground
-                        ? boosterTargetingForegroundSortingOrder
+            bool useTargetOutline = isSelected || isBoosterTargeted || isTutorialTargeted;
+            float outlineWidth = useTargetOutline ? selectedOutlineWidth : restingOutlineWidth;
+            Color outlineColor = useTargetOutline ? selectedOutlineColor : restingOutlineColor;
+            int sortingOrder = isTutorialTargeted
+                ? tutorialTargetSortingOrder
+                : isBoosterTargetingForeground
+                    ? boosterTargetingForegroundSortingOrder
                     : useTargetOutline ? selectedOutlineSortingOrder : restingOutlineSortingOrder;
+            for (int index = 0; index < outlineRenderers.Count; index++)
+            {
+                LineRenderer outline = outlineRenderers[index];
+                if (outline == null)
+                    continue;
+
+                outline.startWidth = outlineWidth;
+                outline.endWidth = outlineWidth;
+                outline.startColor = outlineColor;
+                outline.endColor = outlineColor;
+                outline.sortingOrder = sortingOrder;
             }
         }
 
@@ -1693,6 +1800,18 @@ namespace GravityPuzzle
             Body.WakeUp();
         }
 
+        public void EnterShredderFreefallPhysics(ShredderConfig config, float downwardSpeed)
+        {
+            EnterShredderSupportPhysics(config);
+            if (Body == null)
+                return;
+
+            Body.constraints = RigidbodyConstraints2D.None;
+            Body.velocity = Vector2.down * Mathf.Max(0f, downwardSpeed);
+            Body.angularVelocity = 0f;
+            Body.WakeUp();
+        }
+
         /// <summary>
         /// Takes a prevalidated support member through the controlled approach
         /// corridor. This is intentionally kinematic: Unity contacts may still
@@ -1752,8 +1871,7 @@ namespace GravityPuzzle
             // a shredder feed. Its outline would therefore draw artificial
             // horizontal seams through the still-visible voxel presentation.
             // The next pool spawn restores the authored root outline.
-            if (rootOutline != null)
-                rootOutline.enabled = false;
+            SetOutlineRenderersEnabled(false);
 
             if (renderers == null || renderers.Length == 0)
                 return;
@@ -1802,8 +1920,7 @@ namespace GravityPuzzle
                     renderer.sortingOrder = shredderPresentationSortingOrders[index] + sortingOrderOffset;
             }
 
-            if (rootOutline != null)
-                rootOutline.sortingOrder = shredderPresentationOutlineSortingOrder + sortingOrderOffset;
+            SetOutlineRenderersSortingOrder(shredderPresentationOutlineSortingOrder + sortingOrderOffset);
         }
 
         public void ApplyShredderPresentationClipping()
@@ -1924,8 +2041,7 @@ namespace GravityPuzzle
             shredderPresentationEnabledStates = null;
             shredderPresentationMaskStates = null;
             shredderPresentationSortingOrders = null;
-            if (rootOutline != null)
-                rootOutline.sortingOrder = shredderPresentationOutlineSortingOrder;
+            SetOutlineRenderersSortingOrder(shredderPresentationOutlineSortingOrder);
         }
 
         public void ReleaseCollisionCellsAtOrBelow(float worldY, List<BoxCollider2D> releasedBuffer = null)
@@ -2489,8 +2605,7 @@ namespace GravityPuzzle
             InvalidateVoxelCache();
 
             // Avoid leaving the original silhouette around a modified piece.
-            if (rootOutline != null)
-                rootOutline.enabled = false;
+            SetOutlineRenderersEnabled(false);
 
             if (collisionCells.Count == 0)
             {
@@ -2851,6 +2966,32 @@ namespace GravityPuzzle
             return TryBeginShredderFeedAfterReservation(
                 reportDestructionImmediately,
                 keepReservationUntilDespawn: false);
+        }
+
+        /// <summary>
+        /// Begins the map-exit phase of the shredder flow. Grid ownership is
+        /// retained as a reservation while a later handoff controller clears
+        /// the piece to its physics line; this method never enables physics or
+        /// starts shred presentation.
+        /// </summary>
+        public bool TryBeginShredderExitHandoff()
+        {
+            if (IsShredderInteractionLocked || IsFrozen)
+                return false;
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board != null &&
+                !board.TryReservePieceInGrid(this, PieceState.HandoffToPhysics))
+            {
+                return false;
+            }
+
+            GridFallView?.Cancel();
+            shredderHandoffMode = ShredderHandoffMode.PhysicsIsland;
+            keepShredderGridReservationUntilDespawn = true;
+            SetSelected(false);
+            Debug.Log($"[ShredderHandoff] Exit handoff locked targeting for piece {SourcePieceId}.", this);
+            return true;
         }
 
         /// <summary>

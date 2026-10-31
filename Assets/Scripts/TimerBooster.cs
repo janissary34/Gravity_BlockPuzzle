@@ -1379,9 +1379,9 @@ namespace GravityPuzzle
             // t=0.02  Impact shard particles
             _freezeFXSequence.InsertCallback(0.02f, () =>
             {
-                impactShardLong?.Play();
-                impactShardDiamond?.Play();
-                impactShardChunk?.Play();
+                PlayParticleIfAvailable(impactShardLong);
+                PlayParticleIfAvailable(impactShardDiamond);
+                PlayParticleIfAvailable(impactShardChunk);
             });
 
             // t=0.03  Cold vapor: UI Image DOTween — fade in, expand in place, then fade out
@@ -1567,9 +1567,9 @@ namespace GravityPuzzle
         /// <summary>Stops and clears all one-shot impact PSystems.</summary>
         private void StopNewImpactParticles()
         {
-            impactShardLong?.Stop(true,    ParticleSystemStopBehavior.StopEmittingAndClear);
-            impactShardDiamond?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            impactShardChunk?.Stop(true,   ParticleSystemStopBehavior.StopEmittingAndClear);
+            StopParticleIfAvailable(impactShardLong, ParticleSystemStopBehavior.StopEmittingAndClear);
+            StopParticleIfAvailable(impactShardDiamond, ParticleSystemStopBehavior.StopEmittingAndClear);
+            StopParticleIfAvailable(impactShardChunk, ParticleSystemStopBehavior.StopEmittingAndClear);
             // Vapor is now a UI Image; kill its tween and reset state
             KillVaporTween(immediate: true);
         }

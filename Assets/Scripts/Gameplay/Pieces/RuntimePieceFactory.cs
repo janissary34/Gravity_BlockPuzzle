@@ -19,6 +19,29 @@ namespace GravityPuzzle.Gameplay.Pieces
     }
 
     /// <summary>
+    /// Presentation-only occupancy snapshot expressed in the level's
+    /// authoritative fine-grid coordinates. It exists so selection outlines
+    /// can be rebuilt without reading Sprite alpha or physics geometry.
+    /// </summary>
+    public sealed class RuntimePieceOutlineGrid
+    {
+        public RuntimePieceOutlineGrid(float cellSize, HashSet<Vector2Int> occupiedCells)
+        {
+            CellSize = cellSize;
+            this.occupiedCells = occupiedCells;
+            OccupiedCells = this.occupiedCells;
+        }
+
+        public float CellSize { get; }
+        public IReadOnlyCollection<Vector2Int> OccupiedCells { get; }
+        public bool IsValid => CellSize > 0f && OccupiedCells != null && OccupiedCells.Count > 0;
+
+        public bool Contains(Vector2Int cell) => occupiedCells != null && occupiedCells.Contains(cell);
+
+        private readonly HashSet<Vector2Int> occupiedCells;
+    }
+
+    /// <summary>
     /// Renderer-only description of one part of an intact piece. Reveal-area
     /// presentations use this to mirror a future pooled piece without renting
     /// a gameplay root or creating colliders.
@@ -72,11 +95,11 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static readonly HashSet<string> warnedMissingVisualIds = new HashSet<string>();
         private static readonly HashSet<string> warnedMissingPaletteIds = new HashSet<string>();
         private static readonly HashSet<string> warnedUnsupportedPaletteIds = new HashSet<string>();
-        // Outline rebuilds run only on presentation transitions, but pooled
-        // pieces can still refresh often in a dense level. Reuse these buffers
-        // instead of allocating a contour for every whole-sprite refresh.
-        private static readonly List<Vector2> spritePhysicsShapeBuffer = new List<Vector2>(32);
-        private static readonly List<Vector2> spriteOutlineContourBuffer = new List<Vector2>(32);
+        private static readonly List<GridOutlineEdge> outlineEdges = new List<GridOutlineEdge>(128);
+        private static readonly List<List<Vector2Int>> outlineLoopBuffers = new List<List<Vector2Int>>(8);
+        private static readonly List<List<Vector2Int>> outlineLoops = new List<List<Vector2Int>>(8);
+        private static readonly List<Vector2> outlineSourcePoints = new List<Vector2>(64);
+        private static readonly List<Vector2> outlineContourPoints = new List<Vector2>(96);
 
         public static void SetRootProvider(IRuntimePieceRootProvider provider)
         {
@@ -222,7 +245,6 @@ namespace GravityPuzzle.Gameplay.Pieces
                 presentationMaterial);
 
             root.CompositeCollider.GenerateGeometry();
-            ConfigureOutline(root.Outline, root.CompositeCollider);
 
             PuzzlePiece puzzlePiece = root.Piece;
             ApplyPieceSetup(
@@ -232,7 +254,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                 visualColor,
                 presentationMaterial,
                 root.CompositeCollider,
-                content);
+                content,
+                BuildOutlineGrid(level, definition));
             ConfigureWholePiecePresentation(puzzlePiece, level, definition);
 
             return puzzlePiece;
@@ -328,10 +351,10 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         public static void RefreshOutline(PuzzlePiece piece)
         {
-            if (piece == null || piece.CompositeCollider == null || piece.Outline == null)
+            if (piece == null || piece.Outline == null)
                 return;
 
-            ConfigureOutline(piece.Outline, piece.CompositeCollider, piece.WholePieceVisual);
+            ConfigureOutline(piece);
         }
 
         /// <summary>
@@ -351,11 +374,8 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             if (piece.CompositeCollider != null)
                 piece.CompositeCollider.enabled = false;
-            if (piece.Outline != null)
-            {
-                piece.Outline.positionCount = 0;
-                piece.Outline.enabled = false;
-            }
+            piece.ConfigureOutlineGrid(null);
+            piece.ClearOutlineRenderers();
         }
 
         private static void PrepareRoot(
@@ -439,12 +459,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             }
 
             composite.GenerateGeometry();
-            // Build the presentation outline while adjoining modular cells
-            // still share their full edges. ConfigureCollisionGeometry applies
-            // a small collision skin afterwards; generating the outline from
-            // that shrunken composite turns each cell into a separate path and
-            // leaves a selected fragment outlined only around one cell.
-            ConfigureOutline(outline, composite);
+            piece.ConfigureOutlineGrid(BuildOutlineGrid(level, cells));
+            ConfigureOutline(piece);
             piece.ConfigureProgressUnits(Mathf.Max(1, Mathf.CeilToInt(remainingProgress)));
             piece.ConfigureVisualColor(color);
             piece.ConfigurePresentationMaterials(
@@ -576,7 +592,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             Color visualColor,
             Material presentationMaterial,
             CompositeCollider2D pieceComposite,
-            PieceRuntimeContent content)
+            PieceRuntimeContent content,
+            RuntimePieceOutlineGrid outlineGrid)
         {
             puzzlePiece.ConfigureIceParticleVfx(iceParticleVfx);
             puzzlePiece.ConfigurePresentationMaterials(
@@ -620,6 +637,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineWidth : definition.bombCounterOutlineWidth,
                 pieceVisualConfig != null && pieceVisualConfig.BombCounterOffset != Vector2.zero ? pieceVisualConfig.BombCounterOffset : definition.bombCounterOffset,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterSortingOrder : 50));
+            puzzlePiece.ConfigureOutlineGrid(outlineGrid);
+            ConfigureOutline(puzzlePiece);
             if (content.VoxelShards != null && content.VoxelShards.Count > 0)
                 puzzlePiece.ConfigureVoxelPresentation(content.VoxelShards);
             else if (content.CollisionCellVisuals != null)
@@ -765,6 +784,47 @@ namespace GravityPuzzle.Gameplay.Pieces
             return parts;
         }
 
+        private static RuntimePieceOutlineGrid BuildOutlineGrid(
+            GravityLevelDefinition level,
+            PieceDefinition definition)
+        {
+            float fineCellSize = 1f / Mathf.Max(1, level.subdivisions);
+            HashSet<Vector2Int> occupied = new HashSet<Vector2Int>();
+            for (int index = 0; index < definition.cells.Count; index++)
+            {
+                PieceCellDefinition cell = definition.cells[index];
+                Vector2Int rotated = QuarterTurnUtility.Rotate(cell.localCell, definition.quarterTurns);
+                occupied.Add(rotated);
+            }
+
+            return new RuntimePieceOutlineGrid(fineCellSize, occupied);
+        }
+
+        private static RuntimePieceOutlineGrid BuildOutlineGrid(
+            GravityLevelDefinition level,
+            IReadOnlyList<RuntimePieceFragmentCell> cells)
+        {
+            float fineCellSize = 1f / Mathf.Max(1, level.subdivisions);
+            HashSet<Vector2Int> occupied = new HashSet<Vector2Int>();
+            for (int index = 0; index < cells.Count; index++)
+            {
+                RuntimePieceFragmentCell cell = cells[index];
+                int widthInCells = Mathf.Max(1, Mathf.RoundToInt(cell.Size.x / fineCellSize));
+                int heightInCells = Mathf.Max(1, Mathf.RoundToInt(cell.Size.y / fineCellSize));
+                int minimumX = Mathf.RoundToInt(
+                    (cell.LocalPosition.x - cell.Size.x * .5f + fineCellSize * .5f) / fineCellSize);
+                int minimumY = Mathf.RoundToInt(
+                    (cell.LocalPosition.y - cell.Size.y * .5f + fineCellSize * .5f) / fineCellSize);
+                for (int y = 0; y < heightInCells; y++)
+                {
+                    for (int x = 0; x < widthInCells; x++)
+                        occupied.Add(new Vector2Int(minimumX + x, minimumY + y));
+                }
+            }
+
+            return new RuntimePieceOutlineGrid(fineCellSize, occupied);
+        }
+
         private static bool HasBlockCells(PieceDefinition definition)
         {
             if (definition.cells == null)
@@ -779,26 +839,63 @@ namespace GravityPuzzle.Gameplay.Pieces
             return false;
         }
 
-        private static void ConfigureOutline(
-            LineRenderer outline,
-            CompositeCollider2D pieceComposite,
-            SpriteRenderer wholePieceVisual = null)
+        private static void ConfigureOutline(PuzzlePiece piece)
         {
+            RuntimePieceOutlineGrid grid = piece != null ? piece.OutlineGrid : null;
+            if (grid == null || !grid.IsValid)
+            {
+                piece?.ClearOutlineRenderers();
+                return;
+            }
+
+            TraceOutlineLoops(grid);
+            SortOutlineLoops();
+            int rendererCount = Mathf.Min(piece.OutlineRendererCount, outlineLoops.Count);
+            piece.ClearOutlineRenderers(rendererCount);
+
+            float maximumClearance = grid.CellSize * .45f;
+            float outsideClearance = Mathf.Clamp(
+                GetSelectedOutlineWidth() * .5f + GetOutlineOuterPadding() + GetOutlineVisualInset(),
+                0f,
+                maximumClearance);
+            float cornerRadius = Mathf.Min(GetOutlineCornerRadius(), maximumClearance);
+            for (int loopIndex = 0; loopIndex < rendererCount; loopIndex++)
+            {
+                ConvertGridLoopToLocalPoints(outlineLoops[loopIndex], grid.CellSize, outlineSourcePoints);
+                BuildOutlineContour(
+                    outlineSourcePoints,
+                    cornerRadius,
+                    outsideClearance,
+                    GetOutlineCornerVertices(),
+                    outlineContourPoints);
+                ConfigureOutlineRenderer(piece.GetOutlineRenderer(loopIndex), outlineContourPoints);
+            }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (outlineLoops.Count > piece.OutlineRendererCount)
+            {
+                Debug.LogWarning(
+                    $"[PieceOutline] '{piece.name}' produced {outlineLoops.Count} grid loops but its prefab provides " +
+                    $"{piece.OutlineRendererCount} outline renderers. The smallest loops were not rendered.",
+                    piece);
+            }
+#endif
+        }
+
+        private static void ConfigureOutlineRenderer(LineRenderer outline, IReadOnlyList<Vector2> contour)
+        {
+            if (outline == null || contour == null || contour.Count < 3)
+                return;
+
             outline.enabled = true;
             outline.useWorldSpace = false;
             outline.loop = true;
-            outline.positionCount = 0;
             outline.startWidth = GetRestingOutlineWidth();
             outline.endWidth = GetRestingOutlineWidth();
-            // The LineRenderer join only rounds within the line width. That
-            // leaves a square contour on the rounded Scene Tuna piece art and
-            // lets a selected glow cover the artwork at exterior corners.
-            // Build the rounded, offset contour explicitly instead.
             outline.alignment = LineAlignment.TransformZ;
             outline.numCornerVertices = 0;
             outline.numCapVertices = 0;
             outline.sortingOrder = GetRestingOutlineSortingOrder();
-
             if (sharedOutlineMaterial == null)
             {
                 Shader shader = Shader.Find("Sprites/Default");
@@ -811,173 +908,197 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             outline.startColor = GetRestingOutlineColor();
             outline.endColor = GetRestingOutlineColor();
-
-            if (TryConfigureOutlineFromWholePieceSprite(outline, wholePieceVisual))
-                return;
-
-            if (pieceComposite.pathCount <= 0)
-                return;
-
-            int pathIndex = FindOuterPathIndex(pieceComposite);
-            int pointCount = pieceComposite.GetPathPointCount(pathIndex);
-            Vector2[] path = new Vector2[pointCount];
-            pieceComposite.GetPath(pathIndex, path);
-            List<Vector2> contour = BuildOutlineContour(
-                path,
-                GetOutlineCornerRadius(),
-                GetSelectedOutlineWidth() * .5f +
-                GetOutlineOuterPadding() -
-                GetOutlineVisualInset(),
-                GetOutlineCornerVertices());
             outline.positionCount = contour.Count;
             for (int index = 0; index < contour.Count; index++)
-                outline.SetPosition(index, new Vector3(contour[index].x, contour[index].y, 0f));
-        }
-
-        /// <summary>
-        /// Uses an artist-authored sprite physics shape as the visual contour
-        /// for an intact atlas silhouette. This does not use the collider as
-        /// gameplay authority: it only lets the pooled LineRenderer follow the
-        /// same alpha silhouette that the player sees. Composite geometry
-        /// remains the fallback for modular, joined, tiled, and invalid art.
-        /// </summary>
-        private static bool TryConfigureOutlineFromWholePieceSprite(
-            LineRenderer outline,
-            SpriteRenderer wholePieceVisual)
-        {
-            if (wholePieceVisual == null ||
-                !wholePieceVisual.enabled ||
-                wholePieceVisual.drawMode != SpriteDrawMode.Simple ||
-                wholePieceVisual.sprite == null)
             {
-                return false;
-            }
-
-            Sprite sprite = wholePieceVisual.sprite;
-            if (sprite.GetPhysicsShapeCount() != 1)
-                return false;
-
-            spritePhysicsShapeBuffer.Clear();
-            sprite.GetPhysicsShape(0, spritePhysicsShapeBuffer);
-            if (spritePhysicsShapeBuffer.Count < 3)
-                return false;
-
-            spriteOutlineContourBuffer.Clear();
-            Transform spriteTransform = wholePieceVisual.transform;
-            Transform outlineTransform = outline.transform;
-            for (int index = 0; index < spritePhysicsShapeBuffer.Count; index++)
-            {
-                Vector2 point = spritePhysicsShapeBuffer[index];
-                if (wholePieceVisual.flipX)
-                    point.x = -point.x;
-                if (wholePieceVisual.flipY)
-                    point.y = -point.y;
-
-                Vector3 localPoint = outlineTransform.InverseTransformPoint(
-                    spriteTransform.TransformPoint(point));
-                AddContourPoint(spriteOutlineContourBuffer, localPoint);
-            }
-
-            RemoveClosedContourDuplicate(spriteOutlineContourBuffer);
-            RemoveCollinearContourPoints(spriteOutlineContourBuffer);
-            if (spriteOutlineContourBuffer.Count < 3 ||
-                Mathf.Abs(GetSignedArea(spriteOutlineContourBuffer)) < .0001f)
-            {
-                return false;
-            }
-
-            EnsureCounterClockwiseWinding(spriteOutlineContourBuffer);
-            outline.numCornerVertices = GetOutlineCornerVertices();
-            outline.positionCount = spriteOutlineContourBuffer.Count;
-            for (int index = 0; index < spriteOutlineContourBuffer.Count; index++)
-            {
-                Vector2 point = spriteOutlineContourBuffer[index];
+                Vector2 point = contour[index];
                 outline.SetPosition(index, new Vector3(point.x, point.y, 0f));
             }
-
-            return true;
         }
 
-        private static void RemoveClosedContourDuplicate(List<Vector2> contour)
+        private static void TraceOutlineLoops(RuntimePieceOutlineGrid grid)
         {
-            if (contour.Count > 1 &&
-                (contour[0] - contour[contour.Count - 1]).sqrMagnitude <= .00000001f)
+            outlineEdges.Clear();
+            foreach (Vector2Int cell in grid.OccupiedCells)
             {
-                contour.RemoveAt(contour.Count - 1);
+                if (!grid.Contains(cell + Vector2Int.down))
+                    outlineEdges.Add(new GridOutlineEdge(cell, cell + Vector2Int.right, 0));
+                if (!grid.Contains(cell + Vector2Int.right))
+                    outlineEdges.Add(new GridOutlineEdge(cell + Vector2Int.right, cell + Vector2Int.one, 1));
+                if (!grid.Contains(cell + Vector2Int.up))
+                    outlineEdges.Add(new GridOutlineEdge(cell + Vector2Int.one, cell + Vector2Int.up, 2));
+                if (!grid.Contains(cell + Vector2Int.left))
+                    outlineEdges.Add(new GridOutlineEdge(cell + Vector2Int.up, cell, 3));
             }
-        }
 
-        private static void RemoveCollinearContourPoints(List<Vector2> contour)
-        {
-            const float minimumEdgeSqrLength = .00000001f;
-            const float collinearSineTolerance = .0001f;
-
-            for (int index = contour.Count - 1; index >= 0 && contour.Count >= 3; index--)
+            outlineLoops.Clear();
+            int loopCount = 0;
+            for (int edgeIndex = 0; edgeIndex < outlineEdges.Count; edgeIndex++)
             {
-                Vector2 previous = contour[(index + contour.Count - 1) % contour.Count];
-                Vector2 current = contour[index];
-                Vector2 next = contour[(index + 1) % contour.Count];
-                Vector2 incoming = current - previous;
-                Vector2 outgoing = next - current;
-                float incomingLength = incoming.sqrMagnitude;
-                float outgoingLength = outgoing.sqrMagnitude;
-                if (incomingLength <= minimumEdgeSqrLength || outgoingLength <= minimumEdgeSqrLength)
-                {
-                    contour.RemoveAt(index);
+                if (outlineEdges[edgeIndex].Visited)
                     continue;
-                }
 
-                float cross = incoming.x * outgoing.y - incoming.y * outgoing.x;
-                float edgeProduct = Mathf.Sqrt(incomingLength * outgoingLength);
-                if (edgeProduct > 0f &&
-                    Mathf.Abs(cross) / edgeProduct <= collinearSineTolerance &&
-                    Vector2.Dot(incoming, outgoing) > 0f)
+                List<Vector2Int> loop = GetOutlineLoopBuffer(loopCount++);
+                if (!TraceOutlineLoop(edgeIndex, loop))
+                    loop.Clear();
+                if (loop.Count >= 3)
                 {
-                    contour.RemoveAt(index);
+                    RemoveExactCollinearPoints(loop);
+                    if (loop.Count >= 3)
+                        outlineLoops.Add(loop);
                 }
             }
         }
 
-        private static float GetSignedArea(IReadOnlyList<Vector2> contour)
+        private static List<Vector2Int> GetOutlineLoopBuffer(int index)
         {
-            float signedArea = 0f;
-            for (int index = 0; index < contour.Count; index++)
-            {
-                Vector2 current = contour[index];
-                Vector2 next = contour[(index + 1) % contour.Count];
-                signedArea += current.x * next.y - next.x * current.y;
-            }
+            while (outlineLoopBuffers.Count <= index)
+                outlineLoopBuffers.Add(new List<Vector2Int>(16));
 
-            return signedArea * .5f;
+            List<Vector2Int> loop = outlineLoopBuffers[index];
+            loop.Clear();
+            return loop;
         }
 
-        private static void EnsureCounterClockwiseWinding(List<Vector2> contour)
+        private static bool TraceOutlineLoop(int firstEdgeIndex, List<Vector2Int> loop)
         {
-            if (GetSignedArea(contour) < 0f)
-                contour.Reverse();
+            int edgeIndex = firstEdgeIndex;
+            Vector2Int firstVertex = outlineEdges[firstEdgeIndex].Start;
+            int safety = outlineEdges.Count + 1;
+            while (safety-- > 0)
+            {
+                GridOutlineEdge edge = outlineEdges[edgeIndex];
+                if (edge.Visited)
+                    return false;
+
+                edge.Visited = true;
+                outlineEdges[edgeIndex] = edge;
+                loop.Add(edge.Start);
+                if (edge.End == firstVertex)
+                    return true;
+
+                edgeIndex = FindNextOutlineEdge(edge.End, edge.Direction);
+                if (edgeIndex < 0)
+                    return false;
+            }
+
+            return false;
+        }
+
+        private static int FindNextOutlineEdge(Vector2Int vertex, int incomingDirection)
+        {
+            int bestIndex = -1;
+            int bestPriority = int.MaxValue;
+            for (int index = 0; index < outlineEdges.Count; index++)
+            {
+                GridOutlineEdge candidate = outlineEdges[index];
+                if (candidate.Visited || candidate.Start != vertex)
+                    continue;
+
+                int turn = (candidate.Direction - incomingDirection + 4) % 4;
+                int priority = turn == 1 ? 0 : turn == 0 ? 1 : turn == 3 ? 2 : 3;
+                if (priority >= bestPriority)
+                    continue;
+
+                bestPriority = priority;
+                bestIndex = index;
+            }
+
+            return bestIndex;
+        }
+
+        private static void RemoveExactCollinearPoints(List<Vector2Int> loop)
+        {
+            for (int index = loop.Count - 1; index >= 0 && loop.Count >= 3; index--)
+            {
+                Vector2Int previous = loop[(index + loop.Count - 1) % loop.Count];
+                Vector2Int current = loop[index];
+                Vector2Int next = loop[(index + 1) % loop.Count];
+                Vector2Int incoming = current - previous;
+                Vector2Int outgoing = next - current;
+                int cross = incoming.x * outgoing.y - incoming.y * outgoing.x;
+                int dot = incoming.x * outgoing.x + incoming.y * outgoing.y;
+                if (cross == 0 && dot > 0)
+                    loop.RemoveAt(index);
+            }
+        }
+
+        private static void ConvertGridLoopToLocalPoints(
+            IReadOnlyList<Vector2Int> gridLoop,
+            float cellSize,
+            List<Vector2> localPoints)
+        {
+            localPoints.Clear();
+            for (int index = 0; index < gridLoop.Count; index++)
+            {
+                Vector2Int vertex = gridLoop[index];
+                localPoints.Add(new Vector2(
+                    (vertex.x - .5f) * cellSize,
+                    (vertex.y - .5f) * cellSize));
+            }
+        }
+
+        private static void SortOutlineLoops()
+        {
+            for (int index = 1; index < outlineLoops.Count; index++)
+            {
+                List<Vector2Int> candidate = outlineLoops[index];
+                float candidateArea = GetGridLoopSignedArea(candidate);
+                int insertIndex = index - 1;
+                while (insertIndex >= 0 && ShouldSortBefore(candidateArea, GetGridLoopSignedArea(outlineLoops[insertIndex])))
+                {
+                    outlineLoops[insertIndex + 1] = outlineLoops[insertIndex];
+                    insertIndex--;
+                }
+
+                outlineLoops[insertIndex + 1] = candidate;
+            }
+        }
+
+        private static bool ShouldSortBefore(float candidateArea, float currentArea)
+        {
+            bool candidateIsOuter = candidateArea > 0f;
+            bool currentIsOuter = currentArea > 0f;
+            if (candidateIsOuter != currentIsOuter)
+                return candidateIsOuter;
+
+            return Mathf.Abs(candidateArea) > Mathf.Abs(currentArea);
+        }
+
+        private static float GetGridLoopSignedArea(IReadOnlyList<Vector2Int> loop)
+        {
+            float area = 0f;
+            for (int index = 0; index < loop.Count; index++)
+            {
+                Vector2Int current = loop[index];
+                Vector2Int next = loop[(index + 1) % loop.Count];
+                area += current.x * next.y - next.x * current.y;
+            }
+
+            return area * .5f;
         }
 
         /// <summary>
-        /// Produces a presentation-only contour outside an orthogonal composite
-        /// path. Convex corners are intentionally rounded at the same scale as
-        /// the piece art; concave joins remain mitered in the empty space so an
-        /// L/T/C silhouette never loses part of its footprint.
+        /// Produces a presentation-only contour from deterministic grid edges.
+        /// Convex corners receive explicit arc samples; concave corners use the
+        /// intersection of their offset edges so the entire silhouette remains.
         /// </summary>
-        private static List<Vector2> BuildOutlineContour(
-            Vector2[] path,
+        private static void BuildOutlineContour(
+            IReadOnlyList<Vector2> path,
             float requestedRadius,
             float outsideClearance,
-            int cornerSegments)
+            int cornerSegments,
+            List<Vector2> contour)
         {
-            List<Vector2> contour = new List<Vector2>();
-            if (path == null || path.Length < 3)
-                return contour;
+            contour.Clear();
+            if (path == null || path.Count < 3)
+                return;
 
             float signedArea = 0f;
-            for (int index = 0; index < path.Length; index++)
+            for (int index = 0; index < path.Count; index++)
             {
                 Vector2 current = path[index];
-                Vector2 next = path[(index + 1) % path.Length];
+                Vector2 next = path[(index + 1) % path.Count];
                 signedArea += current.x * next.y - next.x * current.y;
             }
 
@@ -990,11 +1111,11 @@ namespace GravityPuzzle.Gameplay.Pieces
             const float minimumEdgeLength = .0001f;
             const float cornerEpsilon = .0001f;
 
-            for (int index = 0; index < path.Length; index++)
+            for (int index = 0; index < path.Count; index++)
             {
-                Vector2 previous = path[(index + path.Length - 1) % path.Length];
+                Vector2 previous = path[(index + path.Count - 1) % path.Count];
                 Vector2 current = path[index];
-                Vector2 next = path[(index + 1) % path.Length];
+                Vector2 next = path[(index + 1) % path.Count];
                 Vector2 incoming = current - previous;
                 Vector2 outgoing = next - current;
                 float incomingLength = incoming.magnitude;
@@ -1074,7 +1195,6 @@ namespace GravityPuzzle.Gameplay.Pieces
                 }
             }
 
-            return contour;
         }
 
         private static Vector2 GetOutsideNormal(Vector2 direction, float winding)
@@ -1134,37 +1254,6 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static float GetOutlineOuterPadding() => pieceVisualConfig != null ? pieceVisualConfig.OutlineOuterPadding : 0f;
         private static float GetOutlineVisualInset() => pieceVisualConfig != null ? pieceVisualConfig.OutlineVisualInset : .075f;
         private static int GetOutlineCornerVertices() => pieceVisualConfig != null ? pieceVisualConfig.OutlineCornerVertices : 4;
-
-        private static int FindOuterPathIndex(CompositeCollider2D pieceComposite)
-        {
-            int outerPathIndex = 0;
-            float largestArea = 0f;
-            for (int pathIndex = 0; pathIndex < pieceComposite.pathCount; pathIndex++)
-            {
-                int count = pieceComposite.GetPathPointCount(pathIndex);
-                if (count < 3)
-                    continue;
-
-                Vector2[] path = new Vector2[count];
-                pieceComposite.GetPath(pathIndex, path);
-                float signedArea = 0f;
-                for (int index = 0; index < count; index++)
-                {
-                    Vector2 current = path[index];
-                    Vector2 next = path[(index + 1) % count];
-                    signedArea += current.x * next.y - next.x * current.y;
-                }
-
-                float area = Mathf.Abs(signedArea);
-                if (area <= largestArea)
-                    continue;
-
-                largestArea = area;
-                outerPathIndex = pathIndex;
-            }
-
-            return outerPathIndex;
-        }
 
         private static BoxCollider2D ConfigurePiecePartSlot(
             PiecePartSlot slot,
@@ -1674,6 +1763,22 @@ namespace GravityPuzzle.Gameplay.Pieces
             return new Vector2(
                 -level.boardColumns * .5f + cell.x + .5f,
                 -level.boardRows * .5f + cell.y + .5f);
+        }
+
+        private struct GridOutlineEdge
+        {
+            public GridOutlineEdge(Vector2Int start, Vector2Int end, int direction)
+            {
+                Start = start;
+                End = end;
+                Direction = direction;
+                Visited = false;
+            }
+
+            public Vector2Int Start;
+            public Vector2Int End;
+            public int Direction;
+            public bool Visited;
         }
 
         private readonly struct PiecePartGeometry

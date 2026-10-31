@@ -67,20 +67,18 @@ menu, which preserves existing IDs. The fallback material remains for missing or
 unsupported palette materials, not as the intended normal appearance.
 
 Piece selection glow is presentation-only: it neither changes collision nor board
-occupancy. For an active, non-tiled whole-piece atlas sprite with exactly one valid
-Sprite Editor physics contour, `RuntimePieceFactory` uses that contour for the pooled
-root's `LineRenderer`. It follows the art's actual alpha silhouette, including its
-authored rounded corners and per-sprite transparent gutter. Sprite physics contours
-used this way are a visual authoring contract, not gameplay physics.
+occupancy. `RuntimePieceFactory` derives its contour solely from the piece's retained
+fine-grid occupancy. It removes shared cardinal edges, traces the remaining closed
+boundary loops, and emits explicit fixed-segment arcs at convex corners. Concave
+corners use intersecting offset edges. Sprite alpha, Sprite physics shapes,
+`CompositeCollider2D` paths, and collider skin are never read for this presentation.
 
-Modular, joined, tiled, absent, or invalid whole-piece art falls back to the
-`CompositeCollider2D` exterior path. That fallback offsets the line beyond its selected
-width, then applies configurable atlas-gutter inset and convex-corner rounding.
-`PieceVisualConfig` owns the fallback clearance, visual inset, corner radius, and
-curve-segment count. Concave joins stay in their empty grid space so irregular L/T/C
-silhouettes retain their complete outline. The outline is refreshed when a whole-piece
-sprite or its visibility changes, and fragment rebuilds naturally return to the
-composite fallback.
+`PieceVisualConfig` owns line width, visual inset, outer padding, corner radius, and
+corner-segment count. The selected-line half width, padding, and visual inset resolve
+to one clamped grid-space offset, so a sprite's internal visual gutter can be matched
+without changing its source texture. Freeze/thaw only reapplies visual state; spawning
+and fragment rebuilds regenerate the grid outline. Selecting a piece in the Unity
+editor draws its generated root-loop points and segments as magenta Gizmos.
 
 ## Whole-piece and modular fallback selection
 

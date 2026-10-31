@@ -342,6 +342,7 @@ namespace GravityPuzzle
             if (shredderConfig != null)
                 boardState.SetFinalShredderGraceSeconds(
                     shredderConfig.FinalPieceTimerGraceSeconds);
+            BlockShredder.Instance.ConfigurePhysicsHandoffLine(-halfHeight);
             CreateShredders(level, halfHeight, shredderConfig);
 
             CreateObstacles(level);
@@ -1865,7 +1866,11 @@ namespace GravityPuzzle
             
             // Lower the shredders so their top edge (y + radius) is exactly at the bottom of the board (-halfHeight).
             // This prevents blocks resting on the shredder from being pushed vertically out of the grid alignment.
-            float y = -halfHeight - radius;
+            float handoffDistance = shredderConfig != null
+                ? shredderConfig.PhysicsHandoffDistanceBelowMap : 0f;
+            float freefallDistance = shredderConfig != null
+                ? shredderConfig.PhysicsFreefallDistanceBelowHandoff : 0f;
+            float y = -halfHeight - handoffDistance - freefallDistance - radius;
 
             for (int i = 0; i < count; i++)
             {
