@@ -1422,10 +1422,10 @@ namespace GravityPuzzle
             // t=0.18  Ambient snow (looping PSystems)
             _freezeFXSequence.InsertCallback(0.18f, () =>
             {
-                snowTop?.Play();
-                snowBottom?.Play();
-                snowLeft?.Play();
-                snowRight?.Play();
+                PlayParticleIfAvailable(snowTop);
+                PlayParticleIfAvailable(snowBottom);
+                PlayParticleIfAvailable(snowLeft);
+                PlayParticleIfAvailable(snowRight);
             });
 
             // t=0.24  FreezeTimerIndicator — fully null-safe, OutCubic with scale
@@ -1541,10 +1541,27 @@ namespace GravityPuzzle
                 ? ParticleSystemStopBehavior.StopEmittingAndClear
                 : ParticleSystemStopBehavior.StopEmitting;
 
-            snowTop?.Stop(true, behavior);
-            snowBottom?.Stop(true, behavior);
-            snowLeft?.Stop(true, behavior);
-            snowRight?.Stop(true, behavior);
+            StopParticleIfAvailable(snowTop, behavior);
+            StopParticleIfAvailable(snowBottom, behavior);
+            StopParticleIfAvailable(snowLeft, behavior);
+            StopParticleIfAvailable(snowRight, behavior);
+        }
+
+        // Unity's null-conditional operator does not apply UnityEngine.Object's
+        // destroyed-object check. These presentation fields are optional and can
+        // be replaced by a scene reload, so use Unity-aware equality before use.
+        private static void PlayParticleIfAvailable(ParticleSystem particle)
+        {
+            if (particle != null)
+                particle.Play();
+        }
+
+        private static void StopParticleIfAvailable(
+            ParticleSystem particle,
+            ParticleSystemStopBehavior behavior)
+        {
+            if (particle != null)
+                particle.Stop(true, behavior);
         }
 
         /// <summary>Stops and clears all one-shot impact PSystems.</summary>
