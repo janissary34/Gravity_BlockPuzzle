@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: L15
   m_EditorClassIdentifier: 
   levelName: New Level
+  difficulty: 0
   timeLimit: 60
   boardColumns: 8
   boardRows: 9
