@@ -200,6 +200,9 @@ namespace GravityPuzzle
             return CurrentLevel;
         }
 
+        public const int InitialPlayerCoinAmount = 1000;
+        public const int CoinRewardPerLevel = 40;
+
         public static bool HasNextLevel => currentLevelIndex >= 0 && currentLevelIndex + 1 < levels.Length;
 
         public static int CurrentLevelNumber => Mathf.Max(1, currentLevelIndex + 1);
@@ -208,6 +211,13 @@ namespace GravityPuzzle
         public static int CurrentLevelCoinAmount => CurrentLevel != null
             ? Mathf.Max(0, CurrentLevel.coinAmount)
             : 0;
+
+        /// <summary>
+        /// Player's coin total at the start of the active campaign level.
+        /// Starts at 1000 on Level 1 and increases by 40 for each completed level.
+        /// </summary>
+        public static int CurrentPlayerCoinAmount =>
+            InitialPlayerCoinAmount + (CurrentLevelNumber - 1) * CoinRewardPerLevel;
 
         /// <summary>
         /// Requests that the next scene load immediately starts the active level without showing the main menu.

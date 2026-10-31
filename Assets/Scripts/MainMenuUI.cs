@@ -18,6 +18,9 @@ namespace GravityPuzzle
         [Tooltip("Optional. Text component displaying current level number (e.g. 'Level 1').")]
         public TMP_Text levelText;
 
+        [Tooltip("Optional. Text component displaying current coin total.")]
+        public TMP_Text coinText;
+
         [Header("Scene Settings")]
         [Tooltip("Name of your gameplay level scene (e.g. 'Scene1'). Leave blank to load Build Index 1.")]
         public string gameSceneName = "Scene1";
@@ -36,6 +39,11 @@ namespace GravityPuzzle
             {
                 int currentLevel = GravityLevelRuntime.CurrentLevelNumber;
                 levelText.text = $"Level {currentLevel}";
+            }
+
+            if (coinText != null)
+            {
+                coinText.SetText("{0}", GravityLevelRuntime.CurrentPlayerCoinAmount);
             }
         }
 

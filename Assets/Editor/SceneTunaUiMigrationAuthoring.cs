@@ -193,11 +193,13 @@ namespace GravityPuzzle.Editor
             // by placeholder text, otherwise the visible top-HUD label is
             // never updated at runtime.
             TMP_Text levelText = FindDescendant(uiRoot, "Level_Display_txt")?.GetComponent<TMP_Text>();
+            TMP_Text coinText = FindDescendant(uiRoot, "gold_txt")?.GetComponent<TMP_Text>();
             TMP_Text retryLevelText = FindTextWithInitialValue(
                 FindDescendant(uiRoot, "Retry_Panel"), "Level 99");
             TMP_Text failedLevelText = FindDescendant(uiRoot, "LevelFailText")?.GetComponent<TMP_Text>();
 
             SetReference(bootstrap, "levelDisplayText", levelText);
+            SetReference(bootstrap, "coinDisplayText", coinText);
             SetReference(bootstrap, "retryLevelText", retryLevelText);
             SetReference(bootstrap, "failedLevelText", failedLevelText);
 

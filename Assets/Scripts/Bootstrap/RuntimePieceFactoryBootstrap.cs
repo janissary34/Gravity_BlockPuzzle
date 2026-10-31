@@ -60,6 +60,9 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Text that displays the active campaign level number.")]
         [SerializeField] private TMP_Text levelDisplayText;
 
+        [Tooltip("Text that displays the player's current coin total in the HUD.")]
+        [SerializeField] private TMP_Text coinDisplayText;
+
         [Tooltip("Text in the retry confirmation panel that displays the active campaign level number.")]
         [SerializeField] private TMP_Text retryLevelText;
 
@@ -85,6 +88,10 @@ namespace GravityPuzzle.Bootstrap
 
         private void Awake()
         {
+            // Mobile players default to 30 FPS when no frame-rate target is set.
+            // This scene bootstrap is the first active gameplay composition root.
+            Application.targetFrameRate = 60;
+
             // Inventory is configured before level/UI setup so every booster
             // adapter reads one persistent authority from its first refresh.
             BoosterInventoryRuntime.Configure(new PlayerPrefsBoosterInventory());
@@ -133,6 +140,7 @@ namespace GravityPuzzle.Bootstrap
                     poolParent != null ? poolParent : transform);
             }
 
+            ResolveCoinDisplayText();
             UpdateLevelDisplays();
 
             string pieceValidationError = "BlockPiece prefab or PoolConfig is not assigned.";
@@ -203,12 +211,31 @@ namespace GravityPuzzle.Bootstrap
             isReady = true;
         }
 
+        private void ResolveCoinDisplayText()
+        {
+            if (coinDisplayText != null || levelDisplayText == null)
+                return;
+
+            Transform hudRoot = levelDisplayText.transform.parent != null
+                ? levelDisplayText.transform.parent.parent
+                : null;
+            if (hudRoot == null)
+                return;
+
+            Transform coinTextTransform = hudRoot.Find("UI_Coin/gold_txt");
+            if (coinTextTransform != null)
+                coinDisplayText = coinTextTransform.GetComponent<TMP_Text>();
+        }
+
         private void UpdateLevelDisplays()
         {
             int currentLevelNumber = GravityLevelRuntime.CurrentLevelNumber;
 
             if (levelDisplayText != null)
                 levelDisplayText.SetText("Level {0}", currentLevelNumber);
+
+            if (coinDisplayText != null)
+                coinDisplayText.SetText("{0}", GravityLevelRuntime.CurrentPlayerCoinAmount);
 
             if (retryLevelText != null)
                 retryLevelText.SetText("Level {0}", currentLevelNumber);
