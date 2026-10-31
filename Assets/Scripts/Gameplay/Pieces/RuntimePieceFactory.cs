@@ -585,9 +585,6 @@ namespace GravityPuzzle.Gameplay.Pieces
                 : baseIceFontSize * Mathf.Clamp(definition.iceCounterFontSize / 36f, 0.2f, 3.0f);
 
             float baseBombFontSize = pieceVisualConfig != null ? pieceVisualConfig.BombCounterFontSize : .65f;
-            float resolvedBombFontSize = definition.bombCounterFontSize <= 0f
-                ? baseBombFontSize
-                : baseBombFontSize * Mathf.Clamp(definition.bombCounterFontSize / 36f, 0.2f, 3.0f);
 
             puzzlePiece.Configure(new PieceRuntimeSetup(
                 sourcePieceId,
@@ -612,7 +609,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 definition.specialBlockType,
                 definition.bombTimerSeconds,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterFont : null,
-                resolvedBombFontSize,
+                baseBombFontSize,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterTextColor : definition.bombCounterTextColor,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineColor : definition.bombCounterOutlineColor,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineWidth : definition.bombCounterOutlineWidth,

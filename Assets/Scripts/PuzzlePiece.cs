@@ -2383,13 +2383,13 @@ namespace GravityPuzzle
             if (!TryGetCellIndexAt(worldPosition, out int targetIndex))
                 return false;
 
-            return TryRemoveCellAtIndex(targetIndex, out removedCell, false);
+            return TryRemoveCellAtIndex(targetIndex, out removedCell);
         }
 
         /// <summary>
-        /// Applies a hammer hit to a visible cell. A bomb is defused only when
-        /// the impact removes its final cell; a surviving piece retains its
-        /// armed bomb state through the topology rebuild.
+        /// Applies a hammer hit to a visible cell. An armed bomb is defused
+        /// in place; its icon and countdown are removed without changing the
+        /// piece's cells or authoritative grid footprint.
         /// </summary>
         public bool TryRemoveCellWithHammer(Vector2 worldPosition, out RemovedCell removedCell)
         {
@@ -2400,7 +2400,19 @@ namespace GravityPuzzle
             if (!TryGetCellIndexAt(worldPosition, out int targetIndex))
                 return false;
 
-            return TryRemoveCellAtIndex(targetIndex, out removedCell, true);
+            if (IsBomb && !IsBombDefused)
+            {
+                DefuseBomb();
+                return true;
+            }
+
+            bool removesFinalCell = collisionCells.Count == 1;
+            int sourcePieceId = SourcePieceId;
+            bool removed = TryRemoveCellAtIndex(targetIndex, out removedCell);
+            if (removed && removesFinalCell)
+                PrototypeBoard.Active?.NotifyPieceHammerDestroyed(sourcePieceId);
+
+            return removed;
         }
 
         /// <summary>
@@ -2422,8 +2434,7 @@ namespace GravityPuzzle
 
         private bool TryRemoveCellAtIndex(
             int targetIndex,
-            out RemovedCell removedCell,
-            bool defuseBombWithHammer)
+            out RemovedCell removedCell)
         {
             removedCell = default;
             if (targetIndex < 0 || collisionCells == null || collisionCellVisuals == null ||
@@ -2483,18 +2494,7 @@ namespace GravityPuzzle
 
             if (collisionCells.Count == 0)
             {
-                // A hammer remains a valid explicit resolution for a bomb
-                // only when it removes that bomb completely. Defusing before
-                // this point used to make a partially damaged bomb harmless
-                // and left its surviving cells without their bomb overlay.
-                if (ShouldDefuseBombAfterCellRemoval(
-                        defuseBombWithHammer,
-                        IsBomb,
-                        collisionCells.Count))
-                    SetBombDefused(true);
                 ReportDestroyed();
-                if (defuseBombWithHammer)
-                    PrototypeBoard.Active?.NotifyPieceHammerDestroyed(SourcePieceId);
                 ReleaseInstance();
             }
             else
@@ -2551,24 +2551,10 @@ namespace GravityPuzzle
             return true;
         }
 
-        private static bool ShouldDefuseBombAfterCellRemoval(
-            bool hammerImpact,
-            bool isBomb,
-            int remainingCellCount)
+        private void DefuseBomb()
         {
-            return hammerImpact && isBomb && remainingCellCount == 0;
-        }
-
-        private void SetBombDefused(bool isDefused)
-        {
-            IsBombDefused = isDefused;
-            if (isDefused)
-            {
-                if (bombCounterText != null)
-                    bombCounterText.enabled = false;
-                if (iceCounterText != null)
-                    iceCounterText.enabled = false;
-            }
+            IsBombDefused = true;
+            ClearBombVisuals();
         }
 
         // The rendered voxel grid is intentionally made of child VoxelShard
@@ -3024,6 +3010,8 @@ namespace GravityPuzzle
 
             Bounds combinedBounds = default;
             SpriteRenderer sortingSource = null;
+            Vector2 weightedCenter = Vector2.zero;
+            float totalCellArea = 0f;
             for (int index = 0; index < collisionCellVisuals.Count; index++)
             {
                 SpriteRenderer source = collisionCellVisuals[index];
@@ -3039,24 +3027,40 @@ namespace GravityPuzzle
                 {
                     combinedBounds.Encapsulate(source.bounds);
                 }
+
+                Vector2 sourceSize = source.bounds.size;
+                float sourceArea = sourceSize.x * sourceSize.y;
+                if (sourceArea > Mathf.Epsilon)
+                {
+                    weightedCenter += (Vector2)source.bounds.center * sourceArea;
+                    totalCellArea += sourceArea;
+                }
             }
 
             if (sortingSource == null)
                 return;
 
+            Vector2 targetSize = GetBombOverlayTargetSize();
+            Vector2 desiredCenter = totalCellArea > Mathf.Epsilon
+                ? weightedCenter / totalCellArea
+                : combinedBounds.center;
+            Vector2 overlayCenter = DoesBombFootprintFitPiece(desiredCenter, targetSize)
+                ? desiredCenter
+                : GetClosestBombCellCenter(desiredCenter, combinedBounds.center);
+
             // A bomb is a property of the complete authored piece, not of
-            // each of its cells. It therefore renders once at the piece
-            // centre, but always at one authored block's size rather than
-            // scaling up with a 2x2 or larger footprint.
+            // each cell. It renders once at the shape's center when that
+            // one-block footprint fits. Concave shapes instead use the most
+            // central occupied cell so the icon never floats in empty space.
             CreateBombOverlay(
                 sortingSource,
-                combinedBounds,
-                GetBombOverlayTargetSize());
+                overlayCenter,
+                targetSize);
         }
 
         private void CreateBombOverlay(
             SpriteRenderer sortingSource,
-            Bounds combinedBounds,
+            Vector2 overlayCenter,
             Vector2 targetSize)
         {
             if (!TryGetAvailableIceSlot(out SpriteRenderer renderer))
@@ -3067,8 +3071,8 @@ namespace GravityPuzzle
 
             renderer.transform.SetParent(transform, false);
             renderer.transform.position = new Vector3(
-                combinedBounds.center.x,
-                combinedBounds.center.y,
+                overlayCenter.x,
+                overlayCenter.y,
                 transform.position.z - .01f);
             renderer.transform.localRotation = Quaternion.identity;
             renderer.transform.localScale = GetOverlayScaleToFit(
@@ -3103,6 +3107,59 @@ namespace GravityPuzzle
             }
 
             return largestCellSize;
+        }
+
+        private bool DoesBombFootprintFitPiece(Vector2 center, Vector2 size)
+        {
+            const float edgeInset = .0001f;
+            Vector2 halfSize = size * .5f;
+            float horizontalInset = Mathf.Max(0f, halfSize.x - edgeInset);
+            float verticalInset = Mathf.Max(0f, halfSize.y - edgeInset);
+
+            return IsPointInsideBombPiece(center) &&
+                   IsPointInsideBombPiece(center + new Vector2(-horizontalInset, -verticalInset)) &&
+                   IsPointInsideBombPiece(center + new Vector2(-horizontalInset, verticalInset)) &&
+                   IsPointInsideBombPiece(center + new Vector2(horizontalInset, -verticalInset)) &&
+                   IsPointInsideBombPiece(center + new Vector2(horizontalInset, verticalInset));
+        }
+
+        private bool IsPointInsideBombPiece(Vector2 point)
+        {
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer cell = collisionCellVisuals[index];
+                if (cell == null)
+                    continue;
+
+                Bounds bounds = cell.bounds;
+                if (point.x >= bounds.min.x && point.x <= bounds.max.x &&
+                    point.y >= bounds.min.y && point.y <= bounds.max.y)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private Vector2 GetClosestBombCellCenter(Vector2 target, Vector2 fallback)
+        {
+            Vector2 closestCenter = fallback;
+            float closestDistance = float.PositiveInfinity;
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer cell = collisionCellVisuals[index];
+                if (cell == null)
+                    continue;
+
+                Vector2 center = cell.bounds.center;
+                float distance = (center - target).sqrMagnitude;
+                if (distance >= closestDistance)
+                    continue;
+
+                closestCenter = center;
+                closestDistance = distance;
+            }
+
+            return closestCenter;
         }
 
         private static Vector3 GetOverlayScaleToFit(

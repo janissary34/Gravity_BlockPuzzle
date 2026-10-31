@@ -2537,10 +2537,10 @@ namespace GravityPuzzle
                 return;
 
             // A bomb's contract is stricter than ordinary piece removal: it
-            // must enter a shredder or be completely removed by a hammer.
-            // A partial hammer edit preserves the armed bomb on its surviving
-            // root. Falling off the board or another destruction path cannot
-            // silently satisfy its objective.
+            // must enter a shredder or be explicitly defused by a hammer.
+            // Defusal preserves the piece's grid footprint. Falling off the
+            // board or another destruction path cannot silently satisfy its
+            // objective.
             if (destroyedPiece.IsBomb && !destroyedPiece.IsBombDefused && !destroyedPiece.IsBeingShredded)
             {
                 Debug.Log($"[BombBlock] '{destroyedPiece.name}' was removed without entering a shredder.", destroyedPiece);

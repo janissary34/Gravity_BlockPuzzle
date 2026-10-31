@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using GravityPuzzle.Config;
 using UnityEditor;
 using UnityEngine;
 
@@ -807,7 +808,6 @@ namespace GravityPuzzle.Editor
                 }
 
                 float newBombTimerSeconds = piece.bombTimerSeconds;
-                float newBombCounterFontSize = piece.bombCounterFontSize;
                 Color newBombCounterTextColor = piece.bombCounterTextColor;
                 Color newBombCounterOutlineColor = piece.bombCounterOutlineColor;
                 float newBombCounterOutlineWidth = piece.bombCounterOutlineWidth;
@@ -816,8 +816,9 @@ namespace GravityPuzzle.Editor
                 {
                     newBombTimerSeconds = Mathf.Max(1f, EditorGUILayout.FloatField("Bomb Timer (seconds)", piece.bombTimerSeconds));
                     GUILayout.Label("Bomb Counter Text", EditorStyles.boldLabel);
-                    newBombCounterFontSize = EditorGUILayout.Slider(
-                        "Font Size", piece.bombCounterFontSize <= 0f ? 36f : piece.bombCounterFontSize, 8f, 96f);
+                    EditorGUILayout.HelpBox(
+                        "Font size is global. Adjust Bomb Counter Font Size in PieceVisualConfig.",
+                        MessageType.Info);
                     newBombCounterTextColor = EditorGUILayout.ColorField("Text Color", piece.bombCounterTextColor);
                     newBombCounterOutlineColor = EditorGUILayout.ColorField("Outline Color", piece.bombCounterOutlineColor);
                     newBombCounterOutlineWidth = EditorGUILayout.Slider("Outline Width", piece.bombCounterOutlineWidth, 0f, 1f);
@@ -835,7 +836,6 @@ namespace GravityPuzzle.Editor
                     !Mathf.Approximately(newCounterOutlineWidth, piece.iceCounterOutlineWidth) ||
                     newCounterOffset != piece.iceCounterOffset ||
                     !Mathf.Approximately(newBombTimerSeconds, piece.bombTimerSeconds) ||
-                    !Mathf.Approximately(newBombCounterFontSize, piece.bombCounterFontSize) ||
                     newBombCounterTextColor != piece.bombCounterTextColor ||
                     newBombCounterOutlineColor != piece.bombCounterOutlineColor ||
                     !Mathf.Approximately(newBombCounterOutlineWidth, piece.bombCounterOutlineWidth) ||
@@ -855,7 +855,6 @@ namespace GravityPuzzle.Editor
                     piece.iceCounterOutlineWidth = newCounterOutlineWidth;
                     piece.iceCounterOffset = newCounterOffset;
                     piece.bombTimerSeconds = newBombTimerSeconds;
-                    piece.bombCounterFontSize = newBombCounterFontSize;
                     piece.bombCounterTextColor = newBombCounterTextColor;
                     piece.bombCounterOutlineColor = newBombCounterOutlineColor;
                     piece.bombCounterOutlineWidth = newBombCounterOutlineWidth;
@@ -1855,7 +1854,13 @@ namespace GravityPuzzle.Editor
 
         private static void DrawBombCounterPreview(Rect bounds, PieceDefinition piece)
         {
-            int previewFontSize = Mathf.Clamp(Mathf.RoundToInt(piece.bombCounterFontSize), 8, 96);
+            PieceVisualConfig config = AssetDatabase.LoadAssetAtPath<PieceVisualConfig>(
+                "Assets/PieceVisualConfig.asset");
+            float globalFontSize = config != null ? config.BombCounterFontSize : .65f;
+            int previewFontSize = Mathf.Clamp(
+                Mathf.RoundToInt(globalFontSize / .65f * 36f),
+                8,
+                96);
             GUIStyle textStyle = new GUIStyle(EditorStyles.boldLabel)
             {
                 alignment = TextAnchor.MiddleCenter,

@@ -91,28 +91,38 @@ public sealed class BombPresentationTests
         }
     }
 
-    [TestCase(true, true, 2, false)]
-    [TestCase(true, true, 0, true)]
-    [TestCase(false, true, 0, false)]
-    [TestCase(true, false, 0, false)]
-    public void HammerBombDefuse_RequiresFinalCellRemoval(
-        bool hammerImpact,
-        bool isBomb,
-        int remainingCellCount,
-        bool expected)
+    [Test]
+    public void HammerHitOnArmedBomb_DefusesWithoutRemovingItsBlock()
     {
-        MethodInfo method = typeof(PuzzlePiece).GetMethod(
-            "ShouldDefuseBombAfterCellRemoval",
-            BindingFlags.Static | BindingFlags.NonPublic);
+        var root = new GameObject("Hammer bomb defuse test");
+        var texture = new Texture2D(16, 16);
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
 
-        bool actual = (bool)method.Invoke(null, new object[]
+        try
         {
-            hammerImpact,
-            isBomb,
-            remainingCellCount
-        });
+            var piece = root.AddComponent<PuzzlePiece>();
+            SpriteRenderer overlay = ConfigureBombPresentation(piece, root.transform, sprite, new[] { Vector2.zero });
+            var counter = new GameObject("Bomb Counter Presentation").AddComponent<TextMeshPro>();
+            counter.transform.SetParent(root.transform);
+            SetField(piece, "bombCounterText", counter);
+            piece.RefreshBombState();
 
-        Assert.That(actual, Is.EqualTo(expected));
+            BoxCollider2D blockCollider = GetField<List<BoxCollider2D>>(piece, "collisionCells")[0];
+            Assert.That(piece.TryRemoveCellWithHammer(blockCollider.bounds.center, out PuzzlePiece.RemovedCell result), Is.True);
+
+            Assert.That(result.progressUnits, Is.Zero);
+            Assert.That(piece.CollisionCellCount, Is.EqualTo(1));
+            Assert.That(blockCollider.enabled, Is.True);
+            Assert.That(piece.IsBombDefused, Is.True);
+            Assert.That(overlay.enabled, Is.False);
+            Assert.That(counter.enabled, Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(texture);
+        }
     }
 
     [Test]
@@ -125,37 +135,13 @@ public sealed class BombPresentationTests
         try
         {
             var piece = root.AddComponent<PuzzlePiece>();
-            var slots = new GameObject("Ice Presentation Slots").transform;
-            slots.SetParent(root.transform);
-            var overlay = new GameObject("Bomb Overlay Slot").AddComponent<SpriteRenderer>();
-            overlay.transform.SetParent(slots);
-
-            SetField(piece, "iceSlotsRoot", slots);
-            GetField<List<SpriteRenderer>>(piece, "iceSlots").Add(overlay);
-            SetField(piece, "bombOverlaySprite", sprite);
-            SetField(piece, "bombOverlayFill", .936f);
-            SetField(piece, "<IsBomb>k__BackingField", true);
-
-            var cellVisuals = new List<SpriteRenderer>();
-            var cellSizes = new List<Vector2>();
-            SetField(piece, "collisionCellVisuals", cellVisuals);
-            SetField(piece, "fullCollisionCellSizes", cellSizes);
-            Vector2[] centers =
+            SpriteRenderer overlay = ConfigureBombPresentation(piece, root.transform, sprite, new[]
             {
                 new Vector2(-.5f, -.5f),
                 new Vector2(.5f, -.5f),
                 new Vector2(-.5f, .5f),
                 new Vector2(.5f, .5f)
-            };
-            for (int index = 0; index < centers.Length; index++)
-            {
-                var cell = new GameObject($"Cell {index}").AddComponent<SpriteRenderer>();
-                cell.transform.SetParent(root.transform);
-                cell.transform.localPosition = centers[index];
-                cell.sprite = sprite;
-                cellVisuals.Add(cell);
-                cellSizes.Add(Vector2.one);
-            }
+            });
 
             piece.RefreshBombState();
 
@@ -170,6 +156,78 @@ public sealed class BombPresentationTests
             Object.DestroyImmediate(sprite);
             Object.DestroyImmediate(texture);
         }
+    }
+
+    [Test]
+    public void BombPresentation_ConcavePieceUsesCentralOccupiedBlock()
+    {
+        var root = new GameObject("Concave bomb footprint test");
+        var texture = new Texture2D(16, 16);
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
+
+        try
+        {
+            var piece = root.AddComponent<PuzzlePiece>();
+            SpriteRenderer overlay = ConfigureBombPresentation(piece, root.transform, sprite, new[]
+            {
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(2f, 1f),
+                new Vector2(3f, 1f),
+                new Vector2(3f, 0f),
+                new Vector2(3f, -1f)
+            });
+
+            piece.RefreshBombState();
+
+            Assert.That(overlay.bounds.center.x, Is.EqualTo(2f).Within(.001f));
+            Assert.That(overlay.bounds.center.y, Is.EqualTo(1f).Within(.001f));
+            Assert.That(overlay.bounds.size.x, Is.EqualTo(.936f).Within(.001f));
+            Assert.That(overlay.bounds.size.y, Is.EqualTo(.936f).Within(.001f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(texture);
+        }
+    }
+
+    private static SpriteRenderer ConfigureBombPresentation(
+        PuzzlePiece piece,
+        Transform root,
+        Sprite sprite,
+        IReadOnlyList<Vector2> centers)
+    {
+        var slots = new GameObject("Ice Presentation Slots").transform;
+        slots.SetParent(root);
+        var overlay = new GameObject("Bomb Overlay Slot").AddComponent<SpriteRenderer>();
+        overlay.transform.SetParent(slots);
+
+        SetField(piece, "iceSlotsRoot", slots);
+        GetField<List<SpriteRenderer>>(piece, "iceSlots").Add(overlay);
+        SetField(piece, "bombOverlaySprite", sprite);
+        SetField(piece, "bombOverlayFill", .936f);
+        SetField(piece, "<IsBomb>k__BackingField", true);
+
+        var cellVisuals = new List<SpriteRenderer>();
+        var collisionCells = new List<BoxCollider2D>();
+        var cellSizes = new List<Vector2>();
+        SetField(piece, "collisionCellVisuals", cellVisuals);
+        SetField(piece, "collisionCells", collisionCells);
+        SetField(piece, "fullCollisionCellSizes", cellSizes);
+        for (int index = 0; index < centers.Count; index++)
+        {
+            var cell = new GameObject($"Cell {index}").AddComponent<SpriteRenderer>();
+            cell.transform.SetParent(root);
+            cell.transform.localPosition = centers[index];
+            cell.sprite = sprite;
+            cellVisuals.Add(cell);
+            collisionCells.Add(cell.gameObject.AddComponent<BoxCollider2D>());
+            cellSizes.Add(Vector2.one);
+        }
+
+        return overlay;
     }
 
     private static void SetField<T>(PuzzlePiece piece, string name, T value)

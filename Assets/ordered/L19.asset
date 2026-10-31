@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: L19
   m_EditorClassIdentifier: 
   levelName: New Level
+  difficulty: 0
   timeLimit: 150
   boardColumns: 7
   boardRows: 9
@@ -35,7 +36,8 @@ MonoBehaviour:
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
-  - name: Piece 9
+  - pieceId: 
+    name: Piece 9
     tutorialTargetId: 
     visualId: 
     paletteId: BlueLight
@@ -184,7 +186,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -15, y: -5}
       type: 0
-  - name: Piece 10
+  - pieceId: 
+    name: Piece 10
     tutorialTargetId: 
     visualId: 
     paletteId: Purple
@@ -333,7 +336,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -15, y: 3}
       type: 0
-  - name: Piece 11
+  - pieceId: 
+    name: Piece 11
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -482,7 +486,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -7, y: -1}
       type: 0
-  - name: Piece 12
+  - pieceId: 
+    name: Piece 12
     tutorialTargetId: 
     visualId: 
     paletteId: Orange
@@ -535,7 +540,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -15, y: 15}
       type: 0
-  - name: Piece 5
+  - pieceId: 
+    name: Piece 5
     tutorialTargetId: 
     visualId: 
     paletteId: Yellow
@@ -684,7 +690,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 5, y: 11}
       type: 0
-  - name: Piece 6
+  - pieceId: 
+    name: Piece 6
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -833,7 +840,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 13, y: 11}
       type: 0
-  - name: Piece 7
+  - pieceId: 
+    name: Piece 7
     tutorialTargetId: 
     visualId: 
     paletteId: GreenLight
@@ -982,6 +990,7 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 13, y: 19}
       type: 0
+  joints: []
   boxes: []
   elevators: []
   pins: []

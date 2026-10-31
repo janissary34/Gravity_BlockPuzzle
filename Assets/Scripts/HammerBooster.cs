@@ -539,17 +539,20 @@ namespace GravityPuzzle
             if (TopologyEditingEnabled &&
                 piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
-                if (board?.BreakJointsById(hammerJointIds) > 0)
-                    PuzzleDragController.WakeUpGravity();
                 impactSucceeded = true;
-                Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
-                LevelProgressManager manager = LevelProgressManager.Instance;
-                if (manager != null)
-                    manager.SpawnFlyingVoxelBurst(
-                        cell.worldPosition,
-                        color,
-                        cell.progressUnits,
-                        cell.renderedVoxelCount);
+                if (cell.progressUnits > 0f)
+                {
+                    if (board?.BreakJointsById(hammerJointIds) > 0)
+                        PuzzleDragController.WakeUpGravity();
+                    Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
+                    LevelProgressManager manager = LevelProgressManager.Instance;
+                    if (manager != null)
+                        manager.SpawnFlyingVoxelBurst(
+                            cell.worldPosition,
+                            color,
+                            cell.progressUnits,
+                            cell.renderedVoxelCount);
+                }
             }
 
             Camera camera = gameplayCamera;

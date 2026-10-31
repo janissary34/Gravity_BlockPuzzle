@@ -54,6 +54,7 @@ namespace GravityPuzzle.Config
         [Tooltip("Atlas-fit factor that preserves Scene Tuna's authored 0.30 Bomb scale on a standard one-cell piece.")]
         [SerializeField, Range(.1f, 1f)] private float bombOverlayFill = .936f;
         [SerializeField] private TMP_FontAsset bombCounterFont;
+        [Tooltip("Global world-space font size for every Bomb counter. Level assets cannot override this value.")]
         [SerializeField, Min(.1f)] private float bombCounterFontSize = .65f;
         [SerializeField] private Color bombCounterTextColor = Color.white;
         [SerializeField] private Color bombCounterOutlineColor = new Color(.055f, .08f, .28f, 1f);

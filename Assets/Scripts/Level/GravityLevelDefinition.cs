@@ -219,7 +219,6 @@ namespace GravityPuzzle
         public Vector2 iceCounterOffset = Vector2.zero;
         [Tooltip("Seconds available to shred this bomb after the player's first action. Values below 1 are invalid for bomb pieces.")]
         [Min(1f)] public float bombTimerSeconds = 10f;
-        [Min(1f)] public float bombCounterFontSize = 36f;
         public Color bombCounterTextColor = new Color(.95f, .18f, .12f);
         public Color bombCounterOutlineColor = Color.white;
         [Range(0f, 1f)] public float bombCounterOutlineWidth = .18f;
