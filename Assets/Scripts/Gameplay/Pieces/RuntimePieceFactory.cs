@@ -855,8 +855,8 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             float maximumClearance = grid.CellSize * .45f;
             float outsideClearance = Mathf.Clamp(
-                GetSelectedOutlineWidth() * .5f + GetOutlineOuterPadding() + GetOutlineVisualInset(),
-                0f,
+                GetSelectedOutlineWidth() * .5f + GetOutlineOuterPadding() - GetOutlineVisualInset(),
+                -GetSelectedOutlineWidth() * .5f,
                 maximumClearance);
             float cornerRadius = Mathf.Min(GetOutlineCornerRadius(), maximumClearance);
             for (int loopIndex = 0; loopIndex < rendererCount; loopIndex++)
@@ -1080,8 +1080,9 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         /// <summary>
         /// Produces a presentation-only contour from deterministic grid edges.
-        /// Convex corners receive explicit arc samples; concave corners use the
-        /// intersection of their offset edges so the entire silhouette remains.
+        /// Both convex and concave corners receive explicit arc samples. This
+        /// keeps the grid silhouette smooth without delegating joins to
+        /// LineRenderer or reading a sprite/physics contour.
         /// </summary>
         private static void BuildOutlineContour(
             IReadOnlyList<Vector2> path,
@@ -1136,7 +1137,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 }
 
                 bool isConvex = turn * winding > 0f;
-                if (!isConvex || requestedRadius <= cornerEpsilon)
+                if (requestedRadius <= cornerEpsilon)
                 {
                     AddContourPoint(
                         contour,
@@ -1164,6 +1165,22 @@ namespace GravityPuzzle.Gameplay.Pieces
                             outgoing,
                             outgoingOutside,
                             clearance));
+                    continue;
+                }
+
+                if (!isConvex)
+                {
+                    AddConcaveCornerArc(
+                        contour,
+                        current,
+                        incoming,
+                        outgoing,
+                        incomingOutside,
+                        outgoingOutside,
+                        radius,
+                        clearance,
+                        winding,
+                        segments);
                     continue;
                 }
 
@@ -1195,6 +1212,53 @@ namespace GravityPuzzle.Gameplay.Pieces
                 }
             }
 
+        }
+
+        private static void AddConcaveCornerArc(
+            List<Vector2> contour,
+            Vector2 corner,
+            Vector2 incoming,
+            Vector2 outgoing,
+            Vector2 incomingOutside,
+            Vector2 outgoingOutside,
+            float radius,
+            float clearance,
+            float winding,
+            int segments)
+        {
+            // A concave turn has no automatic LineRenderer join that can be
+            // trusted: its offset-line intersection is the sharp L-notch seen
+            // in the game. Use the same tangent distance as exterior corners;
+            // the offset changes the circle radius but never its grid anchor.
+            float arcRadius = radius - clearance;
+            if (arcRadius <= .0001f)
+            {
+                AddContourPoint(
+                    contour,
+                    IntersectOffsetEdges(
+                        corner,
+                        incoming,
+                        incomingOutside,
+                        outgoing,
+                        outgoingOutside,
+                        clearance));
+                return;
+            }
+
+            Vector2 start = corner - incoming * radius + incomingOutside * clearance;
+            Vector2 end = corner + outgoing * radius + outgoingOutside * clearance;
+            Vector2 center = start + incomingOutside * arcRadius;
+            float startAngle = Mathf.Atan2(start.y - center.y, start.x - center.x);
+            float endAngle = Mathf.Atan2(end.y - center.y, end.x - center.x);
+            float arc = winding > 0f
+                ? Mathf.Repeat(startAngle - endAngle, Mathf.PI * 2f)
+                : Mathf.Repeat(endAngle - startAngle, Mathf.PI * 2f);
+
+            for (int segment = 0; segment <= segments; segment++)
+            {
+                float angle = startAngle - winding * arc * segment / segments;
+                AddContourPoint(contour, center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * arcRadius);
+            }
         }
 
         private static Vector2 GetOutsideNormal(Vector2 direction, float winding)

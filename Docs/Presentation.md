@@ -82,12 +82,13 @@ future piece needs more loops, increase the prefab slot count deliberately rathe
 than creating a renderer at runtime.
 
 `PieceVisualConfig` owns line width, visual inset, outer padding, corner radius, and
-corner-segment count. The selected-line half width, padding, and visual inset resolve
-to one positive, clamped grid-space offset, so transparent atlas gutter is kept
-outside the visible block art rather than letting the stroke overlap it. Freeze/thaw
-only reapplies visual state; spawning and fragment rebuilds regenerate the grid
-outline. Selecting a piece in the Unity editor draws every generated loop's points
-and segments as magenta Gizmos.
+corner-segment count. The selected-line half width and padding move the stroke out;
+the atlas visual inset moves its centre back only enough for the inner edge to meet
+the visible block art. Convex and concave grid corners both receive explicit arcs,
+so an L-notch is not left as a sharp offset-line intersection. Freeze/thaw only
+reapplies visual state; spawning and fragment rebuilds regenerate the grid outline.
+Selecting a piece in the Unity editor draws every generated loop's points and
+segments as magenta Gizmos.
 
 ## Whole-piece and modular fallback selection
 

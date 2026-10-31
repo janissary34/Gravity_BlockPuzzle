@@ -73,7 +73,7 @@ namespace GravityPuzzle.Config
         [SerializeField, Min(0f)] private float outlineCornerRadius = .12f;
         [Tooltip("Extra space between the rendered block art and its selection glow. The selected line half-width is added automatically.")]
         [SerializeField, Min(0f)] private float outlineOuterPadding;
-        [Tooltip("Known transparent gutter between the grid-cell boundary and visible atlas art. It is added outside the grid silhouette so the glow never cuts into the piece.")]
+        [Tooltip("Known transparent gutter between the grid-cell boundary and visible atlas art. It offsets the line centre inward by this amount while retaining half the line width outside, so the glow meets rather than cuts into the artwork.")]
         [SerializeField, Min(0f)] private float outlineVisualInset = .075f;
         [Tooltip("Segments used to approximate each rounded exterior glow corner.")]
         [SerializeField, Range(1, 8)] private int outlineCornerVertices = 4;
