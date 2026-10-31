@@ -64,6 +64,14 @@ overrides. Legacy assets can be assigned via the non-destructive palette migrati
 menu, which preserves existing IDs. The fallback material remains for missing or
 unsupported palette materials, not as the intended normal appearance.
 
+Piece selection glow follows the `CompositeCollider2D` exterior path, but is a
+presentation-only contour: it neither changes collision nor board occupancy.
+`RuntimePieceFactory` offsets it beyond the selected line width, then applies the
+atlas-gutter inset and rounds convex corners before assigning it to the pooled root's
+`LineRenderer`. `PieceVisualConfig` owns the clearance, visual inset, corner radius,
+and curve-segment count. Concave joins stay in their empty grid space so irregular
+L/T/C silhouettes retain their complete outline.
+
 ## Whole-piece and modular fallback selection
 
 Gameplay colliders and board cells remain unchanged when presentation switches between these paths:

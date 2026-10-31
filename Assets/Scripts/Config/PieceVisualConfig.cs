@@ -68,8 +68,14 @@ namespace GravityPuzzle.Config
         [SerializeField] private Color selectedOutlineColor = Color.white;
         [SerializeField] private int restingOutlineSortingOrder = 10;
         [SerializeField] private int selectedOutlineSortingOrder = 20;
-        [SerializeField, Range(0, 8)] private int outlineCornerVertices = 4;
-        [SerializeField, Range(0, 8)] private int outlineCapVertices = 4;
+        [Tooltip("Radius, in board-cell units, used to round the glow path at exterior piece corners. The path is clamped automatically for small fine-grid cells.")]
+        [SerializeField, Min(0f)] private float outlineCornerRadius = .12f;
+        [Tooltip("Extra space between the rendered block art and its selection glow. The selected line half-width is added automatically.")]
+        [SerializeField, Min(0f)] private float outlineOuterPadding;
+        [Tooltip("Moves the glow into the transparent gutter in the authored piece atlas. Use this to make the glow hug visible pixels without changing collider or grid bounds.")]
+        [SerializeField, Min(0f)] private float outlineVisualInset = .075f;
+        [Tooltip("Segments used to approximate each rounded exterior glow corner.")]
+        [SerializeField, Range(1, 8)] private int outlineCornerVertices = 4;
 
         [Header("Joint Springs Presentation")]
         [Tooltip("Scale multiplier for the joint spiral rings.")]
@@ -120,8 +126,10 @@ namespace GravityPuzzle.Config
         public Color SelectedOutlineColor => selectedOutlineColor;
         public int RestingOutlineSortingOrder => restingOutlineSortingOrder;
         public int SelectedOutlineSortingOrder => selectedOutlineSortingOrder;
-        public int OutlineCornerVertices => outlineCornerVertices;
-        public int OutlineCapVertices => outlineCapVertices;
+        public float OutlineCornerRadius => Mathf.Max(0f, outlineCornerRadius);
+        public float OutlineOuterPadding => Mathf.Max(0f, outlineOuterPadding);
+        public float OutlineVisualInset => Mathf.Clamp(outlineVisualInset, 0f, .1f);
+        public int OutlineCornerVertices => Mathf.Max(1, outlineCornerVertices);
         public float SpringScale => springScale > 0f ? springScale : 0.1495036f;
         public float SpringStudOffset => springStudOffset > 0f ? springStudOffset : 0.25f;
         public float SpringHoleDepthOffset => springHoleDepthOffset;

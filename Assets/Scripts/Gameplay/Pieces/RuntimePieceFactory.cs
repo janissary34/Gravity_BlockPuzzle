@@ -785,8 +785,13 @@ namespace GravityPuzzle.Gameplay.Pieces
             outline.positionCount = 0;
             outline.startWidth = GetRestingOutlineWidth();
             outline.endWidth = GetRestingOutlineWidth();
-            outline.numCornerVertices = GetOutlineCornerVertices();
-            outline.numCapVertices = GetOutlineCapVertices();
+            // The LineRenderer join only rounds within the line width. That
+            // leaves a square contour on the rounded Scene Tuna piece art and
+            // lets a selected glow cover the artwork at exterior corners.
+            // Build the rounded, offset contour explicitly instead.
+            outline.alignment = LineAlignment.TransformZ;
+            outline.numCornerVertices = 0;
+            outline.numCapVertices = 0;
             outline.sortingOrder = GetRestingOutlineSortingOrder();
 
             if (sharedOutlineMaterial == null)
@@ -807,11 +812,170 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             int pathIndex = FindOuterPathIndex(pieceComposite);
             int pointCount = pieceComposite.GetPathPointCount(pathIndex);
-            outline.positionCount = pointCount;
             Vector2[] path = new Vector2[pointCount];
             pieceComposite.GetPath(pathIndex, path);
-            for (int index = 0; index < pointCount; index++)
-                outline.SetPosition(index, new Vector3(path[index].x, path[index].y, 0f));
+            List<Vector2> contour = BuildOutlineContour(
+                path,
+                GetOutlineCornerRadius(),
+                GetSelectedOutlineWidth() * .5f +
+                GetOutlineOuterPadding() -
+                GetOutlineVisualInset(),
+                GetOutlineCornerVertices());
+            outline.positionCount = contour.Count;
+            for (int index = 0; index < contour.Count; index++)
+                outline.SetPosition(index, new Vector3(contour[index].x, contour[index].y, 0f));
+        }
+
+        /// <summary>
+        /// Produces a presentation-only contour outside an orthogonal composite
+        /// path. Convex corners are intentionally rounded at the same scale as
+        /// the piece art; concave joins remain mitered in the empty space so an
+        /// L/T/C silhouette never loses part of its footprint.
+        /// </summary>
+        private static List<Vector2> BuildOutlineContour(
+            Vector2[] path,
+            float requestedRadius,
+            float outsideClearance,
+            int cornerSegments)
+        {
+            List<Vector2> contour = new List<Vector2>();
+            if (path == null || path.Length < 3)
+                return contour;
+
+            float signedArea = 0f;
+            for (int index = 0; index < path.Length; index++)
+            {
+                Vector2 current = path[index];
+                Vector2 next = path[(index + 1) % path.Length];
+                signedArea += current.x * next.y - next.x * current.y;
+            }
+
+            float winding = signedArea >= 0f ? 1f : -1f;
+            // A negative clearance intentionally consumes transparent atlas
+            // gutter. It changes only the presentation path; collider and
+            // authoritative grid bounds remain untouched.
+            float clearance = outsideClearance;
+            int segments = Mathf.Max(1, cornerSegments);
+            const float minimumEdgeLength = .0001f;
+            const float cornerEpsilon = .0001f;
+
+            for (int index = 0; index < path.Length; index++)
+            {
+                Vector2 previous = path[(index + path.Length - 1) % path.Length];
+                Vector2 current = path[index];
+                Vector2 next = path[(index + 1) % path.Length];
+                Vector2 incoming = current - previous;
+                Vector2 outgoing = next - current;
+                float incomingLength = incoming.magnitude;
+                float outgoingLength = outgoing.magnitude;
+                if (incomingLength < minimumEdgeLength || outgoingLength < minimumEdgeLength)
+                    continue;
+
+                incoming /= incomingLength;
+                outgoing /= outgoingLength;
+                Vector2 incomingOutside = GetOutsideNormal(incoming, winding);
+                Vector2 outgoingOutside = GetOutsideNormal(outgoing, winding);
+                float turn = incoming.x * outgoing.y - incoming.y * outgoing.x;
+
+                if (Mathf.Abs(turn) < cornerEpsilon)
+                {
+                    AddContourPoint(contour, current + incomingOutside * clearance);
+                    continue;
+                }
+
+                bool isConvex = turn * winding > 0f;
+                if (!isConvex || requestedRadius <= cornerEpsilon)
+                {
+                    AddContourPoint(
+                        contour,
+                        IntersectOffsetEdges(
+                            current,
+                            incoming,
+                            incomingOutside,
+                            outgoing,
+                            outgoingOutside,
+                            clearance));
+                    continue;
+                }
+
+                float radius = Mathf.Min(
+                    requestedRadius,
+                    Mathf.Max(0f, Mathf.Min(incomingLength, outgoingLength) * .5f - cornerEpsilon));
+                if (radius <= cornerEpsilon)
+                {
+                    AddContourPoint(
+                        contour,
+                        IntersectOffsetEdges(
+                            current,
+                            incoming,
+                            incomingOutside,
+                            outgoing,
+                            outgoingOutside,
+                            clearance));
+                    continue;
+                }
+
+                Vector2 start = current - incoming * radius + incomingOutside * clearance;
+                Vector2 end = current + outgoing * radius + outgoingOutside * clearance;
+                Vector2 incomingInside = -incomingOutside;
+                Vector2 outgoingInside = -outgoingOutside;
+                Vector2 bisector = (incomingInside + outgoingInside).normalized;
+                float bisectorProjection = Mathf.Abs(Vector2.Dot(bisector, incomingInside));
+                if (bisectorProjection < cornerEpsilon)
+                {
+                    AddContourPoint(contour, start);
+                    AddContourPoint(contour, end);
+                    continue;
+                }
+
+                Vector2 center = current + bisector * (radius / bisectorProjection);
+                float arcRadius = Vector2.Distance(center, start);
+                float startAngle = Mathf.Atan2(start.y - center.y, start.x - center.x);
+                float endAngle = Mathf.Atan2(end.y - center.y, end.x - center.x);
+                float arc = winding > 0f
+                    ? Mathf.Repeat(endAngle - startAngle, Mathf.PI * 2f)
+                    : Mathf.Repeat(startAngle - endAngle, Mathf.PI * 2f);
+
+                for (int segment = 0; segment <= segments; segment++)
+                {
+                    float angle = startAngle + winding * arc * segment / segments;
+                    AddContourPoint(contour, center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * arcRadius);
+                }
+            }
+
+            return contour;
+        }
+
+        private static Vector2 GetOutsideNormal(Vector2 direction, float winding)
+        {
+            return winding > 0f
+                ? new Vector2(direction.y, -direction.x)
+                : new Vector2(-direction.y, direction.x);
+        }
+
+        private static Vector2 IntersectOffsetEdges(
+            Vector2 corner,
+            Vector2 incoming,
+            Vector2 incomingOutside,
+            Vector2 outgoing,
+            Vector2 outgoingOutside,
+            float clearance)
+        {
+            Vector2 first = corner + incomingOutside * clearance;
+            Vector2 second = corner + outgoingOutside * clearance;
+            float denominator = incoming.x * outgoing.y - incoming.y * outgoing.x;
+            if (Mathf.Abs(denominator) < .0001f)
+                return (first + second) * .5f;
+
+            Vector2 delta = second - first;
+            float distance = (delta.x * outgoing.y - delta.y * outgoing.x) / denominator;
+            return first + incoming * distance;
+        }
+
+        private static void AddContourPoint(List<Vector2> contour, Vector2 point)
+        {
+            if (contour.Count == 0 || (contour[contour.Count - 1] - point).sqrMagnitude > .00000001f)
+                contour.Add(point);
         }
 
         private static void ConfigureOutlinePresentation(PuzzlePiece piece)
@@ -835,8 +999,10 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static Color GetSelectedOutlineColor() => pieceVisualConfig != null ? pieceVisualConfig.SelectedOutlineColor : Color.white;
         private static int GetRestingOutlineSortingOrder() => pieceVisualConfig != null ? pieceVisualConfig.RestingOutlineSortingOrder : 10;
         private static int GetSelectedOutlineSortingOrder() => pieceVisualConfig != null ? pieceVisualConfig.SelectedOutlineSortingOrder : 20;
+        private static float GetOutlineCornerRadius() => pieceVisualConfig != null ? pieceVisualConfig.OutlineCornerRadius : .12f;
+        private static float GetOutlineOuterPadding() => pieceVisualConfig != null ? pieceVisualConfig.OutlineOuterPadding : 0f;
+        private static float GetOutlineVisualInset() => pieceVisualConfig != null ? pieceVisualConfig.OutlineVisualInset : .075f;
         private static int GetOutlineCornerVertices() => pieceVisualConfig != null ? pieceVisualConfig.OutlineCornerVertices : 4;
-        private static int GetOutlineCapVertices() => pieceVisualConfig != null ? pieceVisualConfig.OutlineCapVertices : 4;
 
         private static int FindOuterPathIndex(CompositeCollider2D pieceComposite)
         {
