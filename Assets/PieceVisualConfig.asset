@@ -253,7 +253,7 @@ MonoBehaviour:
   selectedOutlineSortingOrder: 20
   outlineCornerRadius: 0.12
   outlineOuterPadding: 0
-  outlineVisualInset: 0.075
+  outlineVisualInset: 0.03
   outlineCornerVertices: 4
   springScale: 0.1495036
   springStudOffset: 0.25
