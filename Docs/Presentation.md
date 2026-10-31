@@ -52,6 +52,9 @@ explicitly on presentation rebuild, Hammer defuse, destruction, and pool reset.
 A Hammer hit on an armed bomb removes only its icon and countdown, preserving every
 piece cell, joint, and authoritative grid footprint. After defusal, the piece is
 handled as a normal block by later Hammer hits and by the shredder.
+While Hammer targeting is active, normal and defused pieces use the pooled per-cell
+outline. An armed bomb instead uses its existing composite whole-piece outline, so
+the target feedback matches Hammer's one-action bomb defuse behavior.
 
 Presentation slots are pooled state. Every renter must receive reset sprite, material, colour, transform, sorting, mask, enabled state, and property-block state.
 
@@ -63,13 +66,21 @@ overrides. Legacy assets can be assigned via the non-destructive palette migrati
 menu, which preserves existing IDs. The fallback material remains for missing or
 unsupported palette materials, not as the intended normal appearance.
 
-Piece selection glow follows the `CompositeCollider2D` exterior path, but is a
-presentation-only contour: it neither changes collision nor board occupancy.
-`RuntimePieceFactory` offsets it beyond the selected line width, then applies the
-atlas-gutter inset and rounds convex corners before assigning it to the pooled root's
-`LineRenderer`. `PieceVisualConfig` owns the clearance, visual inset, corner radius,
-and curve-segment count. Concave joins stay in their empty grid space so irregular
-L/T/C silhouettes retain their complete outline.
+Piece selection glow is presentation-only: it neither changes collision nor board
+occupancy. For an active, non-tiled whole-piece atlas sprite with exactly one valid
+Sprite Editor physics contour, `RuntimePieceFactory` uses that contour for the pooled
+root's `LineRenderer`. It follows the art's actual alpha silhouette, including its
+authored rounded corners and per-sprite transparent gutter. Sprite physics contours
+used this way are a visual authoring contract, not gameplay physics.
+
+Modular, joined, tiled, absent, or invalid whole-piece art falls back to the
+`CompositeCollider2D` exterior path. That fallback offsets the line beyond its selected
+width, then applies configurable atlas-gutter inset and convex-corner rounding.
+`PieceVisualConfig` owns the fallback clearance, visual inset, corner radius, and
+curve-segment count. Concave joins stay in their empty grid space so irregular L/T/C
+silhouettes retain their complete outline. The outline is refreshed when a whole-piece
+sprite or its visibility changes, and fragment rebuilds naturally return to the
+composite fallback.
 
 ## Whole-piece and modular fallback selection
 

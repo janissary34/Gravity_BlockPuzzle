@@ -78,6 +78,8 @@ namespace GravityPuzzle.Config
         [Min(1)] [SerializeField] private int contactGlowPoolCapacity = 4;
 
         [Header("Temporary Physics Island")]
+        [Tooltip("World-space clearance below the map bottom before an exiting piece leaves the grid reservation and enters freefall physics.")]
+        [Min(0f)] [SerializeField] private float physicsHandoffDistanceBelowMap = 1.5f;
         [Tooltip("Lets only a contact-connected stack above a shredder feed use Unity physics briefly. Normal board gravity remains grid-owned.")]
         [SerializeField] private bool enablePhysicsIsland = true;
         [Tooltip("Gravity applied to a temporary dynamic support piece inside the shredder mouth.")]
@@ -173,6 +175,7 @@ namespace GravityPuzzle.Config
         /// <summary>Authored low-friction material used only during a shredder feed.</summary>
         public PhysicsMaterial2D FeedPhysicsMaterial => feedPhysicsMaterial;
         public bool EnablePhysicsIsland => enablePhysicsIsland;
+        public float PhysicsHandoffDistanceBelowMap => physicsHandoffDistanceBelowMap;
         public float PhysicsIslandGravityScale => physicsIslandGravityScale;
         public float PhysicsIslandAngularDrag => physicsIslandAngularDrag;
         public float PhysicsIslandCaptureDistance => physicsIslandCaptureDistance;

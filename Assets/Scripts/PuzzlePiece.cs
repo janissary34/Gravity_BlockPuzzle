@@ -2879,6 +2879,7 @@ namespace GravityPuzzle
             shredderHandoffMode = ShredderHandoffMode.PhysicsIsland;
             keepShredderGridReservationUntilDespawn = true;
             SetSelected(false);
+            Debug.Log($"[ShredderHandoff] Targeting locked at handoff for piece {SourcePieceId}.", this);
             return true;
         }
 
@@ -3614,6 +3615,7 @@ namespace GravityPuzzle
             if (!IsFrozen && !useModularNormal && joinedPieceSegments.Count > 0)
             {
                 RefreshJoinedPiecePresentation();
+                RuntimePieceFactory.RefreshOutline(this);
                 return;
             }
 
@@ -3629,6 +3631,7 @@ namespace GravityPuzzle
             {
                 wholePieceRenderer.enabled = false;
                 SetModularCellPresentationVisible(true);
+                RuntimePieceFactory.RefreshOutline(this);
                 return;
             }
 
@@ -3682,6 +3685,7 @@ namespace GravityPuzzle
             wholePieceRenderer.enabled = true;
             SetModularCellPresentationVisible(false);
             configuredShredderRenderers = new[] { wholePieceRenderer };
+            RuntimePieceFactory.RefreshOutline(this);
         }
 
         private void RefreshJoinedPiecePresentation()

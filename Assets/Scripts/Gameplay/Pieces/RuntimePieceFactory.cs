@@ -72,6 +72,11 @@ namespace GravityPuzzle.Gameplay.Pieces
         private static readonly HashSet<string> warnedMissingVisualIds = new HashSet<string>();
         private static readonly HashSet<string> warnedMissingPaletteIds = new HashSet<string>();
         private static readonly HashSet<string> warnedUnsupportedPaletteIds = new HashSet<string>();
+        // Outline rebuilds run only on presentation transitions, but pooled
+        // pieces can still refresh often in a dense level. Reuse these buffers
+        // instead of allocating a contour for every whole-sprite refresh.
+        private static readonly List<Vector2> spritePhysicsShapeBuffer = new List<Vector2>(32);
+        private static readonly List<Vector2> spriteOutlineContourBuffer = new List<Vector2>(32);
 
         public static void SetRootProvider(IRuntimePieceRootProvider provider)
         {
@@ -326,7 +331,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             if (piece == null || piece.CompositeCollider == null || piece.Outline == null)
                 return;
 
-            ConfigureOutline(piece.Outline, piece.CompositeCollider);
+            ConfigureOutline(piece.Outline, piece.CompositeCollider, piece.WholePieceVisual);
         }
 
         /// <summary>
@@ -774,7 +779,10 @@ namespace GravityPuzzle.Gameplay.Pieces
             return false;
         }
 
-        private static void ConfigureOutline(LineRenderer outline, CompositeCollider2D pieceComposite)
+        private static void ConfigureOutline(
+            LineRenderer outline,
+            CompositeCollider2D pieceComposite,
+            SpriteRenderer wholePieceVisual = null)
         {
             outline.enabled = true;
             outline.useWorldSpace = false;
@@ -804,6 +812,9 @@ namespace GravityPuzzle.Gameplay.Pieces
             outline.startColor = GetRestingOutlineColor();
             outline.endColor = GetRestingOutlineColor();
 
+            if (TryConfigureOutlineFromWholePieceSprite(outline, wholePieceVisual))
+                return;
+
             if (pieceComposite.pathCount <= 0)
                 return;
 
@@ -821,6 +832,129 @@ namespace GravityPuzzle.Gameplay.Pieces
             outline.positionCount = contour.Count;
             for (int index = 0; index < contour.Count; index++)
                 outline.SetPosition(index, new Vector3(contour[index].x, contour[index].y, 0f));
+        }
+
+        /// <summary>
+        /// Uses an artist-authored sprite physics shape as the visual contour
+        /// for an intact atlas silhouette. This does not use the collider as
+        /// gameplay authority: it only lets the pooled LineRenderer follow the
+        /// same alpha silhouette that the player sees. Composite geometry
+        /// remains the fallback for modular, joined, tiled, and invalid art.
+        /// </summary>
+        private static bool TryConfigureOutlineFromWholePieceSprite(
+            LineRenderer outline,
+            SpriteRenderer wholePieceVisual)
+        {
+            if (wholePieceVisual == null ||
+                !wholePieceVisual.enabled ||
+                wholePieceVisual.drawMode != SpriteDrawMode.Simple ||
+                wholePieceVisual.sprite == null)
+            {
+                return false;
+            }
+
+            Sprite sprite = wholePieceVisual.sprite;
+            if (sprite.GetPhysicsShapeCount() != 1)
+                return false;
+
+            spritePhysicsShapeBuffer.Clear();
+            sprite.GetPhysicsShape(0, spritePhysicsShapeBuffer);
+            if (spritePhysicsShapeBuffer.Count < 3)
+                return false;
+
+            spriteOutlineContourBuffer.Clear();
+            Transform spriteTransform = wholePieceVisual.transform;
+            Transform outlineTransform = outline.transform;
+            for (int index = 0; index < spritePhysicsShapeBuffer.Count; index++)
+            {
+                Vector2 point = spritePhysicsShapeBuffer[index];
+                if (wholePieceVisual.flipX)
+                    point.x = -point.x;
+                if (wholePieceVisual.flipY)
+                    point.y = -point.y;
+
+                Vector3 localPoint = outlineTransform.InverseTransformPoint(
+                    spriteTransform.TransformPoint(point));
+                AddContourPoint(spriteOutlineContourBuffer, localPoint);
+            }
+
+            RemoveClosedContourDuplicate(spriteOutlineContourBuffer);
+            RemoveCollinearContourPoints(spriteOutlineContourBuffer);
+            if (spriteOutlineContourBuffer.Count < 3 ||
+                Mathf.Abs(GetSignedArea(spriteOutlineContourBuffer)) < .0001f)
+            {
+                return false;
+            }
+
+            EnsureCounterClockwiseWinding(spriteOutlineContourBuffer);
+            outline.numCornerVertices = GetOutlineCornerVertices();
+            outline.positionCount = spriteOutlineContourBuffer.Count;
+            for (int index = 0; index < spriteOutlineContourBuffer.Count; index++)
+            {
+                Vector2 point = spriteOutlineContourBuffer[index];
+                outline.SetPosition(index, new Vector3(point.x, point.y, 0f));
+            }
+
+            return true;
+        }
+
+        private static void RemoveClosedContourDuplicate(List<Vector2> contour)
+        {
+            if (contour.Count > 1 &&
+                (contour[0] - contour[contour.Count - 1]).sqrMagnitude <= .00000001f)
+            {
+                contour.RemoveAt(contour.Count - 1);
+            }
+        }
+
+        private static void RemoveCollinearContourPoints(List<Vector2> contour)
+        {
+            const float minimumEdgeSqrLength = .00000001f;
+            const float collinearSineTolerance = .0001f;
+
+            for (int index = contour.Count - 1; index >= 0 && contour.Count >= 3; index--)
+            {
+                Vector2 previous = contour[(index + contour.Count - 1) % contour.Count];
+                Vector2 current = contour[index];
+                Vector2 next = contour[(index + 1) % contour.Count];
+                Vector2 incoming = current - previous;
+                Vector2 outgoing = next - current;
+                float incomingLength = incoming.sqrMagnitude;
+                float outgoingLength = outgoing.sqrMagnitude;
+                if (incomingLength <= minimumEdgeSqrLength || outgoingLength <= minimumEdgeSqrLength)
+                {
+                    contour.RemoveAt(index);
+                    continue;
+                }
+
+                float cross = incoming.x * outgoing.y - incoming.y * outgoing.x;
+                float edgeProduct = Mathf.Sqrt(incomingLength * outgoingLength);
+                if (edgeProduct > 0f &&
+                    Mathf.Abs(cross) / edgeProduct <= collinearSineTolerance &&
+                    Vector2.Dot(incoming, outgoing) > 0f)
+                {
+                    contour.RemoveAt(index);
+                }
+            }
+        }
+
+        private static float GetSignedArea(IReadOnlyList<Vector2> contour)
+        {
+            float signedArea = 0f;
+            for (int index = 0; index < contour.Count; index++)
+            {
+                Vector2 current = contour[index];
+                Vector2 next = contour[(index + 1) % contour.Count];
+                signedArea += current.x * next.y - next.x * current.y;
+            }
+
+            return signedArea * .5f;
+        }
+
+        private static void EnsureCounterClockwiseWinding(List<Vector2> contour)
+        {
+            if (GetSignedArea(contour) < 0f)
+                contour.Reverse();
         }
 
         /// <summary>

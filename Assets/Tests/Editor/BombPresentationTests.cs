@@ -125,6 +125,34 @@ public sealed class BombPresentationTests
         }
     }
 
+    [TestCase(true, false, true)]
+    [TestCase(true, true, false)]
+    [TestCase(false, false, false)]
+    public void HammerTargeting_UsesWholePieceOutlineForArmedBombsOnly(
+        bool isBomb,
+        bool isBombDefused,
+        bool expected)
+    {
+        var root = new GameObject("Hammer targeting policy test");
+        try
+        {
+            var piece = root.AddComponent<PuzzlePiece>();
+            SetField(piece, "<IsBomb>k__BackingField", isBomb);
+            SetField(piece, "<IsBombDefused>k__BackingField", isBombDefused);
+
+            MethodInfo method = typeof(BoosterTargetingPresentation).GetMethod(
+                "UsesWholePieceHammerHighlight",
+                BindingFlags.Static | BindingFlags.NonPublic);
+
+            Assert.That(method, Is.Not.Null);
+            Assert.That((bool)method.Invoke(null, new object[] { piece }), Is.EqualTo(expected));
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+        }
+    }
+
     [Test]
     public void BombPresentation_MultiBlockPieceUsesOneBlockFootprintAtPieceCenter()
     {

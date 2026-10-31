@@ -425,7 +425,14 @@ namespace GravityPuzzle.Presentation.Views
                 {
                     expectedPiece.SetBoosterTargeted(true);
                     expectedPiece.SetTutorialTargeted(true, tutorialDimSortingOrder + 2);
-                    ShowHammerCellOutlineForTutorial(expectedPiece, hammerCellCenter, hammerCellSize, tutorialDimSortingOrder + 2);
+                    if (!UsesWholePieceHammerHighlight(expectedPiece))
+                    {
+                        ShowHammerCellOutlineForTutorial(
+                            expectedPiece,
+                            hammerCellCenter,
+                            hammerCellSize,
+                            tutorialDimSortingOrder + 2);
+                    }
                 }
                 tutorialTargetIndicator?.Hide();
                 return;
@@ -995,6 +1002,15 @@ namespace GravityPuzzle.Presentation.Views
                 if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked)
                     continue;
 
+                // Hammer defuses an armed bomb as one gameplay action. Reuse
+                // the piece's composite outline so targeting reflects that
+                // whole-piece outcome instead of suggesting a single-cell hit.
+                if (UsesWholePieceHammerHighlight(piece))
+                {
+                    piece.SetBoosterTargeted(true);
+                    continue;
+                }
+
                 targetableCellBuffer.Clear();
                 piece.CollectTargetableCells(targetableCellBuffer);
                 LineRenderer sourceOutline = piece.Outline;
@@ -1017,6 +1033,11 @@ namespace GravityPuzzle.Presentation.Views
                     activeHammerOutlines.Add(outline);
                 }
             }
+        }
+
+        private static bool UsesWholePieceHammerHighlight(PuzzlePiece piece)
+        {
+            return piece != null && piece.IsBomb && !piece.IsBombDefused;
         }
 
         private void ShowHammerCellOutlineForTutorial(
