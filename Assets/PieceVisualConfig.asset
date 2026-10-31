@@ -251,10 +251,10 @@ MonoBehaviour:
   selectedOutlineColor: {r: 1, g: 1, b: 1, a: 1}
   restingOutlineSortingOrder: 10
   selectedOutlineSortingOrder: 20
-  outlineCornerRadius: 0.12
+  outlineCornerRadius: 0.18
   outlineOuterPadding: 0
   outlineVisualInset: 0.03
-  outlineCornerVertices: 4
+  outlineCornerVertices: 6
   springScale: 0.1495036
   springStudOffset: 0.25
   springHoleDepthOffset: 0.099

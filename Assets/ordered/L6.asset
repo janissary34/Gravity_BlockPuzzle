@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelName: New Level
   difficulty: 0
-  timeLimit: 40
+  timeLimit: 300
   boardColumns: 7
   boardRows: 8
   subdivisions: 4

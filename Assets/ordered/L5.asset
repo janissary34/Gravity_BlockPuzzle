@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: L5
   m_EditorClassIdentifier: 
   levelName: New Level
-  timeLimit: 15
+  timeLimit: 300
   boardColumns: 6
   boardRows: 6
   subdivisions: 4
