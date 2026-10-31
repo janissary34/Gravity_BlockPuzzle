@@ -73,12 +73,21 @@ boundary loops, and emits explicit fixed-segment arcs at convex corners. Concave
 corners use intersecting offset edges. Sprite alpha, Sprite physics shapes,
 `CompositeCollider2D` paths, and collider skin are never read for this presentation.
 
+`BlockPiece.prefab` owns one root outline renderer and seven disabled child renderers
+named `Outline Loop 1` through `Outline Loop 7`. `PuzzlePiece` caches that fixed
+pool once in `Awake`; every loop is independently configured, reset, hidden for Box
+reveal and shredder presentation, and restored with the same colour, width, and
+sorting state. The eight-renderer capacity is an authored presentation limit: if a
+future piece needs more loops, increase the prefab slot count deliberately rather
+than creating a renderer at runtime.
+
 `PieceVisualConfig` owns line width, visual inset, outer padding, corner radius, and
 corner-segment count. The selected-line half width, padding, and visual inset resolve
-to one clamped grid-space offset, so a sprite's internal visual gutter can be matched
-without changing its source texture. Freeze/thaw only reapplies visual state; spawning
-and fragment rebuilds regenerate the grid outline. Selecting a piece in the Unity
-editor draws its generated root-loop points and segments as magenta Gizmos.
+to one positive, clamped grid-space offset, so transparent atlas gutter is kept
+outside the visible block art rather than letting the stroke overlap it. Freeze/thaw
+only reapplies visual state; spawning and fragment rebuilds regenerate the grid
+outline. Selecting a piece in the Unity editor draws every generated loop's points
+and segments as magenta Gizmos.
 
 ## Whole-piece and modular fallback selection
 

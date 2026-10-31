@@ -320,7 +320,7 @@ namespace GravityPuzzle
                     ShredderCatchZone zone = zones[zoneIndex];
                     if (zone == null)
                         continue;
-                    if (!zone.ContainsCaptureFootprint(piece))
+                    if (!zone.ContainsMapExitFootprint(piece))
                     {
 #if UNITY_EDITOR
                         zone.LogCaptureRejection(piece, shredder);

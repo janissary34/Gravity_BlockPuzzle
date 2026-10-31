@@ -107,6 +107,30 @@ namespace GravityPuzzle
             return hasShredderEntryCell;
         }
 
+        /// <summary>Grid-bottom admission for the exit handoff; unlike mouth
+        /// capture it deliberately ignores world-space distance to the wheels.</summary>
+        public bool ContainsMapExitFootprint(PuzzlePiece piece)
+        {
+            if (piece == null || piece.IsShredderInteractionLocked || piece.IsFrozen)
+                return false;
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (board == null || board.BoardSnapshot == null || level == null ||
+                !board.TryGetPieceModel(piece, out PieceModel model) ||
+                (model.State != PieceState.Placed && model.State != PieceState.Dragging))
+                return false;
+
+            for (int index = 0; index < model.LocalCells.Count; index++)
+            {
+                GridCoordinate cell = model.GetWorldCell(index);
+                if (cell.Y == 0 && IsInsideShredderLane(level, cell))
+                    return true;
+            }
+
+            return false;
+        }
+
 #if UNITY_EDITOR
         // Diagnostic only: evaluate the rejected candidate without changing
         // the authoritative capture decision or emitting per-frame logs.
