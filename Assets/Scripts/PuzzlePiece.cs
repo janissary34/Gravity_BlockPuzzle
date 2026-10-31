@@ -3045,14 +3045,19 @@ namespace GravityPuzzle
                 return;
 
             // A bomb is a property of the complete authored piece, not of
-            // each of its cells. A 2x2 Bomb therefore gets one 2x2-sized
-            // presentation instead of four independent bomb icons.
-            CreateBombOverlay(sortingSource, combinedBounds);
+            // each of its cells. It therefore renders once at the piece
+            // centre, but always at one authored block's size rather than
+            // scaling up with a 2x2 or larger footprint.
+            CreateBombOverlay(
+                sortingSource,
+                combinedBounds,
+                GetBombOverlayTargetSize());
         }
 
         private void CreateBombOverlay(
             SpriteRenderer sortingSource,
-            Bounds combinedBounds)
+            Bounds combinedBounds,
+            Vector2 targetSize)
         {
             if (!TryGetAvailableIceSlot(out SpriteRenderer renderer))
             {
@@ -3067,7 +3072,7 @@ namespace GravityPuzzle
                 transform.position.z - .01f);
             renderer.transform.localRotation = Quaternion.identity;
             renderer.transform.localScale = GetOverlayScaleToFit(
-                combinedBounds.size,
+                targetSize,
                 bombOverlaySprite,
                 bombOverlayFill);
             renderer.gameObject.name = "Bomb Overlay";
@@ -3077,6 +3082,27 @@ namespace GravityPuzzle
             renderer.sortingOrder = sortingSource.sortingOrder + 5;
             renderer.enabled = true;
             bombOverlayRenderer = renderer;
+        }
+
+        private Vector2 GetBombOverlayTargetSize()
+        {
+            if (fullCollisionCellSizes == null || fullCollisionCellSizes.Count == 0)
+                return Vector2.one;
+
+            Vector2 largestCellSize = Vector2.one;
+            float largestCellArea = 0f;
+            for (int index = 0; index < fullCollisionCellSizes.Count; index++)
+            {
+                Vector2 cellSize = fullCollisionCellSizes[index];
+                float cellArea = cellSize.x * cellSize.y;
+                if (cellSize.x <= 0f || cellSize.y <= 0f || cellArea <= largestCellArea)
+                    continue;
+
+                largestCellSize = cellSize;
+                largestCellArea = cellArea;
+            }
+
+            return largestCellSize;
         }
 
         private static Vector3 GetOverlayScaleToFit(

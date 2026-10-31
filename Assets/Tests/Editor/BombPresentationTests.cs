@@ -115,6 +115,63 @@ public sealed class BombPresentationTests
         Assert.That(actual, Is.EqualTo(expected));
     }
 
+    [Test]
+    public void BombPresentation_MultiBlockPieceUsesOneBlockFootprintAtPieceCenter()
+    {
+        var root = new GameObject("Bomb footprint test");
+        var texture = new Texture2D(16, 16);
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
+
+        try
+        {
+            var piece = root.AddComponent<PuzzlePiece>();
+            var slots = new GameObject("Ice Presentation Slots").transform;
+            slots.SetParent(root.transform);
+            var overlay = new GameObject("Bomb Overlay Slot").AddComponent<SpriteRenderer>();
+            overlay.transform.SetParent(slots);
+
+            SetField(piece, "iceSlotsRoot", slots);
+            GetField<List<SpriteRenderer>>(piece, "iceSlots").Add(overlay);
+            SetField(piece, "bombOverlaySprite", sprite);
+            SetField(piece, "bombOverlayFill", .936f);
+            SetField(piece, "<IsBomb>k__BackingField", true);
+
+            var cellVisuals = new List<SpriteRenderer>();
+            var cellSizes = new List<Vector2>();
+            SetField(piece, "collisionCellVisuals", cellVisuals);
+            SetField(piece, "fullCollisionCellSizes", cellSizes);
+            Vector2[] centers =
+            {
+                new Vector2(-.5f, -.5f),
+                new Vector2(.5f, -.5f),
+                new Vector2(-.5f, .5f),
+                new Vector2(.5f, .5f)
+            };
+            for (int index = 0; index < centers.Length; index++)
+            {
+                var cell = new GameObject($"Cell {index}").AddComponent<SpriteRenderer>();
+                cell.transform.SetParent(root.transform);
+                cell.transform.localPosition = centers[index];
+                cell.sprite = sprite;
+                cellVisuals.Add(cell);
+                cellSizes.Add(Vector2.one);
+            }
+
+            piece.RefreshBombState();
+
+            Assert.That(overlay.bounds.center.x, Is.EqualTo(root.transform.position.x).Within(.001f));
+            Assert.That(overlay.bounds.center.y, Is.EqualTo(root.transform.position.y).Within(.001f));
+            Assert.That(overlay.bounds.size.x, Is.EqualTo(.936f).Within(.001f));
+            Assert.That(overlay.bounds.size.y, Is.EqualTo(.936f).Within(.001f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(texture);
+        }
+    }
+
     private static void SetField<T>(PuzzlePiece piece, string name, T value)
     {
         typeof(PuzzlePiece).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(piece, value);
