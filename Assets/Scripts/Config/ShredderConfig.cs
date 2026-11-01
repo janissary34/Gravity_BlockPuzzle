@@ -84,10 +84,6 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float physicsFreefallDistanceBelowHandoff = 2f;
         [Tooltip("Downward speed assigned when a piece crosses from the grid exit handoff into freefall. It must not be slower than the kinematic exit travel.")]
         [Min(.01f)] [SerializeField] private float physicsFreefallEntrySpeed = 4.2f;
-        [Tooltip("Maximum magnitude of a freefall piece's linear velocity. This bounds rare contact-resolution impulses without preventing normal falls.")]
-        [Min(.01f)] [SerializeField] private float physicsFreefallMaxSpeed = 14f;
-        [Tooltip("Maximum absolute angular velocity of a freefall piece in degrees per second.")]
-        [Min(0f)] [SerializeField] private float physicsFreefallMaxAngularSpeed = 360f;
         [Tooltip("Angular damping applied only after a piece has entered the open freefall area.")]
         [Min(0f)] [SerializeField] private float physicsFreefallAngularDrag = .75f;
         [Tooltip("Lets only a contact-connected stack above a shredder feed use Unity physics briefly. Normal board gravity remains grid-owned.")]
@@ -192,8 +188,6 @@ namespace GravityPuzzle.Config
         public float PhysicsHandoffDistanceBelowMap => physicsHandoffDistanceBelowMap;
         public float PhysicsFreefallDistanceBelowHandoff => physicsFreefallDistanceBelowHandoff;
         public float PhysicsFreefallEntrySpeed => physicsFreefallEntrySpeed;
-        public float PhysicsFreefallMaxSpeed => physicsFreefallMaxSpeed;
-        public float PhysicsFreefallMaxAngularSpeed => physicsFreefallMaxAngularSpeed;
         public float PhysicsFreefallAngularDrag => physicsFreefallAngularDrag;
         public float PhysicsIslandGravityScale => physicsIslandGravityScale;
         public float PhysicsIslandAngularDrag => physicsIslandAngularDrag;

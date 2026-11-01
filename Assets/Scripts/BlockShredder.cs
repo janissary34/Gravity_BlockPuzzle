@@ -215,32 +215,44 @@ namespace GravityPuzzle
                     continue;
                 }
 
-                ConstrainFreefallMotion(freefall.Piece);
-
-                if (TryCapturePhysicsIslandMember(freefall.Piece, freefall.Zone))
+                if (TryCaptureFreefallPieceAtCutter(freefall.Piece, freefall.Zone))
                     activeFreefallPieces.RemoveAt(index);
             }
         }
 
-        private void ConstrainFreefallMotion(PuzzlePiece piece)
+        /// <summary>
+        /// The map-exit freefall route never joins the legacy island queue.
+        /// It remains Dynamic until the lowest occupied cell crosses the same
+        /// seam hidden by the teeth, then starts only the established shred
+        /// presentation.  Grid ownership was released at the handoff line.
+        /// </summary>
+        private bool TryCaptureFreefallPieceAtCutter(
+            PuzzlePiece piece,
+            ShredderCatchZone zone)
         {
-            if (piece == null || piece.Body == null || shredderConfig == null)
-                return;
-
-            Rigidbody2D body = piece.Body;
-            Vector2 velocity = body.velocity;
-            float maxSpeed = shredderConfig.PhysicsFreefallMaxSpeed;
-            if (maxSpeed > 0f && velocity.sqrMagnitude > maxSpeed * maxSpeed)
-                body.velocity = velocity.normalized * maxSpeed;
-
-            float maxAngularSpeed = shredderConfig.PhysicsFreefallMaxAngularSpeed;
-            if (maxAngularSpeed > 0f)
+            if (piece == null || zone == null || shredderConfig == null ||
+                !zone.ContainsFreefallCutterFootprint(piece, shredderConfig.GearClippingRatio))
             {
-                body.angularVelocity = Mathf.Clamp(
-                    body.angularVelocity,
-                    -maxAngularSpeed,
-                    maxAngularSpeed);
+                return false;
             }
+
+            float entryDownwardSpeed = piece.Body != null
+                ? Mathf.Max(0f, -piece.Body.velocity.y)
+                : 0f;
+
+            if (!piece.TryBeginOffBoardFreefallShredding())
+            {
+                Debug.LogError(
+                    "[ShredderFreefall] Cutter capture rejected an off-board handoff piece.",
+                    piece);
+                return false;
+            }
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            board?.JointSpringPresenter?.PrepareForShredder(piece);
+            board?.BreakJointsForPiece(piece);
+            StartCoroutine(FeedPieceIntoShredder(piece, zone, entryDownwardSpeed));
+            return true;
         }
 
         private void OnDisable()

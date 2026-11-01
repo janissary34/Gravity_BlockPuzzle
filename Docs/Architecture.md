@@ -49,17 +49,16 @@ reaches the map-bottom exit in that zone enters `HandoffToPhysics` immediately:
 targeting is locked and its grid cells stay reserved while an owned kinematic
 exit phase clears the map. The exit line is evaluated from the lowest physical
 cell edge, never from a piece root/pivot. At that line the reservation is
-released and the piece becomes an independent Dynamic freefall body. Freefall
-bodies may collide and rotate naturally, but config-owned speed and angular-speed
-limits bound contact recovery. They are never held in a hidden queue.
+released and the piece becomes an independent Dynamic freefall body. No
+shredder tick clamps its velocity or rotation, and no grid reservation, queue,
+drag, or targeting logic owns it after that release.
 
-The mouth capture plane uses the same lowest-cell geometry. Capture promotes a
-piece to the existing kinematic feed without retaining its freefall colliders;
-therefore a feeding piece cannot act as an infinite-mass obstacle for pieces
-still in freefall. Its downward speed eases to the configured feed speed and its
-orientation settles toward its nearest cardinal rotation at a bounded rate,
-rather than snapping every body toward zero degrees. This keeps irregular and
-board-rotated shapes visually continuous through the state transition.
+The freefall capture plane is the rendered cutter seam rather than the older
+approach plane. Only when the lowest real cell crosses that seam does the board
+transition the already-off-board model from `HandoffToPhysics` to `Shredding`.
+This transition never recreates a grid reservation. The cutter presentation then
+owns the final visual consumption and pooled despawn; it cannot block or slow a
+piece while that piece is still travelling through the open freefall area.
 
 `ShredderCatchZone` validates physical capture using per-cell geometry and then
 confirms the authoritative grid state. `CollisionBounds` is not used to decide

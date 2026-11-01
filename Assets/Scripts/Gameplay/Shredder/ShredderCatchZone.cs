@@ -259,6 +259,23 @@ namespace GravityPuzzle
         }
 
         /// <summary>
+        /// Freefall remains fully dynamic until real material reaches the
+        /// authored cutter seam.  Unlike the island gate, this has no early
+        /// approach distance because there is no motorized queue to enter.
+        /// </summary>
+        public bool ContainsFreefallCutterFootprint(
+            PuzzlePiece piece,
+            float gearClippingRatio)
+        {
+            if (piece == null || !piece.IsInShredderPhysicsHandoff)
+                return false;
+
+            float cutterSeamY = ShredY - WheelRadius * Mathf.Clamp(gearClippingRatio, 0.1f, 0.9f);
+            return TryGetCellVerticalExtents(piece, out float lowestCellY, out _) &&
+                   lowestCellY <= cutterSeamY;
+        }
+
+        /// <summary>
         /// Returns the lowest real occupied cell for stable island capture
         /// ordering. The enclosing collision bounds are deliberately avoided:
         /// their empty notches are not physical material.

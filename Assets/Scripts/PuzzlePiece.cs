@@ -3280,6 +3280,30 @@ namespace GravityPuzzle
                 keepReservationUntilDespawn: true);
         }
 
+        /// <summary>
+        /// Starts the cutter presentation for a piece already released from
+        /// the board at the freefall line.  Its grid cells were cleared before
+        /// Unity physics began, so this path deliberately has no reservation
+        /// capture or frontier-release ownership.
+        /// </summary>
+        public bool TryBeginOffBoardFreefallShredding()
+        {
+            if (!IsInShredderPhysicsHandoff || IsFrozen)
+                return false;
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (board == null || !board.TryBeginOffBoardShredding(this))
+                return false;
+
+            GridFallView?.Cancel();
+            shredderHandoffMode = ShredderHandoffMode.Feeding;
+            keepShredderGridReservationUntilDespawn = false;
+            SetSelected(false);
+            board.TryLockFinalShredderOutcome(this);
+            ReportDestroyed();
+            return true;
+        }
+
         private bool TryBeginShredderFeedAfterReservation(
             bool reportDestructionImmediately,
             bool keepReservationUntilDespawn)

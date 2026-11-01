@@ -1142,6 +1142,24 @@ namespace GravityPuzzle
         }
 
         /// <summary>
+        /// Commits a piece that has already left the authoritative grid to the
+        /// shredder.  Freefall pieces have no remaining board footprint, so
+        /// this transition must never recreate a reservation merely to enter
+        /// the presentation phase.
+        /// </summary>
+        public bool TryBeginOffBoardShredding(PuzzlePiece piece)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model) ||
+                model.State != PieceState.HandoffToPhysics ||
+                model.IsOnBoard)
+            {
+                return false;
+            }
+
+            return TryTransitionPieceState(model, PieceState.Shredding);
+        }
+
+        /// <summary>
         /// Atomically reserves a root and its board-derived support chain for
         /// the temporary shredder physics island. The grid remains authoritative:
         /// every footprint stays Reserved while Unity physics renders only the
@@ -2560,13 +2578,19 @@ namespace GravityPuzzle
                 FailLevel();
             }
 
-            // The handoff reserves the piece while it is still visibly entering
-            // the shredder. Individual grid cells are released only as the
-            // cutter removes them from the presentation.
+            bool isOffBoardShredderFeed = destroyedPiece.IsBeingShredded &&
+                                           TryGetPieceModel(destroyedPiece, out PieceModel model) &&
+                                           model.State == PieceState.Shredding &&
+                                           !model.IsOnBoard;
+
+            // Legacy feeds retain their grid footprint until their cutter
+            // frontier releases it. Freefall pieces were deliberately cleared
+            // at the handoff line and therefore only report progress here;
+            // reserving them again would create a ghost grid obstruction.
             bool keepsGridReservation = destroyedPiece.IsBeingShredded;
-            if (keepsGridReservation)
+            if (keepsGridReservation && !isOffBoardShredderFeed)
                 TryReservePieceInGrid(destroyedPiece, PieceState.Shredding);
-            else
+            else if (!keepsGridReservation)
                 TryClearPieceFromGrid(destroyedPiece, PieceState.Shredding);
             if (destroyedPiece.IsBeingShredded)
                 BlockShredded?.Invoke(destroyedPiece.SourcePieceId);
