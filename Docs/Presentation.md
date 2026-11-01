@@ -137,6 +137,10 @@ sprite bounds; it does not compensate for malformed source-image bounds.
 
 A presentation refresh may rewrite sprites, materials, visibility, sorting, and overlay state. It must not repair gameplay state as a side effect. If a visual appears only after another piece is destroyed or shredded, treat that as evidence of stale or conflicting presentation ownership rather than relying on the later refresh.
 
+## Build verification level advance
+
+`InGameUI` contains the authored `Debug_Next_Level_Button` for device-build verification. `DebugNextLevelButton` is an input adapter only: it delegates to `PrototypeBoard.TryAdvanceToNextLevelForDebug`, which advances the existing `GravityLevelRuntime` campaign sequence and reloads the active scene through `SplashSceneLoader`. It intentionally does not clear the board, grant completion rewards, queue booster unlocks, or persist tutorial progress. The control is disabled on the final configured level.
+
 ## Directional Board Frame
 
 The decorative frame uses the Scene Tuna atlas pieces `Corner_Top_Left`, `Corner_Top_Right`, `Edge_Top`, `Edge_Left`, and `Edge_Right`. Scene Tuna's grid cells are 0.77 world units wide; its authored 0.5 sprite scale is therefore converted to `0.5 / 0.77` for the one-unit runtime grid. The top strip retains the source's vertical flip. Source-relative join positions live in `BoardPresentationConfig`; no generated backdrop or replacement frame art participates in this frame.
