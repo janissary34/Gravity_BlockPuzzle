@@ -125,6 +125,57 @@ public sealed class BombPresentationTests
         }
     }
 
+    [Test]
+    public void ArmedBomb_HammerVisualImpactUsesBombIconCenter()
+    {
+        var root = new GameObject("Hammer bomb impact point test");
+        var texture = new Texture2D(16, 16);
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
+
+        try
+        {
+            var piece = root.AddComponent<PuzzlePiece>();
+            SpriteRenderer overlay = ConfigureBombPresentation(piece, root.transform, sprite, new[] { new Vector2(2f, 3f) });
+            piece.RefreshBombState();
+
+            Assert.That(piece.TryGetBombVisualImpactPoint(out Vector2 impactPoint), Is.True);
+            Assert.That(impactPoint, Is.EqualTo((Vector2)overlay.bounds.center));
+
+            SetField(piece, "<IsBombDefused>k__BackingField", true);
+            Assert.That(piece.TryGetBombVisualImpactPoint(out _), Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(texture);
+        }
+    }
+
+    [Test]
+    public void ArmedBomb_ShredderPresentationIncludesBombIcon()
+    {
+        var root = new GameObject("Shredder bomb icon test");
+        var texture = new Texture2D(16, 16);
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
+
+        try
+        {
+            var piece = root.AddComponent<PuzzlePiece>();
+            SpriteRenderer overlay = ConfigureBombPresentation(piece, root.transform, sprite, new[] { Vector2.zero });
+            piece.RefreshBombState();
+            piece.PrepareModularShredderSurface();
+
+            CollectionAssert.Contains(piece.ConfiguredShredderRenderers, overlay);
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(texture);
+        }
+    }
+
     [TestCase(true, false, true)]
     [TestCase(true, true, false)]
     [TestCase(false, false, false)]

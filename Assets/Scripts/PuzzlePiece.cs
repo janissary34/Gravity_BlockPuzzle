@@ -59,6 +59,9 @@ namespace GravityPuzzle
         private const float MaximumBombCounterFontScale = .32f;
         private const string IceCounterPresentationName = "Ice Counter Presentation";
         private const string BombCounterPresentationName = "Bomb Counter Presentation";
+        private static readonly int BombDefuseSplitSideId = Shader.PropertyToID("_SplitSide");
+        private static readonly int BombDefuseFadeId = Shader.PropertyToID("_DefuseFade");
+        private static readonly int BombDefuseSplitLineLocalId = Shader.PropertyToID("_SplitLineLocal");
         private static readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
 
         public static IReadOnlyList<PuzzlePiece> ActivePieces => activePieces;
@@ -190,6 +193,7 @@ namespace GravityPuzzle
         private Color iceFrostTint = new Color(1f, 1f, 1f, .18f);
         private Sprite bombOverlaySprite;
         private float bombOverlayFill = .936f;
+        private Material bombDefuseSplitMaterial;
         private Material icePresentationMaterial;
         private IIceBlockParticleVfx iceParticleVfx;
         private IIceBlockParticleVfxHandle iceParticleVfxHandle;
@@ -271,6 +275,9 @@ namespace GravityPuzzle
         private float bombCounterOutlineWidth = .18f;
         private Vector2 bombCounterOffset;
         private SpriteRenderer bombOverlayRenderer;
+        private SpriteRenderer bombDefuseLeftRenderer;
+        private SpriteRenderer bombDefuseRightRenderer;
+        private MaterialPropertyBlock bombDefusePropertyBlock;
         private int previousBombRemaining = -1;
 
         private readonly struct JoinedPieceSegment
@@ -313,6 +320,7 @@ namespace GravityPuzzle
 
         private void Awake()
         {
+            bombDefusePropertyBlock = new MaterialPropertyBlock();
             defaultPhysicsLayer = gameObject.layer;
             Body = GetComponent<Rigidbody2D>();
             GridFallView = GetComponent<PieceGridFallView>();
@@ -934,6 +942,7 @@ namespace GravityPuzzle
                 configuredShredderRenderers = joinedPieceRenderers.Count > 0
                     ? joinedPieceRenderers.ToArray()
                     : new[] { wholePieceRenderer };
+                AppendBombOverlayToShredderPresentation();
                 return;
             }
 
@@ -955,6 +964,26 @@ namespace GravityPuzzle
 
             for (int index = 0; index < collisionCellVisuals.Count; index++)
                 configuredShredderRenderers[index] = collisionCellVisuals[index];
+
+            AppendBombOverlayToShredderPresentation();
+        }
+
+        private void AppendBombOverlayToShredderPresentation()
+        {
+            if (!IsBomb || IsBombDefused || bombOverlayRenderer == null ||
+                !bombOverlayRenderer.enabled || configuredShredderRenderers == null)
+            {
+                return;
+            }
+
+            SpriteRenderer[] renderersWithBomb = new SpriteRenderer[
+                configuredShredderRenderers.Length + 1];
+            Array.Copy(
+                configuredShredderRenderers,
+                renderersWithBomb,
+                configuredShredderRenderers.Length);
+            renderersWithBomb[renderersWithBomb.Length - 1] = bombOverlayRenderer;
+            configuredShredderRenderers = renderersWithBomb;
         }
 
         public void ClearVoxelPresentation()
@@ -1547,6 +1576,7 @@ namespace GravityPuzzle
             iceFrostTint = setup.IceFrostTint;
             bombOverlaySprite = setup.BombOverlaySprite;
             bombOverlayFill = setup.BombOverlayFill;
+            bombDefuseSplitMaterial = setup.BombDefuseSplitMaterial;
             ConfigureFreeze(
                 setup.SpecialBlockType == PieceSpecialBlockType.Bomb ? 0 : setup.FrozenMoveCount,
                 setup.IceCounterFont,
@@ -1586,6 +1616,7 @@ namespace GravityPuzzle
             iceFrostTint = new Color(1f, 1f, 1f, .18f);
             bombOverlaySprite = null;
             bombOverlayFill = .936f;
+            bombDefuseSplitMaterial = null;
             shredderReservationCells.Clear();
             shredderCellsReadyToRelease.Clear();
             shredderReservationStartBodyY = 0f;
@@ -2093,8 +2124,15 @@ namespace GravityPuzzle
 
         public void HideShredderRenderer(SpriteRenderer renderer)
         {
-            if (renderer != null && renderer.transform.IsChildOf(transform))
-                renderer.enabled = false;
+            if (renderer == null || !renderer.transform.IsChildOf(transform))
+                return;
+
+            renderer.enabled = false;
+            if (renderer == bombOverlayRenderer && bombCounterText != null)
+            {
+                bombCounterText.enabled = false;
+                bombCounterText.gameObject.SetActive(false);
+            }
         }
 
         private void RestoreDefaultCollisionMaterials()
@@ -2332,6 +2370,23 @@ namespace GravityPuzzle
 
             previousBombRemaining = remainingSeconds;
             UpdateBombCounter(remainingSeconds);
+        }
+
+        /// <summary>
+        /// Returns the visible Bomb icon centre for a Hammer-only presentation
+        /// strike. Gameplay targeting remains owned by the selected grid cell.
+        /// </summary>
+        public bool TryGetBombVisualImpactPoint(out Vector2 impactPoint)
+        {
+            impactPoint = default;
+            if (!IsBomb || IsBombDefused || bombOverlayRenderer == null ||
+                !bombOverlayRenderer.enabled)
+            {
+                return false;
+            }
+
+            impactPoint = bombOverlayRenderer.bounds.center;
+            return true;
         }
 
         public void RefreshFreezeState(int destroyedPieceCount)
@@ -2760,8 +2815,9 @@ namespace GravityPuzzle
 
         private void DefuseBomb()
         {
+            bool isDefusePresentationPlaying = PlayBombDefusePresentation();
             IsBombDefused = true;
-            ClearBombVisuals();
+            ClearBombVisuals(isDefusePresentationPlaying);
         }
 
         // The rendered voxel grid is intentionally made of child VoxelShard
@@ -3592,6 +3648,7 @@ namespace GravityPuzzle
             {
                 SpriteRenderer candidate = iceSlots[index];
                 if (candidate == null || candidate == wholePieceRenderer || candidate == bombOverlayRenderer ||
+                    candidate == bombDefuseLeftRenderer || candidate == bombDefuseRightRenderer ||
                     iceRenderers.Contains(candidate) || joinedPieceRenderers.Contains(candidate))
                     continue;
 
@@ -3820,8 +3877,125 @@ namespace GravityPuzzle
             }
         }
 
-        private void ClearBombVisuals()
+        private bool PlayBombDefusePresentation()
         {
+            if (bombOverlayRenderer == null || !bombOverlayRenderer.enabled ||
+                bombDefuseSplitMaterial == null || bombDefusePropertyBlock == null)
+            {
+                return false;
+            }
+
+            TweenConfig tweenConfig = GridFallView != null ? GridFallView.Config : null;
+            if (tweenConfig == null || !TryGetAvailableIceSlot(out SpriteRenderer leftRenderer))
+                return false;
+
+            // Reserve the first pooled slot before acquiring the second so the
+            // generic allocator cannot hand back the same renderer twice.
+            bombDefuseLeftRenderer = leftRenderer;
+            if (!TryGetAvailableIceSlot(out SpriteRenderer rightRenderer))
+            {
+                bombDefuseLeftRenderer = null;
+                return false;
+            }
+            bombDefuseLeftRenderer = null;
+
+            SpriteRenderer source = bombOverlayRenderer;
+            ConfigureBombDefuseHalf(leftRenderer, source, 0f, "Bomb Defuse Left");
+            ConfigureBombDefuseHalf(rightRenderer, source, 1f, "Bomb Defuse Right");
+            bombDefuseLeftRenderer = leftRenderer;
+            bombDefuseRightRenderer = rightRenderer;
+
+            Vector3 leftStart = leftRenderer.transform.localPosition;
+            Vector3 rightStart = rightRenderer.transform.localPosition;
+            float duration = tweenConfig.BombDefuseSplitDuration;
+            Sequence splitSequence = DOTween.Sequence()
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
+            splitSequence.Join(leftRenderer.transform.DOLocalMoveX(
+                leftStart.x - tweenConfig.BombDefuseHalfSeparation,
+                duration).SetEase(tweenConfig.BombDefuseSplitEase));
+            splitSequence.Join(rightRenderer.transform.DOLocalMoveX(
+                rightStart.x + tweenConfig.BombDefuseHalfSeparation,
+                duration).SetEase(tweenConfig.BombDefuseSplitEase));
+            splitSequence.Join(DOVirtual.Float(0f, 1f, duration, SetBombDefuseFade)
+                .SetEase(tweenConfig.BombDefuseFadeEase));
+            splitSequence.OnComplete(ClearBombDefusePresentation);
+            return true;
+        }
+
+        private void ConfigureBombDefuseHalf(
+            SpriteRenderer renderer,
+            SpriteRenderer source,
+            float splitSide,
+            string rendererName)
+        {
+            renderer.transform.SetParent(transform, false);
+            renderer.transform.localPosition = source.transform.localPosition;
+            renderer.transform.localRotation = source.transform.localRotation;
+            renderer.transform.localScale = source.transform.localScale;
+            renderer.gameObject.name = rendererName;
+            renderer.sprite = source.sprite;
+            renderer.color = source.color;
+            renderer.sharedMaterial = bombDefuseSplitMaterial;
+            renderer.sortingLayerID = source.sortingLayerID;
+            renderer.sortingOrder = source.sortingOrder;
+            renderer.enabled = true;
+
+            float splitLineLocal = renderer.sprite != null
+                ? renderer.sprite.bounds.center.x
+                : 0f;
+            ApplyBombDefuseProperties(renderer, splitSide, 0f, splitLineLocal);
+        }
+
+        private void SetBombDefuseFade(float fade)
+        {
+            if (bombDefuseLeftRenderer != null)
+                ApplyBombDefuseProperties(bombDefuseLeftRenderer, 0f, fade);
+            if (bombDefuseRightRenderer != null)
+                ApplyBombDefuseProperties(bombDefuseRightRenderer, 1f, fade);
+        }
+
+        private void ApplyBombDefuseProperties(
+            SpriteRenderer renderer,
+            float splitSide,
+            float fade,
+            float? splitLineLocal = null)
+        {
+            renderer.GetPropertyBlock(bombDefusePropertyBlock);
+            bombDefusePropertyBlock.SetFloat(BombDefuseSplitSideId, splitSide);
+            bombDefusePropertyBlock.SetFloat(BombDefuseFadeId, Mathf.Clamp01(fade));
+            if (splitLineLocal.HasValue)
+                bombDefusePropertyBlock.SetFloat(BombDefuseSplitLineLocalId, splitLineLocal.Value);
+            renderer.SetPropertyBlock(bombDefusePropertyBlock);
+        }
+
+        private void ClearBombDefusePresentation()
+        {
+            ClearBombDefuseRenderer(ref bombDefuseLeftRenderer);
+            ClearBombDefuseRenderer(ref bombDefuseRightRenderer);
+        }
+
+        private void ClearBombDefuseRenderer(ref SpriteRenderer renderer)
+        {
+            if (renderer == null)
+                return;
+
+            DOTween.Kill(renderer);
+            DOTween.Kill(renderer.transform);
+            renderer.enabled = false;
+            renderer.sprite = null;
+            renderer.color = Color.white;
+            renderer.sharedMaterial = null;
+            renderer.SetPropertyBlock(null);
+            renderer.transform.SetParent(iceSlotsRoot, false);
+            renderer = null;
+        }
+
+        private void ClearBombVisuals(bool preserveDefusePresentation = false)
+        {
+            if (!preserveDefusePresentation)
+                ClearBombDefusePresentation();
+
             previousBombRemaining = -1;
             if (bombOverlayRenderer != null)
             {

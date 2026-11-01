@@ -65,6 +65,14 @@ handled as a normal block by later Hammer hits and by the shredder.
 While Hammer targeting is active, normal and defused pieces use the pooled per-cell
 outline. An armed bomb instead uses its existing composite whole-piece outline, so
 the target feedback matches Hammer's one-action bomb defuse behavior.
+The Hammer's visual strike is centered on the armed Bomb icon while gameplay still
+validates the selected grid cell. At impact, two temporary pooled presentation slots
+render the left and right icon halves with the shared Bomb split material, separate
+briefly, then fade. This is presentation-only; the bomb is defused immediately and
+its counter is removed without changing the piece's grid footprint.
+An armed Bomb icon is also appended to the shredder presentation renderer set. It
+therefore uses the same cutter dissolve and clipping path as its block; its counter
+is hidden only when the icon has fully crossed the cutter line.
 
 Presentation slots are pooled state. Every renter must receive reset sprite, material, colour, transform, sorting, mask, enabled state, and property-block state.
 

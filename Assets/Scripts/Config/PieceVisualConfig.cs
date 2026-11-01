@@ -53,6 +53,8 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite bombOverlaySprite;
         [Tooltip("Atlas-fit factor that preserves Scene Tuna's authored 0.30 Bomb scale on a standard one-cell piece.")]
         [SerializeField, Range(.1f, 1f)] private float bombOverlayFill = .936f;
+        [Tooltip("Shared sprite material that clips the two pooled halves of a Bomb icon during Hammer defusal.")]
+        [SerializeField] private Material bombDefuseSplitMaterial;
         [SerializeField] private TMP_FontAsset bombCounterFont;
         [Tooltip("Global world-space font size for every Bomb counter. Level assets cannot override this value.")]
         [SerializeField, Min(.1f)] private float bombCounterFontSize = .65f;
@@ -114,6 +116,7 @@ namespace GravityPuzzle.Config
         public int IceCounterSortingOrder => iceCounterSortingOrder;
         public Sprite BombOverlaySprite => bombOverlaySprite;
         public float BombOverlayFill => bombOverlayFill;
+        public Material BombDefuseSplitMaterial => bombDefuseSplitMaterial;
         public TMP_FontAsset BombCounterFont => bombCounterFont != null ? bombCounterFont : iceCounterFont;
         public float BombCounterFontSize => Mathf.Max(.1f, bombCounterFontSize);
         public Color BombCounterTextColor => bombCounterTextColor;

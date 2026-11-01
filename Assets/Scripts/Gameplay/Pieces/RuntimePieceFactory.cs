@@ -620,6 +620,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.IceFrostTint : new Color(1f, 1f, 1f, .18f),
                 pieceVisualConfig != null ? pieceVisualConfig.BombOverlaySprite : null,
                 pieceVisualConfig != null ? pieceVisualConfig.BombOverlayFill : .936f,
+                pieceVisualConfig != null ? pieceVisualConfig.BombDefuseSplitMaterial : null,
                 definition.frozenMoveCount,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterFont : null,
                 resolvedIceFontSize,

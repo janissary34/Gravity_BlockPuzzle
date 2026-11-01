@@ -71,6 +71,14 @@ namespace GravityPuzzle.Config
         [Min(1)] [SerializeField] private int hammerCameraShakeVibrato = 18;
         [Min(0f)] [SerializeField] private float hammerCameraShakeRandomness = 90f;
 
+        [Header("Bomb Defuse Presentation")]
+        [Tooltip("Duration of the Hammer-only Bomb icon split and fade presentation.")]
+        [Min(.001f)] [SerializeField] private float bombDefuseSplitDuration = .16f;
+        [Tooltip("World-space horizontal distance each Bomb icon half travels while fading.")]
+        [Min(0f)] [SerializeField] private float bombDefuseHalfSeparation = .12f;
+        [SerializeField] private Ease bombDefuseSplitEase = Ease.OutQuad;
+        [SerializeField] private Ease bombDefuseFadeEase = Ease.InQuad;
+
         [Header("Rocket Booster Presentation")]
         [Min(.001f)] [SerializeField] private float rocketEntranceDuration = .75f;
         [SerializeField] private Ease rocketEntranceEase = Ease.OutCubic;
@@ -206,6 +214,10 @@ namespace GravityPuzzle.Config
         public float HammerCameraShakeStrength => hammerCameraShakeStrength;
         public int HammerCameraShakeVibrato => hammerCameraShakeVibrato;
         public float HammerCameraShakeRandomness => hammerCameraShakeRandomness;
+        public float BombDefuseSplitDuration => bombDefuseSplitDuration;
+        public float BombDefuseHalfSeparation => bombDefuseHalfSeparation;
+        public Ease BombDefuseSplitEase => bombDefuseSplitEase;
+        public Ease BombDefuseFadeEase => bombDefuseFadeEase;
         public float RocketEntranceDuration => rocketEntranceDuration;
         public Ease RocketEntranceEase => rocketEntranceEase;
         public float RocketTargetPauseDuration => rocketTargetPauseDuration;

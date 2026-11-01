@@ -332,7 +332,11 @@ namespace GravityPuzzle
                 if (target.Piece != null && target.Piece.TryGetTargetableCellAt(target.WorldPosition, out PuzzlePiece.TargetableCell targetableCell))
                     impactPosition = targetableCell.Center;
 
-                if (TryStartHammerImpact(target.Piece, impactPosition))
+                Vector2 visualImpactPosition = target.Piece != null &&
+                    target.Piece.TryGetBombVisualImpactPoint(out Vector2 bombVisualImpactPoint)
+                    ? bombVisualImpactPoint
+                    : impactPosition;
+                if (TryStartHammerImpact(target.Piece, impactPosition, visualImpactPosition))
                 {
                     boundBoard.StartTimer();
                     activeBooster = null;
@@ -357,7 +361,8 @@ namespace GravityPuzzle
 
         private bool TryStartHammerImpact(
             PuzzlePiece piece,
-            Vector2 impactPosition)
+            Vector2 gameplayImpactPosition,
+            Vector2 visualImpactPosition)
         {
             // Validate before consuming the booster. The actual removal happens
             // at the animation impact frame, not at target selection.
@@ -374,13 +379,14 @@ namespace GravityPuzzle
             PuzzleDragController.CancelGridFallForTargetedAction(piece);
             impactInProgress = true;
             impactSucceeded = false;
-            PlayHammerSwing(piece, impactPosition);
+            PlayHammerSwing(piece, gameplayImpactPosition, visualImpactPosition);
             return true;
         }
 
         private void PlayHammerSwing(
             PuzzlePiece piece,
-            Vector2 impactPosition)
+            Vector2 gameplayImpactPosition,
+            Vector2 visualImpactPosition)
         {
             if (tweenConfig == null)
             {
@@ -391,7 +397,7 @@ namespace GravityPuzzle
 
             if (!TryRentHammerVisual(out BoosterVisualView hammerView))
             {
-                ApplyHammerImpact(piece, impactPosition);
+                ApplyHammerImpact(piece, gameplayImpactPosition);
                 impactInProgress = false;
                 if (TopologyEditingEnabled)
                     ConsumeHammerUse();
@@ -403,7 +409,7 @@ namespace GravityPuzzle
             Vector3 defaultScale = hammerTransform.localScale;
             Vector3 impactScale = defaultScale * popScaleMultiplier;
             Camera camera = gameplayCamera;
-            Vector3 impact = impactPosition;
+            Vector3 impact = visualImpactPosition;
             bool targetIsLeft = impact.x < 0f;
             float facingYAngle = targetIsLeft ? 0f : -180f;
             float windUpAngle = targetIsLeft ? 18f : -18f;
@@ -441,7 +447,7 @@ namespace GravityPuzzle
             swing.AppendInterval(tweenConfig.HammerWindUpDelay);
             swing.Append(hammerTransform.DORotate(new Vector3(0f, facingYAngle, impactAngle), tweenConfig.HammerStrikeDuration)
                 .SetEase(tweenConfig.HammerStrikeEase));
-            swing.AppendCallback(() => ApplyHammerImpact(piece, impactPosition));
+            swing.AppendCallback(() => ApplyHammerImpact(piece, gameplayImpactPosition));
             // Phase 4: shrink along an exit arc once the hit has registered.
             swing.Append(DOVirtual.Float(0f, 1f, tweenConfig.HammerExitDuration, progress =>
                 hammerTransform.position = QuadraticBezier(hoverPoint, exitControl, exitPoint, progress))

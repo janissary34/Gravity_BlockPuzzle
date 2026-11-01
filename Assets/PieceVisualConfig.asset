@@ -238,6 +238,7 @@ MonoBehaviour:
   iceCounterSortingOrder: 50
   bombOverlaySprite: {fileID: 1513006127, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   bombOverlayFill: 0.936
+  bombDefuseSplitMaterial: {fileID: 2100000, guid: a49a5f3cb0e44ef3947a03cc67a2182c, type: 2}
   bombCounterFont: {fileID: 11400000, guid: 0e1847d847368439f88be6c09b488ce3, type: 2}
   bombCounterFontSize: 0.35
   bombCounterTextColor: {r: 1, g: 1, b: 1, a: 1}
