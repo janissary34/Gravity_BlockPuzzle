@@ -153,24 +153,30 @@ public sealed class BombPresentationTests
     }
 
     [Test]
-    public void ArmedBomb_ShredderPresentationIncludesBombIcon()
+    public void ArmedBomb_ShredderPresentationReplacesBombIconWithVisualVoxels()
     {
         var root = new GameObject("Shredder bomb icon test");
         var texture = new Texture2D(16, 16);
         Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
+        Material fragmentMaterial = new Material(Shader.Find("Sprites/Default"));
 
         try
         {
             var piece = root.AddComponent<PuzzlePiece>();
             SpriteRenderer overlay = ConfigureBombPresentation(piece, root.transform, sprite, new[] { Vector2.zero });
+            SetField(piece, "bombDefuseSplitMaterial", fragmentMaterial);
             piece.RefreshBombState();
             piece.PrepareModularShredderSurface();
 
-            CollectionAssert.Contains(piece.ConfiguredShredderRenderers, overlay);
+            CollectionAssert.DoesNotContain(piece.ConfiguredShredderRenderers, overlay);
+            Assert.That(
+                piece.ConfiguredShredderRenderers.Length,
+                Is.EqualTo(1 + VoxelBlockBuilder.Subdivisions * VoxelBlockBuilder.Subdivisions));
         }
         finally
         {
             Object.DestroyImmediate(root);
+            Object.DestroyImmediate(fragmentMaterial);
             Object.DestroyImmediate(sprite);
             Object.DestroyImmediate(texture);
         }
