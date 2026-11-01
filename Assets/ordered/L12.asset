@@ -52,7 +52,6 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
@@ -170,7 +169,6 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
@@ -320,7 +318,6 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
@@ -438,7 +435,6 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
@@ -588,7 +584,6 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
@@ -706,7 +701,6 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18

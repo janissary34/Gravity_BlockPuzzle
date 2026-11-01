@@ -1428,7 +1428,10 @@ namespace GravityPuzzle
             for (int index = 0; index < outlineRenderers.Count; index++)
             {
                 LineRenderer outline = outlineRenderers[index];
-                if (outline == null)
+                // A pooled piece is reset before RuntimePieceFactory rebuilds
+                // its contour. LineRenderer rejects presentation updates while
+                // it has no valid contour points.
+                if (outline == null || outline.positionCount < 3)
                     continue;
 
                 outline.startWidth = outlineWidth;
