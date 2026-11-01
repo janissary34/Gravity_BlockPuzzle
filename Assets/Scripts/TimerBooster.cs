@@ -25,6 +25,9 @@ namespace GravityPuzzle
         [Tooltip("Target UI transform for timer text.")]
         [SerializeField] private Transform timer_txt;
 
+        [Tooltip("Optional configured owner for a visual button-state child. When assigned, this component forwards activation to the owner that holds the scene UI references.")]
+        [SerializeField] private TimerBooster presentationSequenceOwner;
+
         [Tooltip("Optional UI Button to trigger the Timer Booster.")]
         [SerializeField] private Button boosterButton;
 
@@ -553,6 +556,16 @@ namespace GravityPuzzle
         /// </summary>
         public void PlayTimerBoosterSequence()
         {
+            // The enabled/disabled button artwork has its own Button for
+            // raycasts, but the parent owns the timer presentation, state and
+            // scene-authored references. Keep that ownership explicit rather
+            // than duplicating the presentation setup onto visual children.
+            if (presentationSequenceOwner != null && presentationSequenceOwner != this)
+            {
+                presentationSequenceOwner.PlayTimerBoosterSequence();
+                return;
+            }
+
             IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
             if (tutorialGate != null && !tutorialGate.AllowsBoosterActivation(BoosterRewardType.FreezeTimer))
                 return;

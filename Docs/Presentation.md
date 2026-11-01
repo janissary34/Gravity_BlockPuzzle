@@ -14,6 +14,16 @@ When a first-use booster prompt raises that dimmer, the authored feature panel
 is visible as well. Its copy identifies the Rocket, Hammer, or Freeze Timer
 action; it does not own targeting validation or booster state.
 
+## Freeze Timer button ownership
+
+`Time_Booster_Button` owns the Freeze Timer presentation, its scene-authored
+timer references, and the authoritative freeze activation. Its
+`Time_Booster_Button(Enable)` and `(Disable)` children are visual button-state
+variants. The enabled child keeps the raycast Button but forwards activation to
+the parent `TimerBooster` through its explicit `presentationSequenceOwner`
+reference; it must not own a duplicate timer presentation setup. This preserves
+one timer-sequence owner while allowing authored enabled/disabled visuals.
+
 ## New Booster reward visuals
 
 `NewBoosterPanelView` owns which pre-authored reward slot is visible. Each
