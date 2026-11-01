@@ -82,6 +82,14 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float physicsHandoffDistanceBelowMap = 1.5f;
         [Tooltip("Clear freefall distance between the handoff line and the shredder mouth.")]
         [Min(0f)] [SerializeField] private float physicsFreefallDistanceBelowHandoff = 2f;
+        [Tooltip("Downward speed assigned when a piece crosses from the grid exit handoff into freefall. It must not be slower than the kinematic exit travel.")]
+        [Min(.01f)] [SerializeField] private float physicsFreefallEntrySpeed = 4.2f;
+        [Tooltip("Maximum magnitude of a freefall piece's linear velocity. This bounds rare contact-resolution impulses without preventing normal falls.")]
+        [Min(.01f)] [SerializeField] private float physicsFreefallMaxSpeed = 14f;
+        [Tooltip("Maximum absolute angular velocity of a freefall piece in degrees per second.")]
+        [Min(0f)] [SerializeField] private float physicsFreefallMaxAngularSpeed = 360f;
+        [Tooltip("Angular damping applied only after a piece has entered the open freefall area.")]
+        [Min(0f)] [SerializeField] private float physicsFreefallAngularDrag = .75f;
         [Tooltip("Lets only a contact-connected stack above a shredder feed use Unity physics briefly. Normal board gravity remains grid-owned.")]
         [SerializeField] private bool enablePhysicsIsland = true;
         [Tooltip("Gravity applied to a temporary dynamic support piece inside the shredder mouth.")]
@@ -149,6 +157,10 @@ namespace GravityPuzzle.Config
         [FormerlySerializedAs("tremorVelocityMultiplier")]
         [Min(0f)] [SerializeField] private float feedShakeAmplitude = 2.5f;
         [Min(0f)] [SerializeField] private float feedAngularDrag = 6f;
+        [Tooltip("Maximum angular correction per second after a freefall piece is captured by the kinematic feed. The target remains its nearest cardinal orientation.")]
+        [Min(0f)] [SerializeField] private float feedAlignmentAngularSpeed = 360f;
+        [Tooltip("How quickly the feed decelerates an arriving freefall piece to its normal feed speed.")]
+        [Min(0f)] [SerializeField] private float feedEntryDeceleration = 18f;
         [Tooltip("Angular speed range used by the kinematic feed's bounded physical tilt.")]
         [Min(0f)] [SerializeField] private float tumbleTorque = .35f;
         [Range(0f, 20f)] [SerializeField] private float maxFeedTiltAngle = 5f;
@@ -179,6 +191,10 @@ namespace GravityPuzzle.Config
         public bool EnablePhysicsIsland => enablePhysicsIsland;
         public float PhysicsHandoffDistanceBelowMap => physicsHandoffDistanceBelowMap;
         public float PhysicsFreefallDistanceBelowHandoff => physicsFreefallDistanceBelowHandoff;
+        public float PhysicsFreefallEntrySpeed => physicsFreefallEntrySpeed;
+        public float PhysicsFreefallMaxSpeed => physicsFreefallMaxSpeed;
+        public float PhysicsFreefallMaxAngularSpeed => physicsFreefallMaxAngularSpeed;
+        public float PhysicsFreefallAngularDrag => physicsFreefallAngularDrag;
         public float PhysicsIslandGravityScale => physicsIslandGravityScale;
         public float PhysicsIslandAngularDrag => physicsIslandAngularDrag;
         public float PhysicsIslandCaptureDistance => physicsIslandCaptureDistance;
@@ -187,6 +203,8 @@ namespace GravityPuzzle.Config
         public float PhysicsIslandGuideDepth => physicsIslandGuideDepth;
         public float WheelRotationSpeedMultiplier => wheelRotationSpeedMultiplier;
         public float CaptureApproachDistance => captureApproachDistance;
+        public float FeedAlignmentAngularSpeed => feedAlignmentAngularSpeed;
+        public float FeedEntryDeceleration => feedEntryDeceleration;
         public float WheelArtScale => wheelArtScale;
         public int WheelToothCount => wheelToothCount;
         public float DiscArtScale => discArtScale;

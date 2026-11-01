@@ -1031,6 +1031,67 @@ namespace GravityPuzzle
             return 1;
         }
 
+        /// <summary>
+        /// Returns the true vertical footprint from the cached cell geometry.
+        /// This deliberately does not read Collider2D.bounds: exit handoff
+        /// runs while normal piece colliders are disabled.
+        /// </summary>
+        public bool TryGetActiveCellVerticalExtents(
+            out float lowestCellY,
+            out float highestCellY)
+        {
+            lowestCellY = float.PositiveInfinity;
+            highestCellY = float.NegativeInfinity;
+
+            if (collisionCells != null && collisionCells.Count > 0)
+            {
+                for (int index = 0; index < collisionCells.Count; index++)
+                {
+                    BoxCollider2D cell = collisionCells[index];
+                    if (cell == null)
+                        continue;
+
+                    Vector3 center = cell.transform.TransformPoint(cell.offset);
+                    Vector2 size = fullCollisionCellSizes != null && index < fullCollisionCellSizes.Count
+                        ? fullCollisionCellSizes[index]
+                        : cell.size;
+                    Bounds bounds = CreateWorldCellBounds(cell.transform, center, size);
+                    lowestCellY = Mathf.Min(lowestCellY, bounds.min.y);
+                    highestCellY = Mathf.Max(highestCellY, bounds.max.y);
+                }
+            }
+
+            if (lowestCellY != float.PositiveInfinity)
+                return true;
+
+            if (collisionCellVisuals != null && collisionCellVisuals.Count > 0)
+            {
+                for (int index = 0; index < collisionCellVisuals.Count; index++)
+                {
+                    SpriteRenderer visual = collisionCellVisuals[index];
+                    if (visual == null)
+                        continue;
+
+                    Vector2 size = fullCollisionCellSizes != null && index < fullCollisionCellSizes.Count
+                        ? fullCollisionCellSizes[index]
+                        : Vector2.one;
+                    Bounds bounds = CreateWorldCellBounds(
+                        visual.transform,
+                        visual.transform.position,
+                        size);
+                    lowestCellY = Mathf.Min(lowestCellY, bounds.min.y);
+                    highestCellY = Mathf.Max(highestCellY, bounds.max.y);
+                }
+            }
+
+            if (lowestCellY != float.PositiveInfinity)
+                return true;
+
+            lowestCellY = transform.position.y - .5f;
+            highestCellY = transform.position.y + .5f;
+            return true;
+        }
+
         private static Bounds CreateWorldCellBounds(
             Transform cellTransform,
             Vector3 center,
@@ -1766,6 +1827,10 @@ namespace GravityPuzzle
             // but stop rotation once this piece becomes a kinematic feed.
             // A wide active feed must not sweep into another simultaneous feed.
             Body.angularVelocity = 0f;
+            // Once the coordinate gate accepts this piece, the feed owns its
+            // transform. Letting its kinematic collider hit later freefall
+            // bodies would make an infinite-mass pinball surface.
+            SetPiecePhysicsCollidersEnabled(false);
         }
 
         /// <summary>
@@ -1809,10 +1874,34 @@ namespace GravityPuzzle
             if (Body == null)
                 return;
 
+            // The exit phase moves the transform while this body is inert.
+            // Synchronise the Rigidbody pose before switching it to Dynamic;
+            // otherwise Unity can solve one step from a stale pooled pose.
+            Body.position = transform.position;
+            Body.rotation = transform.eulerAngles.z;
             Body.constraints = RigidbodyConstraints2D.None;
-            Body.velocity = Vector2.down * Mathf.Max(0f, downwardSpeed);
+            Body.angularDrag = config.PhysicsFreefallAngularDrag;
+            Body.velocity = Vector2.down * Mathf.Max(
+                config.PhysicsFreefallEntrySpeed,
+                downwardSpeed);
             Body.angularVelocity = 0f;
             Body.WakeUp();
+        }
+
+        private void SetPiecePhysicsCollidersEnabled(bool enabled)
+        {
+            if (solidColliders == null)
+                CacheSolidColliders();
+
+            if (solidColliders == null)
+                return;
+
+            for (int index = 0; index < solidColliders.Length; index++)
+            {
+                Collider2D collider = solidColliders[index];
+                if (collider != null && !collider.isTrigger)
+                    collider.enabled = enabled;
+            }
         }
 
         /// <summary>

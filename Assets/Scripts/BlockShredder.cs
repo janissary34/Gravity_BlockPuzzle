@@ -168,11 +168,26 @@ namespace GravityPuzzle
                     continue;
                 }
 
-                Vector3 position = handoff.Piece.transform.position;
-                position.y = Mathf.Max(physicsHandoffLineY, position.y - speed * Time.fixedDeltaTime);
-                handoff.Piece.transform.position = position;
-                if (position.y > physicsHandoffLineY)
+                if (!handoff.Piece.TryGetActiveCellVerticalExtents(
+                        out float lowestCellY,
+                        out _))
+                {
+                    Debug.LogError("[ShredderHandoff] Could not resolve the exit piece footprint.", handoff.Piece);
+                    activeExitHandoffs.RemoveAt(index);
                     continue;
+                }
+
+                // Root pivots differ between tall and irregular pieces. Moving
+                // a root to one fixed Y collapsed distinct footprints into one
+                // physical plane and caused Box2D depenetration explosions.
+                // The handoff line is a bottom-edge plane instead.
+                float remainingDistance = lowestCellY - physicsHandoffLineY;
+                if (remainingDistance > 0f)
+                {
+                    float step = Mathf.Min(remainingDistance, speed * Time.fixedDeltaTime);
+                    handoff.Piece.transform.position += Vector3.down * step;
+                    continue;
+                }
 
                 PrototypeBoard board = PrototypeBoard.Active;
                 if (board == null || !board.TryReleaseShredderExitReservation(handoff.Piece))
@@ -181,6 +196,7 @@ namespace GravityPuzzle
                     continue;
                 }
 
+                Physics2D.SyncTransforms();
                 handoff.Piece.EnterShredderFreefallPhysics(shredderConfig, speed);
                 activeFreefallPieces.Add(handoff);
                 activeExitHandoffs.RemoveAt(index);
@@ -198,8 +214,31 @@ namespace GravityPuzzle
                     continue;
                 }
 
+                ConstrainFreefallMotion(freefall.Piece);
+
                 if (TryCapturePhysicsIslandMember(freefall.Piece, freefall.Zone))
                     activeFreefallPieces.RemoveAt(index);
+            }
+        }
+
+        private void ConstrainFreefallMotion(PuzzlePiece piece)
+        {
+            if (piece == null || piece.Body == null || shredderConfig == null)
+                return;
+
+            Rigidbody2D body = piece.Body;
+            Vector2 velocity = body.velocity;
+            float maxSpeed = shredderConfig.PhysicsFreefallMaxSpeed;
+            if (maxSpeed > 0f && velocity.sqrMagnitude > maxSpeed * maxSpeed)
+                body.velocity = velocity.normalized * maxSpeed;
+
+            float maxAngularSpeed = shredderConfig.PhysicsFreefallMaxAngularSpeed;
+            if (maxAngularSpeed > 0f)
+            {
+                body.angularVelocity = Mathf.Clamp(
+                    body.angularVelocity,
+                    -maxAngularSpeed,
+                    maxAngularSpeed);
             }
         }
 
@@ -459,9 +498,12 @@ namespace GravityPuzzle
             if (!piece.TryBeginShredderFeedFromPhysicsIsland())
                 return false;
 
+            float entryDownwardSpeed = piece.Body != null
+                ? Mathf.Max(0f, -piece.Body.velocity.y)
+                : 0f;
             board.JointSpringPresenter?.PrepareForShredder(piece);
             board.BreakJointsForPiece(piece);
-            StartCoroutine(FeedPieceIntoShredder(piece, zone));
+            StartCoroutine(FeedPieceIntoShredder(piece, zone, entryDownwardSpeed));
             return true;
         }
 
@@ -575,7 +617,8 @@ namespace GravityPuzzle
 
         private System.Collections.IEnumerator FeedPieceIntoShredder(
             PuzzlePiece piece,
-            ShredderCatchZone zone)
+            ShredderCatchZone zone,
+            float entryDownwardSpeed = 0f)
         {
             if (piece == null || zone == null)
             {
@@ -654,6 +697,13 @@ namespace GravityPuzzle
             float tremorFrequency = shredderConfig != null ? shredderConfig.TremorFrequency : 55f;
             float shakeAmplitude = shredderConfig != null ? shredderConfig.FeedShakeAmplitude : 2.5f;
             float maxTiltAngle = shredderConfig != null ? shredderConfig.MaxFeedTiltAngle : 5f;
+            float feedAlignmentSpeed = shredderConfig != null
+                ? shredderConfig.FeedAlignmentAngularSpeed
+                : 360f;
+            float feedEntryDeceleration = shredderConfig != null
+                ? shredderConfig.FeedEntryDeceleration
+                : 18f;
+            float currentFeedSpeed = Mathf.Max(feedSpeed, entryDownwardSpeed);
             float debrisAccumulator = 0f;
             // The clipping seam sits at the center/upper-middle line of the wheels.
             float visualCutterY = clippingSeamY;
@@ -687,21 +737,30 @@ namespace GravityPuzzle
 
                 if (rb != null)
                 {
-                    // The feed is kinematic, so commit its position steadily downwards.
-                    rb.MovePosition(rb.position + new Vector2(0f, -feedSpeed * feedDeltaTime));
+                    // Preserve the incoming downward momentum visually, then
+                    // ease to the normal feed speed instead of producing a
+                    // one-frame slow-down when Dynamic physics is captured.
+                    currentFeedSpeed = Mathf.MoveTowards(
+                        currentFeedSpeed,
+                        feedSpeed,
+                        feedEntryDeceleration * feedDeltaTime);
+                    rb.MovePosition(rb.position + new Vector2(0f, -currentFeedSpeed * feedDeltaTime));
 
-                    // Keep the contact pose fixed while the kinematic motor
-                    // pulls the piece through the cutter. Dynamic pieces can
-                    // settle and rotate above the capture plane, but an active
-                    // feed is constrained to the configured envelope so a
-                    // wide shape cannot sweep into the mouth walls or another
-                    // simultaneous feed.
+                    // A freefall piece can arrive at any natural angle. The
+                    // previous direct clamp to +/-5 degrees around zero made
+                    // 90/180-degree pieces visibly snap and could make a wide
+                    // shape jump through the mouth. Settle only toward its
+                    // nearest cardinal orientation at a bounded rate.
                     rb.angularVelocity = 0f;
-                    float clampedAngle = Mathf.Clamp(
-                        Mathf.DeltaAngle(0f, rb.rotation),
-                        -maxTiltAngle,
-                        maxTiltAngle);
-                    rb.MoveRotation(clampedAngle);
+                    float currentAngle = rb.rotation;
+                    float cardinalAngle = Mathf.Round(currentAngle / 90f) * 90f;
+                    if (Mathf.Abs(Mathf.DeltaAngle(currentAngle, cardinalAngle)) > maxTiltAngle)
+                    {
+                        rb.MoveRotation(Mathf.MoveTowardsAngle(
+                            currentAngle,
+                            cardinalAngle,
+                            feedAlignmentSpeed * feedDeltaTime));
+                    }
                 }
 
                 // Sample active block cells directly so concave/notched pieces (L, U, etc.)
