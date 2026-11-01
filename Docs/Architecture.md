@@ -43,15 +43,22 @@ independent groups continue to fall without stalling board gravity.
 The board commits the stack atomically and owns the lifecycle transitions.
 
 `BlockShredder` owns admission to each authored `ShredderCatchZone`, but does
-not reserve a queue, lane, or grid column. Every piece that satisfies its own
-coordinate-defined capture predicate may begin a feed, including multiple
-pieces in the same mouth on the same tick. A prevalidated support island has
-no separate mouth-side waiting state: every reserved member immediately enters
-the established kinematic feed at the configured speed. Per-cell colliders
-remain active until their individual cells cross the cutter, which is also the
-first point at which cutter presentation occurs. This prevents a Unity contact
-wedge or a failed secondary capture from becoming a gameplay queue or a
-permanently locked piece.
+not reserve a queue, lane, or grid column. A piece whose authoritative footprint
+reaches the map-bottom exit in that zone enters `HandoffToPhysics` immediately:
+targeting is locked and its grid cells stay reserved while an owned kinematic
+exit phase clears the map. The exit line is evaluated from the lowest physical
+cell edge, never from a piece root/pivot. At that line the reservation is
+released and the piece becomes an independent Dynamic freefall body. Freefall
+bodies may collide and rotate naturally, but config-owned speed and angular-speed
+limits bound contact recovery. They are never held in a hidden queue.
+
+The mouth capture plane uses the same lowest-cell geometry. Capture promotes a
+piece to the existing kinematic feed without retaining its freefall colliders;
+therefore a feeding piece cannot act as an infinite-mass obstacle for pieces
+still in freefall. Its downward speed eases to the configured feed speed and its
+orientation settles toward its nearest cardinal rotation at a bounded rate,
+rather than snapping every body toward zero degrees. This keeps irregular and
+board-rotated shapes visually continuous through the state transition.
 
 `ShredderCatchZone` validates physical capture using per-cell geometry and then
 confirms the authoritative grid state. `CollisionBounds` is not used to decide
