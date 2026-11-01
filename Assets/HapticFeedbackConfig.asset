@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f442298f2d34f4ca1f38ac3d92d3e7a, type: 3}
+  m_Name: HapticFeedbackConfig
+  m_EditorClassIdentifier: 
+  pieceSelected: {enabled: 1, intensity: 0.12, durationMilliseconds: 12}
+  invalidDrop: {enabled: 1, intensity: 0.18, durationMilliseconds: 22}
+  validDrop: {enabled: 1, intensity: 0.2, durationMilliseconds: 18}
+  invalidDropCooldownMilliseconds: 250
+  uiCooldownMilliseconds: 0
+  uiPriority: 1
+  hammerImpact: {enabled: 1, intensity: 0.58, durationMilliseconds: 55}
+  bombDefused:
+    enabled: 1
+    first: {enabled: 1, intensity: 0.32, durationMilliseconds: 22}
+    second: {enabled: 1, intensity: 0.42, durationMilliseconds: 30}
+    third: {enabled: 0, intensity: 0, durationMilliseconds: 1}
+    gapMilliseconds: 55
+  rocketImpact: {enabled: 1, intensity: 0.68, durationMilliseconds: 65}
+  freezeActivated:
+    enabled: 1
+    first: {enabled: 1, intensity: 0.22, durationMilliseconds: 25}
+    second: {enabled: 1, intensity: 0.28, durationMilliseconds: 30}
+    third: {enabled: 0, intensity: 0, durationMilliseconds: 1}
+    gapMilliseconds: 70
+  impactCooldownMilliseconds: 0
+  impactPriority: 3
+  shredderPatternEnabled: 1
+  shredderStartIntensity: 0.2
+  shredderEndIntensity: 0.08
+  shredderIntensityByFeedProgress:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 1
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  shredderOnMilliseconds: 28
+  shredderOffMilliseconds: 92
+  shredderIntensityUpdateThreshold: 0.02
+  shredderPieceCompleted: {enabled: 1, intensity: 0.32, durationMilliseconds: 32}
+  shredderCompletionCooldownMilliseconds: 0
+  shredderCompletionPriority: 2
+  levelCompleted:
+    enabled: 1
+    first: {enabled: 1, intensity: 0.3, durationMilliseconds: 35}
+    second: {enabled: 1, intensity: 0.42, durationMilliseconds: 45}
+    third: {enabled: 1, intensity: 0.58, durationMilliseconds: 70}
+    gapMilliseconds: 65
+  levelFailed:
+    enabled: 1
+    first: {enabled: 1, intensity: 0.48, durationMilliseconds: 65}
+    second: {enabled: 1, intensity: 0.34, durationMilliseconds: 45}
+    third: {enabled: 0, intensity: 0, durationMilliseconds: 1}
+    gapMilliseconds: 90
+  resultCooldownMilliseconds: 0
+  resultPriority: 3

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.VFX;
 using GravityPuzzle.Presentation.Views;
 using UnityEngine;
@@ -721,6 +722,9 @@ namespace GravityPuzzle
             Vector2 lastContactCenter = Vector2.zero;
             float lastContactWidth = 0f;
             bool isShreddingSoundActive = false;
+            bool hapticSessionActive = false;
+            bool feedCompletedNormally = false;
+            int hapticPieceId = piece.SourcePieceId;
             ShredderContactGlowView activeGlowView = null;
             ShredderContactGlowPool.TryRent(out activeGlowView);
 
@@ -782,6 +786,21 @@ namespace GravityPuzzle
                         isShreddingSoundActive = true;
                         StartContinuousShredSound();
                     }
+
+                    if (!hapticSessionActive)
+                    {
+                        // Match the established continuous-audio ownership: the pattern begins
+                        // on real cutter contact, not on the earlier physics handoff.
+                        HapticFeedbackRuntime.BeginShredder(hapticPieceId);
+                        hapticSessionActive = true;
+                    }
+
+                    // Progress is derived from material already consumed by the feed, rather
+                    // than wall-clock time, so pauses or a slower physical entry do not fade it.
+                    float feedProgress = totalProgress > 0f
+                        ? 1f - Mathf.Clamp01(remainingProgressToEmit / totalProgress)
+                        : 0f;
+                    HapticFeedbackRuntime.UpdateShredderProgress(hapticPieceId, feedProgress);
 
                     // Apply high-frequency mechanical vibration to visual renderers without jittering the physics body
                     float shakeOffsetX = Mathf.Sin(Time.time * tremorFrequency) * tremorIntensity * shakeAmplitude;
@@ -1049,6 +1068,7 @@ namespace GravityPuzzle
                         isShreddingSoundActive = false;
                         StopContinuousShredSound();
                     }
+                    feedCompletedNormally = true;
                     break;
                 }
             }
@@ -1078,6 +1098,9 @@ namespace GravityPuzzle
                     isShreddingSoundActive = false;
                     StopContinuousShredSound();
                 }
+
+                if (hapticSessionActive)
+                    HapticFeedbackRuntime.EndShredder(hapticPieceId, feedCompletedNormally);
             }
 
             if (piece != null)

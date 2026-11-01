@@ -546,6 +546,7 @@ namespace GravityPuzzle
                 piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
                 impactSucceeded = true;
+                HapticFeedbackRuntime.HammerImpact(piece.IsBomb && piece.IsBombDefused);
                 if (cell.progressUnits > 0f)
                 {
                     if (board?.BreakJointsById(hammerJointIds) > 0)

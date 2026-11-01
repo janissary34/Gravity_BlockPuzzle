@@ -2761,6 +2761,7 @@ namespace GravityPuzzle
 
                     OnLevelCleared?.Invoke();
                     LevelCleared?.Invoke();
+                    HapticFeedbackRuntime.LevelCompleted();
 
                     if (winPanel != null)
                     {
@@ -2863,6 +2864,7 @@ namespace GravityPuzzle
             TryTransitionGameState(GameState.Result);
             Debug.Log("LEVEL FAILED!");
             LevelFailed?.Invoke();
+            HapticFeedbackRuntime.LevelFailed();
         }
 
         private void PlayLevelClearParticleEffects()

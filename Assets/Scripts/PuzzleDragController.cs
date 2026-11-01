@@ -929,6 +929,7 @@ namespace GravityPuzzle
 
             lastResolvedDragPosition = selectedPresentationPosition;
             hasLastResolvedDragPosition = true;
+            HapticFeedbackRuntime.PieceSelected();
             if (isCombined)
                 Physics2D.SyncTransforms();
             return true;
@@ -1395,6 +1396,7 @@ namespace GravityPuzzle
             {
                 if (TryCommitSafeSnapRelease(selectedPiece, out _))
                 {
+                    HapticFeedbackRuntime.ValidDrop();
                     for (int groupIndex = 0; groupIndex < selectedJointGroupPieces.Count; groupIndex++)
                         SnapPieceToCommittedGridPosition(selectedJointGroupPieces[groupIndex]);
                 }
@@ -1410,6 +1412,7 @@ namespace GravityPuzzle
 
             if (TryCommitSafeSnapRelease(selectedPiece, out Vector2 releasePosition))
             {
+                HapticFeedbackRuntime.ValidDrop();
                 PuzzlePiece releasePiece = selectedPiece;
                 gridReleasePresentationPiece = releasePiece;
                 if (!releasePiece.GridFallView.PlayReleaseTo(
@@ -1435,6 +1438,7 @@ namespace GravityPuzzle
             if (hasSelectedPieceStartAnchor &&
                 TryRestoreGridRelease(selectedPiece, restoreAnchor, out Vector2 restorePosition))
             {
+                HapticFeedbackRuntime.InvalidDrop();
                 MoveBody(body, restorePosition);
                 selectedPiece = null;
                 hasSelectedPieceStartAnchor = false;

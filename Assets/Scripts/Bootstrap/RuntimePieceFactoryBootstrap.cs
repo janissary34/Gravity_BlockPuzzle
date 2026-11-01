@@ -73,6 +73,10 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Optional visual lookup for level piece Visual Id values. Empty IDs keep their authored legacy colours.")]
         [SerializeField] private PieceVisualConfig pieceVisualConfig;
 
+        [Header("Haptics")]
+        [Tooltip("Presentation-only mobile haptic tuning. Leave unassigned only for scenes that intentionally have no haptic feedback.")]
+        [SerializeField] private HapticFeedbackConfig hapticFeedbackConfig;
+
         [Header("Ice Block Particles")]
         [Tooltip("Prefab template prewarmed once per possible ice block. A separate instance plays at every ice block.")]
         [SerializeField] private ParticleSystem iceCrackParticleSystem;
@@ -95,6 +99,7 @@ namespace GravityPuzzle.Bootstrap
             // Inventory is configured before level/UI setup so every booster
             // adapter reads one persistent authority from its first refresh.
             BoosterInventoryRuntime.Configure(new PlayerPrefsBoosterInventory());
+            HapticFeedbackRuntime.Configure(hapticFeedbackConfig);
 
             if (gameplayCamera == null)
             {
@@ -209,6 +214,16 @@ namespace GravityPuzzle.Bootstrap
 
             WarnForUnresolvedVisualIds(selectedLevel);
             isReady = true;
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            HapticFeedbackRuntime.NotifyApplicationPaused(paused);
+        }
+
+        private void OnDestroy()
+        {
+            HapticFeedbackRuntime.StopAll();
         }
 
         private void ResolveCoinDisplayText()

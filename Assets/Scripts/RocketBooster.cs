@@ -517,6 +517,7 @@ namespace GravityPuzzle
                 // the rocket removal is visually complete, not on target tap.
                 piece.ReportDestroyed();
                 piece.ReleaseInstance();
+                HapticFeedbackRuntime.RocketImpact();
             }
 
             if (consumed)

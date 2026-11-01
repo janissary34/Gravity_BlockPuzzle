@@ -621,6 +621,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.BombOverlaySprite : null,
                 pieceVisualConfig != null ? pieceVisualConfig.BombOverlayFill : .936f,
                 pieceVisualConfig != null ? pieceVisualConfig.BombDefuseSplitMaterial : null,
+                pieceVisualConfig != null ? pieceVisualConfig.BombShredderVoxelSubdivisions : 4,
                 definition.frozenMoveCount,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterFont : null,
                 resolvedIceFontSize,

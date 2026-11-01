@@ -8,6 +8,7 @@ MonoImporter:
   - voxelShardPrefab: {fileID: 3779104866993386737, guid: 407437a00a22144cd80d53c456435d6e, type: 3}
   - poolConfig: {fileID: 11400000, guid: e83a15e692e0d4a49ab874c797e92f79, type: 2}
   - pieceVisualConfig: {instanceID: 0}
+  - hapticFeedbackConfig: {fileID: 11400000, guid: c1e49dc9cdd54cc895e661637e7d31a5, type: 2}
   - poolParent: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}

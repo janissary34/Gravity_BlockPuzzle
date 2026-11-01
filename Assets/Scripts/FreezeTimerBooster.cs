@@ -169,6 +169,7 @@ namespace GravityPuzzle
 
             BoosterFirstUseTutorialRuntime.Gate?.NotifyBoosterActivated(BoosterRewardType.FreezeTimer);
             freezeRoutine = StartCoroutine(FreezeTimerRoutine(boundBoard));
+            HapticFeedbackRuntime.FreezeActivated();
             BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.FreezeTimer);
             RefreshButtonState();
             return true;

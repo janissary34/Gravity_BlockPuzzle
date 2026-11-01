@@ -194,6 +194,7 @@ namespace GravityPuzzle
         private Sprite bombOverlaySprite;
         private float bombOverlayFill = .936f;
         private Material bombDefuseSplitMaterial;
+        private int bombShredderVoxelSubdivisions = 4;
         private Material icePresentationMaterial;
         private IIceBlockParticleVfx iceParticleVfx;
         private IIceBlockParticleVfxHandle iceParticleVfxHandle;
@@ -278,7 +279,7 @@ namespace GravityPuzzle
         private SpriteRenderer bombDefuseLeftRenderer;
         private SpriteRenderer bombDefuseRightRenderer;
         private readonly List<SpriteRenderer> bombShredderFragmentRenderers =
-            new List<SpriteRenderer>(9);
+            new List<SpriteRenderer>(16);
         private MaterialPropertyBlock bombDefusePropertyBlock;
         private int previousBombRemaining = -1;
 
@@ -1002,10 +1003,11 @@ namespace GravityPuzzle
 
         private bool TryBuildBombShredderFragments()
         {
-            if (bombDefuseSplitMaterial == null || bombShredderFragmentRenderers.Count > 0)
+            if (bombDefuseSplitMaterial == null || bombOverlayRenderer == null ||
+                bombOverlayRenderer.sprite == null || bombShredderFragmentRenderers.Count > 0)
                 return false;
 
-            int subdivisions = VoxelBlockBuilder.Subdivisions;
+            int subdivisions = bombShredderVoxelSubdivisions;
             int fragmentCount = subdivisions * subdivisions;
             for (int index = 0; index < fragmentCount; index++)
             {
@@ -1636,6 +1638,7 @@ namespace GravityPuzzle
             bombOverlaySprite = setup.BombOverlaySprite;
             bombOverlayFill = setup.BombOverlayFill;
             bombDefuseSplitMaterial = setup.BombDefuseSplitMaterial;
+            bombShredderVoxelSubdivisions = Mathf.Clamp(setup.BombShredderVoxelSubdivisions, 2, 8);
             ConfigureFreeze(
                 setup.SpecialBlockType == PieceSpecialBlockType.Bomb ? 0 : setup.FrozenMoveCount,
                 setup.IceCounterFont,
@@ -1676,6 +1679,7 @@ namespace GravityPuzzle
             bombOverlaySprite = null;
             bombOverlayFill = .936f;
             bombDefuseSplitMaterial = null;
+            bombShredderVoxelSubdivisions = 4;
             shredderReservationCells.Clear();
             shredderCellsReadyToRelease.Clear();
             shredderReservationStartBodyY = 0f;
@@ -3955,7 +3959,8 @@ namespace GravityPuzzle
         private bool PlayBombDefusePresentation()
         {
             if (bombOverlayRenderer == null || !bombOverlayRenderer.enabled ||
-                bombDefuseSplitMaterial == null || bombDefusePropertyBlock == null)
+                bombOverlayRenderer.sprite == null || bombDefuseSplitMaterial == null ||
+                bombDefusePropertyBlock == null)
             {
                 return false;
             }

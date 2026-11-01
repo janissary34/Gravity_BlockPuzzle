@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using GravityPuzzle.Infrastructure.Services;
 using UnityEngine.SceneManagement;
 using System;
 
@@ -38,6 +39,7 @@ namespace GravityPuzzle.Presentation.Views
 
         public event Action Closed;
         public event Action<bool> SoundChanged;
+        public event Action<bool> VibrationChanged;
 
         private void Awake()
         {
@@ -125,6 +127,8 @@ namespace GravityPuzzle.Presentation.Views
             vibrationEnabled = !vibrationEnabled;
             PlayerPrefs.SetInt(VibrationPreferenceKey, vibrationEnabled ? 1 : 0);
             PlayerPrefs.Save();
+            HapticFeedbackRuntime.NotifyPreferenceChanged(vibrationEnabled);
+            VibrationChanged?.Invoke(vibrationEnabled);
             RefreshToggleVisuals();
         }
 

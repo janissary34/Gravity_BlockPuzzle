@@ -5,6 +5,7 @@
 * `PrototypeBootstrap` is the scene composition root.
 * The board grid/matrix is authoritative for occupancy and gameplay rules.
 * Piece transforms, colliders, sprites, VFX, and tweens represent gameplay state; they do not define it.
+* Haptics are presentation-only. `HapticFeedbackConfig` owns cue tuning and per-cue gates; `RuntimePieceFactoryBootstrap` configures the centralized runtime adapter. Gameplay owners notify it only after a successful authoritative outcome. Shredder feedback begins at real cutter contact, aggregates concurrent feeds by their least feed progress, and always stops on cancellation, app pause, preference disable, or scene teardown.
 * Runtime piece roots come from the typed `BlockPiece` pool and must fully reset presentation, physics, subscriptions, and temporary state when returned.
 * `GravityLevelDefinition` and the associated ScriptableObject configs own authored level and tuning data. Mutable session state belongs to runtime objects. Each level also owns its authored difficulty label (`Normal`, `Hard`, or `Very Hard`); this is presentation metadata, with `Normal` reserved for the future Easy UI indicator. Level definitions own viewport coverage; `BoardPresentationConfig` owns the shared board-top viewport inset, which runtime applies through the gameplay camera when it builds every level.
 

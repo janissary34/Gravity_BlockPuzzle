@@ -74,6 +74,8 @@ An armed Bomb icon is replaced by a pooled visual voxel grid as it enters the
 shredder. Those icon fragments use the same cutter dissolve and clipping path as
 the block, so the Bomb artwork is physically consumed cell-by-cell; its counter is
 hidden only when the final icon fragment has crossed the cutter line.
+`PieceVisualConfig` owns the globally shared fragment material and visual grid
+resolution; it does not alter gameplay voxels, progress, or shredder occupancy.
 
 Presentation slots are pooled state. Every renter must receive reset sprite, material, colour, transform, sorting, mask, enabled state, and property-block state.
 

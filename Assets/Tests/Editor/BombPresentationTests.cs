@@ -169,9 +169,10 @@ public sealed class BombPresentationTests
             piece.PrepareModularShredderSurface();
 
             CollectionAssert.DoesNotContain(piece.ConfiguredShredderRenderers, overlay);
+            int visualSubdivisions = GetField<int>(piece, "bombShredderVoxelSubdivisions");
             Assert.That(
                 piece.ConfiguredShredderRenderers.Length,
-                Is.EqualTo(1 + VoxelBlockBuilder.Subdivisions * VoxelBlockBuilder.Subdivisions));
+                Is.EqualTo(1 + visualSubdivisions * visualSubdivisions));
         }
         finally
         {

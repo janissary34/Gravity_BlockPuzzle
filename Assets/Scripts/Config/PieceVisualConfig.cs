@@ -55,6 +55,8 @@ namespace GravityPuzzle.Config
         [SerializeField, Range(.1f, 1f)] private float bombOverlayFill = .936f;
         [Tooltip("Shared sprite material that clips the two pooled halves of a Bomb icon during Hammer defusal.")]
         [SerializeField] private Material bombDefuseSplitMaterial;
+        [Tooltip("Number of visual fragments per Bomb-icon side while it is consumed by the shredder. This affects presentation only.")]
+        [SerializeField, Range(2, 8)] private int bombShredderVoxelSubdivisions = 4;
         [SerializeField] private TMP_FontAsset bombCounterFont;
         [Tooltip("Global world-space font size for every Bomb counter. Level assets cannot override this value.")]
         [SerializeField, Min(.1f)] private float bombCounterFontSize = .65f;
@@ -117,6 +119,7 @@ namespace GravityPuzzle.Config
         public Sprite BombOverlaySprite => bombOverlaySprite;
         public float BombOverlayFill => bombOverlayFill;
         public Material BombDefuseSplitMaterial => bombDefuseSplitMaterial;
+        public int BombShredderVoxelSubdivisions => Mathf.Clamp(bombShredderVoxelSubdivisions, 2, 8);
         public TMP_FontAsset BombCounterFont => bombCounterFont != null ? bombCounterFont : iceCounterFont;
         public float BombCounterFontSize => Mathf.Max(.1f, bombCounterFontSize);
         public Color BombCounterTextColor => bombCounterTextColor;
