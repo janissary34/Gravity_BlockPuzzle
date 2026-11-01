@@ -583,7 +583,12 @@ namespace GravityPuzzle
 
             if (timer_obj == null || timer_txt == null)
             {
-                Debug.LogWarning("[TimerBooster] Cannot play sequence: timer_obj or timer_txt reference is missing in Inspector.");
+                Debug.LogWarning(
+                    "[TimerBooster] Cannot play sequence because a required reference is missing. " +
+                    $"object='{name}', scene='{gameObject.scene.name}', " +
+                    $"timer_obj={(timer_obj == null ? "missing" : timer_obj.name)}, " +
+                    $"timer_txt={(timer_txt == null ? "missing" : timer_txt.name)}.",
+                    this);
                 return;
             }
 
