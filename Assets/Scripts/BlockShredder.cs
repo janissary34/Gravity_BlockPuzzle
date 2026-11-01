@@ -236,10 +236,6 @@ namespace GravityPuzzle
                 return false;
             }
 
-            float entryDownwardSpeed = piece.Body != null
-                ? Mathf.Max(0f, -piece.Body.velocity.y)
-                : 0f;
-
             if (!piece.TryBeginOffBoardFreefallShredding())
             {
                 Debug.LogError(
@@ -251,8 +247,77 @@ namespace GravityPuzzle
             PrototypeBoard board = PrototypeBoard.Active;
             board?.JointSpringPresenter?.PrepareForShredder(piece);
             board?.BreakJointsForPiece(piece);
-            StartCoroutine(FeedPieceIntoShredder(piece, zone, entryDownwardSpeed));
+            ConsumeFreefallPieceAtCutter(piece, zone);
             return true;
+        }
+
+        /// <summary>
+        /// Completes the new freefall route at the cutter without reviving the
+        /// legacy kinematic feed. The body stays fully physics-owned until it
+        /// crosses the seam; at that exact destruction event the pooled root
+        /// is removed and only independent particle and HUD presentations
+        /// remain alive.
+        /// </summary>
+        private void ConsumeFreefallPieceAtCutter(
+            PuzzlePiece piece,
+            ShredderCatchZone zone)
+        {
+            if (piece == null || zone == null)
+                return;
+
+            float clippingSeamY = zone.ShredY -
+                                  zone.WheelRadius * shredderConfig.GearClippingRatio;
+            piece.GetActiveCellBounds(cachedCellBoundsBuffer);
+
+            Vector2 contactCenter = new Vector2(piece.transform.position.x, clippingSeamY);
+            float contactWidth = .05f;
+            if (!TryGetCutterContactSurface(
+                    cachedCellBoundsBuffer,
+                    clippingSeamY,
+                    out contactWidth,
+                    out contactCenter))
+            {
+                for (int index = 0; index < cachedCellBoundsBuffer.Count; index++)
+                {
+                    Bounds bounds = cachedCellBoundsBuffer[index];
+                    contactCenter.x = bounds.center.x;
+                    contactWidth = Mathf.Max(contactWidth, bounds.size.x);
+                }
+
+                contactCenter.y = clippingSeamY;
+            }
+
+            Color tileColor = Opaque(piece.VisualColor);
+            if (debrisParticleSystem != null && shredderConfig.EnableContactDebrisPresentation)
+            {
+                int entryBurstCount = Mathf.Min(
+                    shredderConfig.MaxDebrisEntryBurstPerFrame,
+                    Mathf.CeilToInt(contactWidth * shredderConfig.DebrisEntryBurstPerWorldUnit));
+                EmitEntryBurstAtContactSurface(
+                    cachedCellBoundsBuffer,
+                    clippingSeamY,
+                    contactWidth,
+                    tileColor,
+                    entryBurstCount);
+                EmitFinalDebrisBurst(contactCenter, contactWidth, tileColor);
+            }
+
+            LevelProgressManager progressManager = LevelProgressManager.Instance;
+            float progress = Mathf.Max(0f, piece.RemainingProgressUnits);
+            if (progressManager != null && progress > 0f)
+            {
+                int blockCount = Mathf.Max(1, piece.ProgressUnits);
+                int flightCount = shredderConfig.GetProgressVoxelFlightCount(blockCount);
+                progressManager.SpawnFlyingVoxelBurst(
+                    new Vector3(contactCenter.x, clippingSeamY, 0f),
+                    tileColor,
+                    progress,
+                    flightCount,
+                    contactWidth);
+            }
+
+            piece.PrepareForPresentationRemoval();
+            piece.ReleaseInstance();
         }
 
         private void OnDisable()

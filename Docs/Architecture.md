@@ -57,8 +57,9 @@ The freefall capture plane is the rendered cutter seam rather than the older
 approach plane. Only when the lowest real cell crosses that seam does the board
 transition the already-off-board model from `HandoffToPhysics` to `Shredding`.
 This transition never recreates a grid reservation. The cutter presentation then
-owns the final visual consumption and pooled despawn; it cannot block or slow a
-piece while that piece is still travelling through the open freefall area.
+emits pooled cutter debris and HUD progress before the root is returned to its
+pool. It does not take transform or Rigidbody ownership before the destruction
+event, so it cannot block or slow a piece in the open freefall area.
 
 `ShredderCatchZone` validates physical capture using per-cell geometry and then
 confirms the authoritative grid state. `CollisionBounds` is not used to decide
