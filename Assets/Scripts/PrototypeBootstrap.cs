@@ -3032,6 +3032,29 @@ namespace GravityPuzzle
             SplashSceneLoader.LoadViaSplash(activeScene.name);
         }
 
+        /// <summary>
+        /// Advances the campaign for build verification without treating the
+        /// current board as completed or granting its completion rewards.
+        /// </summary>
+        public bool TryAdvanceToNextLevelForDebug()
+        {
+            if (nextLevelTransitionPending || !GravityLevelRuntime.HasNextLevel)
+                return false;
+
+            nextLevelTransitionPending = true;
+            TryTransitionGameState(GameState.Result);
+
+            if (!GravityLevelRuntime.TryAdvanceToNextLevel())
+            {
+                nextLevelTransitionPending = false;
+                return false;
+            }
+
+            Scene activeScene = SceneManager.GetActiveScene();
+            SplashSceneLoader.LoadViaSplash(activeScene.name);
+            return true;
+        }
+
         private static void PlayParticleEffect(ParticleSystem particleEffect)
         {
             if (particleEffect == null)
