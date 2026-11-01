@@ -59,9 +59,9 @@ namespace GravityPuzzle
         private const float MaximumBombCounterFontScale = .32f;
         private const string IceCounterPresentationName = "Ice Counter Presentation";
         private const string BombCounterPresentationName = "Bomb Counter Presentation";
-        private static readonly int BombDefuseSplitSideId = Shader.PropertyToID("_SplitSide");
         private static readonly int BombDefuseFadeId = Shader.PropertyToID("_DefuseFade");
-        private static readonly int BombDefuseSplitLineLocalId = Shader.PropertyToID("_SplitLineLocal");
+        private static readonly int BombFragmentClipMinLocalId = Shader.PropertyToID("_ClipMinLocal");
+        private static readonly int BombFragmentClipMaxLocalId = Shader.PropertyToID("_ClipMaxLocal");
         private static readonly List<PuzzlePiece> activePieces = new List<PuzzlePiece>();
 
         public static IReadOnlyList<PuzzlePiece> ActivePieces => activePieces;
@@ -277,6 +277,8 @@ namespace GravityPuzzle
         private SpriteRenderer bombOverlayRenderer;
         private SpriteRenderer bombDefuseLeftRenderer;
         private SpriteRenderer bombDefuseRightRenderer;
+        private readonly List<SpriteRenderer> bombShredderFragmentRenderers =
+            new List<SpriteRenderer>(9);
         private MaterialPropertyBlock bombDefusePropertyBlock;
         private int previousBombRemaining = -1;
 
@@ -976,6 +978,18 @@ namespace GravityPuzzle
                 return;
             }
 
+            if (TryBuildBombShredderFragments())
+            {
+                int originalCount = configuredShredderRenderers.Length;
+                SpriteRenderer[] renderersWithFragments = new SpriteRenderer[
+                    originalCount + bombShredderFragmentRenderers.Count];
+                Array.Copy(configuredShredderRenderers, renderersWithFragments, originalCount);
+                for (int index = 0; index < bombShredderFragmentRenderers.Count; index++)
+                    renderersWithFragments[originalCount + index] = bombShredderFragmentRenderers[index];
+                configuredShredderRenderers = renderersWithFragments;
+                return;
+            }
+
             SpriteRenderer[] renderersWithBomb = new SpriteRenderer[
                 configuredShredderRenderers.Length + 1];
             Array.Copy(
@@ -984,6 +998,51 @@ namespace GravityPuzzle
                 configuredShredderRenderers.Length);
             renderersWithBomb[renderersWithBomb.Length - 1] = bombOverlayRenderer;
             configuredShredderRenderers = renderersWithBomb;
+        }
+
+        private bool TryBuildBombShredderFragments()
+        {
+            if (bombDefuseSplitMaterial == null || bombShredderFragmentRenderers.Count > 0)
+                return false;
+
+            int subdivisions = VoxelBlockBuilder.Subdivisions;
+            int fragmentCount = subdivisions * subdivisions;
+            for (int index = 0; index < fragmentCount; index++)
+            {
+                if (!TryGetAvailableIceSlot(out SpriteRenderer fragment))
+                {
+                    ClearBombShredderFragments();
+                    return false;
+                }
+
+                // Add immediately so the next allocation cannot lease the
+                // same pooled renderer.
+                bombShredderFragmentRenderers.Add(fragment);
+            }
+
+            SpriteRenderer source = bombOverlayRenderer;
+            Bounds spriteBounds = source.sprite.bounds;
+            Vector2 minimum = spriteBounds.min;
+            Vector2 fragmentSize = spriteBounds.size / subdivisions;
+            for (int y = 0; y < subdivisions; y++)
+            {
+                for (int x = 0; x < subdivisions; x++)
+                {
+                    int index = y * subdivisions + x;
+                    Vector2 clipMinimum = minimum + Vector2.Scale(
+                        fragmentSize,
+                        new Vector2(x, y));
+                    ConfigureBombFragmentRenderer(
+                        bombShredderFragmentRenderers[index],
+                        source,
+                        clipMinimum,
+                        clipMinimum + fragmentSize,
+                        $"Bomb Shred Voxel {x}_{y}");
+                }
+            }
+
+            source.enabled = false;
+            return true;
         }
 
         public void ClearVoxelPresentation()
@@ -2128,11 +2187,26 @@ namespace GravityPuzzle
                 return;
 
             renderer.enabled = false;
-            if (renderer == bombOverlayRenderer && bombCounterText != null)
+            if (renderer == bombOverlayRenderer || bombShredderFragmentRenderers.Contains(renderer))
             {
-                bombCounterText.enabled = false;
-                bombCounterText.gameObject.SetActive(false);
+                HideBombCounterAfterShredderPass();
             }
+        }
+
+        private void HideBombCounterAfterShredderPass()
+        {
+            if (bombCounterText == null)
+                return;
+
+            for (int index = 0; index < bombShredderFragmentRenderers.Count; index++)
+            {
+                SpriteRenderer fragment = bombShredderFragmentRenderers[index];
+                if (fragment != null && fragment.enabled)
+                    return;
+            }
+
+            bombCounterText.enabled = false;
+            bombCounterText.gameObject.SetActive(false);
         }
 
         private void RestoreDefaultCollisionMaterials()
@@ -3649,7 +3723,8 @@ namespace GravityPuzzle
                 SpriteRenderer candidate = iceSlots[index];
                 if (candidate == null || candidate == wholePieceRenderer || candidate == bombOverlayRenderer ||
                     candidate == bombDefuseLeftRenderer || candidate == bombDefuseRightRenderer ||
-                    iceRenderers.Contains(candidate) || joinedPieceRenderers.Contains(candidate))
+                    bombShredderFragmentRenderers.Contains(candidate) || iceRenderers.Contains(candidate) ||
+                    joinedPieceRenderers.Contains(candidate))
                     continue;
 
                 renderer = candidate;
@@ -3900,8 +3975,22 @@ namespace GravityPuzzle
             bombDefuseLeftRenderer = null;
 
             SpriteRenderer source = bombOverlayRenderer;
-            ConfigureBombDefuseHalf(leftRenderer, source, 0f, "Bomb Defuse Left");
-            ConfigureBombDefuseHalf(rightRenderer, source, 1f, "Bomb Defuse Right");
+            Bounds spriteBounds = source.sprite.bounds;
+            Vector2 spriteMinimum = spriteBounds.min;
+            Vector2 spriteMaximum = spriteBounds.max;
+            float splitX = spriteBounds.center.x;
+            ConfigureBombFragmentRenderer(
+                leftRenderer,
+                source,
+                spriteMinimum,
+                new Vector2(splitX, spriteMaximum.y),
+                "Bomb Defuse Left");
+            ConfigureBombFragmentRenderer(
+                rightRenderer,
+                source,
+                new Vector2(splitX, spriteMinimum.y),
+                spriteMaximum,
+                "Bomb Defuse Right");
             bombDefuseLeftRenderer = leftRenderer;
             bombDefuseRightRenderer = rightRenderer;
 
@@ -3911,22 +4000,27 @@ namespace GravityPuzzle
             Sequence splitSequence = DOTween.Sequence()
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
-            splitSequence.Join(leftRenderer.transform.DOLocalMoveX(
+            splitSequence.Append(leftRenderer.transform.DOLocalMoveX(
                 leftStart.x - tweenConfig.BombDefuseHalfSeparation,
                 duration).SetEase(tweenConfig.BombDefuseSplitEase));
             splitSequence.Join(rightRenderer.transform.DOLocalMoveX(
                 rightStart.x + tweenConfig.BombDefuseHalfSeparation,
                 duration).SetEase(tweenConfig.BombDefuseSplitEase));
-            splitSequence.Join(DOVirtual.Float(0f, 1f, duration, SetBombDefuseFade)
+            splitSequence.Append(DOVirtual.Float(
+                0f,
+                1f,
+                tweenConfig.BombDefuseFadeDuration,
+                SetBombDefuseFade)
                 .SetEase(tweenConfig.BombDefuseFadeEase));
             splitSequence.OnComplete(ClearBombDefusePresentation);
             return true;
         }
 
-        private void ConfigureBombDefuseHalf(
+        private void ConfigureBombFragmentRenderer(
             SpriteRenderer renderer,
             SpriteRenderer source,
-            float splitSide,
+            Vector2 clipMinimum,
+            Vector2 clipMaximum,
             string rendererName)
         {
             renderer.transform.SetParent(transform, false);
@@ -3941,31 +4035,34 @@ namespace GravityPuzzle
             renderer.sortingOrder = source.sortingOrder;
             renderer.enabled = true;
 
-            float splitLineLocal = renderer.sprite != null
-                ? renderer.sprite.bounds.center.x
-                : 0f;
-            ApplyBombDefuseProperties(renderer, splitSide, 0f, splitLineLocal);
+            ApplyBombFragmentProperties(renderer, 0f, clipMinimum, clipMaximum);
         }
 
         private void SetBombDefuseFade(float fade)
         {
             if (bombDefuseLeftRenderer != null)
-                ApplyBombDefuseProperties(bombDefuseLeftRenderer, 0f, fade);
+                SetBombFragmentFade(bombDefuseLeftRenderer, fade);
             if (bombDefuseRightRenderer != null)
-                ApplyBombDefuseProperties(bombDefuseRightRenderer, 1f, fade);
+                SetBombFragmentFade(bombDefuseRightRenderer, fade);
         }
 
-        private void ApplyBombDefuseProperties(
-            SpriteRenderer renderer,
-            float splitSide,
-            float fade,
-            float? splitLineLocal = null)
+        private void SetBombFragmentFade(SpriteRenderer renderer, float fade)
         {
             renderer.GetPropertyBlock(bombDefusePropertyBlock);
-            bombDefusePropertyBlock.SetFloat(BombDefuseSplitSideId, splitSide);
             bombDefusePropertyBlock.SetFloat(BombDefuseFadeId, Mathf.Clamp01(fade));
-            if (splitLineLocal.HasValue)
-                bombDefusePropertyBlock.SetFloat(BombDefuseSplitLineLocalId, splitLineLocal.Value);
+            renderer.SetPropertyBlock(bombDefusePropertyBlock);
+        }
+
+        private void ApplyBombFragmentProperties(
+            SpriteRenderer renderer,
+            float fade,
+            Vector2 clipMinimum,
+            Vector2 clipMaximum)
+        {
+            renderer.GetPropertyBlock(bombDefusePropertyBlock);
+            bombDefusePropertyBlock.SetFloat(BombDefuseFadeId, Mathf.Clamp01(fade));
+            bombDefusePropertyBlock.SetVector(BombFragmentClipMinLocalId, clipMinimum);
+            bombDefusePropertyBlock.SetVector(BombFragmentClipMaxLocalId, clipMaximum);
             renderer.SetPropertyBlock(bombDefusePropertyBlock);
         }
 
@@ -3991,10 +4088,32 @@ namespace GravityPuzzle
             renderer = null;
         }
 
+        private void ClearBombShredderFragments()
+        {
+            for (int index = 0; index < bombShredderFragmentRenderers.Count; index++)
+            {
+                SpriteRenderer renderer = bombShredderFragmentRenderers[index];
+                if (renderer == null)
+                    continue;
+
+                DOTween.Kill(renderer);
+                DOTween.Kill(renderer.transform);
+                renderer.enabled = false;
+                renderer.sprite = null;
+                renderer.color = Color.white;
+                renderer.sharedMaterial = null;
+                renderer.SetPropertyBlock(null);
+                renderer.transform.SetParent(iceSlotsRoot, false);
+            }
+
+            bombShredderFragmentRenderers.Clear();
+        }
+
         private void ClearBombVisuals(bool preserveDefusePresentation = false)
         {
             if (!preserveDefusePresentation)
                 ClearBombDefusePresentation();
+            ClearBombShredderFragments();
 
             previousBombRemaining = -1;
             if (bombOverlayRenderer != null)

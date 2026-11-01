@@ -4,9 +4,9 @@ Shader "GravityPuzzle/Bomb Defuse Split Sprite"
     {
         [PerRendererData] _MainTex("Sprite Texture", 2D) = "white" {}
         [PerRendererData] _Color("Tint", Color) = (1,1,1,1)
-        _SplitSide("Split Side", Float) = 0
         _DefuseFade("Defuse Fade", Range(0,1)) = 0
-        _SplitLineLocal("Split Line Local", Float) = 0
+        _ClipMinLocal("Clip Min Local", Vector) = (-100,-100,0,0)
+        _ClipMaxLocal("Clip Max Local", Vector) = (100,100,0,0)
     }
 
     SubShader
@@ -36,16 +36,16 @@ Shader "GravityPuzzle/Bomb Defuse Split Sprite"
                 float4 positionCS : SV_POSITION;
                 half4 color : COLOR;
                 float2 uv : TEXCOORD0;
-                float localX : TEXCOORD1;
+                float2 localPosition : TEXCOORD1;
             };
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
             CBUFFER_START(UnityPerMaterial)
                 float4 _Color;
-                float _SplitSide;
                 float _DefuseFade;
-                float _SplitLineLocal;
+                float4 _ClipMinLocal;
+                float4 _ClipMaxLocal;
             CBUFFER_END
 
             Varyings Vert(Attributes input)
@@ -54,18 +54,16 @@ Shader "GravityPuzzle/Bomb Defuse Split Sprite"
                 output.positionCS = TransformWorldToHClip(TransformObjectToWorld(input.positionOS));
                 output.uv = input.uv;
                 output.color = input.color * _Color;
-                output.localX = input.positionOS.x;
+                output.localPosition = input.positionOS.xy;
                 return output;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
-                float isRightHalf = step(.5, _SplitSide);
-                float splitDistance = lerp(
-                    _SplitLineLocal - input.localX,
-                    input.localX - _SplitLineLocal,
-                    isRightHalf);
-                clip(splitDistance);
+                clip(input.localPosition.x - _ClipMinLocal.x);
+                clip(_ClipMaxLocal.x - input.localPosition.x);
+                clip(input.localPosition.y - _ClipMinLocal.y);
+                clip(_ClipMaxLocal.y - input.localPosition.y);
 
                 half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.color;
                 color.a *= saturate(1 - _DefuseFade);

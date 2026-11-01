@@ -77,6 +77,8 @@ namespace GravityPuzzle.Config
         [Tooltip("World-space horizontal distance each Bomb icon half travels while fading.")]
         [Min(0f)] [SerializeField] private float bombDefuseHalfSeparation = .12f;
         [SerializeField] private Ease bombDefuseSplitEase = Ease.OutQuad;
+        [Tooltip("Duration the already-split Bomb icon halves remain visible while fading.")]
+        [Min(.001f)] [SerializeField] private float bombDefuseFadeDuration = .2f;
         [SerializeField] private Ease bombDefuseFadeEase = Ease.InQuad;
 
         [Header("Rocket Booster Presentation")]
@@ -217,6 +219,7 @@ namespace GravityPuzzle.Config
         public float BombDefuseSplitDuration => bombDefuseSplitDuration;
         public float BombDefuseHalfSeparation => bombDefuseHalfSeparation;
         public Ease BombDefuseSplitEase => bombDefuseSplitEase;
+        public float BombDefuseFadeDuration => bombDefuseFadeDuration;
         public Ease BombDefuseFadeEase => bombDefuseFadeEase;
         public float RocketEntranceDuration => rocketEntranceDuration;
         public Ease RocketEntranceEase => rocketEntranceEase;

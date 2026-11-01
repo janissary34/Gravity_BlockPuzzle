@@ -67,9 +67,10 @@ MonoBehaviour:
   hammerCameraShakeStrength: 0.12
   hammerCameraShakeVibrato: 18
   hammerCameraShakeRandomness: 90
-  bombDefuseSplitDuration: 0.16
+  bombDefuseSplitDuration: 0.14
   bombDefuseHalfSeparation: 0.12
   bombDefuseSplitEase: 6
+  bombDefuseFadeDuration: 0.2
   bombDefuseFadeEase: 5
   rocketEntranceDuration: 0.4
   rocketEntranceEase: 9

@@ -9,6 +9,8 @@ Shader "GravityPuzzle/Shredder Dissolve Sprite"
         _EdgeSoftness("Edge Softness", Float) = .035
         _NoiseFrequency("Noise Frequency", Float) = 12
         _ShredTint("Shred Tint", Color) = (1,1,1,1)
+        _ClipMinLocal("Clip Min Local", Vector) = (-100,-100,0,0)
+        _ClipMaxLocal("Clip Max Local", Vector) = (100,100,0,0)
     }
 
     SubShader
@@ -39,6 +41,7 @@ Shader "GravityPuzzle/Shredder Dissolve Sprite"
                 half4 color : COLOR;
                 float2 uv : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
+                float2 localPosition : TEXCOORD2;
             };
 
             TEXTURE2D(_MainTex);
@@ -50,6 +53,8 @@ Shader "GravityPuzzle/Shredder Dissolve Sprite"
                 float _EdgeSoftness;
                 float _NoiseFrequency;
                 float4 _ShredTint;
+                float4 _ClipMinLocal;
+                float4 _ClipMaxLocal;
             CBUFFER_END
 
             float Hash(float value)
@@ -65,12 +70,17 @@ Shader "GravityPuzzle/Shredder Dissolve Sprite"
                 output.positionWS = positionWS;
                 output.uv = input.uv;
                 output.color = input.color * _Color;
+                output.localPosition = input.positionOS.xy;
                 return output;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
                 half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.color * _ShredTint;
+                clip(input.localPosition.x - _ClipMinLocal.x);
+                clip(_ClipMaxLocal.x - input.localPosition.x);
+                clip(input.localPosition.y - _ClipMinLocal.y);
+                clip(_ClipMaxLocal.y - input.localPosition.y);
                 float tooth = Hash(floor(input.positionWS.x * _NoiseFrequency));
                 float wave = sin(input.positionWS.x * _NoiseFrequency * 2.17) * .35;
                 float cutterEdge = _ShredLine + ((tooth - .5) + wave) * _EdgeAmplitude;
