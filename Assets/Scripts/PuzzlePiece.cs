@@ -515,7 +515,7 @@ namespace GravityPuzzle
         {
             RestoreBoxRevealContentVisual();
             RestoreShredderPresentation();
-            ApplyGridPhysicsProfile();
+            ApplyLifecyclePhysicsProfile(PieceState.Spawned);
             shredderHandoffMode = ShredderHandoffMode.None;
             keepShredderGridReservationUntilDespawn = false;
             gridDespawned = false;
@@ -555,7 +555,7 @@ namespace GravityPuzzle
             ClearBombVisuals();
             ClearWholePiecePresentation();
             RestoreShredderPresentation();
-            ApplyGridPhysicsProfile();
+            ApplyLifecyclePhysicsProfile(PieceState.Despawned);
             RuntimePieceFactory.ResetPooledPiece(this);
             InvalidateVoxelCache();
         }
@@ -1700,7 +1700,7 @@ namespace GravityPuzzle
             shredderReservationStartBodyY = 0f;
             shredderHandoffMode = ShredderHandoffMode.None;
             keepShredderGridReservationUntilDespawn = false;
-            ApplyGridPhysicsProfile();
+            ApplyLifecyclePhysicsProfile(PieceState.Spawned);
             destructionReported = false;
             useFullCollisionGeometry = false;
             isSelected = false;
@@ -1867,25 +1867,58 @@ namespace GravityPuzzle
         public void PrepareForPresentationRemoval()
         {
             SetSelected(false);
-            ApplyGridPhysicsProfile();
+            ApplyLifecyclePhysicsProfile(PieceState.Despawned);
         }
 
         /// <summary>
-        /// Grid owns normal board movement. This method fully resets the
-        /// engine-facing state instead of relying on prefab leftovers.
+        /// The piece root is the only Unity-side writer of Rigidbody2D,
+        /// collider, material and layer state. Gameplay code must first move
+        /// the authoritative PieceModel through its lifecycle, then ask this
+        /// adapter to apply the matching engine profile. No profile inherits
+        /// state from a previous phase.
         /// </summary>
-        public void ApplyGridPhysicsProfile()
+        public void ApplyLifecyclePhysicsProfile(
+            PieceState state,
+            ShredderConfig shredderConfig = null,
+            float downwardEntrySpeed = 0f)
+        {
+            switch (state)
+            {
+                case PieceState.Spawned:
+                case PieceState.Placed:
+                case PieceState.Dragging:
+                case PieceState.Falling:
+                case PieceState.HandoffToPhysics:
+                case PieceState.Despawned:
+                    ApplyGridPhysicsProfile();
+                    return;
+
+                case PieceState.OpenFreefall:
+                    ApplyOpenFreefallPhysicsProfile(shredderConfig, downwardEntrySpeed);
+                    return;
+
+                case PieceState.Shredding:
+                    ApplyShreddingPhysicsProfile();
+                    return;
+
+                default:
+                    Debug.LogWarning($"[PiecePhysics] Unsupported lifecycle state '{state}' for piece {SourcePieceId}.", this);
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Grid owns normal board movement. Physical collision geometry is
+        /// intentionally inactive here: selection comes from the authoritative
+        /// grid rather than Physics2D overlap queries.
+        /// </summary>
+        private void ApplyGridPhysicsProfile()
         {
             RestoreDefaultPhysicsLayers();
             RestoreDefaultCollisionMaterials();
             useFullCollisionGeometry = false;
             ApplyCollisionProfile();
-            // Grid input resolves a piece with Physics2D overlap queries.
-            // Keep its colliders queryable, while the kinematic profile and
-            // authoritative grid remain the only movement authority. Open
-            // freefall is on an isolated layer, so it cannot collide with
-            // these grid input colliders.
-            SetPiecePhysicsCollidersEnabled(true, false);
+            SetPiecePhysicsCollidersEnabled(false, false);
             PhysicsProfile = PiecePhysicsProfile.Grid;
 
             if (Body == null)
@@ -1899,14 +1932,12 @@ namespace GravityPuzzle
             Body.angularDrag = 0f;
             Body.gravityScale = 0f;
             Body.bodyType = RigidbodyType2D.Kinematic;
-            Body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            Body.constraints = RigidbodyConstraints2D.FreezeAll;
             Body.interpolation = RigidbodyInterpolation2D.None;
             Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             Body.useFullKinematicContacts = false;
             Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            // Grid movement is deterministic kinematic presentation, not
-            // contact-driven simulation. Colliders above remain disabled.
-            Body.simulated = true;
+            Body.simulated = false;
         }
 
         /// <summary>
@@ -1915,7 +1946,7 @@ namespace GravityPuzzle
         /// </summary>
         public void PrepareGridPhysicsForInteraction(bool interpolate)
         {
-            ApplyGridPhysicsProfile();
+            ApplyLifecyclePhysicsProfile(PieceState.Placed);
             if (Body != null)
                 Body.interpolation = interpolate
                     ? RigidbodyInterpolation2D.Interpolate
@@ -1944,7 +1975,7 @@ namespace GravityPuzzle
         /// does not call any shredder support/approach setup: its only allowed
         /// contacts are other OpenFreefall pieces.
         /// </summary>
-        public void ApplyOpenFreefallPhysicsProfile(ShredderConfig config, float downwardSpeed)
+        private void ApplyOpenFreefallPhysicsProfile(ShredderConfig config, float downwardSpeed)
         {
             if (config == null)
                 return;
@@ -1985,7 +2016,7 @@ namespace GravityPuzzle
         /// every physical collider are inert before the feed coroutine moves
         /// the visual root and emits debris.
         /// </summary>
-        public void ApplyShreddingPhysicsProfile()
+        private void ApplyShreddingPhysicsProfile()
         {
             RestoreDefaultPhysicsLayers();
             RestoreDefaultCollisionMaterials();
@@ -2008,74 +2039,6 @@ namespace GravityPuzzle
             Body.interpolation = RigidbodyInterpolation2D.None;
             Body.sleepMode = RigidbodySleepMode2D.StartAsleep;
             Body.simulated = false;
-        }
-
-        /// <summary>
-        /// Dedicated temporary-island profile. It is intentionally separate
-        /// from OpenFreefall because it collides with authored blocker and
-        /// guide geometry inside the controlled shredder corridor.
-        /// </summary>
-        public void ApplyShredderSupportPhysicsProfile(ShredderConfig config)
-        {
-            if (config == null)
-                return;
-
-            useFullCollisionGeometry = true;
-            ApplyCollisionProfile();
-            ApplyShredderCollisionMaterial(config.FeedPhysicsMaterial);
-            ApplyPhysicsLayer(ShredderPhysicsLayers.PieceLayer);
-            SetPiecePhysicsCollidersEnabled(true, false);
-            PhysicsProfile = PiecePhysicsProfile.ShredderSupport;
-            if (Body == null)
-                return;
-
-            Body.position = transform.position;
-            Body.rotation = transform.eulerAngles.z;
-            Body.simulated = true;
-            Body.bodyType = RigidbodyType2D.Dynamic;
-            Body.gravityScale = config.PhysicsIslandGravityScale;
-            Body.drag = 0f;
-            Body.angularDrag = config.PhysicsIslandAngularDrag;
-            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            Body.constraints = RigidbodyConstraints2D.FreezePositionX |
-                               RigidbodyConstraints2D.FreezeRotation;
-            Body.useFullKinematicContacts = false;
-            Body.interpolation = RigidbodyInterpolation2D.Interpolate;
-            Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            Body.velocity = Vector2.zero;
-            Body.angularVelocity = 0f;
-            Body.WakeUp();
-        }
-
-        public void ApplyShredderApproachPhysicsProfile(ShredderConfig config)
-        {
-            if (config == null)
-                return;
-
-            useFullCollisionGeometry = true;
-            ApplyCollisionProfile();
-            ApplyShredderCollisionMaterial(config.FeedPhysicsMaterial);
-            ApplyPhysicsLayer(ShredderPhysicsLayers.PieceLayer);
-            SetPiecePhysicsCollidersEnabled(true, false);
-            PhysicsProfile = PiecePhysicsProfile.ShredderApproach;
-            if (Body == null)
-                return;
-
-            Body.position = transform.position;
-            Body.rotation = transform.eulerAngles.z;
-            Body.simulated = true;
-            Body.bodyType = RigidbodyType2D.Kinematic;
-            Body.gravityScale = 0f;
-            Body.drag = 0f;
-            Body.angularDrag = config.FeedAngularDrag;
-            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            Body.constraints = RigidbodyConstraints2D.FreezePositionX |
-                               RigidbodyConstraints2D.FreezeRotation;
-            Body.useFullKinematicContacts = true;
-            Body.interpolation = RigidbodyInterpolation2D.None;
-            Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            Body.velocity = Vector2.zero;
-            Body.angularVelocity = 0f;
         }
 
         /// <summary>
@@ -3392,7 +3355,7 @@ namespace GravityPuzzle
                 return false;
 
             GridFallView?.Cancel();
-            ApplyShreddingPhysicsProfile();
+            ApplyLifecyclePhysicsProfile(PieceState.Shredding);
             shredderHandoffMode = ShredderHandoffMode.Feeding;
             keepShredderGridReservationUntilDespawn = false;
             SetSelected(false);

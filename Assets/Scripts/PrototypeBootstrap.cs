@@ -1129,23 +1129,41 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Atomically transfers a map-exit piece from its reserved grid
-        /// footprint into the off-board freefall lifecycle. This is the sole
-        /// owner of the Grid/HandoffToPhysics -> OpenFreefall transition.
+        /// Releases the board footprint immediately after the coordinate-based
+        /// map-exit admission. The following kinematic handoff is outside the
+        /// board, so retaining a Reserved footprint would incorrectly make
+        /// ordinary grid gravity queue behind an invisible departing piece.
+        /// </summary>
+        public bool TryReleaseHandoffGridFootprint(PuzzlePiece piece)
+        {
+            if (!TryGetPieceModel(piece, out PieceModel model) ||
+                model.State != PieceState.HandoffToPhysics ||
+                !BoardSnapshot.Grid.IsFullyReservedBy(model))
+            {
+                return false;
+            }
+
+            BoardSnapshot.Grid.ClearPiece(model);
+            BoardOccupancyChanged?.Invoke();
+            PuzzleDragController.WakeUpGravity();
+            return true;
+        }
+
+        /// <summary>
+        /// Atomically transitions an already off-board handoff piece into
+        /// isolated open freefall. Grid release is intentionally earlier at
+        /// the map-exit boundary, not at this lower physics line.
         /// </summary>
         public bool TryBeginOpenFreefall(PuzzlePiece piece)
         {
             if (!TryGetPieceModel(piece, out PieceModel model) ||
                 model.State != PieceState.HandoffToPhysics ||
-                !BoardSnapshot.Grid.IsFullyReservedBy(model))
+                model.IsOnBoard)
                 return false;
 
             if (!TryTransitionPieceState(model, PieceState.OpenFreefall))
                 return false;
 
-            BoardSnapshot.Grid.ClearPiece(model);
-            BoardOccupancyChanged?.Invoke();
-            PuzzleDragController.WakeUpGravity();
             return true;
         }
 

@@ -175,7 +175,10 @@ namespace GravityPuzzle
                 if (member == null)
                     continue;
 
-                member.ApplyShredderApproachPhysicsProfile(config);
+                // The normal map-exit route never creates a support-island.
+                // Keep this dormant legacy path lifecycle-driven if an old
+                // authored setup still reaches it.
+                member.ApplyLifecyclePhysicsProfile(PieceState.HandoffToPhysics, config);
                 dynamicMembers.Add(member);
             }
 

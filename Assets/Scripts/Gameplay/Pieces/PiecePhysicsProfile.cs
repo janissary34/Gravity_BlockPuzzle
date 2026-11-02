@@ -9,8 +9,6 @@ namespace GravityPuzzle.Gameplay.Pieces
     {
         Grid,
         OpenFreefall,
-        Shredding,
-        ShredderSupport,
-        ShredderApproach
+        Shredding
     }
 }

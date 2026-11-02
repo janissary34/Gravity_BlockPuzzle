@@ -364,7 +364,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             DOTween.Kill(piece.gameObject);
             ClearGeneratedContent(piece);
 
-            piece.ApplyGridPhysicsProfile();
+            piece.ApplyLifecyclePhysicsProfile(PieceState.Despawned);
 
             if (piece.CompositeCollider != null)
                 piece.CompositeCollider.enabled = false;
@@ -386,7 +386,7 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         private static void ConfigureBody(PuzzlePiece piece)
         {
-            piece?.ApplyGridPhysicsProfile();
+            piece?.ApplyLifecyclePhysicsProfile(PieceState.Placed);
         }
 
         private static void ConfigureFragment(
@@ -450,7 +450,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             piece.ConfigureRemainingProgress(remainingProgress);
             ConfigureOutlinePresentation(piece);
             ConfigureFragmentJoinedPresentation(piece, cells);
-            piece.ApplyGridPhysicsProfile();
+            piece.ApplyLifecyclePhysicsProfile(PieceState.Placed);
         }
 
         /// <summary>
@@ -623,7 +623,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 puzzlePiece.ConfigureSolidCellPresentation(content.CollisionCellVisuals);
 
             ConfigureOutlinePresentation(puzzlePiece);
-            puzzlePiece.ApplyGridPhysicsProfile();
+            puzzlePiece.ApplyLifecyclePhysicsProfile(PieceState.Placed);
         }
 
         private static PieceRuntimeContent BuildRuntimeContent(

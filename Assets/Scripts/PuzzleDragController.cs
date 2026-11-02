@@ -55,10 +55,7 @@ namespace GravityPuzzle
         private Vector2 lastResolvedDragPosition;
         private bool hasLastResolvedDragPosition;
         private int activeFingerId = -1;
-        private readonly Collider2D[] selectionHits = new Collider2D[32];
         private const float FineCellDragThreshold = .5f;
-        private const float TouchSelectionRadiusInGridCells = .45f;
-        private const float MouseSelectionRadiusInGridCells = .18f;
         public static PuzzleDragController Instance { get; private set; }
         private PrototypeBoard subscribedBoard;
         private bool inputLockedByGameState;
@@ -349,7 +346,6 @@ namespace GravityPuzzle
             if (inputLockedByGameState)
                 return;
 
-            Physics2D.SyncTransforms();
             AdvanceGridGravityPresentation();
         }
 
@@ -932,7 +928,8 @@ namespace GravityPuzzle
             lastResolvedDragPosition = selectedPresentationPosition;
             hasLastResolvedDragPosition = true;
             HapticFeedbackRuntime.PieceSelected();
-            Physics2D.SyncTransforms();
+            if (isCombined)
+                Physics2D.SyncTransforms();
             return true;
         }
 
@@ -1137,9 +1134,7 @@ namespace GravityPuzzle
                 {
                     ClearFrozenGroupFeedback();
                     activeFingerId = touch.fingerId;
-                    TrySelectPiece(
-                        PointerWorldPosition(touch.position),
-                        TouchSelectionRadiusInGridCells);
+                    TrySelectPiece(PointerWorldPosition(touch.position));
                 }
                 else if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
                 {
@@ -1170,7 +1165,7 @@ namespace GravityPuzzle
             if (Input.GetMouseButtonDown(0))
             {
                 ClearFrozenGroupFeedback();
-                TrySelectPiece(pointer, MouseSelectionRadiusInGridCells);
+                TrySelectPiece(pointer);
             }
 
             if (selectedPiece != null &&
@@ -1198,43 +1193,12 @@ namespace GravityPuzzle
             return Input.GetTouch(0);
         }
 
-        private void TrySelectPiece(Vector2 pointerPosition, float fallbackRadius)
+        private void TrySelectPiece(Vector2 pointerPosition)
         {
-            // Pins and pieces can intentionally overlap. OverlapPoint returns only
-            // one arbitrary collider, which made a pin hide the movable piece
-            // beneath it. Check every hit and give PuzzlePiece colliders priority.
-            PuzzlePiece piece = null;
-            int hitCount = Physics2D.OverlapPointNonAlloc(pointerPosition, selectionHits);
-            for (int i = 0; i < hitCount; i++)
-            {
-                Collider2D hit = selectionHits[i];
-                piece = hit.GetComponentInParent<PuzzlePiece>();
-                if (piece != null && !piece.IsFrozen && !piece.IsShredderInteractionLocked &&
-                    (piece.GridFallView == null || !piece.GridFallView.IsAnimating))
-                    break;
-                piece = null;
-            }
-
-            if (piece == null)
-            {
-                float closestDistance = float.PositiveInfinity;
-                hitCount = Physics2D.OverlapCircleNonAlloc(pointerPosition, fallbackRadius, selectionHits);
-                for (int i = 0; i < hitCount; i++)
-                {
-                    Collider2D hit = selectionHits[i];
-                    PuzzlePiece candidate = hit.GetComponentInParent<PuzzlePiece>();
-                    if (candidate == null || candidate.IsFrozen || candidate.IsShredderInteractionLocked ||
-                        (candidate.GridFallView != null && candidate.GridFallView.IsAnimating))
-                        continue;
-
-                    float distance = Vector2.SqrMagnitude(hit.ClosestPoint(pointerPosition) - pointerPosition);
-                    if (distance >= closestDistance)
-                        continue;
-
-                    closestDistance = distance;
-                    piece = candidate;
-                }
-            }
+            // Grid selection is not a physics query. The occupied cell is the
+            // authoritative answer, so overlapping visuals, pins, and
+            // off-board freefall colliders cannot steal a drag.
+            PuzzlePiece piece = TryResolveGridPieceAt(pointerPosition);
 
             if (piece == null)
                 return;
@@ -1293,7 +1257,8 @@ namespace GravityPuzzle
                 groupPiece.PrepareGridPhysicsForInteraction(interpolate: false);
                 groupPiece.SetSelected(true);
             }
-            Physics2D.SyncTransforms();
+            if (selectedJointGroupPieces.Count > 1)
+                Physics2D.SyncTransforms();
 
             grabOffset = body.position - pointerPosition;
             dragTarget = body.position;
@@ -1305,6 +1270,20 @@ namespace GravityPuzzle
                 out selectedPivotOffsetFromGroup);
             lastResolvedDragPosition = body.position;
             hasLastResolvedDragPosition = true;
+        }
+
+        private static PuzzlePiece TryResolveGridPieceAt(Vector2 worldPosition)
+        {
+            PrototypeBoard board = PrototypeBoard.Active;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (board == null || level == null || board.BoardSnapshot == null)
+                return null;
+
+            GridCoordinate coordinate = GravityLevelGridCoordinates.WorldToFineCell(level, worldPosition);
+            if (!board.BoardSnapshot.Grid.TryGetOccupantId(coordinate, out int pieceId))
+                return null;
+
+            return FindActivePiece(pieceId);
         }
 
         private void ShowFrozenGroupFeedbackIfNeeded(PrototypeBoard board, PuzzlePiece piece)

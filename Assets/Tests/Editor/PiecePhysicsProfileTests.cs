@@ -38,14 +38,15 @@ namespace GravityPuzzle.Tests.Editor
 
             try
             {
-                piece.ApplyGridPhysicsProfile();
+                piece.ApplyLifecyclePhysicsProfile(PieceState.Placed);
                 Assert.That(piece.PhysicsProfile, Is.EqualTo(PiecePhysicsProfile.Grid));
                 Assert.That(piece.Body.bodyType, Is.EqualTo(RigidbodyType2D.Kinematic));
                 Assert.That(piece.Body.gravityScale, Is.Zero);
-                Assert.That(cellCollider.enabled, Is.True,
-                    "Grid input selects pieces through overlap queries, so its collider must remain queryable.");
+                Assert.That(piece.Body.simulated, Is.False);
+                Assert.That(cellCollider.enabled, Is.False,
+                    "Grid input is resolved through the authoritative board, not a physics collider.");
 
-                piece.ApplyOpenFreefallPhysicsProfile(config, 3f);
+                piece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, config, 3f);
                 Assert.That(piece.PhysicsProfile, Is.EqualTo(PiecePhysicsProfile.OpenFreefall));
                 Assert.That(piece.Body.bodyType, Is.EqualTo(RigidbodyType2D.Dynamic));
                 Assert.That(piece.Body.simulated, Is.True);
@@ -65,7 +66,7 @@ namespace GravityPuzzle.Tests.Editor
                         $"Open freefall must only contact its own dedicated layer (layer {layer}).");
                 }
 
-                piece.ApplyShreddingPhysicsProfile();
+                piece.ApplyLifecyclePhysicsProfile(PieceState.Shredding, config);
                 Assert.That(piece.PhysicsProfile, Is.EqualTo(PiecePhysicsProfile.Shredding));
                 Assert.That(piece.Body.simulated, Is.False);
                 Assert.That(piece.Body.velocity, Is.EqualTo(Vector2.zero));
