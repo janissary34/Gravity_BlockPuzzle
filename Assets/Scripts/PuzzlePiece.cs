@@ -81,6 +81,16 @@ namespace GravityPuzzle
         public bool IsBeingShredded => shredderHandoffMode == ShredderHandoffMode.Feeding;
         public bool IsInShredderPhysicsHandoff =>
             shredderHandoffMode == ShredderHandoffMode.PhysicsIsland;
+        public bool IsInOpenFreefall
+        {
+            get
+            {
+                PrototypeBoard board = PrototypeBoard.Active;
+                return board != null &&
+                       board.TryGetPieceModel(this, out PieceModel model) &&
+                       model.State == PieceState.OpenFreefall;
+            }
+        }
         /// <summary>
         /// Input eligibility follows the authoritative piece lifecycle, never
         /// a Rigidbody, collider, or layer setting. The local mode is only a
@@ -2066,6 +2076,30 @@ namespace GravityPuzzle
             }
         }
 
+        /// <summary>
+        /// Resolves the one possible FixedUpdate overshoot when a Dynamic
+        /// freefall body crosses the cutter seam. This is part of the
+        /// OpenFreefall-to-Shredding transition, after physics has already
+        /// been disabled; no running Rigidbody is teleported.
+        /// </summary>
+        public bool AlignShreddingFootprintToCutter(float cutterSeamY)
+        {
+            if (PhysicsProfile != PiecePhysicsProfile.Shredding ||
+                !TryGetActiveCellVerticalExtents(out float lowestCellY, out _))
+            {
+                return false;
+            }
+
+            float correction = cutterSeamY - lowestCellY;
+            if (Mathf.Approximately(correction, 0f))
+                return true;
+
+            transform.position += Vector3.up * correction;
+            if (Body != null)
+                Body.position = transform.position;
+            return true;
+        }
+
         private void SetPiecePhysicsCollidersEnabled(bool enabled, bool isTrigger)
         {
             if (solidColliders == null)
@@ -2309,45 +2343,6 @@ namespace GravityPuzzle
             shredderPresentationMaskStates = null;
             shredderPresentationSortingOrders = null;
             SetOutlineRenderersSortingOrder(shredderPresentationOutlineSortingOrder);
-        }
-
-        public void ReleaseCollisionCellsAtOrBelow(float worldY, List<BoxCollider2D> releasedBuffer = null)
-        {
-            AdvanceShredderGridReleaseFrontier(worldY);
-
-            if (collisionCells == null)
-                return;
-
-            bool geometryChanged = false;
-            for (int i = 0; i < collisionCells.Count; i++)
-            {
-                BoxCollider2D cell = collisionCells[i];
-                if (cell == null || !cell.enabled || cell.bounds.min.y > worldY)
-                    continue;
-
-                // This physical cell has entered the grinder. Remove only this
-                // lower section; the remaining upper cells stay solid until they
-                // reach the same line on a later physics step.
-                if (releasedBuffer != null)
-                    releasedBuffer.Add(cell);
-
-                cell.enabled = false;
-                geometryChanged = true;
-            }
-
-            if (!geometryChanged)
-                return;
-
-            if (compositeCollider != null)
-                compositeCollider.GenerateGeometry();
-            CacheSolidColliders();
-            // The shredder releases collision cells before their individual
-            // voxel visuals finish crossing the cutter. Do not rebuild the
-            // root outline from that intermediate collision geometry.
-            if (!IsBeingShredded)
-                RuntimePieceFactory.RefreshOutline(this);
-            InvalidateVoxelCache();
-            Physics2D.SyncTransforms();
         }
 
         private void CaptureShredderReservationCells(PieceModel model)
@@ -3254,10 +3249,9 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Begins the map-exit phase of the shredder flow. Grid ownership is
-        /// retained as a reservation while a later handoff controller clears
-        /// the piece to its physics line; this method never enables physics or
-        /// starts shred presentation.
+        /// Begins the atomic map-exit transition. The board reserves this
+        /// footprint only long enough to validate and release it directly into
+        /// OpenFreefall; no transform-driven approach phase may follow.
         /// </summary>
         public bool TryBeginShredderExitHandoff()
         {
@@ -3272,8 +3266,11 @@ namespace GravityPuzzle
             }
 
             GridFallView?.Cancel();
-            shredderHandoffMode = ShredderHandoffMode.PhysicsIsland;
-            keepShredderGridReservationUntilDespawn = true;
+            // Map-exit handoff has no local physics-island mode. Lifecycle is
+            // already the source of truth and the board commits OpenFreefall
+            // immediately after it clears this short reservation.
+            shredderHandoffMode = ShredderHandoffMode.None;
+            keepShredderGridReservationUntilDespawn = false;
             SetSelected(false);
             Debug.Log($"[ShredderHandoff] Exit handoff locked targeting for piece {SourcePieceId}.", this);
             return true;
@@ -3347,7 +3344,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryBeginOffBoardFreefallShredding()
         {
-            if (!IsInShredderPhysicsHandoff || IsFrozen)
+            if (IsFrozen)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;

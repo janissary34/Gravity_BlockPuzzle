@@ -44,9 +44,7 @@ namespace GravityPuzzle
         private float nextParticleShredSoundTime;
         private readonly List<ShredderPhysicsIsland> activePhysicsIslands =
             new List<ShredderPhysicsIsland>();
-        private readonly List<ExitHandoff> activeExitHandoffs = new List<ExitHandoff>();
         private readonly List<ExitHandoff> activeFreefallPieces = new List<ExitHandoff>();
-        private float physicsHandoffLineY;
 
         private sealed class ExitHandoff
         {
@@ -142,7 +140,6 @@ namespace GravityPuzzle
 
         private void FixedUpdate()
         {
-            TickExitHandoffs();
             TickFreefallPieces();
             for (int index = activePhysicsIslands.Count - 1; index >= 0; index--)
             {
@@ -156,68 +153,12 @@ namespace GravityPuzzle
             }
         }
 
-        public void ConfigurePhysicsHandoffLine(float mapBottomY)
-        {
-            float distance = shredderConfig != null ? shredderConfig.PhysicsHandoffDistanceBelowMap : 0f;
-            physicsHandoffLineY = mapBottomY - Mathf.Max(0f, distance);
-        }
-
-        private void TickExitHandoffs()
-        {
-            float speed = shredderConfig != null ? shredderConfig.FeedSpeed : 3.8f;
-            for (int index = activeExitHandoffs.Count - 1; index >= 0; index--)
-            {
-                ExitHandoff handoff = activeExitHandoffs[index];
-                if (handoff.Piece == null || !handoff.Piece.IsInShredderPhysicsHandoff)
-                {
-                    activeExitHandoffs.RemoveAt(index);
-                    continue;
-                }
-
-                if (!handoff.Piece.TryGetActiveCellVerticalExtents(
-                        out float lowestCellY,
-                        out _))
-                {
-                    Debug.LogError("[ShredderHandoff] Could not resolve the exit piece footprint.", handoff.Piece);
-                    activeExitHandoffs.RemoveAt(index);
-                    continue;
-                }
-
-                // Root pivots differ between tall and irregular pieces. Moving
-                // a root to one fixed Y collapsed distinct footprints into one
-                // physical plane and caused Box2D depenetration explosions.
-                // The handoff line is a bottom-edge plane instead.
-                float remainingDistance = lowestCellY - physicsHandoffLineY;
-                if (remainingDistance > 0f)
-                {
-                    float step = Mathf.Min(remainingDistance, speed * Time.fixedDeltaTime);
-                    handoff.Piece.transform.position += Vector3.down * step;
-                    continue;
-                }
-
-                PrototypeBoard board = PrototypeBoard.Active;
-                if (board == null || !board.TryBeginOpenFreefall(handoff.Piece))
-                {
-                    Debug.LogError("[ShredderHandoff] Could not enter open freefall at the physics line.", handoff.Piece);
-                    continue;
-                }
-
-                Physics2D.SyncTransforms();
-                handoff.Piece.ApplyLifecyclePhysicsProfile(
-                    PieceState.OpenFreefall,
-                    shredderConfig,
-                    speed);
-                activeFreefallPieces.Add(handoff);
-                activeExitHandoffs.RemoveAt(index);
-            }
-        }
-
         private void TickFreefallPieces()
         {
             for (int index = activeFreefallPieces.Count - 1; index >= 0; index--)
             {
                 ExitHandoff freefall = activeFreefallPieces[index];
-                if (freefall.Piece == null || !freefall.Piece.IsInShredderPhysicsHandoff)
+                if (freefall.Piece == null || !freefall.Piece.IsInOpenFreefall)
                 {
                     activeFreefallPieces.RemoveAt(index);
                     continue;
@@ -244,13 +185,20 @@ namespace GravityPuzzle
                 return false;
             }
 
-            float entryDownwardSpeed = piece.Body != null
-                ? Mathf.Max(0f, -piece.Body.velocity.y)
-                : 0f;
             if (!piece.TryBeginOffBoardFreefallShredding())
             {
                 Debug.LogError(
                     "[ShredderFreefall] Cutter capture rejected an off-board handoff piece.",
+                    piece);
+                return false;
+            }
+
+            float cutterSeamY = zone.ShredY - zone.WheelRadius *
+                Mathf.Clamp(shredderConfig.GearClippingRatio, 0.1f, 0.9f);
+            if (!piece.AlignShreddingFootprintToCutter(cutterSeamY))
+            {
+                Debug.LogError(
+                    "[ShredderFreefall] Could not align the freefall footprint to the cutter seam.",
                     piece);
                 return false;
             }
@@ -261,7 +209,7 @@ namespace GravityPuzzle
             // Cutter contact ends open physics ownership. The established
             // controlled feed then owns only presentation: row-by-row clipping,
             // tremor, debris and progress must not be bypassed for freefall.
-            StartCoroutine(FeedPieceIntoShredder(piece, zone, entryDownwardSpeed));
+            StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
         }
 
@@ -299,16 +247,20 @@ namespace GravityPuzzle
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
-            if (board == null || !board.TryReleaseHandoffGridFootprint(piece))
+            if (board == null || !board.TryEnterOpenFreefallAtMapExit(piece))
             {
                 Debug.LogError(
-                    "[ShredderHandoff] Accepted map exit could not release its reserved grid footprint.",
+                    "[ShredderFreefall] Accepted map exit could not enter isolated freefall.",
                     piece);
                 return false;
             }
 
-            piece.ApplyLifecyclePhysicsProfile(PieceState.HandoffToPhysics, shredderConfig);
-            activeExitHandoffs.Add(new ExitHandoff { Piece = piece, Zone = zone });
+            // There is deliberately no transform-driven approach phase here.
+            // The exact grid-exit pose becomes the initial Dynamic pose and
+            // Rigidbody2D is the sole movement owner until the cutter seam.
+            Physics2D.SyncTransforms();
+            piece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, shredderConfig);
+            activeFreefallPieces.Add(new ExitHandoff { Piece = piece, Zone = zone });
             return true;
         }
 
@@ -531,12 +483,9 @@ namespace GravityPuzzle
             if (!piece.TryBeginShredderFeedFromPhysicsIsland())
                 return false;
 
-            float entryDownwardSpeed = piece.Body != null
-                ? Mathf.Max(0f, -piece.Body.velocity.y)
-                : 0f;
             board.JointSpringPresenter?.PrepareForShredder(piece);
             board.BreakJointsForPiece(piece);
-            StartCoroutine(FeedPieceIntoShredder(piece, zone, entryDownwardSpeed));
+            StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
         }
 
@@ -650,8 +599,7 @@ namespace GravityPuzzle
 
         private System.Collections.IEnumerator FeedPieceIntoShredder(
             PuzzlePiece piece,
-            ShredderCatchZone zone,
-            float entryDownwardSpeed = 0f)
+            ShredderCatchZone zone)
         {
             if (piece == null || zone == null)
             {
@@ -729,15 +677,11 @@ namespace GravityPuzzle
             float feedAlignmentSpeed = shredderConfig != null
                 ? shredderConfig.FeedAlignmentAngularSpeed
                 : 360f;
-            float feedEntryDeceleration = shredderConfig != null
-                ? shredderConfig.FeedEntryDeceleration
-                : 18f;
-            float currentFeedSpeed = Mathf.Max(feedSpeed, entryDownwardSpeed);
+            float currentFeedSpeed = feedSpeed;
             float debrisAccumulator = 0f;
             // The clipping seam sits at the center/upper-middle line of the wheels.
             float visualCutterY = clippingSeamY;
             float debrisContactY = clippingSeamY;
-            int totalCollisionCells = piece.CollisionCellCount;
 
             // Total area based on true cell blocks (1 unit per block)
             float totalRendererArea = Mathf.Max(0.5f, blockCount * 1.0f);
@@ -745,7 +689,6 @@ namespace GravityPuzzle
             int remainingFlightsToEmit = progressFlightCount;
             float progressVoxelAccumulator = 0f;
 
-            List<BoxCollider2D> releasedCellsBuffer = new List<BoxCollider2D>(Mathf.Max(4, totalCollisionCells));
             bool contactPresentationStarted = false;
             Vector2 lastContactCenter = Vector2.zero;
             float lastContactWidth = 0f;
@@ -767,10 +710,6 @@ namespace GravityPuzzle
                 elapsed += feedDeltaTime;
                 PrototypeBoard.Active?.JointSpringPresenter?.UpdateShredderSprings(piece, clippingSeamY, shredderConfig);
 
-                currentFeedSpeed = Mathf.MoveTowards(
-                    currentFeedSpeed,
-                    feedSpeed,
-                    feedEntryDeceleration * feedDeltaTime);
                 piece.MoveShreddingPresentation(
                     currentFeedSpeed * feedDeltaTime,
                     maxTiltAngle,
@@ -851,13 +790,6 @@ namespace GravityPuzzle
                     if (activeGlowView != null)
                         activeGlowView.Hide();
                 }
-
-                // Release cells that have reached the cutter mouth for physics clearance.
-                releasedCellsBuffer.Clear();
-                float cutterThresholdY = clippingSeamY + (shredderConfig != null
-                    ? shredderConfig.CaptureApproachDistance + 0.12f
-                    : 0.16f);
-                piece.ReleaseCollisionCellsAtOrBelow(cutterThresholdY, releasedCellsBuffer);
 
                 // Continuous voxel stream: distribute voxels smoothly every frame while contacting cutter
                 if (hasContactSurface && contactWidth > 0f && remainingFlightsToEmit > 0)

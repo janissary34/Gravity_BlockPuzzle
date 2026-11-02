@@ -267,7 +267,7 @@ namespace GravityPuzzle
             PuzzlePiece piece,
             float gearClippingRatio)
         {
-            if (piece == null || !piece.IsInShredderPhysicsHandoff)
+            if (piece == null || !piece.IsInOpenFreefall)
                 return false;
 
             float cutterSeamY = ShredY - WheelRadius * Mathf.Clamp(gearClippingRatio, 0.1f, 0.9f);

@@ -46,12 +46,12 @@ The board commits the stack atomically and owns the lifecycle transitions.
 `BlockShredder` owns admission to each authored `ShredderCatchZone`, but does
 not reserve a queue, lane, or grid column. A piece whose authoritative footprint
 reaches the map-bottom exit in that zone enters `HandoffToPhysics` immediately:
-targeting is locked and `PrototypeBoard` clears its grid footprint at that exit
-boundary. The following kinematic movement is entirely outside the board, so it
-must not make pieces above wait on an invisible reservation. The exit line is
-evaluated from the lowest physical cell edge, never from a piece root/pivot. At
-that line `PrototypeBoard` alone transitions the already off-board model to
-`OpenFreefall`.
+targeting is locked and `PrototypeBoard` atomically clears its grid footprint
+and enters `OpenFreefall` at that same exit boundary. There is no transform-
+driven approach phase: Rigidbody2D is the only movement owner below the map
+until the cutter seam. This prevents an invisible reservation from making
+pieces above wait and prevents a second motor from slowing or repositioning
+the freefall body.
 
 `PieceModel` is the sole gameplay lifecycle authority. `PuzzlePiece` is the sole
 Unity-side writer of normal-piece Rigidbody2D, collider, material, and layer

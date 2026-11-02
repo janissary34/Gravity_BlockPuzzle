@@ -14,9 +14,9 @@ depenetrated before reaching the cutter.
 ## Decision
 
 The lifecycle explicitly uses `HandoffToPhysics -> OpenFreefall -> Shredding`.
-`PrototypeBoard` owns the coordinate transitions: it clears the reserved grid
-footprint at the map-exit boundary, then transitions the already-off-board piece
-to `OpenFreefall` at the lower handoff line. `PieceModel` is the sole lifecycle
+`HandoffToPhysics` is an atomic transaction boundary, not a visible movement
+phase: `PrototypeBoard` clears the reserved grid footprint and transitions to
+`OpenFreefall` at the same map-exit boundary. `PieceModel` is the sole lifecycle
 authority, and `PuzzlePiece.ApplyLifecyclePhysicsProfile` is the only Unity-side
 profile writer:
 
@@ -38,3 +38,8 @@ They cannot use map or mouth geometry as invisible support. Changes to freefall
 contacts require both the dedicated layer and `ShredderPhysicsLayers.Configure`;
 they must not be made by mutating individual pieces at runtime. No lifecycle
 phase may use Physics2D collider ordering to select a grid piece.
+
+The cutter captures a freefall body at its rendered seam, disables physics, and
+performs at most one seam-alignment correction before presentation begins. The
+feed coroutine owns visual clipping, jitter, debris, and pooling only; it does
+not mutate colliders, layers, Rigidbody2D settings, or grid occupancy.

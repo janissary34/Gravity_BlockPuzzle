@@ -342,7 +342,6 @@ namespace GravityPuzzle
             if (shredderConfig != null)
                 boardState.SetFinalShredderGraceSeconds(
                     shredderConfig.FinalPieceTimerGraceSeconds);
-            BlockShredder.Instance.ConfigurePhysicsHandoffLine(-halfHeight);
             CreateShredders(level, halfHeight, shredderConfig);
 
             CreateObstacles(level);
