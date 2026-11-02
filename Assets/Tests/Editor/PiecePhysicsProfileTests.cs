@@ -38,6 +38,7 @@ namespace GravityPuzzle.Tests.Editor
             // mirror that construction order in this isolated profile test.
             root.AddComponent<Rigidbody2D>();
             PuzzlePiece piece = root.AddComponent<PuzzlePiece>();
+            InvokeAwake(piece);
             ShredderConfig config = ScriptableObject.CreateInstance<ShredderConfig>();
 
             try
@@ -93,6 +94,15 @@ namespace GravityPuzzle.Tests.Editor
             Assert.That(configure, Is.Not.Null, "Shredder physics layer setup must remain available to the profile owner.");
             Assert.That((bool)configure.Invoke(null, null), Is.True,
                 "The ShredderPhysicsFreefall project layer must exist for isolated open freefall.");
+        }
+
+        private static void InvokeAwake(PuzzlePiece piece)
+        {
+            MethodInfo awake = typeof(PuzzlePiece).GetMethod(
+                "Awake",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(awake, Is.Not.Null);
+            awake.Invoke(piece, null);
         }
     }
 }
