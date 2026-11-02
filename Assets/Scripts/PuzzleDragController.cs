@@ -112,8 +112,7 @@ namespace GravityPuzzle
                         model.Anchor.X - model.PivotOffset.X,
                         model.Anchor.Y - model.PivotOffset.Y);
                     Vector2 correctedPosition = GravityLevelGridCoordinates.FineCellToWorld(level, pivot);
-                    piece.Body.position = correctedPosition;
-                    Physics2D.SyncTransforms();
+                    piece.SetGridPresentationPosition(correctedPosition);
                 }
             }
 
@@ -750,12 +749,11 @@ namespace GravityPuzzle
                 GridCoordinate targetPivot = new GridCoordinate(
                     move.ToAnchor.X - model.PivotOffset.X,
                     move.ToAnchor.Y - model.PivotOffset.Y);
-                PrepareKinematicBody(piece.Body);
+                piece.PrepareGridPhysicsForInteraction(interpolate: true);
                 GridCoordinate sourcePivot = new GridCoordinate(
                     move.FromAnchor.X - model.PivotOffset.X,
                     move.FromAnchor.Y - model.PivotOffset.Y);
-                MoveBody(
-                    piece.Body,
+                piece.SetGridPresentationPosition(
                     GravityLevelGridCoordinates.FineCellToWorld(level, sourcePivot));
                 Vector2 targetPosition = GravityLevelGridCoordinates.FineCellToWorld(level, targetPivot);
                 gridFallingPieces.Add(piece);
@@ -840,7 +838,8 @@ namespace GravityPuzzle
             GridCoordinate pivot = new GridCoordinate(
                 model.Anchor.X - model.PivotOffset.X,
                 model.Anchor.Y - model.PivotOffset.Y);
-            MoveBody(piece.Body, GravityLevelGridCoordinates.FineCellToWorld(level, pivot));
+            piece.SetGridPresentationPosition(
+                GravityLevelGridCoordinates.FineCellToWorld(level, pivot));
         }
 
         private void RemoveFinishedGridFalls()
@@ -910,7 +909,7 @@ namespace GravityPuzzle
                     level,
                     fineDragRemainder);
             Vector2 selectedPresentationPosition = selectedGridPosition + selectedPresentationOffset;
-            piece.Body.position = selectedPresentationPosition;
+            piece.SetGridPresentationPosition(selectedPresentationPosition, synchronizeTransforms: false);
 
             for (int groupIndex = 0; groupIndex < selectedJointGroupPieces.Count; groupIndex++)
             {
@@ -925,14 +924,15 @@ namespace GravityPuzzle
                     groupModel.Anchor.X - groupModel.PivotOffset.X,
                     groupModel.Anchor.Y - groupModel.PivotOffset.Y);
                 Vector2 groupPosition = GravityLevelGridCoordinates.FineCellToWorld(level, groupPivot);
-                groupPiece.Body.position = groupPosition + selectedPresentationOffset;
+                groupPiece.SetGridPresentationPosition(
+                    groupPosition + selectedPresentationOffset,
+                    synchronizeTransforms: false);
             }
 
             lastResolvedDragPosition = selectedPresentationPosition;
             hasLastResolvedDragPosition = true;
             HapticFeedbackRuntime.PieceSelected();
-            if (isCombined)
-                Physics2D.SyncTransforms();
+            Physics2D.SyncTransforms();
             return true;
         }
 
@@ -1097,33 +1097,6 @@ namespace GravityPuzzle
                 $"boardFineSize=({level.FineColumns},{level.FineRows}) " +
                 $"groupAnchors=[{groupAnchors}]");
         }
-
-        private static void PrepareKinematicBody(Rigidbody2D body, bool interpolate = true)
-        {
-            body.simulated = true;
-            body.bodyType = RigidbodyType2D.Kinematic;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            body.interpolation = interpolate
-                ? RigidbodyInterpolation2D.Interpolate
-                : RigidbodyInterpolation2D.None;
-            body.useFullKinematicContacts = false;
-            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            body.velocity = Vector2.zero;
-            body.angularVelocity = 0f;
-            body.angularDrag = 0f;
-            body.rotation = 0f;
-        }
-
-        private static void MoveBody(Rigidbody2D body, Vector2 targetPosition)
-        {
-            // The grid has already validated this authored position. Apply it
-            // immediately so the visual and Physics2D query transforms agree.
-            body.position = targetPosition;
-            Physics2D.SyncTransforms();
-        }
-
-
 
         private static bool TryGetSnapshotPiece(
             PuzzlePiece piece,
@@ -1317,7 +1290,7 @@ namespace GravityPuzzle
                 if (groupPiece == null || groupPiece.Body == null)
                     continue;
 
-                PrepareKinematicBody(groupPiece.Body, interpolate: false);
+                groupPiece.PrepareGridPhysicsForInteraction(interpolate: false);
                 groupPiece.SetSelected(true);
             }
             Physics2D.SyncTransforms();
@@ -1385,10 +1358,10 @@ namespace GravityPuzzle
                     continue;
 
                 groupPiece.SetSelected(false);
-                PrepareKinematicBody(groupPiece.Body);
+                groupPiece.PrepareGridPhysicsForInteraction(interpolate: true);
             }
             Physics2D.SyncTransforms();
-            PrepareKinematicBody(body);
+            selectedPiece.PrepareGridPhysicsForInteraction(interpolate: true);
 
             // Combined members share the same grid-snap transaction, but do
             // not run independent release tweens afterwards: that would make
@@ -1421,7 +1394,7 @@ namespace GravityPuzzle
                         () => CompleteGridReleasePresentation(releasePiece)))
                 {
                     gridReleasePresentationPiece = null;
-                    MoveBody(body, releasePosition);
+                    selectedPiece.SetGridPresentationPosition(releasePosition);
                 }
                 selectedPiece = null;
                 hasSelectedPieceStartAnchor = false;
@@ -1440,7 +1413,7 @@ namespace GravityPuzzle
                 TryRestoreGridRelease(selectedPiece, restoreAnchor, out Vector2 restorePosition))
             {
                 HapticFeedbackRuntime.InvalidDrop();
-                MoveBody(body, restorePosition);
+                selectedPiece.SetGridPresentationPosition(restorePosition);
                 selectedPiece = null;
                 hasSelectedPieceStartAnchor = false;
                 hasLastResolvedDragPosition = false;
@@ -1476,7 +1449,8 @@ namespace GravityPuzzle
                     GridCoordinate pivot = new GridCoordinate(
                         model.Anchor.X - model.PivotOffset.X,
                         model.Anchor.Y - model.PivotOffset.Y);
-                    MoveBody(piece.Body, GravityLevelGridCoordinates.FineCellToWorld(level, pivot));
+                    piece.SetGridPresentationPosition(
+                        GravityLevelGridCoordinates.FineCellToWorld(level, pivot));
                 }
             }
 

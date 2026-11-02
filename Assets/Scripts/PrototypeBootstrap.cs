@@ -1128,11 +1128,19 @@ namespace GravityPuzzle
             return false;
         }
 
-        public bool TryReleaseShredderExitReservation(PuzzlePiece piece)
+        /// <summary>
+        /// Atomically transfers a map-exit piece from its reserved grid
+        /// footprint into the off-board freefall lifecycle. This is the sole
+        /// owner of the Grid/HandoffToPhysics -> OpenFreefall transition.
+        /// </summary>
+        public bool TryBeginOpenFreefall(PuzzlePiece piece)
         {
             if (!TryGetPieceModel(piece, out PieceModel model) ||
                 model.State != PieceState.HandoffToPhysics ||
                 !BoardSnapshot.Grid.IsFullyReservedBy(model))
+                return false;
+
+            if (!TryTransitionPieceState(model, PieceState.OpenFreefall))
                 return false;
 
             BoardSnapshot.Grid.ClearPiece(model);
@@ -1150,7 +1158,7 @@ namespace GravityPuzzle
         public bool TryBeginOffBoardShredding(PuzzlePiece piece)
         {
             if (!TryGetPieceModel(piece, out PieceModel model) ||
-                model.State != PieceState.HandoffToPhysics ||
+                model.State != PieceState.OpenFreefall ||
                 model.IsOnBoard)
             {
                 return false;

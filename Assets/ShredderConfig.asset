@@ -47,6 +47,11 @@ MonoBehaviour:
   feedPhysicsMaterial: {fileID: 6200000, guid: 9eb6102580d2f4baa88e6b9e2ee5187f, type: 2}
   contactGlowPrefab: {fileID: 5501872390192847104, guid: e3d2c1b0a987654321fedcba09876543, type: 3}
   contactGlowPoolCapacity: 4
+  physicsHandoffDistanceBelowMap: 1.5
+  physicsFreefallDistanceBelowHandoff: 2
+  physicsFreefallGravityScale: 1
+  physicsFreefallEntrySpeed: 4.2
+  physicsFreefallAngularDrag: 0.75
   enablePhysicsIsland: 1
   physicsIslandGravityScale: 1
   physicsIslandAngularDrag: 4

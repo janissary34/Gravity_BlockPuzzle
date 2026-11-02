@@ -81,8 +81,27 @@ namespace GravityPuzzle
         public bool IsBeingShredded => shredderHandoffMode == ShredderHandoffMode.Feeding;
         public bool IsInShredderPhysicsHandoff =>
             shredderHandoffMode == ShredderHandoffMode.PhysicsIsland;
-        public bool IsShredderInteractionLocked =>
-            shredderHandoffMode != ShredderHandoffMode.None;
+        /// <summary>
+        /// Input eligibility follows the authoritative piece lifecycle, never
+        /// a Rigidbody, collider, or layer setting. The local mode is only a
+        /// safe fallback while a pooled root has no board model yet.
+        /// </summary>
+        public bool IsShredderInteractionLocked
+        {
+            get
+            {
+                PrototypeBoard board = PrototypeBoard.Active;
+                if (board != null && board.TryGetPieceModel(this, out PieceModel model))
+                {
+                    return model.State == PieceState.HandoffToPhysics ||
+                           model.State == PieceState.OpenFreefall ||
+                           model.State == PieceState.Shredding;
+                }
+
+                return shredderHandoffMode != ShredderHandoffMode.None;
+            }
+        }
+        public PiecePhysicsProfile PhysicsProfile { get; private set; } = PiecePhysicsProfile.Grid;
         public bool IsFrozen { get; private set; }
         public bool IsBomb { get; private set; }
         public bool IsBombDefused { get; private set; }
@@ -496,7 +515,7 @@ namespace GravityPuzzle
         {
             RestoreBoxRevealContentVisual();
             RestoreShredderPresentation();
-            RestoreDefaultPhysicsLayers();
+            ApplyGridPhysicsProfile();
             shredderHandoffMode = ShredderHandoffMode.None;
             keepShredderGridReservationUntilDespawn = false;
             gridDespawned = false;
@@ -514,9 +533,6 @@ namespace GravityPuzzle
             SourcePieceId = -1;
             SetOutlineRenderersEnabled(true);
             ApplyOutlinePresentation();
-            if (compositeCollider != null)
-                compositeCollider.enabled = true;
-            RestoreDefaultCollisionMaterials();
             InvalidateVoxelCache();
         }
 
@@ -539,8 +555,7 @@ namespace GravityPuzzle
             ClearBombVisuals();
             ClearWholePiecePresentation();
             RestoreShredderPresentation();
-            RestoreDefaultPhysicsLayers();
-            RestoreDefaultCollisionMaterials();
+            ApplyGridPhysicsProfile();
             RuntimePieceFactory.ResetPooledPiece(this);
             InvalidateVoxelCache();
         }
@@ -1685,7 +1700,7 @@ namespace GravityPuzzle
             shredderReservationStartBodyY = 0f;
             shredderHandoffMode = ShredderHandoffMode.None;
             keepShredderGridReservationUntilDespawn = false;
-            RestoreDefaultPhysicsLayers();
+            ApplyGridPhysicsProfile();
             destructionReported = false;
             useFullCollisionGeometry = false;
             isSelected = false;
@@ -1844,12 +1859,6 @@ namespace GravityPuzzle
             fallbackPresentationMaterial = fallbackMaterial;
         }
 
-        public void PrepareForShredderPhysics()
-        {
-            useFullCollisionGeometry = true;
-            ApplyCollisionProfile();
-        }
-
         /// <summary>
         /// Keeps a piece visually available for a presentation-only removal
         /// such as the rocket booster. Board physics and colliders must not
@@ -1858,123 +1867,112 @@ namespace GravityPuzzle
         public void PrepareForPresentationRemoval()
         {
             SetSelected(false);
-
-            if (Body == null)
-                return;
-
-            Body.velocity = Vector2.zero;
-            Body.angularVelocity = 0f;
-            Body.simulated = false;
+            ApplyGridPhysicsProfile();
         }
 
         /// <summary>
-        /// Returns this root to an inert pool state. This clears every setting
-        /// that the shredder handoff is allowed to mutate, so a later renter
-        /// cannot inherit angular motion or an unlocked rigidbody profile.
+        /// Grid owns normal board movement. This method fully resets the
+        /// engine-facing state instead of relying on prefab leftovers.
         /// </summary>
-        public void ResetToPooledPhysics()
+        public void ApplyGridPhysicsProfile()
         {
             RestoreDefaultPhysicsLayers();
+            RestoreDefaultCollisionMaterials();
+            useFullCollisionGeometry = false;
+            ApplyCollisionProfile();
+            // Grid input resolves a piece with Physics2D overlap queries.
+            // Keep its colliders queryable, while the kinematic profile and
+            // authoritative grid remain the only movement authority. Open
+            // freefall is on an isolated layer, so it cannot collide with
+            // these grid input colliders.
+            SetPiecePhysicsCollidersEnabled(true, false);
+            PhysicsProfile = PiecePhysicsProfile.Grid;
+
             if (Body == null)
                 return;
 
+            Body.position = transform.position;
+            Body.rotation = transform.eulerAngles.z;
             Body.velocity = Vector2.zero;
             Body.angularVelocity = 0f;
-            Body.rotation = 0f;
+            Body.drag = 0f;
             Body.angularDrag = 0f;
             Body.gravityScale = 0f;
             Body.bodyType = RigidbodyType2D.Kinematic;
-            Body.constraints = RigidbodyConstraints2D.FreezeAll;
+            Body.constraints = RigidbodyConstraints2D.FreezeRotation;
             Body.interpolation = RigidbodyInterpolation2D.None;
-            Body.useFullKinematicContacts = false;
-            Body.sleepMode = RigidbodySleepMode2D.StartAsleep;
-            Body.simulated = false;
-        }
-
-        /// <summary>
-        /// Applies the only runtime physics profile allowed for a board piece:
-        /// the captured shredder feed. Normal drag and grid gravity retain
-        /// their deterministic kinematic presentation ownership.
-        /// </summary>
-        public void EnterShredderPhysics(ShredderConfig config)
-        {
-            if (config == null)
-                return;
-
-            PrepareForShredderPhysics();
-            ApplyShredderPhysicsLayer();
-            if (Body == null)
-                return;
-
-            Body.simulated = true;
-            Body.bodyType = RigidbodyType2D.Kinematic;
             Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            Body.constraints = RigidbodyConstraints2D.None;
-            Body.gravityScale = 0f;
-            // The kinematic feed remains a real contact surface for a
-            // temporary dynamic support chain. This flag also makes its
-            // collision policy explicit instead of relying on a prefab default.
-            Body.useFullKinematicContacts = true;
-            Body.velocity = Vector2.zero;
-            Body.angularDrag = config.FeedAngularDrag;
-            // Preserve the pose reached during the dynamic support handoff,
-            // but stop rotation once this piece becomes a kinematic feed.
-            // A wide active feed must not sweep into another simultaneous feed.
-            Body.angularVelocity = 0f;
-            // Once the coordinate gate accepts this piece, the feed owns its
-            // transform. Letting its kinematic collider hit later freefall
-            // bodies would make an infinite-mass pinball surface.
-            SetPiecePhysicsCollidersEnabled(false);
-        }
-
-        /// <summary>
-        /// Enables the temporary Dynamic profile used only for pieces that are
-        /// physically supported by a root already entering the shredder. The
-        /// board has reserved these pieces first; this method owns only the
-        /// Unity contact response inside that isolated handoff corridor.
-        /// </summary>
-        public void EnterShredderSupportPhysics(ShredderConfig config)
-        {
-            if (config == null)
-                return;
-
-            PrepareForShredderPhysics();
-            ApplyShredderPhysicsLayer();
-            if (Body == null)
-                return;
-
-            Body.simulated = true;
-            Body.bodyType = RigidbodyType2D.Dynamic;
-            Body.gravityScale = config.PhysicsIslandGravityScale;
-            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            // A planner-approved support member already fits the authored
-            // mouth in its grid pose. Let it fall and collide vertically, but
-            // never rotate or drift sideways into a guide and become a shelf
-            // queue before reaching its own coordinate capture plane.
-            Body.constraints = RigidbodyConstraints2D.FreezePositionX |
-                               RigidbodyConstraints2D.FreezeRotation;
             Body.useFullKinematicContacts = false;
-            Body.velocity = Vector2.zero;
-            Body.angularVelocity = 0f;
-            Body.angularDrag = config.PhysicsIslandAngularDrag;
             Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            ApplyShredderCollisionMaterial(config.FeedPhysicsMaterial);
-            Body.WakeUp();
+            // Grid movement is deterministic kinematic presentation, not
+            // contact-driven simulation. Colliders above remain disabled.
+            Body.simulated = true;
         }
 
-        public void EnterShredderFreefallPhysics(ShredderConfig config, float downwardSpeed)
+        /// <summary>
+        /// Grid input and grid-fall presentation may choose interpolation, but
+        /// cannot otherwise mutate the Rigidbody profile directly.
+        /// </summary>
+        public void PrepareGridPhysicsForInteraction(bool interpolate)
         {
-            EnterShredderSupportPhysics(config);
+            ApplyGridPhysicsProfile();
+            if (Body != null)
+                Body.interpolation = interpolate
+                    ? RigidbodyInterpolation2D.Interpolate
+                    : RigidbodyInterpolation2D.None;
+        }
+
+        /// <summary>
+        /// Updates the representation of an already-authorized grid move.
+        /// Grid legality remains in PrototypeBoard; this only keeps the
+        /// Rigidbody pose synchronized with that owned grid transform.
+        /// </summary>
+        public void SetGridPresentationPosition(Vector2 position, bool synchronizeTransforms = true)
+        {
+            if (PhysicsProfile != PiecePhysicsProfile.Grid)
+                return;
+
+            transform.position = position;
+            if (Body != null)
+                Body.position = position;
+            if (synchronizeTransforms)
+                Physics2D.SyncTransforms();
+        }
+
+        /// <summary>
+        /// Applies the isolated off-board physics profile. This deliberately
+        /// does not call any shredder support/approach setup: its only allowed
+        /// contacts are other OpenFreefall pieces.
+        /// </summary>
+        public void ApplyOpenFreefallPhysicsProfile(ShredderConfig config, float downwardSpeed)
+        {
+            if (config == null)
+                return;
+
+            useFullCollisionGeometry = true;
+            ApplyCollisionProfile();
+            RestoreDefaultCollisionMaterials();
+            ApplyPhysicsLayer(ShredderPhysicsLayers.FreefallLayer);
+            SetPiecePhysicsCollidersEnabled(true, false);
+            PhysicsProfile = PiecePhysicsProfile.OpenFreefall;
             if (Body == null)
                 return;
 
-            // The exit phase moves the transform while this body is inert.
-            // Synchronise the Rigidbody pose before switching it to Dynamic;
-            // otherwise Unity can solve one step from a stale pooled pose.
+            // The kinematic exit phase owns the transform. Synchronise that
+            // exact pose before Dynamic simulation starts so Box2D never
+            // resolves from a stale pooled position.
             Body.position = transform.position;
             Body.rotation = transform.eulerAngles.z;
+            Body.simulated = true;
+            Body.bodyType = RigidbodyType2D.Dynamic;
+            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             Body.constraints = RigidbodyConstraints2D.None;
+            Body.gravityScale = config.PhysicsFreefallGravityScale;
+            Body.drag = 0f;
             Body.angularDrag = config.PhysicsFreefallAngularDrag;
+            Body.useFullKinematicContacts = false;
+            Body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
             Body.velocity = Vector2.down * Mathf.Max(
                 config.PhysicsFreefallEntrySpeed,
                 downwardSpeed);
@@ -1982,7 +1980,130 @@ namespace GravityPuzzle
             Body.WakeUp();
         }
 
-        private void SetPiecePhysicsCollidersEnabled(bool enabled)
+        /// <summary>
+        /// Shredding is a controlled presentation stage. The Rigidbody and
+        /// every physical collider are inert before the feed coroutine moves
+        /// the visual root and emits debris.
+        /// </summary>
+        public void ApplyShreddingPhysicsProfile()
+        {
+            RestoreDefaultPhysicsLayers();
+            RestoreDefaultCollisionMaterials();
+            useFullCollisionGeometry = true;
+            ApplyCollisionProfile();
+            SetPiecePhysicsCollidersEnabled(false, false);
+            PhysicsProfile = PiecePhysicsProfile.Shredding;
+            if (Body == null)
+                return;
+
+            Body.velocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+            Body.drag = 0f;
+            Body.angularDrag = 0f;
+            Body.gravityScale = 0f;
+            Body.bodyType = RigidbodyType2D.Kinematic;
+            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            Body.constraints = RigidbodyConstraints2D.FreezeAll;
+            Body.useFullKinematicContacts = false;
+            Body.interpolation = RigidbodyInterpolation2D.None;
+            Body.sleepMode = RigidbodySleepMode2D.StartAsleep;
+            Body.simulated = false;
+        }
+
+        /// <summary>
+        /// Dedicated temporary-island profile. It is intentionally separate
+        /// from OpenFreefall because it collides with authored blocker and
+        /// guide geometry inside the controlled shredder corridor.
+        /// </summary>
+        public void ApplyShredderSupportPhysicsProfile(ShredderConfig config)
+        {
+            if (config == null)
+                return;
+
+            useFullCollisionGeometry = true;
+            ApplyCollisionProfile();
+            ApplyShredderCollisionMaterial(config.FeedPhysicsMaterial);
+            ApplyPhysicsLayer(ShredderPhysicsLayers.PieceLayer);
+            SetPiecePhysicsCollidersEnabled(true, false);
+            PhysicsProfile = PiecePhysicsProfile.ShredderSupport;
+            if (Body == null)
+                return;
+
+            Body.position = transform.position;
+            Body.rotation = transform.eulerAngles.z;
+            Body.simulated = true;
+            Body.bodyType = RigidbodyType2D.Dynamic;
+            Body.gravityScale = config.PhysicsIslandGravityScale;
+            Body.drag = 0f;
+            Body.angularDrag = config.PhysicsIslandAngularDrag;
+            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            Body.constraints = RigidbodyConstraints2D.FreezePositionX |
+                               RigidbodyConstraints2D.FreezeRotation;
+            Body.useFullKinematicContacts = false;
+            Body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+            Body.velocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+            Body.WakeUp();
+        }
+
+        public void ApplyShredderApproachPhysicsProfile(ShredderConfig config)
+        {
+            if (config == null)
+                return;
+
+            useFullCollisionGeometry = true;
+            ApplyCollisionProfile();
+            ApplyShredderCollisionMaterial(config.FeedPhysicsMaterial);
+            ApplyPhysicsLayer(ShredderPhysicsLayers.PieceLayer);
+            SetPiecePhysicsCollidersEnabled(true, false);
+            PhysicsProfile = PiecePhysicsProfile.ShredderApproach;
+            if (Body == null)
+                return;
+
+            Body.position = transform.position;
+            Body.rotation = transform.eulerAngles.z;
+            Body.simulated = true;
+            Body.bodyType = RigidbodyType2D.Kinematic;
+            Body.gravityScale = 0f;
+            Body.drag = 0f;
+            Body.angularDrag = config.FeedAngularDrag;
+            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            Body.constraints = RigidbodyConstraints2D.FreezePositionX |
+                               RigidbodyConstraints2D.FreezeRotation;
+            Body.useFullKinematicContacts = true;
+            Body.interpolation = RigidbodyInterpolation2D.None;
+            Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+            Body.velocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+        }
+
+        /// <summary>
+        /// Advances the non-physical shred presentation after its lifecycle
+        /// has entered Shredding. No Rigidbody state is mutated here.
+        /// </summary>
+        public void MoveShreddingPresentation(
+            float downwardDistance,
+            float maximumTiltAngle,
+            float alignmentSpeed,
+            float deltaTime)
+        {
+            if (PhysicsProfile != PiecePhysicsProfile.Shredding)
+                return;
+
+            transform.position += Vector3.down * downwardDistance;
+            float currentAngle = transform.eulerAngles.z;
+            float cardinalAngle = Mathf.Round(currentAngle / 90f) * 90f;
+            if (Mathf.Abs(Mathf.DeltaAngle(currentAngle, cardinalAngle)) > maximumTiltAngle)
+            {
+                transform.rotation = Quaternion.Euler(
+                    0f,
+                    0f,
+                    Mathf.MoveTowardsAngle(currentAngle, cardinalAngle, alignmentSpeed * deltaTime));
+            }
+        }
+
+        private void SetPiecePhysicsCollidersEnabled(bool enabled, bool isTrigger)
         {
             if (solidColliders == null)
                 CacheSolidColliders();
@@ -1993,44 +2114,19 @@ namespace GravityPuzzle
             for (int index = 0; index < solidColliders.Length; index++)
             {
                 Collider2D collider = solidColliders[index];
-                if (collider != null && !collider.isTrigger)
+                if (collider != null)
+                {
+                    collider.isTrigger = isTrigger;
                     collider.enabled = enabled;
+                }
             }
-        }
-
-        /// <summary>
-        /// Takes a prevalidated support member through the controlled approach
-        /// corridor. This is intentionally kinematic: Unity contacts may still
-        /// render the final feed, but no unowned Dynamic body may wedge itself
-        /// between the cutter guides and leave the gameplay lifecycle locked.
-        /// </summary>
-        public void EnterShredderApproachPhysics(ShredderConfig config)
-        {
-            if (config == null)
-                return;
-
-            PrepareForShredderPhysics();
-            ApplyShredderPhysicsLayer();
-            if (Body == null)
-                return;
-
-            Body.simulated = true;
-            Body.bodyType = RigidbodyType2D.Kinematic;
-            Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            Body.constraints = RigidbodyConstraints2D.FreezePositionX |
-                               RigidbodyConstraints2D.FreezeRotation;
-            Body.gravityScale = 0f;
-            Body.useFullKinematicContacts = true;
-            Body.velocity = Vector2.zero;
-            Body.angularVelocity = 0f;
-            Body.angularDrag = config.FeedAngularDrag;
         }
 
         /// <summary>
         /// Applies the authored shredder-feed material to colliders already
         /// cached by this piece. No hierarchy search occurs during feed.
         /// </summary>
-        public void ApplyShredderCollisionMaterial(PhysicsMaterial2D material)
+        private void ApplyShredderCollisionMaterial(PhysicsMaterial2D material)
         {
             if (material == null || solidColliders == null)
                 return;
@@ -3296,6 +3392,7 @@ namespace GravityPuzzle
                 return false;
 
             GridFallView?.Cancel();
+            ApplyShreddingPhysicsProfile();
             shredderHandoffMode = ShredderHandoffMode.Feeding;
             keepShredderGridReservationUntilDespawn = false;
             SetSelected(false);
@@ -4431,19 +4528,19 @@ namespace GravityPuzzle
             }
         }
 
-        private void ApplyShredderPhysicsLayer()
+        private void ApplyPhysicsLayer(int layer)
         {
-            if (!ShredderPhysicsLayers.IsAvailable)
+            if (!ShredderPhysicsLayers.IsAvailable || layer < 0)
                 return;
 
-            gameObject.layer = ShredderPhysicsLayers.PieceLayer;
+            gameObject.layer = layer;
             if (solidColliders == null)
                 return;
 
             for (int index = 0; index < solidColliders.Length; index++)
             {
                 if (solidColliders[index] != null)
-                    solidColliders[index].gameObject.layer = ShredderPhysicsLayers.PieceLayer;
+                    solidColliders[index].gameObject.layer = layer;
             }
         }
 

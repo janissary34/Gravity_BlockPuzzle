@@ -233,7 +233,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 out Sprite voxelSprite,
                 out Material presentationMaterial);
             PrepareRoot(root.Piece, level, definition);
-            ConfigureBody(root.Body, level);
+            ConfigureBody(root.Piece);
             ConfigureComposite(root.CompositeCollider);
 
             PieceRuntimeContent content = BuildRuntimeContent(
@@ -312,12 +312,6 @@ namespace GravityPuzzle.Gameplay.Pieces
                 GetFallbackSpriteMaterial());
             ConfigureFragment(root.Piece, root.Body, root.CompositeCollider, root.Outline,
                 level, cells, color, presentationMaterial, remainingProgress);
-            // A pooled Rigidbody2D can retain its previous physics pose until
-            // Unity's next transform sync. Fragment grid registration happens
-            // immediately below its creation, so explicitly align the physics
-            // body with the root before that model is derived.
-            root.Body.position = position;
-            root.Body.rotation = rotation.eulerAngles.z;
             return root.Piece;
         }
 
@@ -370,7 +364,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             DOTween.Kill(piece.gameObject);
             ClearGeneratedContent(piece);
 
-            piece.ResetToPooledPhysics();
+            piece.ApplyGridPhysicsProfile();
 
             if (piece.CompositeCollider != null)
                 piece.CompositeCollider.enabled = false;
@@ -390,28 +384,9 @@ namespace GravityPuzzle.Gameplay.Pieces
             ClearGeneratedContent(piece);
         }
 
-        private static void ConfigureBody(Rigidbody2D body, GravityLevelDefinition level)
+        private static void ConfigureBody(PuzzlePiece piece)
         {
-            // This root is pooled. PrepareRoot has already assigned the new
-            // authored transform position, but a Rigidbody2D can still retain
-            // the physics pose from its previous owner until it is explicitly
-            // updated. Grid-fall tweens drive the Rigidbody2D, so leaving that
-            // stale pose in place makes a newly spawned piece travel sideways
-            // towards its grid target and visibly pass through neighbours.
-            body.position = body.transform.position;
-            body.simulated = true;
-            body.gravityScale = level.gravityScale;
-            body.mass = 1f;
-            body.bodyType = RigidbodyType2D.Kinematic;
-            body.useFullKinematicContacts = false;
-            body.interpolation = RigidbodyInterpolation2D.None;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            body.velocity = Vector2.zero;
-            body.angularVelocity = 0f;
-            body.rotation = 0f;
-            body.angularDrag = 0f;
+            piece?.ApplyGridPhysicsProfile();
         }
 
         private static void ConfigureFragment(
@@ -434,7 +409,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                     $"[PiecePool] BlockPiece prefab has {piece.PartSlotCount} part slots but hammer fragment needs {cells.Count}.");
 
             ClearGeneratedContent(piece);
-            ConfigureBody(body, level);
+            ConfigureBody(piece);
             ConfigureComposite(composite);
 
             List<BoxCollider2D> collisionCells = new List<BoxCollider2D>(cells.Count);
@@ -475,6 +450,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             piece.ConfigureRemainingProgress(remainingProgress);
             ConfigureOutlinePresentation(piece);
             ConfigureFragmentJoinedPresentation(piece, cells);
+            piece.ApplyGridPhysicsProfile();
         }
 
         /// <summary>
@@ -647,6 +623,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 puzzlePiece.ConfigureSolidCellPresentation(content.CollisionCellVisuals);
 
             ConfigureOutlinePresentation(puzzlePiece);
+            puzzlePiece.ApplyGridPhysicsProfile();
         }
 
         private static PieceRuntimeContent BuildRuntimeContent(

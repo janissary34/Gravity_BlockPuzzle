@@ -12,32 +12,38 @@ namespace GravityPuzzle
         private const string GuideLayerName = "ShredderPhysicsGuide";
         private const string PieceLayerName = "ShredderPhysicsPiece";
         internal const string BlockerLayerName = "ShredderPhysicsBlocker";
+        internal const string FreefallLayerName = "ShredderPhysicsFreefall";
 
         private static int guideLayer = -1;
         private static int pieceLayer = -1;
         private static int blockerLayer = -1;
+        private static int freefallLayer = -1;
         private static bool configured;
 
         public static int GuideLayer => guideLayer;
         public static int PieceLayer => pieceLayer;
         public static int BlockerLayer => blockerLayer;
+        public static int FreefallLayer => freefallLayer;
         public static bool IsAvailable => configured &&
                                           guideLayer >= 0 &&
                                           pieceLayer >= 0 &&
-                                          blockerLayer >= 0;
+                                          blockerLayer >= 0 &&
+                                          freefallLayer >= 0;
 
         public static bool Configure()
         {
             guideLayer = LayerMask.NameToLayer(GuideLayerName);
             pieceLayer = LayerMask.NameToLayer(PieceLayerName);
             blockerLayer = LayerMask.NameToLayer(BlockerLayerName);
-            configured = guideLayer >= 0 && pieceLayer >= 0 && blockerLayer >= 0;
+            freefallLayer = LayerMask.NameToLayer(FreefallLayerName);
+            configured = guideLayer >= 0 && pieceLayer >= 0 && blockerLayer >= 0 &&
+                         freefallLayer >= 0;
 
             if (!configured)
             {
                 Debug.LogError(
                     $"[ShredderPhysicsIsland] Missing required layers '{GuideLayerName}', " +
-                    $"'{PieceLayerName}', and/or '{BlockerLayerName}'. " +
+                    $"'{PieceLayerName}', '{BlockerLayerName}', and/or '{FreefallLayerName}'. " +
                     "The temporary physics island is disabled until all required layers are added in Project Settings.");
                 return false;
             }
@@ -49,6 +55,7 @@ namespace GravityPuzzle
             {
                 Physics2D.IgnoreLayerCollision(guideLayer, layer, true);
                 Physics2D.IgnoreLayerCollision(pieceLayer, layer, true);
+                Physics2D.IgnoreLayerCollision(freefallLayer, layer, true);
             }
 
             Physics2D.IgnoreLayerCollision(guideLayer, pieceLayer, false);
@@ -58,6 +65,10 @@ namespace GravityPuzzle
             // share the same authoritative blocked cells as the grid; all
             // other Default-layer scene objects remain isolated.
             Physics2D.IgnoreLayerCollision(pieceLayer, blockerLayer, false);
+            // An off-board freefall body must only interact with other
+            // off-board freefall bodies. In particular it cannot touch map
+            // blockers, temporary mouth guides, or support-island members.
+            Physics2D.IgnoreLayerCollision(freefallLayer, freefallLayer, false);
             // This project keeps normally managed pieces on Default. Make the
             // normal board's relationship with the migrated blocker geometry
             // explicit too, rather than relying on the project matrix's
@@ -72,6 +83,7 @@ namespace GravityPuzzle
             guideLayer = -1;
             pieceLayer = -1;
             blockerLayer = -1;
+            freefallLayer = -1;
             configured = false;
         }
     }

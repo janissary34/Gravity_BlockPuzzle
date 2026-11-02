@@ -109,9 +109,14 @@ namespace GravityPuzzle
                     shredderConfig.CatchZonePrefab,
                     transform,
                     shredderConfig.CatchZonePoolCapacity);
+            // OpenFreefall always needs its isolated collision layer. The
+            // optional support island must not decide whether map-exit
+            // freefall receives that layer.
+            bool shredderPhysicsLayersAvailable = shredderConfig != null &&
+                                                  ShredderPhysicsLayers.Configure();
             physicsIslandAvailable = shredderConfig != null &&
                                      shredderConfig.EnablePhysicsIsland &&
-                                     ShredderPhysicsLayers.Configure();
+                                     shredderPhysicsLayersAvailable;
             if (physicsIslandAvailable && shredderConfig.PhysicsMouthPrefab == null)
             {
                 physicsIslandAvailable = false;
@@ -191,14 +196,14 @@ namespace GravityPuzzle
                 }
 
                 PrototypeBoard board = PrototypeBoard.Active;
-                if (board == null || !board.TryReleaseShredderExitReservation(handoff.Piece))
+                if (board == null || !board.TryBeginOpenFreefall(handoff.Piece))
                 {
-                    Debug.LogError("[ShredderHandoff] Could not release the grid reservation at the physics line.", handoff.Piece);
+                    Debug.LogError("[ShredderHandoff] Could not enter open freefall at the physics line.", handoff.Piece);
                     continue;
                 }
 
                 Physics2D.SyncTransforms();
-                handoff.Piece.EnterShredderFreefallPhysics(shredderConfig, speed);
+                handoff.Piece.ApplyOpenFreefallPhysicsProfile(shredderConfig, speed);
                 activeFreefallPieces.Add(handoff);
                 activeExitHandoffs.RemoveAt(index);
             }
@@ -346,7 +351,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryCapturePiece(PuzzlePiece piece, ShredderCatchZone zone)
         {
-            if (piece == null || piece.IsFrozen || zone == null ||
+            if (piece == null || piece.IsFrozen || zone == null || shredderConfig == null ||
                 !zone.ContainsMapExitFootprint(piece))
                 return false;
 
@@ -715,11 +720,7 @@ namespace GravityPuzzle
             // the cutter line below, preventing a feed from passing through an
             // obstacle or another falling piece.
             piece.SetSelected(false);
-            piece.EnterShredderPhysics(shredderConfig);
-            piece.ApplyShredderCollisionMaterial(shredderConfig != null
-                ? shredderConfig.FeedPhysicsMaterial
-                : null);
-            Rigidbody2D rb = piece.Body;
+            piece.ApplyShreddingPhysicsProfile();
 
             // 2. Capture the current presentation before the feed mask begins
             // clipping the piece beneath the cutter.
@@ -816,33 +817,15 @@ namespace GravityPuzzle
                 elapsed += feedDeltaTime;
                 PrototypeBoard.Active?.JointSpringPresenter?.UpdateShredderSprings(piece, clippingSeamY, shredderConfig);
 
-                if (rb != null)
-                {
-                    // Preserve the incoming downward momentum visually, then
-                    // ease to the normal feed speed instead of producing a
-                    // one-frame slow-down when Dynamic physics is captured.
-                    currentFeedSpeed = Mathf.MoveTowards(
-                        currentFeedSpeed,
-                        feedSpeed,
-                        feedEntryDeceleration * feedDeltaTime);
-                    rb.MovePosition(rb.position + new Vector2(0f, -currentFeedSpeed * feedDeltaTime));
-
-                    // A freefall piece can arrive at any natural angle. The
-                    // previous direct clamp to +/-5 degrees around zero made
-                    // 90/180-degree pieces visibly snap and could make a wide
-                    // shape jump through the mouth. Settle only toward its
-                    // nearest cardinal orientation at a bounded rate.
-                    rb.angularVelocity = 0f;
-                    float currentAngle = rb.rotation;
-                    float cardinalAngle = Mathf.Round(currentAngle / 90f) * 90f;
-                    if (Mathf.Abs(Mathf.DeltaAngle(currentAngle, cardinalAngle)) > maxTiltAngle)
-                    {
-                        rb.MoveRotation(Mathf.MoveTowardsAngle(
-                            currentAngle,
-                            cardinalAngle,
-                            feedAlignmentSpeed * feedDeltaTime));
-                    }
-                }
+                currentFeedSpeed = Mathf.MoveTowards(
+                    currentFeedSpeed,
+                    feedSpeed,
+                    feedEntryDeceleration * feedDeltaTime);
+                piece.MoveShreddingPresentation(
+                    currentFeedSpeed * feedDeltaTime,
+                    maxTiltAngle,
+                    feedAlignmentSpeed,
+                    feedDeltaTime);
 
                 // Sample active block cells directly so concave/notched pieces (L, U, etc.)
                 // never produce false contact in empty air.

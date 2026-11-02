@@ -7,6 +7,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         Dragging,
         Falling,
         HandoffToPhysics,
+        OpenFreefall,
         Shredding,
         Despawned
     }

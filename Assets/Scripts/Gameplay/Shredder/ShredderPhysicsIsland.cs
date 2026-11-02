@@ -175,7 +175,7 @@ namespace GravityPuzzle
                 if (member == null)
                     continue;
 
-                member.EnterShredderApproachPhysics(config);
+                member.ApplyShredderApproachPhysicsProfile(config);
                 dynamicMembers.Add(member);
             }
 

@@ -48,14 +48,23 @@ not reserve a queue, lane, or grid column. A piece whose authoritative footprint
 reaches the map-bottom exit in that zone enters `HandoffToPhysics` immediately:
 targeting is locked and its grid cells stay reserved while an owned kinematic
 exit phase clears the map. The exit line is evaluated from the lowest physical
-cell edge, never from a piece root/pivot. At that line the reservation is
-released and the piece becomes an independent Dynamic freefall body. No
-shredder tick clamps its velocity or rotation, and no grid reservation, queue,
-drag, or targeting logic owns it after that release.
+cell edge, never from a piece root/pivot. At that line `PrototypeBoard` alone
+transitions the model to `OpenFreefall` and clears its grid reservation.
+
+`PuzzlePiece` is the sole owner of normal-piece Rigidbody2D, collider, material,
+and layer profiles. `Grid` is kinematic with queryable colliders for input, but
+grid rules exclusively own movement; `OpenFreefall` is Dynamic on
+`ShredderPhysicsFreefall` with full geometry and can collide only with other
+pieces on that layer; `Shredding` disables simulation and colliders before the
+controlled cutter presentation starts. In particular, open freefall
+must never inherit the support-island layer, feed material, blocker contacts, or
+guide contacts. No shredder tick clamps its velocity or rotation while the model
+is `OpenFreefall`, and no grid reservation, queue, drag, or targeting logic owns
+it after that release.
 
 The freefall capture plane is the rendered cutter seam rather than the older
 approach plane. Only when the lowest real cell crosses that seam does the board
-transition the already-off-board model from `HandoffToPhysics` to `Shredding`.
+transition the already-off-board model from `OpenFreefall` to `Shredding`.
 This transition never recreates a grid reservation. The cutter presentation then
 emits pooled cutter debris and HUD progress before the root is returned to its
 pool. It does not take transform or Rigidbody ownership before the destruction

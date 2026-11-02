@@ -82,6 +82,8 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float physicsHandoffDistanceBelowMap = 1.5f;
         [Tooltip("Clear freefall distance between the handoff line and the shredder mouth.")]
         [Min(0f)] [SerializeField] private float physicsFreefallDistanceBelowHandoff = 2f;
+        [Tooltip("Gravity applied only while an off-board piece is in the isolated open-freefall profile.")]
+        [Range(0f, 5f)] [SerializeField] private float physicsFreefallGravityScale = 1f;
         [Tooltip("Downward speed assigned when a piece crosses from the grid exit handoff into freefall. It must not be slower than the kinematic exit travel.")]
         [Min(.01f)] [SerializeField] private float physicsFreefallEntrySpeed = 4.2f;
         [Tooltip("Angular damping applied only after a piece has entered the open freefall area.")]
@@ -187,6 +189,7 @@ namespace GravityPuzzle.Config
         public bool EnablePhysicsIsland => enablePhysicsIsland;
         public float PhysicsHandoffDistanceBelowMap => physicsHandoffDistanceBelowMap;
         public float PhysicsFreefallDistanceBelowHandoff => physicsFreefallDistanceBelowHandoff;
+        public float PhysicsFreefallGravityScale => physicsFreefallGravityScale;
         public float PhysicsFreefallEntrySpeed => physicsFreefallEntrySpeed;
         public float PhysicsFreefallAngularDrag => physicsFreefallAngularDrag;
         public float PhysicsIslandGravityScale => physicsIslandGravityScale;
