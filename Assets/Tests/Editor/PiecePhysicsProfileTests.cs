@@ -33,6 +33,10 @@ namespace GravityPuzzle.Tests.Editor
             GameObject cell = new GameObject("Cell");
             cell.transform.SetParent(root.transform, false);
             BoxCollider2D cellCollider = cell.AddComponent<BoxCollider2D>();
+            // PuzzlePiece caches its required Rigidbody2D in Awake. A runtime
+            // piece prefab always owns one before PuzzlePiece is enabled, so
+            // mirror that construction order in this isolated profile test.
+            root.AddComponent<Rigidbody2D>();
             PuzzlePiece piece = root.AddComponent<PuzzlePiece>();
             ShredderConfig config = ScriptableObject.CreateInstance<ShredderConfig>();
 
