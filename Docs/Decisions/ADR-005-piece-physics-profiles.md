@@ -31,7 +31,10 @@ profile writer:
 Grid drag, gravity presentation, and release snap move transforms through
 `PieceGridFallView`; they never tween a Rigidbody2D. At presentation completion,
 `PuzzlePiece.SetGridPresentationPosition` synchronizes the dormant body pose with
-the committed grid transform before a later physics handoff.
+the committed grid transform before a later physics handoff. The view records
+the latest authored downward presentation rate; map exit transfers that speed
+unchanged to OpenFreefall. The shredder config is only a fallback for a path
+without a measurable downward grid presentation.
 
 Pooling re-applies the Grid profile on spawn and despawn so layers, materials,
 velocities, constraints, colliders, and simulation state cannot leak.
@@ -44,7 +47,12 @@ contacts require both the dedicated layer and `ShredderPhysicsLayers.Configure`;
 they must not be made by mutating individual pieces at runtime. No lifecycle
 phase may use Physics2D collider ordering to select a grid piece.
 
-The cutter captures a freefall body at its rendered seam, disables physics, and
-performs at most one seam-alignment correction before presentation begins. The
-feed coroutine owns visual clipping, jitter, debris, and pooling only; it does
-not mutate colliders, layers, Rigidbody2D settings, or grid occupancy.
+The cutter captures a freefall body at its rendered seam without moving it to a
+shared seam. The body stays Dynamic and simulated, changes only to the dedicated
+`ShredderPhysicsFeed` layer, and keeps its colliders enabled. Freefall and feed
+layers can collide only with each other, never with the map, blockers, guides, or
+normal board. This preserves vertical support between cutting pieces while their
+existing linear velocity continues unchanged. The feed presentation observes the
+live body from `BlockShredder`'s single fixed-step feed list to clip visuals,
+emit debris and report progress; it never writes the piece transform, velocity,
+rotation, colliders, layers, or grid occupancy.

@@ -167,9 +167,11 @@ namespace GravityPuzzle
             }
         }
 
-        public float CurrentCollisionInset => collisionCells == null || useFullCollisionGeometry
+        public float CurrentCollisionInset => collisionCells == null
             ? 0f
-            : GravityGridMetrics.RestingPieceCollisionSkinInCells;
+            : useFullCollisionGeometry
+                ? activePhysicsCollisionInset
+                : GravityGridMetrics.RestingPieceCollisionSkinInCells;
 
         public int CollisionCellCount => collisionCells != null ? collisionCells.Count : 0;
         public IReadOnlyList<BoxCollider2D> CollisionCells => collisionCells;
@@ -237,6 +239,7 @@ namespace GravityPuzzle
         // until every island member despawns, so normal grid gravity cannot
         // enter the same space while physics owns the contact response.
         private bool keepShredderGridReservationUntilDespawn;
+        private float activePhysicsCollisionInset;
         private readonly List<VoxelShard> configuredVoxelShards = new List<VoxelShard>();
         private SpriteRenderer[] configuredShredderRenderers;
         private Collider2D[] solidColliders;
@@ -1908,7 +1911,7 @@ namespace GravityPuzzle
                     return;
 
                 case PieceState.Shredding:
-                    ApplyShreddingPhysicsProfile();
+                    ApplyShreddingPhysicsProfile(shredderConfig);
                     return;
 
                 default:
@@ -1927,6 +1930,7 @@ namespace GravityPuzzle
             RestoreDefaultPhysicsLayers();
             RestoreDefaultCollisionMaterials();
             useFullCollisionGeometry = false;
+            activePhysicsCollisionInset = 0f;
             ApplyCollisionProfile();
             SetPiecePhysicsCollidersEnabled(false, false);
             PhysicsProfile = PiecePhysicsProfile.Grid;
@@ -1987,9 +1991,11 @@ namespace GravityPuzzle
             if (config == null)
                 return;
 
+            CacheSolidColliders();
             useFullCollisionGeometry = true;
+            activePhysicsCollisionInset = config.PhysicsFreefallColliderInset;
             ApplyCollisionProfile();
-            RestoreDefaultCollisionMaterials();
+            ApplyShredderCollisionMaterial(config.FeedPhysicsMaterial);
             ApplyPhysicsLayer(ShredderPhysicsLayers.FreefallLayer);
             SetPiecePhysicsCollidersEnabled(true, false);
             PhysicsProfile = PiecePhysicsProfile.OpenFreefall;
@@ -2011,90 +2017,68 @@ namespace GravityPuzzle
             Body.useFullKinematicContacts = false;
             Body.interpolation = RigidbodyInterpolation2D.Interpolate;
             Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            Body.velocity = Vector2.down * Mathf.Max(
-                config.PhysicsFreefallEntrySpeed,
-                downwardSpeed);
+            // The grid presentation owns no simulated velocity. When it has
+            // supplied an actual downward presentation rate, preserve it
+            // exactly at handoff instead of imposing a slower feed minimum.
+            float entrySpeed = downwardSpeed > 0f
+                ? downwardSpeed
+                : config.PhysicsFreefallEntrySpeed;
+            Body.velocity = Vector2.down * entrySpeed;
             Body.angularVelocity = 0f;
             Body.WakeUp();
         }
 
         /// <summary>
-        /// Shredding is a controlled presentation stage. The Rigidbody and
-        /// every physical collider are inert before the feed coroutine moves
-        /// the visual root and emits debris.
+        /// Cutting is visual consumption over live physics. The body keeps its
+        /// existing linear velocity and collider contacts so higher pieces can
+        /// remain supported by a lower cutting piece.
         /// </summary>
-        private void ApplyShreddingPhysicsProfile()
+        private void ApplyShreddingPhysicsProfile(ShredderConfig config)
         {
-            RestoreDefaultPhysicsLayers();
-            RestoreDefaultCollisionMaterials();
+            CacheSolidColliders();
             useFullCollisionGeometry = true;
+            activePhysicsCollisionInset = config != null
+                ? config.PhysicsFreefallColliderInset
+                : 0f;
             ApplyCollisionProfile();
-            SetPiecePhysicsCollidersEnabled(false, false);
+            ApplyShredderCollisionMaterial(config != null ? config.FeedPhysicsMaterial : null);
+            ApplyPhysicsLayer(ShredderPhysicsLayers.FeedLayer);
+            SetPiecePhysicsCollidersEnabled(true, false);
             PhysicsProfile = PiecePhysicsProfile.Shredding;
             if (Body == null)
                 return;
 
-            Body.velocity = Vector2.zero;
-            Body.angularVelocity = 0f;
             Body.drag = 0f;
-            Body.angularDrag = 0f;
-            Body.gravityScale = 0f;
-            Body.bodyType = RigidbodyType2D.Kinematic;
+            Body.angularDrag = config != null ? config.PhysicsFeedAngularDrag : 0f;
+            Body.gravityScale = config != null ? config.PhysicsFreefallGravityScale : 1f;
+            Body.bodyType = RigidbodyType2D.Dynamic;
             Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            Body.constraints = RigidbodyConstraints2D.FreezeAll;
+            Body.constraints = RigidbodyConstraints2D.None;
             Body.useFullKinematicContacts = false;
-            Body.interpolation = RigidbodyInterpolation2D.None;
-            Body.sleepMode = RigidbodySleepMode2D.StartAsleep;
-            Body.simulated = false;
+            Body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
+            Body.simulated = true;
+            Body.WakeUp();
         }
 
         /// <summary>
-        /// Advances the non-physical shred presentation after its lifecycle
-        /// has entered Shredding. No Rigidbody state is mutated here.
+        /// The profile owner limits only angular energy below the board. It
+        /// intentionally never changes linear velocity or horizontal motion.
         /// </summary>
-        public void MoveShreddingPresentation(
-            float downwardDistance,
-            float maximumTiltAngle,
-            float alignmentSpeed,
-            float deltaTime)
+        public void ClampOffBoardAngularVelocity(ShredderConfig config)
         {
-            if (PhysicsProfile != PiecePhysicsProfile.Shredding)
+            if (Body == null || config == null ||
+                (PhysicsProfile != PiecePhysicsProfile.OpenFreefall &&
+                 PhysicsProfile != PiecePhysicsProfile.Shredding))
+            {
                 return;
-
-            transform.position += Vector3.down * downwardDistance;
-            float currentAngle = transform.eulerAngles.z;
-            float cardinalAngle = Mathf.Round(currentAngle / 90f) * 90f;
-            if (Mathf.Abs(Mathf.DeltaAngle(currentAngle, cardinalAngle)) > maximumTiltAngle)
-            {
-                transform.rotation = Quaternion.Euler(
-                    0f,
-                    0f,
-                    Mathf.MoveTowardsAngle(currentAngle, cardinalAngle, alignmentSpeed * deltaTime));
-            }
-        }
-
-        /// <summary>
-        /// Resolves the one possible FixedUpdate overshoot when a Dynamic
-        /// freefall body crosses the cutter seam. This is part of the
-        /// OpenFreefall-to-Shredding transition, after physics has already
-        /// been disabled; no running Rigidbody is teleported.
-        /// </summary>
-        public bool AlignShreddingFootprintToCutter(float cutterSeamY)
-        {
-            if (PhysicsProfile != PiecePhysicsProfile.Shredding ||
-                !TryGetActiveCellVerticalExtents(out float lowestCellY, out _))
-            {
-                return false;
             }
 
-            float correction = cutterSeamY - lowestCellY;
-            if (Mathf.Approximately(correction, 0f))
-                return true;
-
-            transform.position += Vector3.up * correction;
-            if (Body != null)
-                Body.position = transform.position;
-            return true;
+            float maximum = PhysicsProfile == PiecePhysicsProfile.Shredding
+                ? config.PhysicsFeedMaxAngularVelocity
+                : config.PhysicsFreefallMaxAngularVelocity;
+            if (maximum > 0f)
+                Body.angularVelocity = Mathf.Clamp(Body.angularVelocity, -maximum, maximum);
         }
 
         private void SetPiecePhysicsCollidersEnabled(bool enabled, bool isTrigger)
@@ -2122,6 +2106,9 @@ namespace GravityPuzzle
         /// </summary>
         private void ApplyShredderCollisionMaterial(PhysicsMaterial2D material)
         {
+            if (solidColliders == null)
+                CacheSolidColliders();
+
             if (material == null || solidColliders == null)
                 return;
 
@@ -3202,7 +3189,7 @@ namespace GravityPuzzle
                 return;
 
             float inset = useFullCollisionGeometry
-                ? 0f
+                ? activePhysicsCollisionInset
                 : GravityGridMetrics.RestingPieceCollisionSkinInCells;
 
             // Inset every modular cell around its own centre. Scaling the common
@@ -3339,7 +3326,7 @@ namespace GravityPuzzle
         /// Unity physics began, so this path deliberately has no reservation
         /// capture or frontier-release ownership.
         /// </summary>
-        public bool TryBeginOffBoardFreefallShredding()
+        public bool TryBeginOffBoardFreefallShredding(ShredderConfig shredderConfig)
         {
             if (IsFrozen)
                 return false;
@@ -3349,7 +3336,7 @@ namespace GravityPuzzle
                 return false;
 
             GridFallView?.Cancel();
-            ApplyLifecyclePhysicsProfile(PieceState.Shredding);
+            ApplyLifecyclePhysicsProfile(PieceState.Shredding, shredderConfig);
             shredderHandoffMode = ShredderHandoffMode.Feeding;
             keepShredderGridReservationUntilDespawn = false;
             SetSelected(false);

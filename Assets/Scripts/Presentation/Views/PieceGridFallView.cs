@@ -19,10 +19,19 @@ namespace GravityPuzzle.Presentation.Views
         public bool IsAnimating => activeFallTween != null && activeFallTween.IsActive();
         public TweenConfig Config => tweenConfig;
 
+        /// <summary>
+        /// The most recent downward grid-presentation rate. This is visual
+        /// continuity data only: the shredder may use it as the initial
+        /// velocity for a later physics handoff, but grid rules never depend
+        /// on it.
+        /// </summary>
+        public float LastDownwardPresentationSpeed { get; private set; }
+
         private void OnDisable()
         {
             activeFallTween?.Kill();
             activeFallTween = null;
+            LastDownwardPresentationSpeed = 0f;
         }
 
         public bool PlayFallTo(Vector2 targetPosition, Action onComplete)
@@ -66,7 +75,16 @@ namespace GravityPuzzle.Presentation.Views
         private bool PlayTo(Vector2 targetPosition, float duration, Action onComplete)
         {
             activeFallTween?.Kill();
+            Vector3 start = transform.position;
             Vector3 target = new Vector3(targetPosition.x, targetPosition.y, transform.position.z);
+
+            // Preserve the authored grid-fall tempo across the later
+            // Grid-to-OpenFreefall ownership handoff. A non-downward move is
+            // not a falling velocity and must not be reused at that boundary.
+            LastDownwardPresentationSpeed = target.y < start.y
+                ? (start.y - target.y) / Mathf.Max(duration, Mathf.Epsilon)
+                : 0f;
+
             activeFallTween = transform.DOMove(target, duration)
                 // This shares the same transform-based movement path as drag.
                 // Physics only owns the later OpenFreefall/Shredding phases.

@@ -51,32 +51,48 @@ namespace GravityPuzzle.Tests.Editor
                 Assert.That(cellCollider.enabled, Is.False,
                     "Grid input is resolved through the authoritative board, not a physics collider.");
 
-                piece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, config, 3f);
+                float handoffSpeed = config.PhysicsFreefallEntrySpeed + 1f;
+                piece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, config, handoffSpeed);
                 Assert.That(piece.PhysicsProfile, Is.EqualTo(PiecePhysicsProfile.OpenFreefall));
                 Assert.That(piece.Body.bodyType, Is.EqualTo(RigidbodyType2D.Dynamic));
                 Assert.That(piece.Body.simulated, Is.True);
                 Assert.That(piece.Body.constraints, Is.EqualTo(RigidbodyConstraints2D.None));
                 Assert.That(piece.Body.gravityScale, Is.EqualTo(config.PhysicsFreefallGravityScale));
+                Assert.That(piece.Body.velocity, Is.EqualTo(Vector2.down * handoffSpeed),
+                    "Open freefall must retain a faster authored handoff speed instead of resetting it.");
                 Assert.That(cellCollider.enabled, Is.True);
                 Assert.That(cellCollider.isTrigger, Is.False);
                 int freefallLayer = LayerMask.NameToLayer("ShredderPhysicsFreefall");
                 Assert.That(root.layer, Is.EqualTo(freefallLayer));
                 Assert.That(cell.layer, Is.EqualTo(freefallLayer));
+                int feedLayer = LayerMask.NameToLayer("ShredderPhysicsFeed");
                 for (int layer = 0; layer < 32; layer++)
                 {
-                    bool expectedIgnored = layer != freefallLayer;
+                    bool expectedIgnored = layer != freefallLayer && layer != feedLayer;
                     Assert.That(
                         Physics2D.GetIgnoreLayerCollision(freefallLayer, layer),
                         Is.EqualTo(expectedIgnored),
-                        $"Open freefall must only contact its own dedicated layer (layer {layer}).");
+                        $"Open freefall must only contact freefall and cutting pieces (layer {layer}).");
                 }
 
                 piece.ApplyLifecyclePhysicsProfile(PieceState.Shredding, config);
                 Assert.That(piece.PhysicsProfile, Is.EqualTo(PiecePhysicsProfile.Shredding));
-                Assert.That(piece.Body.simulated, Is.False);
-                Assert.That(piece.Body.velocity, Is.EqualTo(Vector2.zero));
-                Assert.That(piece.Body.angularVelocity, Is.Zero);
-                Assert.That(cellCollider.enabled, Is.False);
+                Assert.That(piece.Body.bodyType, Is.EqualTo(RigidbodyType2D.Dynamic));
+                Assert.That(piece.Body.simulated, Is.True);
+                Assert.That(piece.Body.velocity, Is.EqualTo(Vector2.down * handoffSpeed),
+                    "Cutting must preserve the solved freefall velocity.");
+                Assert.That(cellCollider.enabled, Is.True);
+                Assert.That(cellCollider.isTrigger, Is.False);
+                Assert.That(root.layer, Is.EqualTo(feedLayer));
+                Assert.That(cell.layer, Is.EqualTo(feedLayer));
+                for (int layer = 0; layer < 32; layer++)
+                {
+                    bool expectedIgnored = layer != freefallLayer && layer != feedLayer;
+                    Assert.That(
+                        Physics2D.GetIgnoreLayerCollision(feedLayer, layer),
+                        Is.EqualTo(expectedIgnored),
+                        $"Cutting pieces must only contact freefall and cutting pieces (layer {layer}).");
+                }
             }
             finally
             {
