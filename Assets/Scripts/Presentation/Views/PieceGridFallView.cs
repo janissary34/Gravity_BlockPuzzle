@@ -10,17 +10,14 @@ namespace GravityPuzzle.Presentation.Views
     {
         [SerializeField] private TweenConfig tweenConfig;
 
-        private Rigidbody2D body;
         private Tween activeFallTween;
 
-        public bool CanPlay => body != null && tweenConfig != null;
+        // Grid pieces deliberately have a non-simulated Rigidbody2D. Grid
+        // movement is therefore presentation-only and must never depend on a
+        // Rigidbody tween being simulated by Physics2D.
+        public bool CanPlay => tweenConfig != null;
         public bool IsAnimating => activeFallTween != null && activeFallTween.IsActive();
         public TweenConfig Config => tweenConfig;
-
-        private void Awake()
-        {
-            body = GetComponent<Rigidbody2D>();
-        }
 
         private void OnDisable()
         {
@@ -30,23 +27,23 @@ namespace GravityPuzzle.Presentation.Views
 
         public bool PlayFallTo(Vector2 targetPosition, Action onComplete)
         {
-            if (body == null || tweenConfig == null)
+            if (tweenConfig == null)
                 return false;
 
             return PlayTo(
                 targetPosition,
-                tweenConfig.GetGridFallDuration(Vector2.Distance(body.position, targetPosition)),
+                tweenConfig.GetGridFallDuration(Vector2.Distance(transform.position, targetPosition)),
                 onComplete);
         }
 
         public bool PlayReleaseTo(Vector2 targetPosition, Action onComplete)
         {
-            if (body == null || tweenConfig == null)
+            if (tweenConfig == null)
                 return false;
 
             return PlayTo(
                 targetPosition,
-                tweenConfig.GetGridReleaseDuration(Vector2.Distance(body.position, targetPosition)),
+                tweenConfig.GetGridReleaseDuration(Vector2.Distance(transform.position, targetPosition)),
                 onComplete);
         }
 
@@ -57,26 +54,30 @@ namespace GravityPuzzle.Presentation.Views
         /// </summary>
         public bool RetargetReleaseTo(Vector2 targetPosition, Action onComplete)
         {
-            if (!IsAnimating || body == null || tweenConfig == null)
+            if (!IsAnimating || tweenConfig == null)
                 return false;
 
             return PlayTo(
                 targetPosition,
-                tweenConfig.GetGridReleaseDuration(Vector2.Distance(body.position, targetPosition)),
+                tweenConfig.GetGridReleaseDuration(Vector2.Distance(transform.position, targetPosition)),
                 onComplete);
         }
 
         private bool PlayTo(Vector2 targetPosition, float duration, Action onComplete)
         {
             activeFallTween?.Kill();
-            activeFallTween = body.DOMove(targetPosition, duration)
-                .SetUpdate(UpdateType.Fixed)
+            Vector3 target = new Vector3(targetPosition.x, targetPosition.y, transform.position.z);
+            activeFallTween = transform.DOMove(target, duration)
+                // This shares the same transform-based movement path as drag.
+                // Physics only owns the later OpenFreefall/Shredding phases.
+                .SetUpdate(UpdateType.Normal)
                 .SetEase(tweenConfig.GridFallEase)
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true)
                 .OnComplete(() =>
                 {
                     activeFallTween = null;
+                    transform.position = target;
                     onComplete?.Invoke();
                 });
             return true;

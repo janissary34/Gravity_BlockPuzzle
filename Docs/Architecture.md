@@ -66,6 +66,11 @@ guide contacts. No shredder tick clamps its velocity or rotation while the model
 is `OpenFreefall`, and no grid reservation, queue, drag, or targeting logic owns
 it after that release.
 
+Grid drag, gravity presentation, and release snap are transform-owned by
+`PieceGridFallView`; they do not tween the non-simulated grid Rigidbody2D. When
+the presentation completes, `PuzzlePiece.SetGridPresentationPosition` synchronizes
+the dormant body pose with the committed grid transform before any later handoff.
+
 The freefall capture plane is the rendered cutter seam rather than the older
 approach plane. Only when the lowest real cell crosses that seam does the board
 transition the already-off-board model from `OpenFreefall` to `Shredding`.

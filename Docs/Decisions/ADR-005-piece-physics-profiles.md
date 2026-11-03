@@ -28,6 +28,11 @@ profile writer:
 * `Shredding`: Rigidbody simulation and colliders disabled; the established
   controlled cutter feed is presentation-only.
 
+Grid drag, gravity presentation, and release snap move transforms through
+`PieceGridFallView`; they never tween a Rigidbody2D. At presentation completion,
+`PuzzlePiece.SetGridPresentationPosition` synchronizes the dormant body pose with
+the committed grid transform before a later physics handoff.
+
 Pooling re-applies the Grid profile on spawn and despawn so layers, materials,
 velocities, constraints, colliders, and simulation state cannot leak.
 

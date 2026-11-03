@@ -5,6 +5,7 @@ using GravityPuzzle.Gameplay.Tutorial;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Presentation.Views;
 using UnityEngine;
 
 namespace GravityPuzzle
@@ -21,6 +22,11 @@ namespace GravityPuzzle
         // is locked by Ice. It never enters the Dragging lifecycle state.
         private PuzzlePiece frozenGroupFeedbackPiece;
         private PuzzlePiece gridReleasePresentationPiece;
+        // A joined release commits one grid transaction, so its members must
+        // share one presentation batch instead of some members snapping early.
+        private readonly List<PuzzlePiece> gridReleasePresentationPieces = new List<PuzzlePiece>();
+        private readonly List<Vector2> gridReleasePresentationTargets = new List<Vector2>();
+        private int pendingGridReleasePresentationCount;
         private readonly HashSet<PuzzlePiece> gridFallingPieces = new HashSet<PuzzlePiece>();
         private readonly List<PuzzlePiece> finishedGridFalls = new List<PuzzlePiece>();
         private readonly List<PuzzlePiece> retargetableGridFalls = new List<PuzzlePiece>();
@@ -118,8 +124,7 @@ namespace GravityPuzzle
 
             Instance.gridFallingPieces.Remove(piece);
             Instance.coordinatedFallReleaseMode.Remove(piece.SourcePieceId);
-            if (Instance.gridReleasePresentationPiece == piece)
-                Instance.gridReleasePresentationPiece = null;
+            Instance.CancelGridReleasePresentationIfContains(piece);
             Instance.pendingGridGravityMoves.Clear();
             PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Placed);
         }
@@ -273,11 +278,7 @@ namespace GravityPuzzle
             gridFallingPieces.Clear();
             coordinatedFallReleaseMode.Clear();
 
-            if (gridReleasePresentationPiece != null)
-            {
-                gridReleasePresentationPiece.GridFallView?.Cancel();
-                gridReleasePresentationPiece = null;
-            }
+            CancelGridReleasePresentation();
 
         }
 
@@ -351,12 +352,8 @@ namespace GravityPuzzle
 
         private bool AdvanceGridGravityPresentation()
         {
-            if (gridReleasePresentationPiece != null)
-            {
-                if (gridReleasePresentationPiece.GridFallView == null ||
-                    !gridReleasePresentationPiece.GridFallView.IsAnimating)
-                    gridReleasePresentationPiece = null;
-            }
+            if (gridReleasePresentationPiece != null && !IsGridReleasePresentationAnimating())
+                ClearGridReleasePresentationState();
 
             RemoveFinishedGridFalls();
 
@@ -745,7 +742,7 @@ namespace GravityPuzzle
                 GridCoordinate targetPivot = new GridCoordinate(
                     move.ToAnchor.X - model.PivotOffset.X,
                     move.ToAnchor.Y - model.PivotOffset.Y);
-                piece.PrepareGridPhysicsForInteraction(interpolate: true);
+                piece.PrepareGridPresentationProfile();
                 GridCoordinate sourcePivot = new GridCoordinate(
                     move.FromAnchor.X - model.PivotOffset.X,
                     move.FromAnchor.Y - model.PivotOffset.Y);
@@ -1254,7 +1251,7 @@ namespace GravityPuzzle
                 if (groupPiece == null || groupPiece.Body == null)
                     continue;
 
-                groupPiece.PrepareGridPhysicsForInteraction(interpolate: false);
+                groupPiece.PrepareGridPresentationProfile();
                 groupPiece.SetSelected(true);
             }
             if (selectedJointGroupPieces.Count > 1)
@@ -1318,8 +1315,7 @@ namespace GravityPuzzle
 
             piece.GridFallView?.Cancel();
             gridFallingPieces.Remove(piece);
-            if (gridReleasePresentationPiece == piece)
-                gridReleasePresentationPiece = null;
+            CancelGridReleasePresentationIfContains(piece);
         }
 
         private void ReleasePiece()
@@ -1337,21 +1333,17 @@ namespace GravityPuzzle
                     continue;
 
                 groupPiece.SetSelected(false);
-                groupPiece.PrepareGridPhysicsForInteraction(interpolate: true);
+                groupPiece.PrepareGridPresentationProfile();
             }
             Physics2D.SyncTransforms();
-            selectedPiece.PrepareGridPhysicsForInteraction(interpolate: true);
+            selectedPiece.PrepareGridPresentationProfile();
 
-            // Combined members share the same grid-snap transaction, but do
-            // not run independent release tweens afterwards: that would make
-            // their visuals diverge despite one authoritative group delta.
             if (isCombined)
             {
                 if (TryCommitSafeSnapRelease(selectedPiece, out _))
                 {
                     HapticFeedbackRuntime.ValidDrop();
-                    for (int groupIndex = 0; groupIndex < selectedJointGroupPieces.Count; groupIndex++)
-                        SnapPieceToCommittedGridPosition(selectedJointGroupPieces[groupIndex]);
+                    StartGridReleasePresentation(selectedPiece, selectedJointGroupPieces);
                 }
 
                 selectedPiece = null;
@@ -1367,14 +1359,7 @@ namespace GravityPuzzle
             {
                 HapticFeedbackRuntime.ValidDrop();
                 PuzzlePiece releasePiece = selectedPiece;
-                gridReleasePresentationPiece = releasePiece;
-                if (!releasePiece.GridFallView.PlayReleaseTo(
-                        releasePosition,
-                        () => CompleteGridReleasePresentation(releasePiece)))
-                {
-                    gridReleasePresentationPiece = null;
-                    selectedPiece.SetGridPresentationPosition(releasePosition);
-                }
+                StartGridReleasePresentation(releasePiece, releasePosition);
                 selectedPiece = null;
                 hasSelectedPieceStartAnchor = false;
                 hasLastResolvedDragPosition = false;
@@ -1414,26 +1399,134 @@ namespace GravityPuzzle
             fineDragRemainder = Vector2.zero;
         }
 
-        private void CompleteGridReleasePresentation(PuzzlePiece piece)
+        private void StartGridReleasePresentation(PuzzlePiece releasePiece, Vector2 releasePosition)
         {
-            if (gridReleasePresentationPiece != piece)
-                return;
+            gridReleasePresentationPieces.Clear();
+            gridReleasePresentationTargets.Clear();
+            gridReleasePresentationPieces.Add(releasePiece);
+            gridReleasePresentationTargets.Add(releasePosition);
+            BeginGridReleasePresentation(releasePiece);
+        }
 
-            if (piece != null && piece.Body != null &&
-                TryGetSnapshotPiece(piece, out _, out PieceModel model))
+        private void StartGridReleasePresentation(
+            PuzzlePiece releasePiece,
+            IReadOnlyList<PuzzlePiece> releasePieces)
+        {
+            gridReleasePresentationPieces.Clear();
+            gridReleasePresentationTargets.Clear();
+            for (int index = 0; index < releasePieces.Count; index++)
             {
-                GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
-                if (level != null)
-                {
-                    GridCoordinate pivot = new GridCoordinate(
-                        model.Anchor.X - model.PivotOffset.X,
-                        model.Anchor.Y - model.PivotOffset.Y);
-                    piece.SetGridPresentationPosition(
-                        GravityLevelGridCoordinates.FineCellToWorld(level, pivot));
-                }
+                PuzzlePiece member = releasePieces[index];
+                if (member == null || !TryGetCommittedGridPresentationPosition(member, out Vector2 target))
+                    continue;
+
+                gridReleasePresentationPieces.Add(member);
+                gridReleasePresentationTargets.Add(target);
             }
 
+            BeginGridReleasePresentation(releasePiece);
+        }
+
+        // Grid commit is authoritative before this visual pass begins. Every
+        // member gets the same transform-owned presentation lifecycle so joined
+        // pieces no longer skip their release animation.
+        private void BeginGridReleasePresentation(PuzzlePiece releasePiece)
+        {
+            if (releasePiece == null || gridReleasePresentationPieces.Count == 0)
+                return;
+
+            gridReleasePresentationPiece = releasePiece;
+            pendingGridReleasePresentationCount = gridReleasePresentationPieces.Count;
+            for (int index = 0; index < gridReleasePresentationPieces.Count; index++)
+            {
+                PuzzlePiece member = gridReleasePresentationPieces[index];
+                Vector2 target = gridReleasePresentationTargets[index];
+                bool played = member != null && member.GridFallView != null &&
+                    member.GridFallView.PlayReleaseTo(
+                        target,
+                        () => CompleteGridReleasePresentationMember(member));
+                if (!played)
+                {
+                    member?.SetGridPresentationPosition(target);
+                    CompleteGridReleasePresentationMember(member);
+                }
+            }
+        }
+
+        private void CompleteGridReleasePresentationMember(PuzzlePiece piece)
+        {
+            if (gridReleasePresentationPiece == null ||
+                !gridReleasePresentationPieces.Contains(piece) ||
+                pendingGridReleasePresentationCount <= 0)
+                return;
+
+            pendingGridReleasePresentationCount--;
+            if (pendingGridReleasePresentationCount > 0)
+                return;
+
+            // Align the non-simulated Rigidbody pose with the tween's final
+            // transform once, after every member reaches the committed grid
+            // position. This prevents a stale body pose at the next handoff.
+            for (int index = 0; index < gridReleasePresentationPieces.Count; index++)
+            {
+                PuzzlePiece member = gridReleasePresentationPieces[index];
+                if (member != null && TryGetCommittedGridPresentationPosition(member, out Vector2 target))
+                    member.SetGridPresentationPosition(target, synchronizeTransforms: false);
+            }
+            Physics2D.SyncTransforms();
+            ClearGridReleasePresentationState();
+        }
+
+        private bool IsGridReleasePresentationAnimating()
+        {
+            for (int index = 0; index < gridReleasePresentationPieces.Count; index++)
+            {
+                PieceGridFallView view = gridReleasePresentationPieces[index]?.GridFallView;
+                if (view != null && view.IsAnimating)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void CancelGridReleasePresentationIfContains(PuzzlePiece piece)
+        {
+            if (piece != null && gridReleasePresentationPieces.Contains(piece))
+                CancelGridReleasePresentation();
+        }
+
+        private void CancelGridReleasePresentation()
+        {
+            for (int index = 0; index < gridReleasePresentationPieces.Count; index++)
+                gridReleasePresentationPieces[index]?.GridFallView?.Cancel();
+            ClearGridReleasePresentationState();
+        }
+
+        private void ClearGridReleasePresentationState()
+        {
             gridReleasePresentationPiece = null;
+            pendingGridReleasePresentationCount = 0;
+            gridReleasePresentationPieces.Clear();
+            gridReleasePresentationTargets.Clear();
+        }
+
+        private static bool TryGetCommittedGridPresentationPosition(
+            PuzzlePiece piece,
+            out Vector2 position)
+        {
+            position = default;
+            if (piece == null || !TryGetSnapshotPiece(piece, out _, out PieceModel model))
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null)
+                return false;
+
+            GridCoordinate pivot = new GridCoordinate(
+                model.Anchor.X - model.PivotOffset.X,
+                model.Anchor.Y - model.PivotOffset.Y);
+            position = GravityLevelGridCoordinates.FineCellToWorld(level, pivot);
+            return true;
         }
 
         private bool TryCommitSafeSnapRelease(

@@ -1951,16 +1951,13 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Grid input and grid-fall presentation may choose interpolation, but
-        /// cannot otherwise mutate the Rigidbody profile directly.
+        /// Restores the non-simulated grid profile before transform-owned grid
+        /// input or presentation takes control. Rigidbody interpolation has no
+        /// role here because the grid movement never uses Physics2D simulation.
         /// </summary>
-        public void PrepareGridPhysicsForInteraction(bool interpolate)
+        public void PrepareGridPresentationProfile()
         {
             ApplyLifecyclePhysicsProfile(PieceState.Placed);
-            if (Body != null)
-                Body.interpolation = interpolate
-                    ? RigidbodyInterpolation2D.Interpolate
-                    : RigidbodyInterpolation2D.None;
         }
 
         /// <summary>
