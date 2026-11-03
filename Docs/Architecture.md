@@ -70,9 +70,6 @@ Grid drag, gravity presentation, and release snap are transform-owned by
 `PieceGridFallView`; they do not tween the non-simulated grid Rigidbody2D. When
 the presentation completes, `PuzzlePiece.SetGridPresentationPosition` synchronizes
 the dormant body pose with the committed grid transform before any later handoff.
-The view also supplies its latest authored downward presentation rate to the
-OpenFreefall entry profile, so the map-exit boundary does not reset a faster
-falling piece to a slower generic velocity.
 
 The freefall capture plane is the rendered cutter seam rather than the older
 approach plane. Only when the lowest real cell crosses that seam does the board
@@ -82,14 +79,6 @@ starts the established controlled cutter feed, which owns row-by-row clipping,
 visual tremor, pooled debris, HUD progress, and final pool return. It does not
 take transform or Rigidbody ownership before the cutter transition, so it cannot
 block or slow a piece in the open freefall area.
-
-At the cutter transition, the final solved freefall pose and its linear velocity
-are retained. The body remains Dynamic with colliders enabled on the isolated
-`ShredderPhysicsFeed` layer, which can collide only with freefall/feed bodies.
-This allows an upper piece to rest on a lower cutting piece while map, blocker and
-guide geometry remain unable to interfere. Feed presentation observes the body
-for clipping and effects from `BlockShredder`'s single fixed-step feed list; it
-does not move the transform or Rigidbody2D.
 
 `ShredderCatchZone` validates physical capture using per-cell geometry and then
 confirms the authoritative grid state. `CollisionBounds` is not used to decide

@@ -84,20 +84,10 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float physicsFreefallDistanceBelowHandoff = 2f;
         [Tooltip("Gravity applied only while an off-board piece is in the isolated open-freefall profile.")]
         [Range(0f, 5f)] [SerializeField] private float physicsFreefallGravityScale = 1f;
-        [Tooltip("Fallback downward speed used only when grid presentation has no measured downward motion to transfer into freefall.")]
+        [Tooltip("Downward speed assigned when a piece crosses from the grid exit handoff into freefall. It must not be slower than the kinematic exit travel.")]
         [Min(.01f)] [SerializeField] private float physicsFreefallEntrySpeed = 4.2f;
         [Tooltip("Angular damping applied only after a piece has entered the open freefall area.")]
         [Min(0f)] [SerializeField] private float physicsFreefallAngularDrag = .75f;
-        [Tooltip("Inset applied to full cell colliders only while pieces are in off-board physics.")]
-        [Range(0f, .1f)] [SerializeField] private float physicsFreefallColliderInset = .03f;
-        [Tooltip("Maximum angular speed permitted in open freefall.")]
-        [Min(0f)] [SerializeField] private float physicsFreefallMaxAngularVelocity = 360f;
-        [Tooltip("Angular damping applied after a piece has reached the cutter; linear velocity remains physics-owned.")]
-        [Min(0f)] [SerializeField] private float physicsFeedAngularDrag = 8f;
-        [Tooltip("Maximum angular speed permitted while a piece is visibly cutting.")]
-        [Min(0f)] [SerializeField] private float physicsFeedMaxAngularVelocity = 90f;
-        [Tooltip("Failsafe duration for a physics-open cutting presentation with malformed renderers.")]
-        [Min(.1f)] [SerializeField] private float physicsFeedMaximumDuration = 6f;
         [Tooltip("Lets only a contact-connected stack above a shredder feed use Unity physics briefly. Normal board gravity remains grid-owned.")]
         [SerializeField] private bool enablePhysicsIsland = true;
         [Tooltip("Gravity applied to a temporary dynamic support piece inside the shredder mouth.")]
@@ -202,11 +192,6 @@ namespace GravityPuzzle.Config
         public float PhysicsFreefallGravityScale => physicsFreefallGravityScale;
         public float PhysicsFreefallEntrySpeed => physicsFreefallEntrySpeed;
         public float PhysicsFreefallAngularDrag => physicsFreefallAngularDrag;
-        public float PhysicsFreefallColliderInset => physicsFreefallColliderInset;
-        public float PhysicsFreefallMaxAngularVelocity => physicsFreefallMaxAngularVelocity;
-        public float PhysicsFeedAngularDrag => physicsFeedAngularDrag;
-        public float PhysicsFeedMaxAngularVelocity => physicsFeedMaxAngularVelocity;
-        public float PhysicsFeedMaximumDuration => physicsFeedMaximumDuration;
         public float PhysicsIslandGravityScale => physicsIslandGravityScale;
         public float PhysicsIslandAngularDrag => physicsIslandAngularDrag;
         public float PhysicsIslandCaptureDistance => physicsIslandCaptureDistance;

@@ -52,11 +52,6 @@ MonoBehaviour:
   physicsFreefallGravityScale: 1
   physicsFreefallEntrySpeed: 4.2
   physicsFreefallAngularDrag: 0.75
-  physicsFreefallColliderInset: 0.03
-  physicsFreefallMaxAngularVelocity: 360
-  physicsFeedAngularDrag: 8
-  physicsFeedMaxAngularVelocity: 90
-  physicsFeedMaximumDuration: 6
   enablePhysicsIsland: 1
   physicsIslandGravityScale: 1
   physicsIslandAngularDrag: 4

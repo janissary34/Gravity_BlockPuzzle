@@ -45,43 +45,11 @@ namespace GravityPuzzle
         private readonly List<ShredderPhysicsIsland> activePhysicsIslands =
             new List<ShredderPhysicsIsland>();
         private readonly List<ExitHandoff> activeFreefallPieces = new List<ExitHandoff>();
-        private readonly List<PhysicsVisualFeed> activePhysicsVisualFeeds =
-            new List<PhysicsVisualFeed>();
 
         private sealed class ExitHandoff
         {
             public PuzzlePiece Piece;
             public ShredderCatchZone Zone;
-        }
-
-        /// <summary>
-        /// Per-piece presentation state observed from BlockShredder's single
-        /// FixedUpdate. It deliberately owns no physical state; Rigidbody2D
-        /// remains the only movement owner below the board.
-        /// </summary>
-        private sealed class PhysicsVisualFeed
-        {
-            public PuzzlePiece Piece;
-            public int PieceId;
-            public float ClippingSeamY;
-            public Color TileColor;
-            public SpriteRenderer[] Renderers;
-            public readonly List<VoxelShard> Shards = new List<VoxelShard>();
-            public readonly HashSet<VoxelShard> ProcessedShards = new HashSet<VoxelShard>();
-            public readonly HashSet<Transform> ShardTransforms = new HashSet<Transform>();
-            public readonly List<Bounds> CellBounds = new List<Bounds>(32);
-            public float TotalRendererArea;
-            public float RemainingProgress;
-            public int RemainingFlights;
-            public float ProgressVoxelAccumulator;
-            public float DebrisAccumulator;
-            public float Elapsed;
-            public bool ContactPresentationStarted;
-            public bool IsShreddingSoundActive;
-            public bool HapticSessionActive;
-            public Vector2 LastContactCenter;
-            public float LastContactWidth;
-            public ShredderContactGlowView Glow;
         }
         private readonly List<PuzzlePiece> physicsIslandMemberBuffer =
             new List<PuzzlePiece>(8);
@@ -173,7 +141,6 @@ namespace GravityPuzzle
         private void FixedUpdate()
         {
             TickFreefallPieces();
-            TickPhysicsVisualFeeds();
             for (int index = activePhysicsIslands.Count - 1; index >= 0; index--)
             {
                 ShredderPhysicsIsland island = activePhysicsIslands[index];
@@ -197,8 +164,6 @@ namespace GravityPuzzle
                     continue;
                 }
 
-                freefall.Piece.ClampOffBoardAngularVelocity(shredderConfig);
-
                 if (TryCaptureFreefallPieceAtCutter(freefall.Piece, freefall.Zone))
                     activeFreefallPieces.RemoveAt(index);
             }
@@ -220,7 +185,7 @@ namespace GravityPuzzle
                 return false;
             }
 
-            if (!piece.TryBeginOffBoardFreefallShredding(shredderConfig))
+            if (!piece.TryBeginOffBoardFreefallShredding())
             {
                 Debug.LogError(
                     "[ShredderFreefall] Cutter capture rejected an off-board handoff piece.",
@@ -228,12 +193,23 @@ namespace GravityPuzzle
                 return false;
             }
 
+            float cutterSeamY = zone.ShredY - zone.WheelRadius *
+                Mathf.Clamp(shredderConfig.GearClippingRatio, 0.1f, 0.9f);
+            if (!piece.AlignShreddingFootprintToCutter(cutterSeamY))
+            {
+                Debug.LogError(
+                    "[ShredderFreefall] Could not align the freefall footprint to the cutter seam.",
+                    piece);
+                return false;
+            }
+
             PrototypeBoard board = PrototypeBoard.Active;
             board?.JointSpringPresenter?.PrepareForShredder(piece);
             board?.BreakJointsForPiece(piece);
-            // Preserve the solved Dynamic pose. The feed coroutine below owns
-            // only visual consumption; Rigidbody2D remains the movement owner.
-            BeginPhysicsVisualFeed(piece, zone);
+            // Cutter contact ends open physics ownership. The established
+            // controlled feed then owns only presentation: row-by-row clipping,
+            // tremor, debris and progress must not be bypassed for freefall.
+            StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
         }
 
@@ -283,16 +259,7 @@ namespace GravityPuzzle
             // The exact grid-exit pose becomes the initial Dynamic pose and
             // Rigidbody2D is the sole movement owner until the cutter seam.
             Physics2D.SyncTransforms();
-            // Carry the last grid fall's authored vertical tempo into the
-            // Dynamic phase unchanged. Configuration supplies a fallback only
-            // when this route has no measured downward presentation speed.
-            float presentationDownwardSpeed = piece.GridFallView != null
-                ? piece.GridFallView.LastDownwardPresentationSpeed
-                : 0f;
-            piece.ApplyLifecyclePhysicsProfile(
-                PieceState.OpenFreefall,
-                shredderConfig,
-                presentationDownwardSpeed);
+            piece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, shredderConfig);
             activeFreefallPieces.Add(new ExitHandoff { Piece = piece, Zone = zone });
             return true;
         }
@@ -350,7 +317,7 @@ namespace GravityPuzzle
             // combined graph before the presentation-only island continues.
             board.JointSpringPresenter?.PrepareForShredder(root);
             board.BreakJointsForPiece(root);
-            BeginPhysicsVisualFeed(root, zone);
+            StartCoroutine(FeedPieceIntoShredder(root, zone));
             activePhysicsIslands.Add(new ShredderPhysicsIsland(
                 this,
                 shredderConfig,
@@ -518,15 +485,16 @@ namespace GravityPuzzle
 
             board.JointSpringPresenter?.PrepareForShredder(piece);
             board.BreakJointsForPiece(piece);
-            BeginPhysicsVisualFeed(piece, zone);
+            StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
         }
 
         /// <summary>
-        /// Starts the visual cutter-consumption pass for a support member
-        /// whose full vertical route was validated before island reservation.
-        /// It does not own descent; the live Rigidbody2D continues through
-        /// the cutter and visuals consume only crossed material.
+        /// Starts the existing kinematic feed for a support member whose full
+        /// vertical route was validated before the island reservation. Unlike
+        /// ordinary capture, this must not add a second mouth-approach wait:
+        /// the feed itself owns the controlled descent and only shreds cells
+        /// when they cross the cutter.
         /// </summary>
         internal bool TryBeginPhysicsIslandApproachFeed(
             PuzzlePiece piece,
@@ -545,7 +513,7 @@ namespace GravityPuzzle
 
             board.JointSpringPresenter?.PrepareForShredder(piece);
             board.BreakJointsForPiece(piece);
-            BeginPhysicsVisualFeed(piece, zone);
+            StartCoroutine(FeedPieceIntoShredder(piece, zone));
             return true;
         }
 
@@ -617,266 +585,6 @@ namespace GravityPuzzle
                 shredderConfig != null ? shredderConfig.FeedMaskScale : new Vector2(60f, 30f));
         }
 
-        /// <summary>
-        /// Starts a visual cutter observer for a body that has already entered
-        /// the Shredding lifecycle phase. This is intentionally not a
-        /// coroutine: all active feeds are observed by one FixedUpdate owner.
-        /// </summary>
-        private void BeginPhysicsVisualFeed(PuzzlePiece piece, ShredderCatchZone zone)
-        {
-            if (piece == null || zone == null || shredderConfig == null)
-                return;
-
-            for (int index = 0; index < activePhysicsVisualFeeds.Count; index++)
-            {
-                if (activePhysicsVisualFeeds[index].Piece == piece)
-                    return;
-            }
-
-            float wheelRadius = zone.WheelRadius > 0f ? zone.WheelRadius : 0.4f;
-            float clippingSeamY = zone.ShredY - wheelRadius * shredderConfig.GearClippingRatio;
-            AcquireFeedMask(clippingSeamY);
-
-            // The lifecycle profile is idempotent. It opens the Feed layer and
-            // colliders but deliberately preserves the current body velocity.
-            piece.SetSelected(false);
-            piece.ApplyLifecyclePhysicsProfile(PieceState.Shredding, shredderConfig);
-            piece.PrepareModularShredderSurface();
-
-            PhysicsVisualFeed feed = new PhysicsVisualFeed
-            {
-                Piece = piece,
-                PieceId = piece.SourcePieceId,
-                ClippingSeamY = clippingSeamY,
-                Renderers = piece.ConfiguredShredderRenderers ?? EmptyRenderers,
-                TileColor = Opaque(piece.VisualColor),
-                RemainingProgress = Mathf.Max(0f, piece.RemainingProgressUnits)
-            };
-            piece.BeginShredderPresentation(feed.Renderers, clippingSeamY, shredderConfig);
-            piece.ApplyShredderPresentationClipping();
-            piece.SetShredderPresentationDepth(0);
-
-            IReadOnlyList<VoxelShard> configuredShards = piece.ConfiguredVoxelShards;
-            for (int index = 0; index < configuredShards.Count; index++)
-            {
-                VoxelShard shard = configuredShards[index];
-                if (shard == null)
-                    continue;
-
-                feed.Shards.Add(shard);
-                feed.ShardTransforms.Add(shard.transform);
-            }
-
-            piece.GetActiveCellBounds(feed.CellBounds);
-            int blockCount = Mathf.Max(1, Mathf.Max(piece.ProgressUnits, feed.CellBounds.Count));
-            feed.TotalRendererArea = Mathf.Max(.5f, blockCount);
-            feed.RemainingFlights = shredderConfig.GetProgressVoxelFlightCount(blockCount);
-            ShredderContactGlowPool.TryRent(out feed.Glow);
-            activePhysicsVisualFeeds.Add(feed);
-        }
-
-        private void TickPhysicsVisualFeeds()
-        {
-            for (int index = activePhysicsVisualFeeds.Count - 1; index >= 0; index--)
-            {
-                PhysicsVisualFeed feed = activePhysicsVisualFeeds[index];
-                if (feed.Piece == null || !feed.Piece.IsBeingShredded)
-                {
-                    FinishPhysicsVisualFeed(feed, false);
-                    activePhysicsVisualFeeds.RemoveAt(index);
-                    continue;
-                }
-
-                feed.Elapsed += Time.fixedDeltaTime;
-                feed.Piece.ClampOffBoardAngularVelocity(shredderConfig);
-                PrototypeBoard.Active?.JointSpringPresenter?.UpdateShredderSprings(
-                    feed.Piece,
-                    feed.ClippingSeamY,
-                    shredderConfig);
-                feed.Piece.GetActiveCellBounds(feed.CellBounds);
-
-                bool hasContact = TryGetCutterContactSurface(
-                    feed.CellBounds,
-                    feed.ClippingSeamY,
-                    out float contactWidth,
-                    out Vector2 contactCenter);
-                if (hasContact)
-                    UpdatePhysicsVisualFeedContact(feed, contactWidth, contactCenter);
-                else if (feed.Glow != null)
-                    feed.Glow.Hide();
-
-                bool complete = ConsumeCrossedFeedVisuals(feed);
-                if (complete || feed.Elapsed >= shredderConfig.PhysicsFeedMaximumDuration)
-                {
-                    FinishPhysicsVisualFeed(feed, complete);
-                    activePhysicsVisualFeeds.RemoveAt(index);
-                }
-            }
-        }
-
-        private void UpdatePhysicsVisualFeedContact(
-            PhysicsVisualFeed feed,
-            float contactWidth,
-            Vector2 contactCenter)
-        {
-            feed.LastContactCenter = contactCenter;
-            feed.LastContactWidth = contactWidth;
-            if (!feed.IsShreddingSoundActive)
-            {
-                feed.IsShreddingSoundActive = true;
-                StartContinuousShredSound();
-            }
-
-            if (!feed.HapticSessionActive)
-            {
-                feed.HapticSessionActive = true;
-                HapticFeedbackRuntime.BeginShredder(feed.PieceId);
-            }
-
-            float physicalDownwardSpeed = feed.Piece.Body != null
-                ? Mathf.Max(0f, -feed.Piece.Body.velocity.y)
-                : 0f;
-            float travelledArea = contactWidth * physicalDownwardSpeed * Time.fixedDeltaTime;
-            feed.ProgressVoxelAccumulator += feed.RemainingFlights *
-                                             (travelledArea / feed.TotalRendererArea);
-            int flights = Mathf.Min(
-                feed.RemainingFlights,
-                Mathf.FloorToInt(feed.ProgressVoxelAccumulator));
-            if (flights > 0)
-            {
-                float progress = feed.RemainingFlights > 0
-                    ? Mathf.Min(feed.RemainingProgress, feed.RemainingProgress * flights / feed.RemainingFlights)
-                    : 0f;
-                feed.ProgressVoxelAccumulator -= flights;
-                feed.RemainingFlights -= flights;
-                feed.RemainingProgress = Mathf.Max(0f, feed.RemainingProgress - progress);
-                LevelProgressManager progressManager = LevelProgressManager.Instance;
-                if (progressManager != null && progress > 0.00001f)
-                {
-                    progressManager.SpawnFlyingVoxelBurst(
-                        new Vector3(contactCenter.x, feed.ClippingSeamY, 0f),
-                        feed.TileColor,
-                        progress,
-                        flights,
-                        contactWidth);
-                }
-            }
-
-            if (feed.Glow != null)
-                feed.Glow.UpdateGlow(contactCenter, contactWidth, feed.TileColor, shredderConfig.GlowIntensity);
-
-            if (debrisParticleSystem != null && shredderConfig.EnableContactDebrisPresentation)
-            {
-                if (!feed.ContactPresentationStarted)
-                {
-                    int entryCount = Mathf.Min(
-                        shredderConfig.MaxDebrisEntryBurstPerFrame,
-                        Mathf.CeilToInt(contactWidth * shredderConfig.DebrisEntryBurstPerWorldUnit));
-                    EmitEntryBurstAtContactSurface(
-                        feed.CellBounds,
-                        feed.ClippingSeamY,
-                        contactWidth,
-                        feed.TileColor,
-                        entryCount);
-                }
-
-                feed.DebrisAccumulator += Time.fixedDeltaTime *
-                                          shredderConfig.DebrisPerSecondPerWorldUnit * contactWidth;
-                int count = Mathf.Min(shredderConfig.MaxDebrisPerFrame, Mathf.FloorToInt(feed.DebrisAccumulator));
-                if (count > 0)
-                {
-                    feed.DebrisAccumulator -= count;
-                    EmitDebrisAtContactSurface(
-                        feed.CellBounds,
-                        feed.ClippingSeamY,
-                        contactWidth,
-                        feed.TileColor,
-                        count);
-                }
-            }
-
-            feed.ContactPresentationStarted = true;
-            HapticFeedbackRuntime.UpdateShredderProgress(
-                feed.PieceId,
-                feed.RemainingProgress > 0f
-                    ? 1f - Mathf.Clamp01(feed.RemainingProgress / Mathf.Max(.0001f, feed.Piece.RemainingProgressUnits))
-                    : 1f);
-        }
-
-        private bool ConsumeCrossedFeedVisuals(PhysicsVisualFeed feed)
-        {
-            for (int index = 0; index < feed.Shards.Count; index++)
-            {
-                VoxelShard shard = feed.Shards[index];
-                if (shard != null && !feed.ProcessedShards.Contains(shard) &&
-                    shard.transform.position.y <= feed.ClippingSeamY)
-                {
-                    feed.ProcessedShards.Add(shard);
-                    shard.Recycle();
-                }
-            }
-
-            int activeRendererCount = 0;
-            for (int index = 0; index < feed.Renderers.Length; index++)
-            {
-                SpriteRenderer renderer = feed.Renderers[index];
-                if (renderer == null || !renderer.enabled ||
-                    renderer.gameObject.name.StartsWith("Selected Fill") ||
-                    renderer.gameObject.name.StartsWith("White Selection") ||
-                    feed.ShardTransforms.Contains(renderer.transform))
-                {
-                    continue;
-                }
-
-                if (renderer.bounds.max.y <= feed.ClippingSeamY)
-                {
-                    feed.Piece.HideShredderRenderer(renderer);
-                    if (debrisParticleSystem != null && shredderConfig.EnableContactDebrisPresentation)
-                    {
-                        debrisParticleSystem.EmitAtCutter(
-                            new Vector2(renderer.transform.position.x, feed.ClippingSeamY),
-                            Mathf.Max(.05f, renderer.bounds.size.x),
-                            feed.TileColor,
-                            shredderConfig.DebrisBurstPerCrossedCell);
-                    }
-                    continue;
-                }
-
-                activeRendererCount++;
-            }
-
-            bool allShardsDone = feed.Shards.Count == 0 ||
-                                 feed.ProcessedShards.Count >= feed.Shards.Count;
-            return activeRendererCount == 0 && allShardsDone;
-        }
-
-        private void FinishPhysicsVisualFeed(PhysicsVisualFeed feed, bool completedNormally)
-        {
-            if (feed == null)
-                return;
-
-            PrototypeBoard.Active?.JointSpringPresenter?.FinishShredderSprings(feed.Piece);
-            if (feed.Glow != null)
-                ShredderContactGlowPool.Return(feed.Glow);
-            if (feed.IsShreddingSoundActive)
-                StopContinuousShredSound();
-            if (feed.HapticSessionActive)
-                HapticFeedbackRuntime.EndShredder(feed.PieceId, completedNormally);
-
-            if (feed.RemainingProgress > 0.00001f)
-            {
-                LevelProgressManager progressManager = LevelProgressManager.Instance;
-                if (progressManager != null)
-                    progressManager.AddProgress(feed.RemainingProgress);
-            }
-
-            if (completedNormally)
-                EmitFinalDebrisBurst(feed.LastContactCenter, feed.LastContactWidth, feed.TileColor);
-            if (feed.Piece != null)
-                feed.Piece.ReleaseInstance();
-            ReleaseFeedMask();
-        }
-
         private void ReleaseFeedMask()
         {
             if (activeFeedCount > 0)
@@ -905,9 +613,10 @@ namespace GravityPuzzle
 
             AcquireFeedMask(clippingSeamY);
 
-            // 1. The cutter has already ended OpenFreefall. From this point
-            // onward the feed is presentation-only; lower cells are clipped
-            // only as they reach the cutter line below.
+            // 1. Release the piece into physics with its full collision geometry
+            // intact. Individual lower cells are removed only when they reach
+            // the cutter line below, preventing a feed from passing through an
+            // obstacle or another falling piece.
             piece.SetSelected(false);
             piece.ApplyLifecyclePhysicsProfile(PieceState.Shredding, shredderConfig);
 
@@ -959,10 +668,16 @@ namespace GravityPuzzle
                 : blockCount;
 
             float feedSpeed = shredderConfig != null ? shredderConfig.FeedSpeed : 3.8f;
-            float maxTime = shredderConfig != null
-                ? shredderConfig.PhysicsFeedMaximumDuration
-                : 6.0f;
+            float maxTime = 6.0f;
             float elapsed = 0f;
+            float tremorIntensity = shredderConfig != null ? shredderConfig.TremorIntensity : .045f;
+            float tremorFrequency = shredderConfig != null ? shredderConfig.TremorFrequency : 55f;
+            float shakeAmplitude = shredderConfig != null ? shredderConfig.FeedShakeAmplitude : 2.5f;
+            float maxTiltAngle = shredderConfig != null ? shredderConfig.MaxFeedTiltAngle : 5f;
+            float feedAlignmentSpeed = shredderConfig != null
+                ? shredderConfig.FeedAlignmentAngularSpeed
+                : 360f;
+            float currentFeedSpeed = feedSpeed;
             float debrisAccumulator = 0f;
             // The clipping seam sits at the center/upper-middle line of the wheels.
             float visualCutterY = clippingSeamY;
@@ -986,16 +701,20 @@ namespace GravityPuzzle
 
             try
             {
-                // Rigidbody2D is the sole movement owner after cutter entry.
-                // This visual pass observes that live pose; it never writes a
-                // transform, velocity, or rotation.
+                // 3. The kinematic feed owns the descent while this coroutine watches
+                // the crossing cells and converts them to shred effects.
                 while (piece != null && elapsed < maxTime)
             {
                 yield return FeedPhysicsStep;
                 float feedDeltaTime = Time.fixedDeltaTime;
                 elapsed += feedDeltaTime;
                 PrototypeBoard.Active?.JointSpringPresenter?.UpdateShredderSprings(piece, clippingSeamY, shredderConfig);
-                piece.ClampOffBoardAngularVelocity(shredderConfig);
+
+                piece.MoveShreddingPresentation(
+                    currentFeedSpeed * feedDeltaTime,
+                    maxTiltAngle,
+                    feedAlignmentSpeed,
+                    feedDeltaTime);
 
                 // Sample active block cells directly so concave/notched pieces (L, U, etc.)
                 // never produce false contact in empty air.
@@ -1032,6 +751,11 @@ namespace GravityPuzzle
                         : 0f;
                     HapticFeedbackRuntime.UpdateShredderProgress(hapticPieceId, feedProgress);
 
+                    // Apply high-frequency mechanical vibration to visual renderers without jittering the physics body
+                    float shakeOffsetX = Mathf.Sin(Time.time * tremorFrequency) * tremorIntensity * shakeAmplitude;
+                    float shakeOffsetY = Mathf.Cos(Time.time * tremorFrequency * 1.37f) * tremorIntensity * shakeAmplitude * 0.35f;
+                    piece.ApplyShredderVisualJitter(new Vector2(shakeOffsetX, shakeOffsetY));
+
                     // Accelerate gears and vibrate active contact gears touching the block
                     IReadOnlyList<ShredderWheel> activeWheels = ShredderWheel.ActiveWheels;
                     float halfContact = contactWidth * 0.55f;
@@ -1054,6 +778,7 @@ namespace GravityPuzzle
                 }
                 else
                 {
+                    piece.ResetShredderVisualJitter();
                     IReadOnlyList<ShredderWheel> activeWheels = ShredderWheel.ActiveWheels;
                     for (int w = 0; w < activeWheels.Count; w++)
                     {
