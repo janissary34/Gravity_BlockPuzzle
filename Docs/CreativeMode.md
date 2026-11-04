@@ -69,7 +69,12 @@ Each event has `unity_frame` (`Time.frameCount`) and `t` (`Time.time`). With Uni
 - `recording_start_unity_frame` and `recording_stop_unity_frame`, plus the rendered-frame count for diagnostics;
 - Unity version and recorder settings.
 
-The pipeline computes `video_frame = unity_frame - recording_start_unity_frame`.
+**Frame mapping (measured):** Unity Recorder drops the first frames after `StartRecording` while the Game View settles, and it does not record the stop frame. The pipeline therefore uses the stop frame instead of the start frame:
+
+- `video_origin = recording_stop_unity_frame - video_frame_count`
+- `video_frame = unity_frame - video_origin`
+
+On the first take (`gbp_L30_20261104-164645`): start 1, stop 607, 604 frames, so the origin is 3. Two drags and a fall matched the video motion to the frame. `recording_start_unity_frame` is kept as a consistency check: the importer rejects a take whose origin is not 0–10 frames after the start.
 
 **Game View aspect:** the level computes its camera fit once, from the screen aspect, when it builds, and the recorder resizes the Game View only after Play Mode starts. The launcher therefore refuses to start a take unless the Game View already has the capture aspect (±1 %). Set the Game View to 1080×1920 once; the editor layout keeps it.
 
