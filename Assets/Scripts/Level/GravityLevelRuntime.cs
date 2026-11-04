@@ -35,6 +35,7 @@ namespace GravityPuzzle
         private static bool levelSequenceInitialized;
         private static bool previewLaunchRequested;
         private static bool isEditorLevelPreview;
+        private static GravityLevelDefinition levelOverride;
 
         /// <summary>
         /// True only for the level-editor's explicit Play Preview command.
@@ -61,6 +62,7 @@ namespace GravityPuzzle
             levelSequenceInitialized = false;
             previewLaunchRequested = false;
             isEditorLevelPreview = false;
+            levelOverride = null;
         }
 
         /// <summary>
@@ -162,6 +164,22 @@ namespace GravityPuzzle
         }
 #endif
 
+        /// <summary>
+        /// Explicitly selects the level to play, supplied by the composition root (used by Creative
+        /// Mode takes). Must be configured before the first <see cref="FindLevelToPlay"/>; the level
+        /// does not need to belong to the campaign sequence. Normal play never sets an override.
+        /// </summary>
+        public static void ConfigureLevelOverride(GravityLevelDefinition level)
+        {
+            if (levelSequenceInitialized)
+            {
+                Debug.LogWarning("[LevelSequence] Level override was configured after level selection had started. Ignored.");
+                return;
+            }
+
+            levelOverride = level;
+        }
+
         public static GravityLevelDefinition FindLevelToPlay()
         {
             if (levelSequenceInitialized)
@@ -196,6 +214,22 @@ namespace GravityPuzzle
                 }
             }
 #endif
+
+            if (levelOverride != null)
+            {
+                int overrideIndex = Array.IndexOf(levels, levelOverride);
+                if (overrideIndex >= 0)
+                {
+                    currentLevelIndex = overrideIndex;
+                }
+                else
+                {
+                    levels = new[] { levelOverride };
+                    currentLevelIndex = 0;
+                }
+
+                previewLaunchRequested = true;
+            }
 
             return CurrentLevel;
         }

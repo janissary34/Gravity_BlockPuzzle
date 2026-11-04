@@ -1,4 +1,5 @@
 using GravityPuzzle.Config;
+using GravityPuzzle.Creative.Runtime;
 using System.Collections.Generic;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Gameplay.Reveal;
@@ -87,8 +88,15 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Optional parent for inactive pooled pieces. Uses this object when empty.")]
         [SerializeField] private Transform poolParent;
 
+        [Header("Creative Mode (marketing captures)")]
+        [Tooltip("Optional scene references used only when a creative take is requested from the editor. Creative Mode is off otherwise.")]
+        [SerializeField] private CreativeSceneBindings creativeSceneBindings;
+
         private PoolService poolService;
         private bool isReady;
+        private CreativeTakeRequest creativeRequest;
+        private CreativeBoosterInventory creativeInventory;
+        private CreativeSession creativeSession;
 
         private void Awake()
         {
@@ -96,9 +104,22 @@ namespace GravityPuzzle.Bootstrap
             // This scene bootstrap is the first active gameplay composition root.
             Application.targetFrameRate = 60;
 
+            // Creative Mode is off unless the editor explicitly requested a take for this Play
+            // Mode session (null in normal play and in every player build).
+            creativeRequest = CreativeTakeRequest.ConsumePending();
+
             // Inventory is configured before level/UI setup so every booster
             // adapter reads one persistent authority from its first refresh.
-            BoosterInventoryRuntime.Configure(new PlayerPrefsBoosterInventory());
+            // A creative take uses an in-memory inventory so the player's save is never touched.
+            if (creativeRequest != null)
+            {
+                creativeInventory = new CreativeBoosterInventory(creativeRequest.Config);
+                BoosterInventoryRuntime.Configure(creativeInventory);
+            }
+            else
+            {
+                BoosterInventoryRuntime.Configure(new PlayerPrefsBoosterInventory());
+            }
             HapticFeedbackRuntime.Configure(hapticFeedbackConfig);
 
             if (gameplayCamera == null)
@@ -109,6 +130,8 @@ namespace GravityPuzzle.Bootstrap
 
             PrototypeBootstrap.ConfigureSceneCamera(gameplayCamera);
             GravityLevelRuntime.ConfigureLevelSequence(levelSequence);
+            if (creativeRequest != null)
+                GravityLevelRuntime.ConfigureLevelOverride(creativeRequest.Config.Level);
             GravityLevelRuntime.ConfigureSceneGameplayDependencies(
                 prototypeBoard,
                 puzzleDragController);
@@ -214,6 +237,18 @@ namespace GravityPuzzle.Bootstrap
 
             WarnForUnresolvedVisualIds(selectedLevel);
             isReady = true;
+
+            if (creativeRequest != null)
+            {
+                creativeSession = new CreativeSession(
+                    creativeRequest.Config,
+                    creativeRequest,
+                    prototypeBoard,
+                    gameplayCamera,
+                    creativeSceneBindings,
+                    creativeInventory,
+                    this);
+            }
         }
 
         private void OnApplicationPause(bool paused)
@@ -224,6 +259,7 @@ namespace GravityPuzzle.Bootstrap
         private void OnDestroy()
         {
             HapticFeedbackRuntime.StopAll();
+            creativeSession?.End();
         }
 
         private void ResolveCoinDisplayText()
@@ -287,7 +323,10 @@ namespace GravityPuzzle.Bootstrap
         private void Start()
         {
             if (isReady)
+            {
                 PrototypeBootstrap.StartForActiveScene();
+                creativeSession?.Begin();
+            }
         }
 
 #if UNITY_EDITOR
