@@ -50,7 +50,8 @@ namespace GravityPuzzle.Creative.EditorTools
             new GroupPaths(CreativeUIGroup.BoosterBar, "Boosters"),
             new GroupPaths(CreativeUIGroup.SettingsButton, "UI_Settings"),
             new GroupPaths(CreativeUIGroup.RetryButton, "UI_Restart"),
-            new GroupPaths(CreativeUIGroup.TutorialAndRewardPopups, "Settings_Panel", "New_Booster_Panel", "NewFeatures"),
+            // Scene1 renames the nested New_Booster_Panel prefab instance to NewBooster_featurePanel.
+            new GroupPaths(CreativeUIGroup.TutorialAndRewardPopups, "Settings_Panel", "NewBooster_featurePanel", "NewFeatures"),
             new GroupPaths(CreativeUIGroup.WinPanel, "FullscreenSuccess"),
             new GroupPaths(CreativeUIGroup.FailAndRevivePanels, "Fail_Panel", "RevivePanel", "Retry_Panel", "OutOfLives_Panel"),
             new GroupPaths(CreativeUIGroup.DebugButtons, "Debug_Next_Level_Button"),
