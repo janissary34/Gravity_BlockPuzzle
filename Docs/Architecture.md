@@ -28,6 +28,14 @@ is completely constructed to dismiss the cover. Legacy gameplay bootstrap object
 `Splash.unity` remain disabled so `RuntimePieceFactoryBootstrap` in `Scene1` is the
 sole composition root.
 
+In the editor, `SplashPlayModeStart` sets `EditorSceneManager.playModeStartScene` to
+the first Build Settings scene, so Play Mode always starts from Splash. PlayMode test
+runs must not start there: the Test Framework hosts its controller in its own generated
+scene. `Assets/Tests/PlayMode/PlayModeTestStartScene.cs` uses assembly-level
+`[PrebuildSetup]` and `[PostBuildCleanup]` to clear the start scene before a run and
+restore it after. The Test Framework reads those attributes only from assemblies that
+reference `UnityEditor.TestRunner`, so the file keeps an explicit reference to it.
+
 ## Shredder admission and temporary physics
 
 Grid gravity batches independent falling groups when their occupied grid columns
