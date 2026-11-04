@@ -9,12 +9,15 @@ namespace GravityPuzzle.Creative.EditorTools
 {
     /// <summary>
     /// Starts a creative take: writes the one-shot take request (EditorPrefs) and enters Play Mode.
-    /// The scene's composition root consumes the request; the recorder driver (separate editor
-    /// assembly, present only when Unity Recorder is installed) starts recording at Play Mode start.
+    /// The scene's composition root consumes the request; CreativeRecorderDriver records the take
+    /// with Unity Recorder from Play Mode start to Play Mode exit.
     /// Normal Play Mode is unaffected because no request exists.
     /// </summary>
     public static class CreativeTakeLauncher
     {
+        /// <summary>Allowed relative difference between the Game View aspect and the capture aspect.</summary>
+        private const float AspectTolerance = .01f;
+
         /// <summary>Default output root, shared with the creative-pipeline data folder.</summary>
         public static string DefaultOutputRoot =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal),
@@ -50,6 +53,19 @@ namespace GravityPuzzle.Creative.EditorTools
             if (config == null || config.Level == null)
             {
                 Debug.LogError($"[Creative] '{configPath}' is not a CreativeTakeConfig with a level.");
+                return false;
+            }
+
+            // The level computes its camera fit once, from the screen aspect, when it builds. The
+            // recorder resizes the Game View to the capture size only after Play Mode starts, so the
+            // Game View must already have the capture aspect or the framing would be wrong.
+            Vector2 gameView = Handles.GetMainGameViewSize();
+            float viewAspect = gameView.y > 0f ? gameView.x / gameView.y : 0f;
+            float captureAspect = (float)config.CaptureWidth / config.CaptureHeight;
+            if (Mathf.Abs(viewAspect - captureAspect) > captureAspect * AspectTolerance)
+            {
+                Debug.LogError($"[Creative] The Game View is {gameView.x}x{gameView.y}, but the take captures {config.CaptureWidth}x{config.CaptureHeight}. " +
+                               $"Set the Game View resolution to {config.CaptureWidth}x{config.CaptureHeight} (or that aspect) and start the take again.");
                 return false;
             }
 

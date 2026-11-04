@@ -44,6 +44,19 @@ namespace GravityPuzzle.Creative.Runtime
         public string OutputFolder { get; }
         public string EventsPath => Path.Combine(OutputFolder, TakeName + ".events.json");
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// Reads the pending request WITHOUT consuming it, or null when none exists. Used by the
+        /// editor-only recorder driver, which runs after the Play Mode domain reload and before the
+        /// scene's composition root consumes the request.
+        /// </summary>
+        public static Data PeekPendingData()
+        {
+            string json = UnityEditor.EditorPrefs.GetString(EditorPrefsKey, string.Empty);
+            return string.IsNullOrEmpty(json) ? null : JsonUtility.FromJson<Data>(json);
+        }
+#endif
+
         /// <summary>
         /// Reads and consumes the pending request. Returns null when Creative Mode is not requested
         /// (always null in player builds). Invalid requests are reported and ignored.

@@ -54,7 +54,26 @@ Each event has `unity_frame` (`Time.frameCount`) and `t` (`Time.time`). With Uni
 
 ## Capture
 
-Capture uses Unity Recorder (`com.unity.recorder` 4.0.3, added on this branch), started at Play Mode start by an editor-only driver. The driver arrives in the next step, once the package is resolved and its API can be compile-checked. Recording starts before Scene1 builds its level, so the Game View is already at the capture size (default 1080×1920 @ 30 fps) when the camera fit is computed. The take therefore includes the splash; the pipeline trims to `level.ready`.
+`CreativeRecorderDriver` (`Assets/Editor/Creative/`, editor only) records the take with Unity Recorder (`com.unity.recorder` 4.0.3, added on this branch).
+
+1. **Start:** the driver peeks at the take request (it does not consume it) right after the Play Mode domain reload, before any scene `Awake`. With domain reload disabled, it peeks at `ExitingEditMode` instead.
+2. **Recording:** at `EnteredPlayMode` it starts a `RecorderController`:
+   - Movie recorder, H.264 MP4, quality High, game audio kept;
+   - Game View input at the capture size (default 1080×1920);
+   - constant frame rate (default 30), capped, manual record mode.
+3. **Stop:** at `ExitingPlayMode`, which `CreativeSession.End` triggers after the tail. The driver then writes `<take>.take.json` (schema `creative-pipeline.take/1`) next to the video and `events.json`.
+
+**`take.json` fields:**
+- capture size and frame rate;
+- the Game View size at start;
+- `recording_start_unity_frame` and `recording_stop_unity_frame`, plus the rendered-frame count for diagnostics;
+- Unity version and recorder settings.
+
+The pipeline computes `video_frame = unity_frame - recording_start_unity_frame`.
+
+**Game View aspect:** the level computes its camera fit once, from the screen aspect, when it builds, and the recorder resizes the Game View only after Play Mode starts. The launcher therefore refuses to start a take unless the Game View already has the capture aspect (±1 %). Set the Game View to 1080×1920 once; the editor layout keeps it.
+
+The take includes the splash; the pipeline trims to `level.ready`. Events logged before recording started get negative video frames.
 
 ## Scripted gameplay
 
