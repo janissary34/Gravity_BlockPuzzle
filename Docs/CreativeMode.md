@@ -89,3 +89,15 @@ The take includes the splash; the pipeline trims to `level.ready`. Events logged
 - The script is active only until its last release; afterwards device input works again. `OnDisable` and `CreativeSession.End` clear it.
 - **Authoring guidance:** leave enough frames after each release for falls and shredding to settle before the next press. A press that selects nothing is logged as `[CreativeInput]`.
 - **Review:** independent review, both proposal and implementation, recorded in `Docs/Reviews/2026-11-04-creative-input-review.md`. It ran on `gemini-3.8-flash-high`, an exception the user approved because `gemini-4-argon-high` was unavailable.
+
+## Determinism (measured 2026-11-04)
+
+Two takes of `L30_SmokeTake` (`gbp_L30_20261104-164645`, `gbp_L30_20261104-165145`) were compared by Unity frame, measured from `level.ready`:
+
+- **Startup:** `level.ready` lands one Unity frame apart between runs (7 vs 8). Edit points come from each take's own event log, so this does not matter.
+- **Identical (24 of 27 events):** every scripted press, drag and release; the falls it triggers; the physics handoff; and `take.end` (600 frames after `level.ready` in both).
+- **±1 frame (3 events):** shredding of one piece and the despawn of the other, after `OpenFreefall`. Physics steps at 50 Hz and capture runs at 30 fps. The fixed-step phase at level start differs between runs (game time 0.133 s vs 0.167 s), so free-fall contacts can land one frame apart.
+
+**Consequences:**
+- Each take's own log is exact for that take (a frame-accurate `video_frame`), so editing is unaffected.
+- Reproducing a take is exact for scripted input and board logic, and within ±1 frame for free-fall/shredder timing.

@@ -54,4 +54,5 @@ The reviewer also confirmed:
 ## Validation evidence
 
 - Headless compile of Assembly-CSharp (219 files) and Assembly-CSharp-Editor (38 files) after each step: OK (`creative-pipeline/tools/unity/compile_check.py`).
-- Not yet run, because the Unity Editor has not yet imported the changes: the existing PlayMode tests, a manual mouse play check, and a scripted take comparing two runs' `events.json`. Results will be added to `Docs/CreativeMode.md`.
+- Scripted takes recorded and compared (two runs of `L30_SmokeTake`): input timing exact, see `Docs/CreativeMode.md` → Determinism.
+- Not yet run: the existing PlayMode tests and a manual mouse play check.
