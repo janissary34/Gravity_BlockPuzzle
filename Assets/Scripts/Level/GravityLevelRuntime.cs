@@ -36,6 +36,7 @@ namespace GravityPuzzle
         private static bool previewLaunchRequested;
         private static bool isEditorLevelPreview;
         private static GravityLevelDefinition levelOverride;
+        private static int displayLevelNumberOverride;
 
         /// <summary>
         /// True only for the level-editor's explicit Play Preview command.
@@ -63,6 +64,7 @@ namespace GravityPuzzle
             previewLaunchRequested = false;
             isEditorLevelPreview = false;
             levelOverride = null;
+            displayLevelNumberOverride = 0;
         }
 
         /// <summary>
@@ -180,6 +182,17 @@ namespace GravityPuzzle
             levelOverride = level;
         }
 
+        /// <summary>
+        /// Overrides the level number shown in player-facing labels (HUD, retry, fail and win
+        /// panels), supplied by the composition root for Creative Mode takes. 0 clears the override.
+        /// Presentation only: gameplay gating keeps using <see cref="CurrentLevelNumber"/>, and
+        /// nothing is persisted.
+        /// </summary>
+        public static void ConfigureDisplayLevelNumber(int levelNumber)
+        {
+            displayLevelNumberOverride = Mathf.Max(0, levelNumber);
+        }
+
         public static GravityLevelDefinition FindLevelToPlay()
         {
             if (levelSequenceInitialized)
@@ -240,6 +253,13 @@ namespace GravityPuzzle
         public static bool HasNextLevel => currentLevelIndex >= 0 && currentLevelIndex + 1 < levels.Length;
 
         public static int CurrentLevelNumber => Mathf.Max(1, currentLevelIndex + 1);
+
+        /// <summary>
+        /// Level number for player-facing labels: <see cref="CurrentLevelNumber"/> unless an explicit
+        /// display override is configured. Never use it for gameplay rules.
+        /// </summary>
+        public static int DisplayLevelNumber =>
+            displayLevelNumberOverride > 0 ? displayLevelNumberOverride : CurrentLevelNumber;
 
         /// <summary>Configured coin reward for the level currently being played.</summary>
         public static int CurrentLevelCoinAmount => CurrentLevel != null

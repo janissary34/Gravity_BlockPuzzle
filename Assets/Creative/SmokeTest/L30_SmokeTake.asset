@@ -13,14 +13,16 @@ MonoBehaviour:
   m_Name: L30_SmokeTake
   m_EditorClassIdentifier: 
   level: {fileID: 11400000, guid: f363abb2c20f945dd93c86531c26f1c3, type: 2}
-  uiProfile: {fileID: 0}
+  uiProfile: {fileID: 11400000, guid: db63e8d20d6a4824a0d68dada501f641, type: 2}
   backgroundMode: 0
   backgroundColor: {r: 0, g: 1, b: 0, a: 1}
+  displayLevelNumber: 0
   timerMode: 1
   boosters: []
   script: {fileID: 11400000, guid: 7a29245869f744ef839d7cbcda780ae8, type: 2}
   captureWidth: 1080
   captureHeight: 1920
   captureFrameRate: 30
+  captureStartDelayFrames: 3
   tailFrames: 90
   maxSeconds: 20

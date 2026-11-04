@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using GravityPuzzle.Config;
 using GravityPuzzle.Core.StateMachine;
@@ -18,6 +19,23 @@ namespace GravityPuzzle.Creative.Runtime
     /// </summary>
     public sealed class CreativeSession
     {
+#if UNITY_EDITOR
+        /// <summary>
+        /// Editor-only bridge to the editor recorder driver (which cannot be reached from runtime
+        /// code): raised once per take, with the take name, when the level is visually ready to
+        /// record. Subscribers must unsubscribe after the call and when Play Mode exits.
+        /// </summary>
+        public static event Action<string> CaptureReady;
+
+        // Clears stale subscribers when domain reload on entering Play Mode is disabled. Runs before
+        // the first scene loads, i.e. before the recorder driver subscribes at EnteredPlayMode.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetCaptureReady()
+        {
+            CaptureReady = null;
+        }
+#endif
+
         private readonly CreativeTakeConfig config;
         private readonly CreativeTakeRequest request;
         private readonly PrototypeBoard board;
@@ -32,6 +50,7 @@ namespace GravityPuzzle.Creative.Runtime
         private bool finishing;
         private bool ended;
         private Coroutine safetyRoutine;
+        private Coroutine captureDelayRoutine;
         private CreativePointerScript pointerScript;
 
         public CreativeSession(
@@ -65,6 +84,7 @@ namespace GravityPuzzle.Creative.Runtime
             if (board != null)
             {
                 board.GameStateChanged += OnGameStateChanged;
+                board.TimerStarted += OnTimerStarted;
                 board.PieceStateChanged += OnPieceStateChanged;
                 board.BlockShredded += OnBlockShredded;
                 board.LevelCleared += OnLevelCleared;
@@ -78,8 +98,12 @@ namespace GravityPuzzle.Creative.Runtime
                 dragController.PieceReleased += OnPieceReleased;
 
             ApplyBackground();
+            if (config.UIProfile != null && bindings == null)
+                Debug.LogWarning($"[Creative] Take '{request.TakeName}' uses UI profile '{config.UIProfile.name}', but the scene has no CreativeSceneBindings; " +
+                                 "run Gravity Puzzle/Creative/Author Scene1 UI Bindings. UI is left as the game shows it.", coroutineHost);
             ApplyUIProfile();
             log.Add(CreativeEventKind.LevelReady);
+            captureDelayRoutine = coroutineHost.StartCoroutine(SignalCaptureReadyAfterDelay());
             safetyRoutine = coroutineHost.StartCoroutine(EndAfterSafetyLimit());
             if (config.Script != null && config.Script.DragCount > 0)
                 coroutineHost.StartCoroutine(StartScriptAfterDelay());
@@ -96,6 +120,7 @@ namespace GravityPuzzle.Creative.Runtime
             if (board != null)
             {
                 board.GameStateChanged -= OnGameStateChanged;
+                board.TimerStarted -= OnTimerStarted;
                 board.PieceStateChanged -= OnPieceStateChanged;
                 board.BlockShredded -= OnBlockShredded;
                 board.LevelCleared -= OnLevelCleared;
@@ -116,6 +141,8 @@ namespace GravityPuzzle.Creative.Runtime
 
             if (safetyRoutine != null && coroutineHost != null)
                 coroutineHost.StopCoroutine(safetyRoutine);
+            if (captureDelayRoutine != null && coroutineHost != null)
+                coroutineHost.StopCoroutine(captureDelayRoutine);
 
             log.Add(CreativeEventKind.TakeEnd);
             string path = request.EventsPath;
@@ -171,6 +198,11 @@ namespace GravityPuzzle.Creative.Runtime
                     if (binding.group != rule.group)
                         continue;
 
+                    if (binding.graphics != null)
+                        for (int g = 0; g < binding.graphics.Length; g++)
+                            if (binding.graphics[g] != null)
+                                binding.graphics[g].enabled = false;
+
                     if (binding.canvases != null)
                         for (int c = 0; c < binding.canvases.Length; c++)
                             if (binding.canvases[c] != null)
@@ -189,9 +221,25 @@ namespace GravityPuzzle.Creative.Runtime
         private void OnGameStateChanged(GameState previous, GameState next)
         {
             log.Add(CreativeEventKind.GameState, from: (int)previous, to: (int)next);
-            if (next == GameState.Playing && config.TimerMode == CreativeTimerMode.Frozen && board != null)
-                board.TryPauseTimer(this);
+            // A revive Continue clears the board's pause owners and returns to Playing with the
+            // timer already started, so the freeze is re-applied here as well.
+            if (next == GameState.Playing)
+                HoldFrozenTimer();
             ApplyUIProfile();
+        }
+
+        // The board raises GameStateChanged(Playing) before it marks the timer as started, so the
+        // first pause request has to wait for TimerStarted. Pausing there is synchronous, inside
+        // StartTimer, so the timer never ticks in Frozen mode.
+        private void OnTimerStarted()
+        {
+            HoldFrozenTimer();
+        }
+
+        private void HoldFrozenTimer()
+        {
+            if (config.TimerMode == CreativeTimerMode.Frozen && board != null && !ended)
+                board.TryPauseTimer(this);
         }
 
         private void OnPieceStateChanged(int pieceId, PieceState previous, PieceState next)
@@ -207,6 +255,22 @@ namespace GravityPuzzle.Creative.Runtime
         private void OnPieceReleased(int pieceId, bool accepted)
         {
             log.Add(CreativeEventKind.PieceReleased, pieceId, value: accepted ? 1 : 0);
+        }
+
+        // ---- capture ---------------------------------------------------------------------------
+
+        private IEnumerator SignalCaptureReadyAfterDelay()
+        {
+            for (int frame = 0; frame < config.CaptureStartDelayFrames; frame++)
+                yield return null;
+
+            if (ended)
+                yield break;
+
+            log.Add(CreativeEventKind.CaptureReady);
+#if UNITY_EDITOR
+            CaptureReady?.Invoke(request.TakeName);
+#endif
         }
 
         // ---- scripted gameplay -----------------------------------------------------------------

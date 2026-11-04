@@ -13,9 +13,11 @@ namespace GravityPuzzle.Creative.EditorTools
     /// Records a creative take with Unity Recorder (editor only).
     ///
     /// Active only when a take request exists: the request is peeked (not consumed) right after the
-    /// Play Mode domain reload, before the scene's composition root consumes it. Recording starts at
-    /// EnteredPlayMode and stops at ExitingPlayMode (CreativeSession.End exits Play Mode after the
-    /// take's tail). The driver then writes <c>&lt;take&gt;.take.json</c>, which maps event frames to
+    /// Play Mode domain reload, before the scene's composition root consumes it. Recording starts
+    /// when the take's CreativeSession raises its one-shot CaptureReady signal (the level is built and
+    /// the loading cover has cleared), and stops at ExitingPlayMode (CreativeSession.End exits Play
+    /// Mode after the take's tail). The recorder is prepared at that point too, so none of its helper
+    /// objects live in the splash scene that is unloaded on the way to the level. The driver then writes <c>&lt;take&gt;.take.json</c>, which maps event frames to
     /// video frames: <c>video_frame = unity_frame - recording_start_unity_frame</c>.
     /// Normal Play Mode is unaffected: without a request this class does nothing.
     /// </summary>
@@ -49,13 +51,36 @@ namespace GravityPuzzle.Creative.EditorTools
                     break;
                 case PlayModeStateChange.EnteredPlayMode:
                     if (pending != null)
-                        StartRecording(pending);
-                    pending = null;
+                    {
+                        CreativeSession.CaptureReady -= OnCaptureReady;
+                        CreativeSession.CaptureReady += OnCaptureReady;
+                    }
                     break;
                 case PlayModeStateChange.ExitingPlayMode:
+                    CreativeSession.CaptureReady -= OnCaptureReady;
+                    if (pending != null)
+                        Debug.LogError($"[CreativeRecorder] Take '{pending.takeName}' ended before its session signalled CaptureReady; nothing was recorded and no take.json is written.");
+                    pending = null;
                     StopRecording();
                     break;
             }
+        }
+
+        private static void OnCaptureReady(string takeName)
+        {
+            CreativeSession.CaptureReady -= OnCaptureReady; // one-shot
+            CreativeTakeRequest.Data request = pending;
+            pending = null;
+            if (request == null)
+                return;
+
+            if (request.takeName != takeName)
+            {
+                Debug.LogError($"[CreativeRecorder] CaptureReady came from take '{takeName}', but the request is for '{request.takeName}'; not recording.");
+                return;
+            }
+
+            StartRecording(request);
         }
 
         private static void StartRecording(CreativeTakeRequest.Data request)

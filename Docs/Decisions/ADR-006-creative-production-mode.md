@@ -18,10 +18,12 @@
 
 ## Consequences
 
-- Normal play is unchanged. Two existing files gained small, additive hooks:
-  - `RuntimePieceFactoryBootstrap`: an optional serialized field, the request read, inventory selection, session create/begin/end;
-  - `GravityLevelRuntime`: the override API and one branch in `FindLevelToPlay`.
+- Normal play is unchanged. Existing files gained small, additive hooks:
+  - `RuntimePieceFactoryBootstrap`: an optional serialized field, the request read, inventory selection, session create/begin/end, and the display-level configuration;
+  - `GravityLevelRuntime`: the level override, one branch in `FindLevelToPlay`, and `ConfigureDisplayLevelNumber` / `DisplayLevelNumber` (labels only; equal to `CurrentLevelNumber` unless a take overrides it);
+  - `PrototypeBoard`: a `TimerStarted` observation event (raised once, after `IsTimerStarted` is set), and the win-panel labels read `DisplayLevelNumber`.
+- The editor recorder starts on `CreativeSession.CaptureReady`. This `#if UNITY_EDITOR` static event is the single bridge from the runtime session to the editor assembly; the subscriber is one-shot and is cleared at Play Mode exit.
 - UI groups must be bound in the scene once (`CreativeSceneBindings`).
 - Scripted input enters through a narrow injected `IBoardPointerSource` in `PuzzleDragController`, processed by the existing select/drag/release code. A new observation event, `PuzzleDragController.PieceReleased`, is raised once per release.
 - Cutter contact and booster impacts are not logged yet; they need events in `BlockShredder` and the boosters.
-- **Review:** the AGENTS.md review ran on `gemini-3.8-flash-high`, a user-approved, one-off exception because `gemini-4-argon-high` is unavailable on the account. The project policy is unchanged.
+- **Reviews:** the AGENTS.md reviews ran on `gemini-3.8-flash-high`, each a user-approved, one-off exception because `gemini-4-argon-high` is unavailable on the account. Records: `Docs/Reviews/2026-11-04-creative-input-review.md` and `Docs/Reviews/2026-11-04-creative-presentation-review.md`. The project policy is unchanged.

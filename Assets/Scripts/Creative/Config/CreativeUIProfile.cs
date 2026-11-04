@@ -19,6 +19,8 @@ namespace GravityPuzzle.Creative.Config
         TutorialAndRewardPopups = 7,
         WinPanel = 8,
         FailAndRevivePanels = 9,
+        DebugButtons = 10,
+        DifficultyBadge = 11,
     }
 
     /// <summary>

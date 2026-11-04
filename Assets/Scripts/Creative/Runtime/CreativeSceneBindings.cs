@@ -1,6 +1,7 @@
 using System;
 using GravityPuzzle.Creative.Config;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace GravityPuzzle.Creative.Runtime
 {
@@ -20,7 +21,13 @@ namespace GravityPuzzle.Creative.Runtime
             [Tooltip("Canvases hidden by disabling the Canvas component (children keep their own state).")]
             public Canvas[] canvases;
 
-            [Tooltip("Objects hidden by deactivating them. Re-applied when the game shows panels.")]
+            [Tooltip("UI graphics hidden by disabling the Graphic component (Image, TMP text, ...). Scripts, " +
+                     "tweens and coroutines keep running, raycasts pass through, and a panel the game " +
+                     "activates later stays invisible. Preferred for UI groups.")]
+            public Graphic[] graphics;
+
+            [Tooltip("Objects hidden by deactivating them. Use only for inert objects: deactivation stops " +
+                     "their scripts, coroutines and linked tweens.")]
             public GameObject[] objects;
         }
 

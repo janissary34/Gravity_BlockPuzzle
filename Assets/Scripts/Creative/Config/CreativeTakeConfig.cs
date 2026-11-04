@@ -45,6 +45,9 @@ namespace GravityPuzzle.Creative.Config
         [SerializeField] private CreativeBackgroundMode backgroundMode = CreativeBackgroundMode.Art;
         [Tooltip("Camera clear colour for SolidColor mode (for example #00FF00 for a chroma key).")]
         [SerializeField] private Color backgroundColor = Color.green;
+        [Tooltip("Level number shown in HUD and result labels. 0 = the selected level's campaign number. " +
+                 "Labels only: gameplay rules and the player's save are not affected.")]
+        [Min(0)] [SerializeField] private int displayLevelNumber;
 
         [Header("Gameplay")]
         [SerializeField] private CreativeTimerMode timerMode = CreativeTimerMode.Frozen;
@@ -57,6 +60,9 @@ namespace GravityPuzzle.Creative.Config
         [Min(16)] [SerializeField] private int captureWidth = 1080;
         [Min(16)] [SerializeField] private int captureHeight = 1920;
         [Min(1)] [SerializeField] private int captureFrameRate = 30;
+        [Tooltip("Frames after level.ready before recording starts, so the loading cover has cleared " +
+                 "and the board has rendered (the cover hides about two frames after level.ready).")]
+        [Min(0)] [SerializeField] private int captureStartDelayFrames = 3;
         [Tooltip("Frames kept after the level is cleared or failed, so the result moment is in the take.")]
         [Min(0)] [SerializeField] private int tailFrames = 90;
         [Tooltip("Safety limit: the take ends after this many seconds of game time even without a result.")]
@@ -66,6 +72,7 @@ namespace GravityPuzzle.Creative.Config
         public CreativeUIProfile UIProfile => uiProfile;
         public CreativeBackgroundMode BackgroundMode => backgroundMode;
         public Color BackgroundColor => backgroundColor;
+        public int DisplayLevelNumber => displayLevelNumber;
         public CreativeTimerMode TimerMode => timerMode;
         public int BoosterEntryCount => boosters != null ? boosters.Length : 0;
         public BoosterCount GetBoosterEntry(int index) => boosters[index];
@@ -73,6 +80,7 @@ namespace GravityPuzzle.Creative.Config
         public int CaptureWidth => captureWidth;
         public int CaptureHeight => captureHeight;
         public int CaptureFrameRate => captureFrameRate;
+        public int CaptureStartDelayFrames => captureStartDelayFrames;
         public int TailFrames => tailFrames;
         public float MaxSeconds => maxSeconds;
     }

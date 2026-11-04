@@ -709,6 +709,9 @@ namespace GravityPuzzle
         public event System.Action LevelCleared;
         public event System.Action LevelFailed;
 
+        /// <summary>Raised once when the level timer actually starts (after IsTimerStarted is set).</summary>
+        public event System.Action TimerStarted;
+
         [Header("Win UI Scene Configuration")]
         [Tooltip("If set, this scene will be loaded when the level is cleared instead of the default auto-reload behavior.")]
         public string winSceneName = "";
@@ -2572,6 +2575,7 @@ namespace GravityPuzzle
 
             IsTimerStarted = true;
             bombElapsedSeconds = 0f;
+            TimerStarted?.Invoke();
         }
 
         public void NotifyPieceDestroyed(PuzzlePiece destroyedPiece)
@@ -2926,7 +2930,7 @@ namespace GravityPuzzle
             if (nextLevelButtonLabel != null)
             {
                 nextLevelButtonLabel.text = hasNextLevel
-                    ? $"LEVEL {GravityLevelRuntime.CurrentLevelNumber + 1}"
+                    ? $"LEVEL {GravityLevelRuntime.DisplayLevelNumber + 1}"
                     : "COMPLETE";
             }
 
@@ -2934,7 +2938,7 @@ namespace GravityPuzzle
                 winPanelCoinAmountText.text = GravityLevelRuntime.CurrentLevelCoinAmount.ToString();
 
             if (completedLevelText != null)
-                completedLevelText.SetText("Level {0} Completed!", GravityLevelRuntime.CurrentLevelNumber);
+                completedLevelText.SetText("Level {0} Completed!", GravityLevelRuntime.DisplayLevelNumber);
 
             winPanel.SetActive(true);
             RestartWinParticleEffects();

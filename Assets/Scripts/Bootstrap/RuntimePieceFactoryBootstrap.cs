@@ -131,7 +131,10 @@ namespace GravityPuzzle.Bootstrap
             PrototypeBootstrap.ConfigureSceneCamera(gameplayCamera);
             GravityLevelRuntime.ConfigureLevelSequence(levelSequence);
             if (creativeRequest != null)
+            {
                 GravityLevelRuntime.ConfigureLevelOverride(creativeRequest.Config.Level);
+                GravityLevelRuntime.ConfigureDisplayLevelNumber(creativeRequest.Config.DisplayLevelNumber);
+            }
             GravityLevelRuntime.ConfigureSceneGameplayDependencies(
                 prototypeBoard,
                 puzzleDragController);
@@ -281,19 +284,19 @@ namespace GravityPuzzle.Bootstrap
 
         private void UpdateLevelDisplays()
         {
-            int currentLevelNumber = GravityLevelRuntime.CurrentLevelNumber;
+            int displayedLevelNumber = GravityLevelRuntime.DisplayLevelNumber;
 
             if (levelDisplayText != null)
-                levelDisplayText.SetText("Level {0}", currentLevelNumber);
+                levelDisplayText.SetText("Level {0}", displayedLevelNumber);
 
             if (coinDisplayText != null)
                 coinDisplayText.SetText("{0}", GravityLevelRuntime.CurrentPlayerCoinAmount);
 
             if (retryLevelText != null)
-                retryLevelText.SetText("Level {0}", currentLevelNumber);
+                retryLevelText.SetText("Level {0}", displayedLevelNumber);
 
             if (failedLevelText != null)
-                failedLevelText.SetText("Level {0} failed", currentLevelNumber);
+                failedLevelText.SetText("Level {0} failed", displayedLevelNumber);
         }
 
         private void RegisterRevealPresentations()

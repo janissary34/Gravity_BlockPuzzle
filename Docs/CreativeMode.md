@@ -14,12 +14,13 @@ Branch: `marketing`. Creative Mode records gameplay takes for marketing videos a
 
 | Piece | Owns | Notes |
 |---|---|---|
-| `CreativeTakeConfig` (SO) | Level, UI profile, background mode/colour, timer mode, booster counts, capture size/fps, tail frames, safety limit | Immutable config |
+| `CreativeTakeConfig` (SO) | Level, displayed level number, UI profile, background mode/colour, timer mode, booster counts, capture size/fps, capture start delay, tail frames, safety limit | Immutable config |
 | `CreativeUIProfile` (SO) | Per `CreativeUIGroup`: hidden during the take, or left to the game | Reversible runtime toggles only |
-| `CreativeSceneBindings` (scene component) | Explicit references: canvases/objects per UI group, backdrop renderers | Assigned on `RuntimePieceFactoryBootstrap.creativeSceneBindings`; no runtime search |
+| `CreativeSceneBindings` (scene component) | Explicit references per UI group (UI `Graphic`s, preferred; Canvases; inert objects), backdrop renderers | In Scene1 on the `CreativeSceneBindings` object, assigned on `RuntimePieceFactoryBootstrap.creativeSceneBindings`. Authored by a menu tool; no runtime search |
 | `CreativeBoosterInventory` | In-memory booster counts for the take | Injected through `BoosterInventoryRuntime.Configure`; never touches PlayerPrefs |
 | `GravityLevelRuntime.ConfigureLevelOverride` | Which level is built | Explicit API; must run before `FindLevelToPlay` |
-| `CreativeSession` (plain C#) | Mutable take state, event log, take end | Observes the board and inventory events. The only gameplay effect is an optional timer pause through the board's owner-scoped `TryPauseTimer` |
+| `GravityLevelRuntime.ConfigureDisplayLevelNumber` | Level number shown in HUD, retry, fail and win labels (`DisplayLevelNumber`) | Presentation only; gameplay gating keeps `CurrentLevelNumber`; nothing is saved |
+| `CreativeSession` (plain C#) | Mutable take state, event log, take end | Observes the board and inventory events. The only gameplay effect is an optional timer pause through the board's owner-scoped `TryPauseTimer` (Frozen mode, applied on `PrototypeBoard.TimerStarted`) |
 | `CreativeEventLog` | `<take>.events.json` | Schema `creative-pipeline.events/1` |
 
 **Lifecycle:**
@@ -28,9 +29,10 @@ Branch: `marketing`. Creative Mode records gameplay takes for marketing videos a
    - configure the creative inventory and the level override;
    - create the session after the pools are ready.
 2. Bootstrap `Start`: `StartForActiveScene()`, then `session.Begin()`. `Begin` subscribes to events, applies the background and UI profile, and logs `level.ready`.
-3. On `LevelCleared` or `LevelFailed`: wait `tailFrames` frames, then `End()`. `End` unsubscribes, resumes the timer pause and writes `events.json`; then the editor leaves Play Mode, which finalises the recording.
-4. A safety limit (`maxSeconds` of game time) ends a take that never reaches a result.
-5. `OnDestroy` also calls `End()`. It is idempotent.
+3. `captureStartDelayFrames` (default 3) after `level.ready`, the session logs `capture.ready` and raises the editor-only `CreativeSession.CaptureReady` signal, which starts the recorder.
+4. On `LevelCleared` or `LevelFailed`: wait `tailFrames` frames, then `End()`. `End` unsubscribes, resumes the timer pause and writes `events.json`; then the editor leaves Play Mode, which finalises the recording.
+5. A safety limit (`maxSeconds` of game time) ends a take that never reaches a result.
+6. `OnDestroy` also calls `End()`. It is idempotent.
 
 ## Events (v1: existing game events only)
 
@@ -49,6 +51,7 @@ Each event has `unity_frame` (`Time.frameCount`) and `t` (`Time.time`). With Uni
 
 | `piece.released` | `PuzzleDragController.PieceReleased(pieceId, accepted)`: exactly once per release; `accepted` = valid snap, `false` = restored or failed |
 | `script.start` | the scripted pointer was injected (`drags` = count). Script frame 0 is the next frame the controller samples |
+| `capture.ready` | the level is visually ready and recording is requested (`captureStartDelayFrames` after `level.ready`) |
 
 **Not yet logged:** cutter contact, Hammer/Rocket impact, freeze start. These need events in `BlockShredder` and the boosters.
 
@@ -56,12 +59,16 @@ Each event has `unity_frame` (`Time.frameCount`) and `t` (`Time.time`). With Uni
 
 `CreativeRecorderDriver` (`Assets/Editor/Creative/`, editor only) records the take with Unity Recorder (`com.unity.recorder` 4.0.3, added on this branch).
 
-1. **Start:** the driver peeks at the take request (it does not consume it) right after the Play Mode domain reload, before any scene `Awake`. With domain reload disabled, it peeks at `ExitingEditMode` instead.
-2. **Recording:** at `EnteredPlayMode` it starts a `RecorderController`:
+1. **Request:** the driver peeks at the take request (it does not consume it) right after the Play Mode domain reload, before any scene `Awake`. With domain reload disabled, it peeks at `ExitingEditMode` instead.
+2. **Waiting:** at `EnteredPlayMode` it subscribes once to `CreativeSession.CaptureReady`, the editor-only static event that bridges the runtime session and the editor assembly.
+3. **Recording:** on the signal, the driver unsubscribes and prepares and starts a `RecorderController`:
    - Movie recorder, H.264 MP4, quality High, game audio kept;
    - Game View input at the capture size (default 1080×1920);
    - constant frame rate (default 30), capped, manual record mode.
-3. **Stop:** at `ExitingPlayMode`, which `CreativeSession.End` triggers after the tail. The driver then writes `<take>.take.json` (schema `creative-pipeline.take/1`) next to the video and `events.json`.
+
+   The recorder is prepared only then, so none of its helper objects live in the splash scene, which is unloaded on the way to Scene1. The video therefore starts on clean gameplay: the loading cover clears about two frames after `level.ready`.
+4. **Stop:** at `ExitingPlayMode`, which `CreativeSession.End` triggers after the tail. The driver then writes `<take>.take.json` (schema `creative-pipeline.take/1`) next to the video and `events.json`.
+   - If Play Mode ends before the signal, nothing is recorded, no `take.json` is written, and an error is logged.
 
 **`take.json` fields:**
 - capture size and frame rate;
@@ -78,7 +85,21 @@ On the first take (`gbp_L30_20261104-164645`): start 1, stop 607, 604 frames, so
 
 **Game View aspect:** the level computes its camera fit once, from the screen aspect, when it builds, and the recorder resizes the Game View only after Play Mode starts. The launcher therefore refuses to start a take unless the Game View already has the capture aspect (±1 %). Set the Game View to 1080×1920 once; the editor layout keeps it.
 
-The take includes the splash; the pipeline trims to `level.ready`. Events logged before recording started get negative video frames.
+Events logged before recording started (`take.start`, `level.ready`, `capture.ready`) get negative or near-zero video frames.
+
+## UI visibility
+
+- **Bindings:** run *Gravity Puzzle → Creative → Author Scene1 UI Bindings* once with Scene1 open in Edit Mode (again after UI hierarchy changes). `CreativeSceneBindingsAuthoring` maps each `CreativeUIGroup` to hierarchy paths under `InGameUI`, collects the UI `Graphic` components below them, and saves them on the `CreativeSceneBindings` object. A missing path aborts the tool without changes. The bindings remain editable in the Inspector.
+- **Profiles** (`Assets/Creative/UIProfiles/`) list the groups to hide; unlisted groups are left to the game:
+
+| Profile | Hides |
+|---|---|
+| `CreativeUI_FullHUD` | DebugButtons ("NEXT LEVEL") |
+| `CreativeUI_GameplayClean` | DebugButtons, Settings, Retry, Coins, DifficultyBadge, popups, fail/revive panels. Keeps the level label, timer, progress bar, boosters and win feedback |
+| `CreativeUI_BoardOnly` | every group |
+
+- **Hiding** disables the bound `Graphic` components. Scripts, coroutines and linked tweens keep running, raycasts pass through, and a popup the game opens later stays invisible, because the enabled state survives `SetActive`. The profile is re-applied on every game-state change.
+- **Level label:** `displayLevelNumber` on the take config (0 = automatic). The automatic number is the level's campaign position, e.g. asset `L30` is campaign level 33, because three unnamed levels come earlier in `LevelSequence`.
 
 ## Scripted gameplay
 

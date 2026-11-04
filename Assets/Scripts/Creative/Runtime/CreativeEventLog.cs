@@ -23,6 +23,7 @@ namespace GravityPuzzle.Creative.Runtime
         TakeEnd = 8,
         PieceReleased = 9,
         ScriptStart = 10,
+        CaptureReady = 11,
     }
 
     /// <summary>
@@ -49,7 +50,7 @@ namespace GravityPuzzle.Creative.Runtime
         private static readonly string[] KindNames =
         {
             "take.start", "level.ready", "game.state", "piece.state", "piece.shredded",
-            "level.cleared", "level.failed", "booster.used", "take.end", "piece.released", "script.start",
+            "level.cleared", "level.failed", "booster.used", "take.end", "piece.released", "script.start", "capture.ready",
         };
 
         private readonly List<Entry> entries;
