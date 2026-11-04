@@ -1,6 +1,6 @@
 # ADR-006: Creative Production Mode is an explicit, editor-only, observe-only module
 
-- **Status:** accepted for the `marketing` branch (2026-11-04). The input seam is pending independent review.
+- **Status:** accepted for the `marketing` branch (2026-11-04). The input seam has been reviewed independently (proposal and implementation; see `Docs/Reviews/2026-11-04-creative-input-review.md`).
 - **Context:** marketing videos need recorded takes of chosen levels with configurable UI, background and capture, plus a frame-accurate event log for automated editing. Earlier games did this with destructive edits on marketing branches (prefab and SO changes, deleted UI), which could not be switched off or reused.
 
 ## Decision
@@ -22,5 +22,6 @@
   - `RuntimePieceFactoryBootstrap`: an optional serialized field, the request read, inventory selection, session create/begin/end;
   - `GravityLevelRuntime`: the override API and one branch in `FindLevelToPlay`.
 - UI groups must be bound in the scene once (`CreativeSceneBindings`).
-- Some moments (valid/invalid drop, cutter contact, booster impact) are not logged until new events are added. That and the scripted input seam touch `PuzzleDragController` and wait for the independent review required by AGENTS.md.
-- **Review status:** the AGENTS.md Gemini review could not be run because the `agy` CLI is not installed on the development machine. The user explicitly sequenced configuration, logging and recording before the review, and the review before any `PuzzleDragController` change.
+- Scripted input enters through a narrow injected `IBoardPointerSource` in `PuzzleDragController`, processed by the existing select/drag/release code. A new observation event, `PuzzleDragController.PieceReleased`, is raised once per release.
+- Cutter contact and booster impacts are not logged yet; they need events in `BlockShredder` and the boosters.
+- **Review:** the AGENTS.md review ran on `gemini-3.8-flash-high`, a user-approved, one-off exception because `gemini-4-argon-high` is unavailable on the account. The project policy is unchanged.

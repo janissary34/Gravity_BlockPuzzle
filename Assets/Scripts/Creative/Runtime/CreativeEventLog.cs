@@ -21,6 +21,8 @@ namespace GravityPuzzle.Creative.Runtime
         LevelFailed = 6,
         BoosterUsed = 7,
         TakeEnd = 8,
+        PieceReleased = 9,
+        ScriptStart = 10,
     }
 
     /// <summary>
@@ -47,7 +49,7 @@ namespace GravityPuzzle.Creative.Runtime
         private static readonly string[] KindNames =
         {
             "take.start", "level.ready", "game.state", "piece.state", "piece.shredded",
-            "level.cleared", "level.failed", "booster.used", "take.end",
+            "level.cleared", "level.failed", "booster.used", "take.end", "piece.released", "script.start",
         };
 
         private readonly List<Entry> entries;
@@ -98,6 +100,10 @@ namespace GravityPuzzle.Creative.Runtime
                 else if (e.Kind == CreativeEventKind.GameState)
                     json.Append(", \"from\": ").Append(Quote(((GameState)e.From).ToString()))
                         .Append(", \"to\": ").Append(Quote(((GameState)e.To).ToString()));
+                else if (e.Kind == CreativeEventKind.PieceReleased)
+                    json.Append(", \"accepted\": ").Append(e.Value != 0 ? "true" : "false");
+                else if (e.Kind == CreativeEventKind.ScriptStart)
+                    json.Append(", \"drags\": ").Append(e.Value);
                 else if (e.Kind == CreativeEventKind.BoosterUsed)
                     json.Append(", \"booster\": ").Append(Quote(((BoosterRewardType)e.From).ToString()))
                         .Append(", \"remaining\": ").Append(e.Value);

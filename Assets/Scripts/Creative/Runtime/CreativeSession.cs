@@ -21,6 +21,7 @@ namespace GravityPuzzle.Creative.Runtime
         private readonly CreativeTakeConfig config;
         private readonly CreativeTakeRequest request;
         private readonly PrototypeBoard board;
+        private readonly PuzzleDragController dragController;
         private readonly Camera camera;
         private readonly CreativeSceneBindings bindings;
         private readonly CreativeBoosterInventory inventory;
@@ -31,11 +32,13 @@ namespace GravityPuzzle.Creative.Runtime
         private bool finishing;
         private bool ended;
         private Coroutine safetyRoutine;
+        private CreativePointerScript pointerScript;
 
         public CreativeSession(
             CreativeTakeConfig config,
             CreativeTakeRequest request,
             PrototypeBoard board,
+            PuzzleDragController dragController,
             Camera camera,
             CreativeSceneBindings bindings,
             CreativeBoosterInventory inventory,
@@ -44,6 +47,7 @@ namespace GravityPuzzle.Creative.Runtime
             this.config = config;
             this.request = request;
             this.board = board;
+            this.dragController = dragController;
             this.camera = camera;
             this.bindings = bindings;
             this.inventory = inventory;
@@ -70,10 +74,15 @@ namespace GravityPuzzle.Creative.Runtime
             if (inventory != null)
                 inventory.CountChanged += OnBoosterCountChanged;
 
+            if (dragController != null)
+                dragController.PieceReleased += OnPieceReleased;
+
             ApplyBackground();
             ApplyUIProfile();
             log.Add(CreativeEventKind.LevelReady);
             safetyRoutine = coroutineHost.StartCoroutine(EndAfterSafetyLimit());
+            if (config.Script != null && config.Script.DragCount > 0)
+                coroutineHost.StartCoroutine(StartScriptAfterDelay());
             Debug.Log($"[Creative] Take '{request.TakeName}' started on level '{LevelName}'.", coroutineHost);
         }
 
@@ -96,6 +105,14 @@ namespace GravityPuzzle.Creative.Runtime
 
             if (inventory != null)
                 inventory.CountChanged -= OnBoosterCountChanged;
+
+            if (dragController != null)
+            {
+                dragController.PieceReleased -= OnPieceReleased;
+                dragController.ConfigureScriptedPointerSource(null);
+            }
+
+            pointerScript?.Stop();
 
             if (safetyRoutine != null && coroutineHost != null)
                 coroutineHost.StopCoroutine(safetyRoutine);
@@ -185,6 +202,38 @@ namespace GravityPuzzle.Creative.Runtime
         private void OnBlockShredded(int sourcePieceId)
         {
             log.Add(CreativeEventKind.PieceShredded, sourcePieceId);
+        }
+
+        private void OnPieceReleased(int pieceId, bool accepted)
+        {
+            log.Add(CreativeEventKind.PieceReleased, pieceId, value: accepted ? 1 : 0);
+        }
+
+        // ---- scripted gameplay -----------------------------------------------------------------
+
+        private IEnumerator StartScriptAfterDelay()
+        {
+            CreativePointerScript script;
+            try
+            {
+                script = new CreativePointerScript(config.Script, config.Level);
+            }
+            catch (System.ArgumentException exception)
+            {
+                Debug.LogError($"[Creative] Script '{config.Script.name}' is invalid: {exception.Message} The take continues without scripted input.", coroutineHost);
+                yield break;
+            }
+
+            for (int frame = 0; frame < config.Script.StartDelayFrames; frame++)
+                yield return null;
+
+            if (ended || dragController == null || camera == null)
+                yield break;
+
+            pointerScript = script;
+            pointerScript.Start(camera);
+            dragController.ConfigureScriptedPointerSource(pointerScript);
+            log.Add(CreativeEventKind.ScriptStart, value: pointerScript.DragCount);
         }
 
         private void OnBoosterCountChanged(BoosterRewardType booster, int remaining)

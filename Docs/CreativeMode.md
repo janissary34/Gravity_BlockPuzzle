@@ -47,13 +47,21 @@ Branch: `marketing`. Creative Mode records gameplay takes for marketing videos a
 
 Each event has `unity_frame` (`Time.frameCount`) and `t` (`Time.time`). With Unity Recorder capturing at a constant frame rate, one Unity frame is one video frame. The recorder driver records the Unity frame at which recording started, so `video_frame = unity_frame - recording_start_unity_frame`.
 
-**Not yet logged** (they need new events at the existing haptic call sites; they wait for the independent review because some are in `PuzzleDragController`): valid/invalid drop, cutter contact, Hammer/Rocket impact, freeze start.
+| `piece.released` | `PuzzleDragController.PieceReleased(pieceId, accepted)`: exactly once per release; `accepted` = valid snap, `false` = restored or failed |
+| `script.start` | the scripted pointer was injected (`drags` = count). Script frame 0 is the next frame the controller samples |
+
+**Not yet logged:** cutter contact, Hammer/Rocket impact, freeze start. These need events in `BlockShredder` and the boosters.
 
 ## Capture
 
 Capture uses Unity Recorder (`com.unity.recorder` 4.0.3, added on this branch), started at Play Mode start by an editor-only driver. The driver arrives in the next step, once the package is resolved and its API can be compile-checked. Recording starts before Scene1 builds its level, so the Game View is already at the capture size (default 1080×1920 @ 30 fps) when the camera fit is computed. The take therefore includes the splash; the pipeline trims to `level.ready`.
 
-## Pending (needs the independent review per AGENTS.md)
+## Scripted gameplay
 
-- Scripted pointer input: a narrow injected pointer source handled next to the existing touch/mouse paths in `PuzzleDragController`, reusing select/drag/release so every rule applies.
-- New gameplay-moment events at the haptic call sites.
+- A `CreativeScript` (SO) lists drags in **board cells**: x from the left column, y from the bottom row; (0, 0) is the centre of the lower-left cell. Each drag has a start frame, a move duration in frames, a from-cell and a to-cell. It is set on the take config.
+- When the take begins, `CreativeSession` builds a `CreativePointerScript`. This validates the script: frames ≥ 0, each move ≥ 1 frame, and ≥ 1 frame between a release and the next press. An invalid script is logged as an error and the take continues unscripted.
+- After `startDelayFrames`, the session injects the script through `PuzzleDragController.ConfigureScriptedPointerSource`.
+- `PuzzleDragController.Update` keeps all its existing guards. When an injected source is active, it calls `ProcessScriptedInput`, which mirrors `ProcessMouseInput` line by line through the existing `TrySelectPiece` / `UpdateDragTarget` / `ReleasePiece`. Every game rule therefore applies, and the touch and mouse paths are unchanged.
+- The script is active only until its last release; afterwards device input works again. `OnDisable` and `CreativeSession.End` clear it.
+- **Authoring guidance:** leave enough frames after each release for falls and shredding to settle before the next press. A press that selects nothing is logged as `[CreativeInput]`.
+- **Review:** independent review, both proposal and implementation, recorded in `Docs/Reviews/2026-11-04-creative-input-review.md`. It ran on `gemini-3.8-flash-high`, an exception the user approved because `gemini-4-argon-high` was unavailable.

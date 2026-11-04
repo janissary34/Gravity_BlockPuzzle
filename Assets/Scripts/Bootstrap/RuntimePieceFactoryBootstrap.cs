@@ -244,6 +244,7 @@ namespace GravityPuzzle.Bootstrap
                     creativeRequest.Config,
                     creativeRequest,
                     prototypeBoard,
+                    puzzleDragController,
                     gameplayCamera,
                     creativeSceneBindings,
                     creativeInventory,

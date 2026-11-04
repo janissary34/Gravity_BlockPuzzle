@@ -50,6 +50,8 @@ namespace GravityPuzzle.Creative.Config
         [SerializeField] private CreativeTimerMode timerMode = CreativeTimerMode.Frozen;
         [Tooltip("Booster counts for this take. Kept in memory only; the player's saved inventory is never touched.")]
         [SerializeField] private BoosterCount[] boosters = Array.Empty<BoosterCount>();
+        [Tooltip("Optional scripted gameplay. Empty = the take is played by hand.")]
+        [SerializeField] private CreativeScript script;
 
         [Header("Capture")]
         [Min(16)] [SerializeField] private int captureWidth = 1080;
@@ -67,6 +69,7 @@ namespace GravityPuzzle.Creative.Config
         public CreativeTimerMode TimerMode => timerMode;
         public int BoosterEntryCount => boosters != null ? boosters.Length : 0;
         public BoosterCount GetBoosterEntry(int index) => boosters[index];
+        public CreativeScript Script => script;
         public int CaptureWidth => captureWidth;
         public int CaptureHeight => captureHeight;
         public int CaptureFrameRate => captureFrameRate;

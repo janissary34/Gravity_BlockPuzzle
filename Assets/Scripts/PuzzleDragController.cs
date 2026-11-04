@@ -63,6 +63,27 @@ namespace GravityPuzzle
         private int activeFingerId = -1;
         private const float FineCellDragThreshold = .5f;
         public static PuzzleDragController Instance { get; private set; }
+
+        /// <summary>
+        /// Raised when a held piece is released: the board-model piece id and whether the drop
+        /// was accepted (valid snap) or restored (invalid drop). Observation only (Creative Mode
+        /// event log); raised at the same points as the existing drop haptics.
+        /// </summary>
+        public event System.Action<int, bool> PieceReleased;
+
+        // Creative Mode only: optional scripted pointer supplied by the composition root.
+        // Null in normal play, so the touch and mouse paths below are unchanged.
+        private GravityPuzzle.Gameplay.Input.IBoardPointerSource scriptedPointerSource;
+
+        /// <summary>
+        /// Supplies a scripted pointer (Creative Mode). While it reports IsActive, it replaces device
+        /// input for this controller and is processed by the same select/drag/release code as the mouse.
+        /// Pass null to restore device input.
+        /// </summary>
+        public void ConfigureScriptedPointerSource(GravityPuzzle.Gameplay.Input.IBoardPointerSource source)
+        {
+            scriptedPointerSource = source;
+        }
         private PrototypeBoard subscribedBoard;
         private bool inputLockedByGameState;
 
@@ -169,6 +190,7 @@ namespace GravityPuzzle
         private void OnDisable()
         {
             BindBoardEvents(null);
+            scriptedPointerSource = null;
 
             if (Instance == this)
                 Instance = null;
@@ -222,7 +244,9 @@ namespace GravityPuzzle
 
             CapturePiecesAtShredderBoundary();
 
-            if (Input.touchCount > 0)
+            if (scriptedPointerSource != null && scriptedPointerSource.IsActive)
+                ProcessScriptedInput(scriptedPointerSource.GetSample(Time.frameCount));
+            else if (Input.touchCount > 0)
                 ProcessTouchInput();
             else
                 ProcessMouseInput();
@@ -1175,6 +1199,28 @@ namespace GravityPuzzle
                 ClearFrozenGroupFeedback();
         }
 
+        // Mirrors ProcessMouseInput exactly, with the scripted sample in place of the mouse.
+        private void ProcessScriptedInput(GravityPuzzle.Gameplay.Input.BoardPointerSample sample)
+        {
+            Vector2 pointer = PointerWorldPosition(sample.ScreenPosition);
+
+            if (sample.Pressed)
+            {
+                ClearFrozenGroupFeedback();
+                TrySelectPiece(pointer);
+                if (selectedPiece == null)
+                    Debug.LogWarning($"[CreativeInput] Scripted press at frame {Time.frameCount} did not select a piece (world {pointer}).", this);
+            }
+
+            if (selectedPiece != null && (sample.Held || sample.Released))
+                UpdateDragTarget(pointer + grabOffset);
+
+            if (selectedPiece != null && sample.Released)
+                ReleasePiece();
+            else if (selectedPiece == null && sample.Released)
+                ClearFrozenGroupFeedback();
+        }
+
         private Touch FindActiveTouch()
         {
             if (activeFingerId < 0)
@@ -1320,6 +1366,7 @@ namespace GravityPuzzle
 
         private void ReleasePiece()
         {
+            int releasingPieceId = selectedPiece.SourcePieceId;
             Rigidbody2D body = selectedPiece.Body;
             TryMoveSelectedPieceOnGrid(selectedPiece);
 
@@ -1343,7 +1390,12 @@ namespace GravityPuzzle
                 if (TryCommitSafeSnapRelease(selectedPiece, out _))
                 {
                     HapticFeedbackRuntime.ValidDrop();
+                    PieceReleased?.Invoke(releasingPieceId, true);
                     StartGridReleasePresentation(selectedPiece, selectedJointGroupPieces);
+                }
+                else
+                {
+                    PieceReleased?.Invoke(releasingPieceId, false);
                 }
 
                 selectedPiece = null;
@@ -1358,6 +1410,7 @@ namespace GravityPuzzle
             if (TryCommitSafeSnapRelease(selectedPiece, out Vector2 releasePosition))
             {
                 HapticFeedbackRuntime.ValidDrop();
+                PieceReleased?.Invoke(releasingPieceId, true);
                 PuzzlePiece releasePiece = selectedPiece;
                 StartGridReleasePresentation(releasePiece, releasePosition);
                 selectedPiece = null;
@@ -1377,6 +1430,7 @@ namespace GravityPuzzle
                 TryRestoreGridRelease(selectedPiece, restoreAnchor, out Vector2 restorePosition))
             {
                 HapticFeedbackRuntime.InvalidDrop();
+                PieceReleased?.Invoke(releasingPieceId, false);
                 selectedPiece.SetGridPresentationPosition(restorePosition);
                 selectedPiece = null;
                 hasSelectedPieceStartAnchor = false;
@@ -1390,6 +1444,7 @@ namespace GravityPuzzle
             Debug.LogWarning(
                 $"[GridRelease] Failed to restore '{selectedPiece.name}' to its committed grid anchor.",
                 selectedPiece);
+            PieceReleased?.Invoke(releasingPieceId, false);
 
             selectedPiece = null;
             hasSelectedPieceStartAnchor = false;
