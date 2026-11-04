@@ -20,3 +20,10 @@ use authored assets or prewarmed typed pools (`LevelRuntimeRoot`, `RevealAreaPoo
 
 Do not extend that path. Migrate pin objects to authored or prewarmed adapters in a
 separate change while preserving pin collision behaviour.
+
+## Creative Mode: `Frozen` timer mode does not freeze the timer
+
+Status: verified on branch `marketing` (take `gbp_L30_20261104-164645`; the timer counts down from 05:00 to 04:43).
+- `PrototypeBoard.StartTimer` calls `TryTransitionGameState(Playing)`, which raises `GameStateChanged`, before it sets `IsTimerStarted`.
+- `CreativeSession` requests its pause from that event, so `TryPauseTimer` sees an inactive timer and returns false. The pause is never applied.
+- Affects only creative takes with `timerMode: Frozen`; normal play is unaffected.
