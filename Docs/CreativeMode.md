@@ -89,14 +89,16 @@ Events logged before recording started (`take.start`, `level.ready`, `capture.re
 
 ## UI visibility
 
-- **Bindings:** run *Gravity Puzzle → Creative → Author Scene1 UI Bindings* once with Scene1 open in Edit Mode (again after UI hierarchy changes). `CreativeSceneBindingsAuthoring` maps each `CreativeUIGroup` to hierarchy paths under `InGameUI`, collects the UI `Graphic` components below them, and saves them on the `CreativeSceneBindings` object. A missing path aborts the tool without changes. The bindings remain editable in the Inspector.
+- **Bindings:** run *Gravity Puzzle → Creative → Author Scene1 UI Bindings* once with Scene1 open in Edit Mode (again after UI hierarchy changes). `CreativeSceneBindingsAuthoring` maps each `CreativeUIGroup` to hierarchy paths under `InGameUI`, collects the UI `Graphic` components below them, and saves them on the `CreativeSceneBindings` object. A missing path, or unsaved changes in Scene1, stops the tool without changes. The bindings remain editable in the Inspector.
+  - A path lists exact object names, one per hierarchy level, because `Transform.Find` cannot reach `New_Booster/feature_Panel_Dark_bg` (its name contains `/`) and returns only the first of duplicate siblings.
+  - Every matching object is bound. `FullscreenSuccess` exists twice (`PrototypeBoard.winPanel` uses the scene-added copy), and the settings, fail, revive and retry panels exist both directly under `InGameUI` and under `New_Panels`. Hiding an unused copy is harmless.
 - **Profiles** (`Assets/Creative/UIProfiles/`) list the groups to hide; unlisted groups are left to the game:
 
 | Profile | Hides |
 |---|---|
 | `CreativeUI_FullHUD` | DebugButtons ("NEXT LEVEL") |
 | `CreativeUI_GameplayClean` | DebugButtons, Settings, Retry, Coins, DifficultyBadge, popups, fail/revive panels. Keeps the level label, timer, progress bar, boosters and win feedback |
-| `CreativeUI_BoardOnly` | every group |
+| `CreativeUI_BoardOnly` | every group. UI outside the groups stays visible (`Timer_obj`, `Freeze_Slider`, `Vapor`, ...) |
 
 - **Hiding** disables the bound `Graphic` components. Scripts, coroutines and linked tweens keep running, raycasts pass through, and a popup the game opens later stays invisible, because the enabled state survives `SetActive`. The profile is re-applied on every game-state change.
 - **Level label:** `displayLevelNumber` on the take config (0 = automatic). The automatic number is the level's campaign position, e.g. asset `L30` is campaign level 33, because three unnamed levels come earlier in `LevelSequence`.
