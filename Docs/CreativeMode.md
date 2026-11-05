@@ -114,6 +114,14 @@ Events logged before recording started (`take.start`, `level.ready`, `capture.re
   - Lower insets rent more lower-grid visual slots. At 0.16 on 9:16, L30 uses 110 of 242; the peak across levels is 234. Exhausting the pool fails the level build.
 - **Level label:** `displayLevelNumber` on the take config (0 = automatic). The automatic number is the level's campaign position, e.g. asset `L30` is campaign level 33, because three unnamed levels come earlier in `LevelSequence`.
 
+## Marketing-only levels
+
+`Assets/Creative/BlockOut/` holds the first one: a 9×12 level with 25 pieces, a script that never clears it (`BlockOut_UnresolvedTake`), and a separate proof that it can be cleared (`BlockOut_FairSolutionTake`). It is selected only through a take config and is not in `LevelSequence`, so campaign levels and normal play are unchanged. Black and white pieces use the level's legacy colour, with no palette, so no shared config changes.
+
+An unresolved take uses timer mode `Frozen` with a level time limit above the low-time threshold, and ends at `maxSeconds`. It raises neither `level.failed` nor `level.cleared`.
+
+**Scripted drag timing:** avoid move frame counts that put the drag remainder on an exact half step, because `PuzzleDragController` can freeze there. The Block Out scripts use 25 and 19 frames for a whole-cell move.
+
 ## Scripted gameplay
 
 - A `CreativeScript` (SO) lists drags in **board cells**: x from the left column, y from the bottom row; (0, 0) is the centre of the lower-left cell. Each drag has a start frame, a move duration in frames, a from-cell and a to-cell. It is set on the take config.

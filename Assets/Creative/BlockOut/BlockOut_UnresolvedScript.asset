@@ -1,0 +1,116 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25475d84eeb0415cbaedf1f6f6af7f8c, type: 3}
+  m_Name: BlockOut_UnresolvedScript
+  m_EditorClassIdentifier: 
+  startDelayFrames: 30
+  drags:
+  - startFrame: 0
+    moveFrames: 19
+    fromCell: {x: 0, y: 11}
+    toCell: {x: 2, y: 11}
+  - startFrame: 41
+    moveFrames: 19
+    fromCell: {x: 2, y: 9}
+    toCell: {x: 2, y: 7}
+  - startFrame: 82
+    moveFrames: 19
+    fromCell: {x: 1, y: 8}
+    toCell: {x: 3, y: 8}
+  - startFrame: 123
+    moveFrames: 25
+    fromCell: {x: 3, y: 3}
+    toCell: {x: 4, y: 3}
+  - startFrame: 204
+    moveFrames: 19
+    fromCell: {x: 3, y: 7}
+    toCell: {x: 3, y: 6}
+  - startFrame: 245
+    moveFrames: 25
+    fromCell: {x: 6, y: 3}
+    toCell: {x: 5, y: 3}
+  - startFrame: 340
+    moveFrames: 25
+    fromCell: {x: 4, y: 4}
+    toCell: {x: 5, y: 4}
+  - startFrame: 421
+    moveFrames: 25
+    fromCell: {x: 1, y: 4}
+    toCell: {x: 2, y: 4}
+  - startFrame: 502
+    moveFrames: 25
+    fromCell: {x: 3, y: 3}
+    toCell: {x: 4, y: 3}
+  - startFrame: 583
+    moveFrames: 25
+    fromCell: {x: 7, y: 4}
+    toCell: {x: 4, y: 4}
+  - startFrame: 664
+    moveFrames: 25
+    fromCell: {x: 6, y: 3}
+    toCell: {x: 5, y: 3}
+  - startFrame: 745
+    moveFrames: 25
+    fromCell: {x: 6, y: 3}
+    toCell: {x: 5, y: 3}
+  - startFrame: 826
+    moveFrames: 25
+    fromCell: {x: 2, y: 9}
+    toCell: {x: 4, y: 9}
+  - startFrame: 907
+    moveFrames: 19
+    fromCell: {x: 0, y: 11}
+    toCell: {x: 0, y: 10}
+  - startFrame: 948
+    moveFrames: 25
+    fromCell: {x: 3, y: 11}
+    toCell: {x: 5, y: 11}
+  - startFrame: 1029
+    moveFrames: 25
+    fromCell: {x: 1, y: 3}
+    toCell: {x: 3, y: 3}
+  - startFrame: 1110
+    moveFrames: 19
+    fromCell: {x: 1, y: 8}
+    toCell: {x: 2, y: 8}
+  - startFrame: 1151
+    moveFrames: 25
+    fromCell: {x: 1, y: 5}
+    toCell: {x: 3, y: 5}
+  - startFrame: 1232
+    moveFrames: 19
+    fromCell: {x: 3, y: 7}
+    toCell: {x: 3, y: 6}
+  - startFrame: 1273
+    moveFrames: 25
+    fromCell: {x: 7, y: 10}
+    toCell: {x: 7, y: 11}
+  - startFrame: 1354
+    moveFrames: 25
+    fromCell: {x: 0, y: 10}
+    toCell: {x: 1, y: 10}
+  - startFrame: 1435
+    moveFrames: 25
+    fromCell: {x: 5, y: 11}
+    toCell: {x: 4, y: 11}
+  - startFrame: 1516
+    moveFrames: 25
+    fromCell: {x: 2, y: 4}
+    toCell: {x: 1, y: 4}
+  - startFrame: 1597
+    moveFrames: 19
+    fromCell: {x: 6, y: 4}
+    toCell: {x: 5, y: 4}
+  - startFrame: 1638
+    moveFrames: 19
+    fromCell: {x: 3, y: 6}
+    toCell: {x: 3, y: 5}
