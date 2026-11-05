@@ -55,4 +55,4 @@ This change adds a board frame measurement to `LevelRuntimeRoot`, moves bar plac
 - **Pointer data, isolated run of the unchanged script:** 42 samples, both drags accepted, script frames unchanged.
 - **Compile:** Assembly-CSharp 220 files OK, Assembly-CSharp-Editor 43 files OK.
 - **Unity tests:** EditMode 51 of 54, PlayMode 20 of 31 passed. All 14 failures are the stale tests in `Docs/KnownIssues.md`.
-- **Not yet run:** a real recording with these changes.
+- **Real recording:** `gbp_L30_20261105-115408` with `L30_MinimalCenteredTake`: validation passed, 42 pointer samples, both drags accepted, and drag, release and shred frames equal to `gbp/take/L30-003`. The bar ends 47 px above the visible frame, with 183 px above the bar and about 190 px below the shredder.

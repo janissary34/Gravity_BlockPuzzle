@@ -389,6 +389,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rewardConfig: {fileID: 11400000, guid: b0d8f1e70966145a49123a9878dc7431, type: 2}
+--- !u!224 &190811372 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 2091368097414922034, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+  m_PrefabInstance: {fileID: 1749646595}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &203077451
 GameObject:
   m_ObjectHideFlags: 0
@@ -6367,6 +6372,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 334526629}
   m_CullTransparentMesh: 1
+--- !u!224 &396528685 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 6026353106715007295, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+  m_PrefabInstance: {fileID: 1749646595}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &420168243
 GameObject:
   m_ObjectHideFlags: 0
@@ -7434,6 +7444,9 @@ MonoBehaviour:
     - {fileID: 1749646598}
     objects: []
   backdropRenderers: []
+  progressBar: {fileID: 396528685}
+  progressBarVisual: {fileID: 190811372}
+  progressBarCanvas: {fileID: 1749646612}
 --- !u!4 &672443249
 Transform:
   m_ObjectHideFlags: 0
