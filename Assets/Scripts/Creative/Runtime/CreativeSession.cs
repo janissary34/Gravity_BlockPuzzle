@@ -4,7 +4,9 @@ using GravityPuzzle.Config;
 using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Creative.Config;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Presentation.Views;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace GravityPuzzle.Creative.Runtime
 {
@@ -43,8 +45,9 @@ namespace GravityPuzzle.Creative.Runtime
         private readonly Camera camera;
         private readonly CreativeSceneBindings bindings;
         private readonly CreativeBoosterInventory inventory;
+        private readonly LevelRuntimeRoot levelRoot;
         private readonly MonoBehaviour coroutineHost;
-        private readonly CreativeEventLog log = new CreativeEventLog(1024);
+        private readonly CreativeEventLog log;
 
         private bool begun;
         private bool finishing;
@@ -54,6 +57,7 @@ namespace GravityPuzzle.Creative.Runtime
         private CreativePointerScript pointerScript;
         private bool progressBarMoved;
         private Vector3 originalProgressBarPosition;
+        private readonly Vector3[] corners = new Vector3[4];
 
         public CreativeSession(
             CreativeTakeConfig config,
@@ -63,6 +67,7 @@ namespace GravityPuzzle.Creative.Runtime
             Camera camera,
             CreativeSceneBindings bindings,
             CreativeBoosterInventory inventory,
+            LevelRuntimeRoot levelRoot,
             MonoBehaviour coroutineHost)
         {
             this.config = config;
@@ -72,7 +77,10 @@ namespace GravityPuzzle.Creative.Runtime
             this.camera = camera;
             this.bindings = bindings;
             this.inventory = inventory;
+            this.levelRoot = levelRoot;
             this.coroutineHost = coroutineHost;
+            // Sized for a pointer sample on every frame of the take, so drags never grow the list.
+            log = new CreativeEventLog(Mathf.Max(1024, Mathf.CeilToInt(config.MaxSeconds * config.CaptureFrameRate) + 256));
             log.Add(CreativeEventKind.TakeStart);
         }
 
@@ -104,7 +112,6 @@ namespace GravityPuzzle.Creative.Runtime
                 Debug.LogWarning($"[Creative] Take '{request.TakeName}' uses UI profile '{config.UIProfile.name}', but the scene has no CreativeSceneBindings; " +
                                  "run Gravity Puzzle/Creative/Author Scene1 UI Bindings. UI is left as the game shows it.", coroutineHost);
             ApplyUIProfile();
-            PlaceProgressBar();
             log.Add(CreativeEventKind.LevelReady);
             captureDelayRoutine = coroutineHost.StartCoroutine(SignalCaptureReadyAfterDelay());
             safetyRoutine = coroutineHost.StartCoroutine(EndAfterSafetyLimit());
@@ -158,38 +165,146 @@ namespace GravityPuzzle.Creative.Runtime
 
         // ---- presentation ---------------------------------------------------------------------
 
-        // Puts the bar's centre above the board top. The bar is authored in the HUD, so this is a
-        // runtime move that ends with the take. The timer is its child and moves with it.
-        private void PlaceProgressBar()
+        // Runs after a rendered frame: a Screen Space - Camera canvas follows its camera only when it
+        // renders, so in the frame the level moves the camera the canvas still has its old pose.
+        // Returns false, with the reason, when the take must not be recorded.
+        private bool PrepareProgressBar(out string failure)
         {
+            failure = null;
             CreativeFramingProfile framing = config.Framing;
-            if (framing == null || framing.ProgressBarBoardGap <= 0f)
-                return;
+            bool framed = framing != null && framing.ProgressBarBoardGap > 0f;
+            RectTransform visual = bindings != null ? bindings.ProgressBarVisual : null;
+            if (IsHiddenByProfile(CreativeUIGroup.ProgressBar) || (!framed && visual == null))
+                return true;
 
             RectTransform bar = bindings != null ? bindings.ProgressBar : null;
             Canvas canvas = bindings != null ? bindings.ProgressBarCanvas : null;
-            if (bar == null || canvas == null || camera == null || config.Level == null)
+            if (bar == null || visual == null || canvas == null || camera == null)
             {
-                Debug.LogWarning($"[Creative] Take '{request.TakeName}' cannot place the progress bar: it needs its scene bindings, a camera and a level; " +
-                                 "run Gravity Puzzle/Creative/Author Scene1 UI Bindings. The bar stays in place.", coroutineHost);
-                return;
+                failure = "the progress bar bindings or camera are missing; run Gravity Puzzle/Creative/Author Scene1 UI Bindings";
+                return false;
             }
 
-            Vector3 boardTop = camera.WorldToScreenPoint(new Vector3(0f, config.Level.boardRows * .5f, 0f));
-            var target = new Vector2(boardTop.x, boardTop.y + framing.ProgressBarBoardGap * camera.pixelHeight);
+            if (levelRoot == null || !levelRoot.TryGetBoardFrameTop(out float frameTopWorld))
+            {
+                failure = "the board frame top could not be measured";
+                return false;
+            }
+
+            Canvas.ForceUpdateCanvases();
             Camera uiCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay
                 ? null
                 : canvas.worldCamera != null ? canvas.worldCamera : camera;
-            if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(bar, target, uiCamera, out Vector3 targetWorld))
+            float padding = framing != null ? framing.BoardFrameArtPadding : 0f;
+            float frameTop = camera.WorldToScreenPoint(new Vector3(0f, frameTopWorld - padding, 0f)).y;
+
+            if (framed)
             {
-                Debug.LogWarning($"[Creative] Take '{request.TakeName}' could not map the progress bar position. The bar stays in place.", coroutineHost);
-                return;
+                Rect before = AttachedScreenRect(visual, uiCamera);
+                var from = new Vector2(before.center.x, before.yMin);
+                var to = new Vector2(before.center.x, frameTop + framing.ProgressBarBoardGap * camera.pixelHeight);
+                if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(bar, from, uiCamera, out Vector3 fromWorld) ||
+                    !RectTransformUtility.ScreenPointToWorldPointInRectangle(bar, to, uiCamera, out Vector3 toWorld))
+                {
+                    failure = "the progress bar position could not be mapped to the canvas";
+                    return false;
+                }
+
+                originalProgressBarPosition = bar.localPosition;
+                progressBarMoved = true;
+                bar.position += new Vector3(0f, toWorld.y - fromWorld.y, 0f);
             }
 
-            originalProgressBarPosition = bar.position;
-            progressBarMoved = true;
-            float barCentreY = bar.TransformPoint(bar.rect.center).y;
-            bar.position += new Vector3(0f, targetWorld.y - barCentreY, 0f);
+            Rect placed = AttachedScreenRect(visual, uiCamera);
+            if (placed.yMin <= frameTop)
+            {
+                RestoreProgressBar();
+                failure = $"the progress bar overlaps the board: its bottom is at {placed.yMin:0.#} px and the frame top at {frameTop:0.#} px (y up)";
+                return false;
+            }
+
+            Rect safe = SafeScreenRect();
+            if (placed.xMin < safe.xMin || placed.xMax > safe.xMax || placed.yMin < safe.yMin || placed.yMax > safe.yMax)
+            {
+                RestoreProgressBar();
+                failure = $"the progress bar is outside the safe screen area: bar {placed}, safe area {safe}";
+                return false;
+            }
+
+            return true;
+        }
+
+        // The bar plus the timer, which hangs below it, when the UI profile leaves the timer visible.
+        private Rect AttachedScreenRect(RectTransform visual, Camera uiCamera)
+        {
+            Rect bounds = ScreenRect(visual, uiCamera);
+            for (int b = 0; b < bindings.UIGroupCount; b++)
+            {
+                CreativeSceneBindings.UIGroupBinding binding = bindings.GetUIGroup(b);
+                if (binding.group != CreativeUIGroup.Timer || binding.graphics == null)
+                    continue;
+
+                for (int g = 0; g < binding.graphics.Length; g++)
+                {
+                    Graphic graphic = binding.graphics[g];
+                    // Inactive is fine: the timer object activates only when play starts, after this check.
+                    if (graphic == null || !graphic.enabled)
+                        continue;
+
+                    Rect rect = ScreenRect(graphic.rectTransform, uiCamera);
+                    bounds = Rect.MinMaxRect(
+                        Mathf.Min(bounds.xMin, rect.xMin), Mathf.Min(bounds.yMin, rect.yMin),
+                        Mathf.Max(bounds.xMax, rect.xMax), Mathf.Max(bounds.yMax, rect.yMax));
+                }
+            }
+
+            return bounds;
+        }
+
+        private Rect ScreenRect(RectTransform rect, Camera uiCamera)
+        {
+            rect.GetWorldCorners(corners);
+            Vector2 min = RectTransformUtility.WorldToScreenPoint(uiCamera, corners[0]);
+            Vector2 max = min;
+            for (int c = 1; c < corners.Length; c++)
+            {
+                Vector2 point = RectTransformUtility.WorldToScreenPoint(uiCamera, corners[c]);
+                min = Vector2.Min(min, point);
+                max = Vector2.Max(max, point);
+            }
+
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+        }
+
+        // Screen.safeArea, as fractions applied to the camera's pixels. In the Editor's Game View
+        // this is the whole view, so the check there means "inside the picture".
+        private Rect SafeScreenRect()
+        {
+            Rect pixels = camera.pixelRect;
+            Rect safe = Screen.safeArea;
+            float width = Mathf.Max(1, Screen.width);
+            float height = Mathf.Max(1, Screen.height);
+            return new Rect(
+                pixels.x + safe.x / width * pixels.width,
+                pixels.y + safe.y / height * pixels.height,
+                safe.width / width * pixels.width,
+                safe.height / height * pixels.height);
+        }
+
+        private bool IsHiddenByProfile(CreativeUIGroup group)
+        {
+            CreativeUIProfile profile = config.UIProfile;
+            if (profile == null)
+                return false;
+
+            for (int p = 0; p < profile.Count; p++)
+            {
+                CreativeUIProfile.GroupVisibility rule = profile.Get(p);
+                if (rule.group == group && !rule.visible)
+                    return true;
+            }
+
+            return false;
         }
 
         private void RestoreProgressBar()
@@ -199,7 +314,7 @@ namespace GravityPuzzle.Creative.Runtime
 
             progressBarMoved = false;
             if (bindings != null && bindings.ProgressBar != null)
-                bindings.ProgressBar.position = originalProgressBarPosition;
+                bindings.ProgressBar.localPosition = originalProgressBarPosition;
         }
 
         private void ApplyBackground()
@@ -309,11 +424,20 @@ namespace GravityPuzzle.Creative.Runtime
 
         private IEnumerator SignalCaptureReadyAfterDelay()
         {
-            for (int frame = 0; frame < config.CaptureStartDelayFrames; frame++)
+            int delay = Mathf.Max(1, config.CaptureStartDelayFrames);
+            for (int frame = 0; frame < delay; frame++)
                 yield return null;
 
             if (ended)
                 yield break;
+
+            if (!PrepareProgressBar(out string failure))
+            {
+                log.Add(CreativeEventKind.CaptureFailed);
+                Debug.LogError($"[Creative] Take '{request.TakeName}' failed pre-recording validation: {failure}. Nothing is recorded.", coroutineHost);
+                Complete();
+                yield break;
+            }
 
             log.Add(CreativeEventKind.CaptureReady);
 #if UNITY_EDITOR
@@ -343,7 +467,7 @@ namespace GravityPuzzle.Creative.Runtime
                 yield break;
 
             pointerScript = script;
-            pointerScript.Start(camera);
+            pointerScript.Start(camera, log);
             dragController.ConfigureScriptedPointerSource(pointerScript);
             log.Add(CreativeEventKind.ScriptStart, value: pointerScript.DragCount);
         }

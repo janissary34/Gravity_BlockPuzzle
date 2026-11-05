@@ -30,6 +30,7 @@ namespace GravityPuzzle.Creative.EditorTools
         private const string UIRootName = "InGameUI";
         private const string BindingsObjectName = "CreativeSceneBindings";
         private const string ProgressBarName = "UI_Progress_Slider";
+        private const string ProgressBarVisualName = "Background";
 
         private struct GroupPaths
         {
@@ -151,6 +152,13 @@ namespace GravityPuzzle.Creative.EditorTools
                 report.AppendLine($"  MISSING progress bar: expected one {UIRootName} > {ProgressBarName}, found {progressBars.Count}");
             }
 
+            List<Transform> progressBarVisuals = FindAll(uiRoot.transform, new[] { ProgressBarName, ProgressBarVisualName });
+            if (progressBarVisuals.Count != 1)
+            {
+                missing = true;
+                report.AppendLine($"  MISSING progress bar visual: expected one {ProgressBarName} > {ProgressBarVisualName}, found {progressBarVisuals.Count}");
+            }
+
             Canvas progressBarCanvas = progressBars.Count == 1 ? progressBars[0].GetComponentInParent<Canvas>(true) : null;
             if (progressBars.Count == 1 && progressBarCanvas == null)
             {
@@ -190,6 +198,7 @@ namespace GravityPuzzle.Creative.EditorTools
                 element.FindPropertyRelative("objects").arraySize = 0;
             }
             serializedBindings.FindProperty("progressBar").objectReferenceValue = progressBars[0];
+            serializedBindings.FindProperty("progressBarVisual").objectReferenceValue = progressBarVisuals[0];
             serializedBindings.FindProperty("progressBarCanvas").objectReferenceValue = progressBarCanvas;
             serializedBindings.ApplyModifiedProperties();
 

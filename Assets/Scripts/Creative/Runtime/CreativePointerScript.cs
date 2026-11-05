@@ -23,6 +23,9 @@ namespace GravityPuzzle.Creative.Runtime
         private readonly Vector2[] toWorld;
         private readonly Vector2[] fromScreen;
         private readonly Vector2[] toScreen;
+        private CreativeEventLog log;
+        private Vector2 viewportPixels;
+        private int lastLoggedFrame = -1;
         private readonly int lastFrame;
         private bool started;
         private int originFrame = -1;
@@ -72,9 +75,15 @@ namespace GravityPuzzle.Creative.Runtime
         /// </summary>
         public bool IsActive => started && (originFrame < 0 || Time.frameCount - originFrame <= lastFrame);
 
-        /// <summary>Converts the drags to screen pixels and arms the script; frame 0 is the next sampled frame.</summary>
-        public void Start(Camera camera)
+        /// <summary>
+        /// Converts the drags to screen pixels and arms the script; frame 0 is the next sampled
+        /// frame. Every sample handed to the drag controller is also written to <paramref name="log"/>.
+        /// </summary>
+        public void Start(Camera camera, CreativeEventLog log)
         {
+            this.log = log;
+            viewportPixels = new Vector2(camera.pixelWidth, camera.pixelHeight);
+            lastLoggedFrame = -1;
             for (int i = 0; i < startFrames.Length; i++)
             {
                 fromScreen[i] = camera.WorldToScreenPoint(fromWorld[i]);
@@ -105,16 +114,30 @@ namespace GravityPuzzle.Creative.Runtime
                     continue;
 
                 float k = (float)(t - startFrames[i]) / (releaseFrames[i] - startFrames[i]);
-                return new BoardPointerSample
+                var sample = new BoardPointerSample
                 {
                     ScreenPosition = Vector2.Lerp(fromScreen[i], toScreen[i], k),
                     Pressed = t == startFrames[i],
                     Held = t < releaseFrames[i],
                     Released = t == releaseFrames[i],
                 };
+                LogSample(frame, sample);
+                return sample;
             }
 
             return default;
+        }
+
+        private void LogSample(int frame, BoardPointerSample sample)
+        {
+            if (log == null || frame == lastLoggedFrame)
+                return;
+
+            lastLoggedFrame = frame;
+            PointerPhase phase = sample.Pressed ? PointerPhase.Press
+                : sample.Released ? PointerPhase.Release
+                : PointerPhase.Move;
+            log.AddPointerSample(sample.ScreenPosition.x / viewportPixels.x, sample.ScreenPosition.y / viewportPixels.y, phase);
         }
 
         /// <summary>World position of a board-cell coordinate ((0, 0) = centre of the lower-left cell).</summary>

@@ -13,4 +13,5 @@ MonoBehaviour:
   m_Name: CreativeFraming_BoardCentered
   m_EditorClassIdentifier: 
   boardTopViewportInset: 0.16
-  progressBarBoardGap: 0.05
+  progressBarBoardGap: 0.015
+  boardFrameArtPadding: 0.3

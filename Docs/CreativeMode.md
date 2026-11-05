@@ -53,6 +53,8 @@ Each event has `unity_frame` (`Time.frameCount`) and `t` (`Time.time`). With Uni
 | `piece.released` | `PuzzleDragController.PieceReleased(pieceId, accepted)`: exactly once per release; `accepted` = valid snap, `false` = restored or failed |
 | `script.start` | the scripted pointer was injected (`drags` = count). Script frame 0 is the next frame the controller samples |
 | `capture.ready` | the level is visually ready and recording is requested (`captureStartDelayFrames` after `level.ready`) |
+| `capture.failed` | pre-recording validation failed; no recording starts |
+| `pointer.sample` | one per frame of a scripted drag, as the drag controller received it: `x`, `y` (viewport fractions, y up), `phase` (press, move, release). The pipeline uses these to drive the editable hand overlay. Movement and timing are unchanged |
 
 **Not yet logged:** cutter contact, Hammer/Rocket impact, freeze start. These need events in `BlockShredder` and the boosters.
 
@@ -105,7 +107,9 @@ Events logged before recording started (`take.start`, `level.ready`, `capture.re
 - **Hiding** disables the bound `Graphic` components. Scripts, coroutines and linked tweens keep running, raycasts pass through, and a popup the game opens later stays invisible, because the enabled state survives `SetActive`. The profile is re-applied on every game-state change.
 - **Framing:** `CreativeFramingProfile` is a separate choice from the UI profile.
   - `boardTopViewportInset` overrides the game's board position through `GravityLevelRuntime.ConfigureBoardTopViewportInset` before the level builds, so the camera, backdrop and lower grid stay consistent. Moving the camera after the build would expose the end of the backdrop.
-  - `progressBarBoardGap` places the bar's centre above the board top when the take begins, and `End` restores it. The timer is a child of the bar, so a profile that shows the timer needs a larger gap.
+  - `progressBarBoardGap` is the gap between the visible top of the board frame and the bottom of the bar, or of the timer when the UI profile shows it. `End` restores the bar.
+  - The frame top comes from the rendered frame sprites. They are full rectangles with transparent padding, so `boardFrameArtPadding` (world units) removes it; 0 is safe but leaves a larger gap.
+  - **Pre-recording validation:** placement runs after at least one rendered frame, because a Screen Space - Camera canvas follows its camera only when it renders. The take then checks the result: a bar that overlaps the board, or leaves the safe screen area, or a framed take with missing bindings, logs `capture.failed` and an error, raises no `CaptureReady` and leaves Play Mode, so nothing is recorded. In the Editor's Game View the safe area is the whole view.
   - Input and events are unaffected: world positions do not change, and pointers convert through the live camera.
   - Lower insets rent more lower-grid visual slots. At 0.16 on 9:16, L30 uses 110 of 242; the peak across levels is 234. Exhausting the pool fails the level build.
 - **Level label:** `displayLevelNumber` on the take config (0 = automatic). The automatic number is the level's campaign position, e.g. asset `L30` is campaign level 33, because three unnamed levels come earlier in `LevelSequence`.

@@ -93,6 +93,28 @@ namespace GravityPuzzle.Presentation.Views
         public Transform BoardFrameRoot => boardFrameRoot;
         public bool HasAuthoredFrameModuleSlots => frameModulePools != null && frameModulePools.Length > 0;
 
+        /// <summary>
+        /// World Y of the top of the frame sprites the current level rented, read from the visible
+        /// renderers. This includes any transparent padding in the art. False when no frame
+        /// module is visible.
+        /// </summary>
+        public bool TryGetBoardFrameTop(out float worldY)
+        {
+            worldY = float.NegativeInfinity;
+            for (int pool = 0; frameModulePools != null && pool < frameModulePools.Length; pool++)
+            {
+                SpriteRenderer[] slots = frameModulePools[pool] != null ? frameModulePools[pool].Slots : null;
+                for (int slot = 0; slots != null && slot < slots.Length; slot++)
+                {
+                    SpriteRenderer renderer = slots[slot];
+                    if (renderer != null && renderer.enabled && renderer.sprite != null)
+                        worldY = Mathf.Max(worldY, renderer.bounds.max.y);
+                }
+            }
+
+            return !float.IsNegativeInfinity(worldY);
+        }
+
 #if UNITY_EDITOR
         public int UsedVisualSlotCount => visualSlotIndex;
         public int UsedFrameModuleSlotCount

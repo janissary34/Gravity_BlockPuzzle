@@ -253,6 +253,7 @@ namespace GravityPuzzle.Bootstrap
                     gameplayCamera,
                     creativeSceneBindings,
                     creativeInventory,
+                    levelRuntimeRoot,
                     this);
             }
         }

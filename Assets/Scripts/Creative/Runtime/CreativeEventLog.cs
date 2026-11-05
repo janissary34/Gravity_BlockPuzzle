@@ -24,6 +24,15 @@ namespace GravityPuzzle.Creative.Runtime
         PieceReleased = 9,
         ScriptStart = 10,
         CaptureReady = 11,
+        CaptureFailed = 12,
+        PointerSample = 13,
+    }
+
+    public enum PointerPhase : byte
+    {
+        Press = 0,
+        Move = 1,
+        Release = 2,
     }
 
     /// <summary>
@@ -45,13 +54,17 @@ namespace GravityPuzzle.Creative.Runtime
             public int From;
             public int To;
             public int Value;
+            public float X;
+            public float Y;
         }
 
         private static readonly string[] KindNames =
         {
             "take.start", "level.ready", "game.state", "piece.state", "piece.shredded",
-            "level.cleared", "level.failed", "booster.used", "take.end", "piece.released", "script.start", "capture.ready",
+            "level.cleared", "level.failed", "booster.used", "take.end", "piece.released", "script.start", "capture.ready", "capture.failed", "pointer.sample",
         };
+
+        private static readonly string[] PhaseNames = { "press", "move", "release" };
 
         private readonly List<Entry> entries;
 
@@ -73,6 +86,24 @@ namespace GravityPuzzle.Creative.Runtime
                 From = from,
                 To = to,
                 Value = value,
+            });
+        }
+
+        /// <summary>
+        /// One scripted pointer sample as the drag controller received it, at viewport fractions
+        /// (x from the left, y from the bottom), so the editing pipeline can follow the real drag.
+        /// </summary>
+        public void AddPointerSample(float viewportX, float viewportY, PointerPhase phase)
+        {
+            entries.Add(new Entry
+            {
+                Frame = UnityEngine.Time.frameCount,
+                Time = UnityEngine.Time.time,
+                Kind = CreativeEventKind.PointerSample,
+                PieceId = -1,
+                Value = (int)phase,
+                X = viewportX,
+                Y = viewportY,
             });
         }
 
@@ -103,6 +134,10 @@ namespace GravityPuzzle.Creative.Runtime
                         .Append(", \"to\": ").Append(Quote(((GameState)e.To).ToString()));
                 else if (e.Kind == CreativeEventKind.PieceReleased)
                     json.Append(", \"accepted\": ").Append(e.Value != 0 ? "true" : "false");
+                else if (e.Kind == CreativeEventKind.PointerSample)
+                    json.Append(", \"x\": ").Append(e.X.ToString("0.#####", CultureInfo.InvariantCulture))
+                        .Append(", \"y\": ").Append(e.Y.ToString("0.#####", CultureInfo.InvariantCulture))
+                        .Append(", \"phase\": ").Append(Quote(PhaseNames[e.Value]));
                 else if (e.Kind == CreativeEventKind.ScriptStart)
                     json.Append(", \"drags\": ").Append(e.Value);
                 else if (e.Kind == CreativeEventKind.BoosterUsed)

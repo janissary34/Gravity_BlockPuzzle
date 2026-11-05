@@ -39,10 +39,15 @@ namespace GravityPuzzle.Creative.Runtime
         [Tooltip("Progress bar moved by a CreativeFramingProfile during a take.")]
         [SerializeField] private RectTransform progressBar;
 
+        [Tooltip("The bar's visible rectangle, used to measure its distance from the board.")]
+        [SerializeField] private RectTransform progressBarVisual;
+
         [Tooltip("Canvas that holds the progress bar.")]
         [SerializeField] private Canvas progressBarCanvas;
 
         public RectTransform ProgressBar => progressBar;
+
+        public RectTransform ProgressBarVisual => progressBarVisual;
 
         public Canvas ProgressBarCanvas => progressBarCanvas;
 
