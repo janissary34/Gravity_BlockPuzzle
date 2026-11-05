@@ -36,6 +36,16 @@ namespace GravityPuzzle.Creative.Runtime
         [Tooltip("Backdrop renderers hidden in SolidColor background mode (board, frame and pieces stay visible).")]
         [SerializeField] private Renderer[] backdropRenderers = Array.Empty<Renderer>();
 
+        [Tooltip("Progress bar moved by a CreativeFramingProfile during a take.")]
+        [SerializeField] private RectTransform progressBar;
+
+        [Tooltip("Canvas that holds the progress bar.")]
+        [SerializeField] private Canvas progressBarCanvas;
+
+        public RectTransform ProgressBar => progressBar;
+
+        public Canvas ProgressBarCanvas => progressBarCanvas;
+
         public int UIGroupCount => uiGroups != null ? uiGroups.Length : 0;
 
         public UIGroupBinding GetUIGroup(int index) => uiGroups[index];

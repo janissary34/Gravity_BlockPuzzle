@@ -16,7 +16,8 @@ Branch: `marketing`. Creative Mode records gameplay takes for marketing videos a
 |---|---|---|
 | `CreativeTakeConfig` (SO) | Level, displayed level number, UI profile, background mode/colour, timer mode, booster counts, capture size/fps, capture start delay, tail frames, safety limit | Immutable config |
 | `CreativeUIProfile` (SO) | Per `CreativeUIGroup`: hidden during the take, or left to the game | Reversible runtime toggles only |
-| `CreativeSceneBindings` (scene component) | Explicit references per UI group (UI `Graphic`s, preferred; Canvases; inert objects), backdrop renderers | In Scene1 on the `CreativeSceneBindings` object, assigned on `RuntimePieceFactoryBootstrap.creativeSceneBindings`. Authored by a menu tool; no runtime search |
+| `CreativeFramingProfile` (SO) | Board top position and progress bar gap, as fractions of screen height | Optional on the take config; empty keeps the game's framing |
+| `CreativeSceneBindings` (scene component) | Explicit references per UI group (UI `Graphic`s, preferred; Canvases; inert objects), backdrop renderers, the progress bar and its canvas | In Scene1 on the `CreativeSceneBindings` object, assigned on `RuntimePieceFactoryBootstrap.creativeSceneBindings`. Authored by a menu tool; no runtime search |
 | `CreativeBoosterInventory` | In-memory booster counts for the take | Injected through `BoosterInventoryRuntime.Configure`; never touches PlayerPrefs |
 | `GravityLevelRuntime.ConfigureLevelOverride` | Which level is built | Explicit API; must run before `FindLevelToPlay` |
 | `GravityLevelRuntime.ConfigureDisplayLevelNumber` | Level number shown in HUD, retry, fail and win labels (`DisplayLevelNumber`) | Presentation only; gameplay gating keeps `CurrentLevelNumber`; nothing is saved |
@@ -98,9 +99,15 @@ Events logged before recording started (`take.start`, `level.ready`, `capture.re
 |---|---|
 | `CreativeUI_FullHUD` | DebugButtons ("NEXT LEVEL") |
 | `CreativeUI_GameplayClean` | DebugButtons, Settings, Retry, Coins, DifficultyBadge, popups, fail/revive panels. Keeps the level label, timer, progress bar, boosters and win feedback |
+| `CreativeUI_Minimal` | everything `GameplayClean` hides, plus LevelHeader, Timer and BoosterBar. Keeps the board, shredder and progress bar. The default for standard creatives; copy it and remove a group for a timer or booster creative |
 | `CreativeUI_BoardOnly` | every group. UI outside the groups stays visible (`Timer_obj`, `Freeze_Slider`, `Vapor`, ...) |
 
 - **Hiding** disables the bound `Graphic` components. Scripts, coroutines and linked tweens keep running, raycasts pass through, and a popup the game opens later stays invisible, because the enabled state survives `SetActive`. The profile is re-applied on every game-state change.
+- **Framing:** `CreativeFramingProfile` is a separate choice from the UI profile.
+  - `boardTopViewportInset` overrides the game's board position through `GravityLevelRuntime.ConfigureBoardTopViewportInset` before the level builds, so the camera, backdrop and lower grid stay consistent. Moving the camera after the build would expose the end of the backdrop.
+  - `progressBarBoardGap` places the bar's centre above the board top when the take begins, and `End` restores it. The timer is a child of the bar, so a profile that shows the timer needs a larger gap.
+  - Input and events are unaffected: world positions do not change, and pointers convert through the live camera.
+  - Lower insets rent more lower-grid visual slots. At 0.16 on 9:16, L30 uses 110 of 242; the peak across levels is 234. Exhausting the pool fails the level build.
 - **Level label:** `displayLevelNumber` on the take config (0 = automatic). The automatic number is the level's campaign position, e.g. asset `L30` is campaign level 33, because three unnamed levels come earlier in `LevelSequence`.
 
 ## Scripted gameplay

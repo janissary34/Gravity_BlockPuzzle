@@ -37,6 +37,7 @@ namespace GravityPuzzle
         private static bool isEditorLevelPreview;
         private static GravityLevelDefinition levelOverride;
         private static int displayLevelNumberOverride;
+        private static float boardTopViewportInsetOverride;
 
         /// <summary>
         /// True only for the level-editor's explicit Play Preview command.
@@ -65,6 +66,7 @@ namespace GravityPuzzle
             isEditorLevelPreview = false;
             levelOverride = null;
             displayLevelNumberOverride = 0;
+            boardTopViewportInsetOverride = 0f;
         }
 
         /// <summary>
@@ -191,6 +193,18 @@ namespace GravityPuzzle
         public static void ConfigureDisplayLevelNumber(int levelNumber)
         {
             displayLevelNumberOverride = Mathf.Max(0, levelNumber);
+        }
+
+        /// <summary>
+        /// Overrides where the board top sits in the viewport (a fraction of its height from the
+        /// top), supplied by the composition root for Creative Mode takes. Must be configured
+        /// before the level builds, because the camera and the viewport backdrops share this
+        /// value. 0 keeps the presentation config's value. The view moves; world positions and
+        /// gameplay do not.
+        /// </summary>
+        public static void ConfigureBoardTopViewportInset(float viewportFraction)
+        {
+            boardTopViewportInsetOverride = Mathf.Max(0f, viewportFraction);
         }
 
         public static GravityLevelDefinition FindLevelToPlay()
@@ -469,9 +483,11 @@ namespace GravityPuzzle
             float cameraSize)
         {
             float boardTop = level.boardRows * .5f;
-            float topInset = configuredBoardPresentationConfig != null
-                ? configuredBoardPresentationConfig.BoardTopViewportInset
-                : .24f;
+            float topInset = boardTopViewportInsetOverride > 0f
+                ? boardTopViewportInsetOverride
+                : configuredBoardPresentationConfig != null
+                    ? configuredBoardPresentationConfig.BoardTopViewportInset
+                    : .24f;
             return boardTop - (0.5f - topInset) * cameraSize * 2f;
         }
 

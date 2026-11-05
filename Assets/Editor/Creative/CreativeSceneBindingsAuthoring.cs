@@ -29,6 +29,7 @@ namespace GravityPuzzle.Creative.EditorTools
         private const string ScenePath = "Assets/Scenes/Scene1.unity";
         private const string UIRootName = "InGameUI";
         private const string BindingsObjectName = "CreativeSceneBindings";
+        private const string ProgressBarName = "UI_Progress_Slider";
 
         private struct GroupPaths
         {
@@ -143,6 +144,20 @@ namespace GravityPuzzle.Creative.EditorTools
                 report.AppendLine($"  {Map[g].Group}: {graphics.Count} graphics");
             }
 
+            List<Transform> progressBars = FindAll(uiRoot.transform, new[] { ProgressBarName });
+            if (progressBars.Count != 1)
+            {
+                missing = true;
+                report.AppendLine($"  MISSING progress bar: expected one {UIRootName} > {ProgressBarName}, found {progressBars.Count}");
+            }
+
+            Canvas progressBarCanvas = progressBars.Count == 1 ? progressBars[0].GetComponentInParent<Canvas>(true) : null;
+            if (progressBars.Count == 1 && progressBarCanvas == null)
+            {
+                missing = true;
+                report.AppendLine($"  MISSING progress bar canvas above {ProgressBarName}");
+            }
+
             if (missing)
             {
                 Debug.LogError("[CreativeBindings] Some UI paths no longer exist; nothing was changed. Update the map in CreativeSceneBindingsAuthoring.\n" + report);
@@ -174,6 +189,8 @@ namespace GravityPuzzle.Creative.EditorTools
                 element.FindPropertyRelative("canvases").arraySize = 0;
                 element.FindPropertyRelative("objects").arraySize = 0;
             }
+            serializedBindings.FindProperty("progressBar").objectReferenceValue = progressBars[0];
+            serializedBindings.FindProperty("progressBarCanvas").objectReferenceValue = progressBarCanvas;
             serializedBindings.ApplyModifiedProperties();
 
             var serializedBootstrap = new SerializedObject(bootstrap);

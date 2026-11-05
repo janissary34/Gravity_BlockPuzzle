@@ -134,6 +134,8 @@ namespace GravityPuzzle.Bootstrap
             {
                 GravityLevelRuntime.ConfigureLevelOverride(creativeRequest.Config.Level);
                 GravityLevelRuntime.ConfigureDisplayLevelNumber(creativeRequest.Config.DisplayLevelNumber);
+                if (creativeRequest.Config.Framing != null)
+                    GravityLevelRuntime.ConfigureBoardTopViewportInset(creativeRequest.Config.Framing.BoardTopViewportInset);
             }
             GravityLevelRuntime.ConfigureSceneGameplayDependencies(
                 prototypeBoard,

@@ -52,6 +52,8 @@ namespace GravityPuzzle.Creative.Runtime
         private Coroutine safetyRoutine;
         private Coroutine captureDelayRoutine;
         private CreativePointerScript pointerScript;
+        private bool progressBarMoved;
+        private Vector3 originalProgressBarPosition;
 
         public CreativeSession(
             CreativeTakeConfig config,
@@ -102,6 +104,7 @@ namespace GravityPuzzle.Creative.Runtime
                 Debug.LogWarning($"[Creative] Take '{request.TakeName}' uses UI profile '{config.UIProfile.name}', but the scene has no CreativeSceneBindings; " +
                                  "run Gravity Puzzle/Creative/Author Scene1 UI Bindings. UI is left as the game shows it.", coroutineHost);
             ApplyUIProfile();
+            PlaceProgressBar();
             log.Add(CreativeEventKind.LevelReady);
             captureDelayRoutine = coroutineHost.StartCoroutine(SignalCaptureReadyAfterDelay());
             safetyRoutine = coroutineHost.StartCoroutine(EndAfterSafetyLimit());
@@ -138,6 +141,7 @@ namespace GravityPuzzle.Creative.Runtime
             }
 
             pointerScript?.Stop();
+            RestoreProgressBar();
 
             if (safetyRoutine != null && coroutineHost != null)
                 coroutineHost.StopCoroutine(safetyRoutine);
@@ -153,6 +157,50 @@ namespace GravityPuzzle.Creative.Runtime
         private string LevelName => config.Level != null ? config.Level.name : "(none)";
 
         // ---- presentation ---------------------------------------------------------------------
+
+        // Puts the bar's centre above the board top. The bar is authored in the HUD, so this is a
+        // runtime move that ends with the take. The timer is its child and moves with it.
+        private void PlaceProgressBar()
+        {
+            CreativeFramingProfile framing = config.Framing;
+            if (framing == null || framing.ProgressBarBoardGap <= 0f)
+                return;
+
+            RectTransform bar = bindings != null ? bindings.ProgressBar : null;
+            Canvas canvas = bindings != null ? bindings.ProgressBarCanvas : null;
+            if (bar == null || canvas == null || camera == null || config.Level == null)
+            {
+                Debug.LogWarning($"[Creative] Take '{request.TakeName}' cannot place the progress bar: it needs its scene bindings, a camera and a level; " +
+                                 "run Gravity Puzzle/Creative/Author Scene1 UI Bindings. The bar stays in place.", coroutineHost);
+                return;
+            }
+
+            Vector3 boardTop = camera.WorldToScreenPoint(new Vector3(0f, config.Level.boardRows * .5f, 0f));
+            var target = new Vector2(boardTop.x, boardTop.y + framing.ProgressBarBoardGap * camera.pixelHeight);
+            Camera uiCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay
+                ? null
+                : canvas.worldCamera != null ? canvas.worldCamera : camera;
+            if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(bar, target, uiCamera, out Vector3 targetWorld))
+            {
+                Debug.LogWarning($"[Creative] Take '{request.TakeName}' could not map the progress bar position. The bar stays in place.", coroutineHost);
+                return;
+            }
+
+            originalProgressBarPosition = bar.position;
+            progressBarMoved = true;
+            float barCentreY = bar.TransformPoint(bar.rect.center).y;
+            bar.position += new Vector3(0f, targetWorld.y - barCentreY, 0f);
+        }
+
+        private void RestoreProgressBar()
+        {
+            if (!progressBarMoved)
+                return;
+
+            progressBarMoved = false;
+            if (bindings != null && bindings.ProgressBar != null)
+                bindings.ProgressBar.position = originalProgressBarPosition;
+        }
 
         private void ApplyBackground()
         {

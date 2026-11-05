@@ -42,6 +42,8 @@ namespace GravityPuzzle.Creative.Config
 
         [Header("Presentation")]
         [SerializeField] private CreativeUIProfile uiProfile;
+        [Tooltip("Optional board position and progress bar placement. Empty = the game's own framing.")]
+        [SerializeField] private CreativeFramingProfile framing;
         [SerializeField] private CreativeBackgroundMode backgroundMode = CreativeBackgroundMode.Art;
         [Tooltip("Camera clear colour for SolidColor mode (for example #00FF00 for a chroma key).")]
         [SerializeField] private Color backgroundColor = Color.green;
@@ -70,6 +72,7 @@ namespace GravityPuzzle.Creative.Config
 
         public GravityLevelDefinition Level => level;
         public CreativeUIProfile UIProfile => uiProfile;
+        public CreativeFramingProfile Framing => framing;
         public CreativeBackgroundMode BackgroundMode => backgroundMode;
         public Color BackgroundColor => backgroundColor;
         public int DisplayLevelNumber => displayLevelNumber;
