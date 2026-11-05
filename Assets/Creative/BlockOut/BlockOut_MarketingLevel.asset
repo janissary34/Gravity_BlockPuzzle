@@ -40,7 +40,7 @@ MonoBehaviour:
     name: k1
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativeCharcoal
     color: {r: 0.08, g: 0.08, b: 0.1, a: 1}
     origin: {x: 0, y: 12}
     quarterTurns: 0
@@ -125,7 +125,7 @@ MonoBehaviour:
     name: w1
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativePearl
     color: {r: 0.96, g: 0.96, b: 0.96, a: 1}
     origin: {x: 8, y: 12}
     quarterTurns: 0
@@ -210,7 +210,7 @@ MonoBehaviour:
     name: k2
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativeCharcoal
     color: {r: 0.08, g: 0.08, b: 0.1, a: 1}
     origin: {x: 20, y: 12}
     quarterTurns: 0
@@ -295,7 +295,7 @@ MonoBehaviour:
     name: w2
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativePearl
     color: {r: 0.96, g: 0.96, b: 0.96, a: 1}
     origin: {x: 28, y: 12}
     quarterTurns: 0
@@ -380,7 +380,7 @@ MonoBehaviour:
     name: w3
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativePearl
     color: {r: 0.96, g: 0.96, b: 0.96, a: 1}
     origin: {x: 0, y: 16}
     quarterTurns: 0
@@ -465,7 +465,7 @@ MonoBehaviour:
     name: k3
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativeCharcoal
     color: {r: 0.08, g: 0.08, b: 0.1, a: 1}
     origin: {x: 8, y: 16}
     quarterTurns: 0
@@ -550,7 +550,7 @@ MonoBehaviour:
     name: w4
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativePearl
     color: {r: 0.96, g: 0.96, b: 0.96, a: 1}
     origin: {x: 16, y: 16}
     quarterTurns: 0
@@ -635,7 +635,7 @@ MonoBehaviour:
     name: k4
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativeCharcoal
     color: {r: 0.08, g: 0.08, b: 0.1, a: 1}
     origin: {x: 24, y: 16}
     quarterTurns: 0
@@ -752,7 +752,7 @@ MonoBehaviour:
     name: k5
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativeCharcoal
     color: {r: 0.08, g: 0.08, b: 0.1, a: 1}
     origin: {x: 0, y: 20}
     quarterTurns: 0
@@ -869,7 +869,7 @@ MonoBehaviour:
     name: w5
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativePearl
     color: {r: 0.96, g: 0.96, b: 0.96, a: 1}
     origin: {x: 12, y: 20}
     quarterTurns: 0
@@ -954,7 +954,7 @@ MonoBehaviour:
     name: k6
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativeCharcoal
     color: {r: 0.08, g: 0.08, b: 0.1, a: 1}
     origin: {x: 20, y: 20}
     quarterTurns: 0
@@ -1039,7 +1039,7 @@ MonoBehaviour:
     name: w6
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativePearl
     color: {r: 0.96, g: 0.96, b: 0.96, a: 1}
     origin: {x: 28, y: 20}
     quarterTurns: 0
@@ -1124,7 +1124,7 @@ MonoBehaviour:
     name: w7
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativePearl
     color: {r: 0.96, g: 0.96, b: 0.96, a: 1}
     origin: {x: 0, y: 24}
     quarterTurns: 0
@@ -1209,7 +1209,7 @@ MonoBehaviour:
     name: k7
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativeCharcoal
     color: {r: 0.08, g: 0.08, b: 0.1, a: 1}
     origin: {x: 8, y: 24}
     quarterTurns: 0
@@ -1326,7 +1326,7 @@ MonoBehaviour:
     name: w8
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativePearl
     color: {r: 0.96, g: 0.96, b: 0.96, a: 1}
     origin: {x: 20, y: 24}
     quarterTurns: 0
@@ -1411,7 +1411,7 @@ MonoBehaviour:
     name: k8
     tutorialTargetId: 
     visualId: 
-    paletteId: 
+    paletteId: CreativeCharcoal
     color: {r: 0.08, g: 0.08, b: 0.1, a: 1}
     origin: {x: 28, y: 24}
     quarterTurns: 0

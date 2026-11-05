@@ -116,7 +116,7 @@ Events logged before recording started (`take.start`, `level.ready`, `capture.re
 
 ## Marketing-only levels
 
-`Assets/Creative/BlockOut/` holds the first one: a 9×12 level with 25 pieces, a script that never clears it (`BlockOut_UnresolvedTake`), and a separate proof that it can be cleared (`BlockOut_FairSolutionTake`). It is selected only through a take config and is not in `LevelSequence`, so campaign levels and normal play are unchanged. Black and white pieces use the level's legacy colour, with no palette, so no shared config changes.
+`Assets/Creative/BlockOut/` holds the first one: a 9×12 level with 25 pieces, a script that never clears it (`BlockOut_UnresolvedTake`), and a separate proof that it can be cleared (`BlockOut_FairSolutionTake`). It is selected only through a take config and is not in `LevelSequence`, so campaign levels and normal play are unchanged. Black and white pieces use the `CreativeCharcoal` and `CreativePearl` palettes, so they get the same shader, studs and shine as colored pieces. Their materials are in the same folder, and `PieceVisualConfig` has two extra palette entries that only this level references.
 
 An unresolved take uses timer mode `Frozen` with a level time limit above the low-time threshold, and ends at `maxSeconds`. It raises neither `level.failed` nor `level.cleared`.
 

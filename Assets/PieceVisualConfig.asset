@@ -39,6 +39,10 @@ MonoBehaviour:
     material: {fileID: 2100000, guid: 9293da730039f4274876c25ed6511983, type: 2}
   - paletteId: Ice
     material: {fileID: 2100000, guid: b80dc5438156b4147b510ff41314932c, type: 2}
+  - paletteId: CreativeCharcoal
+    material: {fileID: 2100000, guid: 727b1d2067854d6c8a101cf398af5404, type: 2}
+  - paletteId: CreativePearl
+    material: {fileID: 2100000, guid: bba08fbf072147f981b0246b4f9a9b49, type: 2}
   useUnifiedModularIce: 0
   normalFallbackSprite: {fileID: -1313627307, guid: 3146e3225d45441d898e5cbdc76090df, type: 3}
   horizontalJoinedFallbackSprite: {fileID: 21300000, guid: 631a6116a97ce4988b6252fe4d4321ff, type: 3}
