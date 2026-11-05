@@ -51,4 +51,4 @@ All Unity runs used an isolated copy of the project, not the working checkout. T
 - **Scene1 by YAML document id:** 242 → 480. None removed. Changed: the bootstrap (`creativeSceneBindings`, plus `hapticFeedbackConfig: {fileID: 0}`, a field already null but absent from the YAML) and `SceneRoots` (one root). Added: the bindings object (3 documents) and 235 stripped stubs for Graphics inside prefab instances. The line diff is large because Unity re-sorts documents on save.
 - **Unity tests with the bindings applied:** EditMode 45 of 48 passed, PlayMode 13 of 24 passed. All 14 failures are the stale tests in `Docs/KnownIssues.md`. The 4 new `FindAll` tests and 4 Creative timer tests pass.
 - **Tool in the user's Editor:** the first run saved Scene1 with the same group counts and the same document-level change as the copy (0 removed, the same 2 changed, 238 added).
-- **Not yet run:** a real take with the profile applied.
+- **Real take:** `gbp_L30_20261105-092121` with `CreativeUI_GameplayClean`. Sampled frames show none of the hidden groups; the level label, timer, progress bar and boosters remain; the timer holds 05:00; scripted input matches the event log.
