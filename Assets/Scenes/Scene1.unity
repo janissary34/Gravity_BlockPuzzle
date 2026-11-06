@@ -8144,6 +8144,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1176785427 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 591159782177926334, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+  m_PrefabInstance: {fileID: 1749646595}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1192654480
 GameObject:
   m_ObjectHideFlags: 0
@@ -9168,6 +9179,14 @@ PrefabInstance:
       propertyPath: m_Sprite
       value: 
       objectReference: {fileID: -384717997, guid: e6806e9b571d641229bcd51e248b7f2a, type: 3}
+    - target: {fileID: 764921348916270003, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 764921348916270004, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+      propertyPath: m_TargetGraphic
+      value: 
+      objectReference: {fileID: 1176785427}
     - target: {fileID: 767218635201226127, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_SizeDelta.x
       value: 1013
@@ -10513,6 +10532,7 @@ MonoBehaviour:
   retryLevelText: {fileID: 1749646596}
   failedLevelText: {fileID: 1749646597}
   pieceVisualConfig: {fileID: 11400000, guid: 6ce7ef2d0321457a93c6ec7053eb6224, type: 2}
+  hapticFeedbackConfig: {fileID: 0}
   iceCrackParticleSystem: {fileID: 201103893946865826, guid: 1d43b1e304cd647cd9efe8e2b5850a0a, type: 3}
   iceBreakParticleSystem: {fileID: 2705653447207242337, guid: 29661e01a9dad4bcc989a5f51be98bc7, type: 3}
   poolParent: {fileID: 1938475611}
