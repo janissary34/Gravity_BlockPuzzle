@@ -2622,10 +2622,10 @@ namespace GravityPuzzle
             // frontier releases it. Freefall pieces were deliberately cleared
             // at the handoff line and therefore only report progress here;
             // reserving them again would create a ghost grid obstruction.
-            bool keepsGridReservation = destroyedPiece.IsBeingShredded;
-            if (keepsGridReservation && !isOffBoardShredderFeed)
+            bool keepsGridReservation = destroyedPiece.IsBeingShredded && !isOffBoardShredderFeed;
+            if (keepsGridReservation)
                 TryReservePieceInGrid(destroyedPiece, PieceState.Shredding);
-            else if (!keepsGridReservation)
+            else
                 TryClearPieceFromGrid(destroyedPiece, PieceState.Shredding);
             if (destroyedPiece.IsBeingShredded)
                 BlockShredded?.Invoke(destroyedPiece.SourcePieceId);
@@ -2644,8 +2644,7 @@ namespace GravityPuzzle
                 }
             }
 
-            if (!keepsGridReservation || anyThawed)
-                PuzzleDragController.WakeUpGravity();
+            PuzzleDragController.WakeUpGravity();
         }
 
         /// <summary>

@@ -367,6 +367,7 @@ namespace GravityPuzzle
             if (inputLockedByGameState)
                 return;
 
+            CapturePiecesAtShredderBoundary();
             AdvanceGridGravityPresentation();
         }
 
@@ -382,9 +383,6 @@ namespace GravityPuzzle
                     ClearGridReleasePresentationState();
 
                 RemoveFinishedGridFalls();
-
-                if (gridReleasePresentationPiece != null)
-                    return gridFallingPieces.Count > 0;
 
                 if (gridFallingPieces.Count > 0)
                     return true;
@@ -434,13 +432,13 @@ namespace GravityPuzzle
                     retargetableGridFalls.Add(piece);
             }
 
+            // Process lowest pieces first so chained extensions unlock space for pieces above.
+            retargetableGridFalls.Sort((a, b) => a.transform.position.y.CompareTo(b.transform.position.y));
+
             for (int index = 0; index < retargetableGridFalls.Count; index++)
             {
                 PuzzlePiece piece = retargetableGridFalls[index];
-                // A temporary support stack shares one presentation trajectory;
-                // retargeting just one member would break its spacing.
-                if (coordinatedFallReleaseMode.ContainsKey(piece.SourcePieceId) ||
-                    piece.IsShredderInteractionLocked ||
+                if (piece.IsShredderInteractionLocked ||
                     !snapshot.TryGetPiece(piece.SourcePieceId, out PieceModel model) ||
                     model.State != PieceState.Falling ||
                     !snapshot.Grid.TryGetFallTarget(model, out GridCoordinate targetAnchor, activeBoard.CanMovePieceDelegate) ||
@@ -1403,6 +1401,7 @@ namespace GravityPuzzle
                 hasSelectedGroupReference = false;
                 pendingDragIntent = Vector2.zero;
                 fineDragRemainder = Vector2.zero;
+                AdvanceGridGravityPresentation();
                 return;
             }
 
@@ -1417,6 +1416,7 @@ namespace GravityPuzzle
                 hasSelectedGroupReference = false;
                 pendingDragIntent = Vector2.zero;
                 fineDragRemainder = Vector2.zero;
+                AdvanceGridGravityPresentation();
                 return;
             }
 

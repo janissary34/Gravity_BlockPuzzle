@@ -118,14 +118,26 @@ namespace GravityPuzzle
             GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
             if (board == null || board.BoardSnapshot == null || level == null ||
                 !board.TryGetPieceModel(piece, out PieceModel model) ||
-                (model.State != PieceState.Placed && model.State != PieceState.Dragging))
+                (model.State != PieceState.Placed && model.State != PieceState.Dragging && model.State != PieceState.Falling))
                 return false;
 
             for (int index = 0; index < model.LocalCells.Count; index++)
             {
                 GridCoordinate cell = model.GetWorldCell(index);
                 if (cell.Y == 0 && IsInsideShredderLane(level, cell))
+                {
+                    if (model.State == PieceState.Falling)
+                    {
+                        // A falling piece is admitted once its visual cells arrive at or near
+                        // the mouth, preventing an unnatural freeze/snap at the boundary.
+                        if (!TryGetCellVerticalExtents(piece, out float lowestCellY, out _) ||
+                            lowestCellY > captureTopY + captureApproachDistance + 0.5f)
+                        {
+                            return false;
+                        }
+                    }
                     return true;
+                }
             }
 
             return false;
