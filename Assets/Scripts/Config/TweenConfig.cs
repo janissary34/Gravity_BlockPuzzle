@@ -10,13 +10,13 @@ namespace GravityPuzzle.Config
         [Min(1)] [SerializeField] private int sequenceCapacity = 125;
         [SerializeField] private float pieceMoveDuration = .12f;
         [SerializeField] private Ease pieceMoveEase = Ease.OutQuad;
-        [SerializeField] private Ease gridFallEase = Ease.OutQuad;
+        [SerializeField] private Ease gridFallEase = Ease.Linear;
         [Min(.001f)] [SerializeField] private float gridFallUnitsPerSecond = 8f;
         [Min(.001f)] [SerializeField] private float gridFallMinimumDuration = .08f;
-        [Min(.001f)] [SerializeField] private float gridFallMaximumDuration = .4f;
-        [Min(.001f)] [SerializeField] private float gridReleaseUnitsPerSecond = 12f;
+        [Min(.001f)] [SerializeField] private float gridFallMaximumDuration = 2f;
+        [Min(.001f)] [SerializeField] private float gridReleaseUnitsPerSecond = 8f;
         [Min(.001f)] [SerializeField] private float gridReleaseMinimumDuration = .06f;
-        [Min(.001f)] [SerializeField] private float gridReleaseMaximumDuration = .28f;
+        [Min(.001f)] [SerializeField] private float gridReleaseMaximumDuration = 2f;
         [SerializeField] private float shredDuration = .3f;
         [SerializeField] private Ease shredEase = Ease.InQuad;
 

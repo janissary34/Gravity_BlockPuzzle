@@ -55,7 +55,7 @@ namespace GravityPuzzle.Tests.Editor
                 Assert.That(piece.PhysicsProfile, Is.EqualTo(PiecePhysicsProfile.OpenFreefall));
                 Assert.That(piece.Body.bodyType, Is.EqualTo(RigidbodyType2D.Dynamic));
                 Assert.That(piece.Body.simulated, Is.True);
-                Assert.That(piece.Body.constraints, Is.EqualTo(RigidbodyConstraints2D.None));
+                Assert.That(piece.Body.constraints, Is.EqualTo(RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation));
                 Assert.That(piece.Body.gravityScale, Is.EqualTo(config.PhysicsFreefallGravityScale));
                 Assert.That(cellCollider.enabled, Is.True);
                 Assert.That(cellCollider.isTrigger, Is.False);
@@ -64,11 +64,10 @@ namespace GravityPuzzle.Tests.Editor
                 Assert.That(cell.layer, Is.EqualTo(freefallLayer));
                 for (int layer = 0; layer < 32; layer++)
                 {
-                    bool expectedIgnored = layer != freefallLayer;
                     Assert.That(
                         Physics2D.GetIgnoreLayerCollision(freefallLayer, layer),
-                        Is.EqualTo(expectedIgnored),
-                        $"Open freefall must only contact its own dedicated layer (layer {layer}).");
+                        Is.True,
+                        $"Open freefall must remain fully isolated from all physics layers (layer {layer}).");
                 }
 
                 piece.ApplyLifecyclePhysicsProfile(PieceState.Shredding, config);

@@ -65,6 +65,7 @@ namespace GravityPuzzle
         public static PuzzleDragController Instance { get; private set; }
         private PrototypeBoard subscribedBoard;
         private bool inputLockedByGameState;
+        private bool isAdvancingGravity;
 
         public static void WakeUpGravity()
         {
@@ -87,6 +88,26 @@ namespace GravityPuzzle
                 Instance.RetargetActiveGridFalls();
                 Instance.AdvanceGridGravityPresentation();
             }
+        }
+
+        /// <summary>
+        /// Clears grid fall and release bookkeeping when a piece is captured
+        /// by the shredder. This does not snap position or force state to Placed,
+        /// leaving full transform and lifecycle ownership to the shredder.
+        /// </summary>
+        public static void CancelGridFallForShredderCapture(PuzzlePiece piece)
+        {
+            if (piece == null)
+                return;
+
+            piece.GridFallView?.Cancel();
+
+            if (Instance == null)
+                return;
+
+            Instance.gridFallingPieces.Remove(piece);
+            Instance.coordinatedFallReleaseMode.Remove(piece.SourcePieceId);
+            Instance.CancelGridReleasePresentationIfContains(piece);
         }
 
         /// <summary>
@@ -310,7 +331,7 @@ namespace GravityPuzzle
             for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
             {
                 PuzzlePiece piece = pieces[pieceIndex];
-                if (piece == null || piece.IsShredderInteractionLocked || piece.IsFrozen)
+                if (piece == null || piece == selectedPiece || piece.IsSelected || piece.IsShredderInteractionLocked || piece.IsFrozen)
                     continue;
 
                 for (int zoneIndex = 0; zoneIndex < zones.Count; zoneIndex++)
@@ -327,10 +348,9 @@ namespace GravityPuzzle
                     }
 
                     // The feed cancels its presentation tween internally. Clear
-                    // this controller's matching fall record first, otherwise a
-                    // later cleanup pass attempts an invalid Shredding -> Placed
-                    // transition for the captured root.
-                    CancelGridFallForTargetedAction(piece);
+                    // this controller's matching fall record first, without snapping
+                    // or forcing a Placed state, so shredder owns the handoff.
+                    CancelGridFallForShredderCapture(piece);
                     if (shredder.TryCapturePiece(piece, zone) && selectedPiece == piece)
                     {
                         selectedPiece = null;
@@ -352,40 +372,40 @@ namespace GravityPuzzle
 
         private bool AdvanceGridGravityPresentation()
         {
-            if (gridReleasePresentationPiece != null && !IsGridReleasePresentationAnimating())
-                ClearGridReleasePresentationState();
-
-            RemoveFinishedGridFalls();
-
-            // A release commits its destination in the authoritative grid before
-            // the short visual snap reaches that destination.  Starting a new
-            // gravity tween now would let a newly unsupported piece fall through
-            // the releasing piece's in-flight visual path. Existing falls retain
-            // their presentation ownership; only new cascade planning waits for
-            // the release pose to converge with the committed grid anchor.
-            if (gridReleasePresentationPiece != null)
+            if (isAdvancingGravity)
                 return gridFallingPieces.Count > 0;
 
-            // The grid commits a fall destination before its presentation tween
-            // completes. Starting another fall against that future occupancy
-            // makes otherwise legal pieces visually pass through one another.
-            // A fall therefore owns presentation until it reaches its committed
-            // anchor; the next move is planned from that settled visual state.
-            if (gridFallingPieces.Count > 0)
-                return true;
+            isAdvancingGravity = true;
+            try
+            {
+                if (gridReleasePresentationPiece != null && !IsGridReleasePresentationAnimating())
+                    ClearGridReleasePresentationState();
 
-            PrototypeBoard activeBoard = PrototypeBoard.Active;
-            LevelBoardSnapshot snapshot = activeBoard != null
-                ? activeBoard.BoardSnapshot
-                : null;
-            if (snapshot == null)
-                return gridFallingPieces.Count > 0;
+                RemoveFinishedGridFalls();
 
-            if (pendingGridGravityMoves.Count == 0)
-                TryBuildSettledGridGravityPlan(activeBoard, snapshot);
+                if (gridReleasePresentationPiece != null)
+                    return gridFallingPieces.Count > 0;
 
-            return TryPlayQueuedGridGravityMoves(activeBoard, snapshot) ||
-                   gridFallingPieces.Count > 0;
+                if (gridFallingPieces.Count > 0)
+                    return true;
+
+                PrototypeBoard activeBoard = PrototypeBoard.Active;
+                LevelBoardSnapshot snapshot = activeBoard != null
+                    ? activeBoard.BoardSnapshot
+                    : null;
+                if (snapshot == null)
+                    return gridFallingPieces.Count > 0;
+
+                if (pendingGridGravityMoves.Count == 0)
+                    TryBuildSettledGridGravityPlan(activeBoard, snapshot);
+
+                return TryPlayQueuedGridGravityMoves(activeBoard, snapshot) ||
+                       gridFallingPieces.Count > 0;
+            }
+            finally
+            {
+                isAdvancingGravity = false;
+            }
         }
 
         /// <summary>
@@ -540,18 +560,26 @@ namespace GravityPuzzle
                 if (selectedJointGravityMoves.Count == 0)
                     return false;
 
-                bool coordinated = selectedJointGravityMoves.Count == 1 &&
-                    TryExpandGravitySupportStack(activeBoard, snapshot, selectedJointGravityMoves[0]);
+                int initialMoveCount = selectedJointGravityMoves.Count;
+                int rootDistance = selectedJointGravityMoves[0].FromAnchor.Y - selectedJointGravityMoves[0].ToAnchor.Y;
+                bool allSameDistance = rootDistance > 0;
+                for (int i = 1; i < selectedJointGravityMoves.Count && allSameDistance; i++)
+                {
+                    if (selectedJointGravityMoves[i].FromAnchor.Y - selectedJointGravityMoves[i].ToAnchor.Y != rootDistance)
+                        allSameDistance = false;
+                }
+
+                bool coordinated = allSameDistance &&
+                    TryExpandGravitySupportStack(activeBoard, snapshot, selectedJointGravityMoves);
                 bool committed = false;
                 if (coordinated)
                 {
                     committed = activeBoard.TryCommitCoordinatedGravityMove(selectedJointGravityMoves, out _);
                     if (!committed)
                     {
-                        // Fall back to attempting the single unexpanded root move before rejecting the group.
-                        GridGravityMove rootMove = selectedJointGravityMoves[0];
-                        selectedJointGravityMoves.Clear();
-                        selectedJointGravityMoves.Add(rootMove);
+                        // Fall back to attempting the root move(s) before rejecting the group.
+                        while (selectedJointGravityMoves.Count > initialMoveCount)
+                            selectedJointGravityMoves.RemoveAt(selectedJointGravityMoves.Count - 1);
                         coordinated = false;
                         committed = activeBoard.TryCommitJointGroupGravityMove(selectedJointGravityMoves, out _);
                     }
@@ -589,19 +617,31 @@ namespace GravityPuzzle
         }
 
         private bool TryExpandGravitySupportStack(
-            PrototypeBoard board, LevelBoardSnapshot snapshot, GridGravityMove rootMove)
+            PrototypeBoard board, LevelBoardSnapshot snapshot, List<GridGravityMove> rootMoves)
         {
-            if (!snapshot.TryGetPiece(rootMove.PieceId, out PieceModel root))
+            if (rootMoves == null || rootMoves.Count == 0)
                 return false;
 
             gravityStackModels.Clear();
             gravityStackIds.Clear();
-            gravityStackModels.Add(root);
-            gravityStackIds.Add(root.Id);
-            PuzzlePiece rootPiece = FindActivePiece(root.Id);
+
+            int rootDistance = rootMoves[0].FromAnchor.Y - rootMoves[0].ToAnchor.Y;
+            if (rootDistance <= 0)
+                return false;
+
+            PuzzlePiece rootPiece = FindActivePiece(rootMoves[0].PieceId);
             if (rootPiece == null || rootPiece.GridFallView == null)
                 return false;
-            int rootDistance = rootMove.FromAnchor.Y - rootMove.ToAnchor.Y;
+
+            for (int i = 0; i < rootMoves.Count; i++)
+            {
+                if (!snapshot.TryGetPiece(rootMoves[i].PieceId, out PieceModel rootModel))
+                    return false;
+                gravityStackModels.Add(rootModel);
+                gravityStackIds.Add(rootModel.Id);
+            }
+
+            int initialCount = gravityStackModels.Count;
             bool added;
             do
             {
@@ -645,7 +685,7 @@ namespace GravityPuzzle
 
                     gravityStackModels.Add(candidate);
                     bool safe = snapshot.Grid.TryGetGroupFallTarget(gravityStackModels, gravityStackTargets, board.CanMovePieceDelegate) &&
-                        root.Anchor.Y - gravityStackTargets[0].Y == rootDistance;
+                        rootMoves[0].FromAnchor.Y - gravityStackTargets[0].Y == rootDistance;
                     if (!safe)
                     {
                         gravityStackModels.RemoveAt(gravityStackModels.Count - 1);
@@ -657,13 +697,13 @@ namespace GravityPuzzle
             }
             while (added);
 
-            if (gravityStackModels.Count == 1)
+            if (gravityStackModels.Count == initialCount)
                 return false;
 
-            for (int index = 1; index < gravityStackModels.Count; index++)
+            for (int index = initialCount; index < gravityStackModels.Count; index++)
             {
                 PieceModel member = gravityStackModels[index];
-                selectedJointGravityMoves.Add(new GridGravityMove(member.Id, member.Anchor,
+                rootMoves.Add(new GridGravityMove(member.Id, member.Anchor,
                     member.Anchor.Offset(new GridCoordinate(0, -rootDistance))));
             }
             return true;
@@ -818,6 +858,14 @@ namespace GravityPuzzle
             coordinatedFallReleaseMode.Remove(piece.SourcePieceId);
             SnapPieceToCommittedGridPosition(piece);
             PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Placed);
+
+            // Immediately check if this piece reached the shredder mouth so it
+            // transitions into freefall without a multi-frame dead stop.
+            CapturePiecesAtShredderBoundary();
+
+            // Immediately advance gravity for any piece waiting above it,
+            // so the upper piece starts falling in the exact same frame!
+            AdvanceGridGravityPresentation();
         }
 
         private static void SnapPieceToCommittedGridPosition(PuzzlePiece piece)
@@ -1252,6 +1300,9 @@ namespace GravityPuzzle
                     continue;
 
                 groupPiece.PrepareGridPresentationProfile();
+                TakeGridPresentationOwnershipForDrag(groupPiece);
+                if (TryGetCommittedGridPresentationPosition(groupPiece, out Vector2 committedPosition))
+                    groupPiece.SetGridPresentationPosition(committedPosition, synchronizeTransforms: false);
                 groupPiece.SetSelected(true);
             }
             if (selectedJointGroupPieces.Count > 1)

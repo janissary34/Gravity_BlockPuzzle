@@ -1987,11 +1987,20 @@ namespace GravityPuzzle
             if (config == null)
                 return;
 
+            SetPiecePhysicsCollidersEnabled(true, false);
+            if (config.FeedPhysicsMaterial != null)
+                ApplyShredderCollisionMaterial(config.FeedPhysicsMaterial);
+            else
+                RestoreDefaultCollisionMaterials();
+            ApplyPhysicsLayer(ShredderPhysicsLayers.FreefallLayer);
             useFullCollisionGeometry = true;
             ApplyCollisionProfile();
-            RestoreDefaultCollisionMaterials();
-            ApplyPhysicsLayer(ShredderPhysicsLayers.FreefallLayer);
-            SetPiecePhysicsCollidersEnabled(true, false);
+            if (compositeCollider != null)
+            {
+                if (config.FeedPhysicsMaterial != null)
+                    compositeCollider.sharedMaterial = config.FeedPhysicsMaterial;
+                compositeCollider.GenerateGeometry();
+            }
             PhysicsProfile = PiecePhysicsProfile.OpenFreefall;
             if (Body == null)
                 return;
@@ -2000,20 +2009,19 @@ namespace GravityPuzzle
             // exact pose before Dynamic simulation starts so Box2D never
             // resolves from a stale pooled position.
             Body.position = transform.position;
-            Body.rotation = transform.eulerAngles.z;
+            Body.rotation = 0f;
+            transform.rotation = Quaternion.identity;
             Body.simulated = true;
             Body.bodyType = RigidbodyType2D.Dynamic;
             Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            Body.constraints = RigidbodyConstraints2D.None;
+            Body.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation;
             Body.gravityScale = config.PhysicsFreefallGravityScale;
             Body.drag = 0f;
-            Body.angularDrag = config.PhysicsFreefallAngularDrag;
+            Body.angularDrag = 0f;
             Body.useFullKinematicContacts = false;
             Body.interpolation = RigidbodyInterpolation2D.Interpolate;
             Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            Body.velocity = Vector2.down * Mathf.Max(
-                config.PhysicsFreefallEntrySpeed,
-                downwardSpeed);
+            Body.velocity = Vector2.down * (config.PhysicsFreefallEntrySpeed > 0f ? config.PhysicsFreefallEntrySpeed : 8f);
             Body.angularVelocity = 0f;
             Body.WakeUp();
         }

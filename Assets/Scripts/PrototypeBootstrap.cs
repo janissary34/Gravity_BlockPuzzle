@@ -1148,6 +1148,9 @@ namespace GravityPuzzle
                 return false;
             }
 
+            JointSpringPresenter?.PrepareForShredder(piece);
+            BreakJointsForPiece(piece);
+
             BoardOccupancyChanged?.Invoke();
             PuzzleDragController.WakeUpGravity();
             return true;
@@ -1359,10 +1362,14 @@ namespace GravityPuzzle
             if (!TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
+            BreakJointsForPiece(piece);
             BoardSnapshot.Grid.ClearPiece(model);
             bool despawned = TryTransitionPieceState(model, PieceState.Despawned);
             if (despawned)
+            {
                 BoardOccupancyChanged?.Invoke();
+                PuzzleDragController.WakeUpGravity();
+            }
             return despawned;
         }
 
@@ -2100,7 +2107,23 @@ namespace GravityPuzzle
 
                 pieceJointGraph.CollectGroupMembers(member.Id, jointGroupMemberIds);
                 if (jointGroupMemberIds.Count > 1)
-                    return false;
+                {
+                    for (int j = 0; j < jointGroupMemberIds.Count; j++)
+                    {
+                        int jointMemberId = jointGroupMemberIds[j];
+                        bool found = false;
+                        for (int m = 0; m < moves.Count; m++)
+                        {
+                            if (moves[m].PieceId == jointMemberId)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found)
+                            return false;
+                    }
+                }
                 jointGroupModels.Add(member);
                 jointGroupTargetAnchors.Add(move.ToAnchor);
             }
@@ -2963,7 +2986,7 @@ namespace GravityPuzzle
 
         private void LoadNextLevelFromWinPanel()
         {
-            if (!boardCleared || nextLevelTransitionPending)
+            if (nextLevelTransitionPending)
                 return;
 
             nextLevelTransitionPending = true;
@@ -3057,12 +3080,12 @@ namespace GravityPuzzle
 
         private void LoadNextLevelAfterWinPanel()
         {
-            if (!boardCleared)
-                return;
-
             if (!GravityLevelRuntime.TryAdvanceToNextLevel())
             {
                 Debug.Log("[LevelSequence] No next level is available.", this);
+                nextLevelTransitionPending = false;
+                if (nextLevelButton != null)
+                    nextLevelButton.interactable = true;
                 return;
             }
 

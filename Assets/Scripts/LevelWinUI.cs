@@ -42,13 +42,7 @@ namespace GravityPuzzle
 
         public void OnNextLevelClicked()
         {
-            // Advance to the next level index if available
-            if (GravityLevelRuntime.HasNextLevel)
-            {
-                GravityLevelRuntime.TryAdvanceToNextLevel();
-            }
-
-            // Flag restart so main menu is skipped and active level starts immediately
+            GravityLevelRuntime.TryAdvanceToNextLevel();
             GravityLevelRuntime.RequestRestart();
             LoadGameScene();
         }

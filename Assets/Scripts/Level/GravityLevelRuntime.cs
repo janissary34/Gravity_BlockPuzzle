@@ -203,7 +203,17 @@ namespace GravityPuzzle
         public const int InitialPlayerCoinAmount = 1000;
         public const int CoinRewardPerLevel = 40;
 
-        public static bool HasNextLevel => currentLevelIndex >= 0 && currentLevelIndex + 1 < levels.Length;
+        public static bool HasNextLevel
+        {
+            get
+            {
+                if (levels != null && levels.Length > 0)
+                    return true;
+                if (configuredSequence != null && configuredSequence.levels != null && configuredSequence.levels.Count > 0)
+                    return true;
+                return false;
+            }
+        }
 
         public static int CurrentLevelNumber => Mathf.Max(1, currentLevelIndex + 1);
 
@@ -236,10 +246,35 @@ namespace GravityPuzzle
 
         public static bool TryAdvanceToNextLevel()
         {
-            if (!HasNextLevel)
+            // If levels is empty or needs population, attempt to load from sequence
+            if (levels == null || levels.Length == 0)
+            {
+                levels = FindAllLevels();
+                currentLevelIndex = -1;
+            }
+
+            // If we only had a single preview level, pull the full campaign sequence so Next Level advances
+            if (levels != null && levels.Length <= 1)
+            {
+                GravityLevelDefinition[] sequenceLevels = FindAllLevels();
+                if (sequenceLevels != null && sequenceLevels.Length > 1)
+                {
+                    levels = sequenceLevels;
+                    currentLevelIndex = -1;
+                }
+            }
+
+            if (levels == null || levels.Length == 0)
                 return false;
 
             currentLevelIndex++;
+            if (currentLevelIndex >= levels.Length)
+            {
+                // Wrap around to the start of the sequence
+                currentLevelIndex = 0;
+            }
+
+            levelSequenceInitialized = true;
             return true;
         }
 

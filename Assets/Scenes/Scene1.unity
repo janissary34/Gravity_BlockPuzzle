@@ -9181,12 +9181,8 @@ PrefabInstance:
       objectReference: {fileID: -384717997, guid: e6806e9b571d641229bcd51e248b7f2a, type: 3}
     - target: {fileID: 764921348916270003, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 764921348916270004, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-      propertyPath: m_TargetGraphic
-      value: 
-      objectReference: {fileID: 1176785427}
     - target: {fileID: 767218635201226127, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_SizeDelta.x
       value: 1013

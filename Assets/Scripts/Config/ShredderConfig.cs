@@ -83,15 +83,15 @@ namespace GravityPuzzle.Config
         [Tooltip("Clear freefall distance between the handoff line and the shredder mouth.")]
         [Min(0f)] [SerializeField] private float physicsFreefallDistanceBelowHandoff = 2f;
         [Tooltip("Gravity applied only while an off-board piece is in the isolated open-freefall profile.")]
-        [Range(0f, 5f)] [SerializeField] private float physicsFreefallGravityScale = 1f;
+        [Range(0f, 5f)] [SerializeField] private float physicsFreefallGravityScale = 0f;
         [Tooltip("Downward speed assigned when a piece crosses from the grid exit handoff into freefall. It must not be slower than the kinematic exit travel.")]
-        [Min(.01f)] [SerializeField] private float physicsFreefallEntrySpeed = 4.2f;
+        [Min(.01f)] [SerializeField] private float physicsFreefallEntrySpeed = 8f;
         [Tooltip("Angular damping applied only after a piece has entered the open freefall area.")]
         [Min(0f)] [SerializeField] private float physicsFreefallAngularDrag = .75f;
         [Tooltip("Lets only a contact-connected stack above a shredder feed use Unity physics briefly. Normal board gravity remains grid-owned.")]
         [SerializeField] private bool enablePhysicsIsland = true;
         [Tooltip("Gravity applied to a temporary dynamic support piece inside the shredder mouth.")]
-        [Range(0f, 5f)] [SerializeField] private float physicsIslandGravityScale = 1f;
+        [Range(0f, 5f)] [SerializeField] private float physicsIslandGravityScale = 0f;
         [Tooltip("Angular damping used by a temporary dynamic support piece.")]
         [Min(0f)] [SerializeField] private float physicsIslandAngularDrag = 4f;
         [Tooltip("Distance above the cutter at which a dynamic island member is captured by the motorized feed.")]

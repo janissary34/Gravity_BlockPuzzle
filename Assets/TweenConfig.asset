@@ -19,10 +19,10 @@ MonoBehaviour:
   gridFallEase: 1
   gridFallUnitsPerSecond: 8
   gridFallMinimumDuration: 0.08
-  gridFallMaximumDuration: 0.4
-  gridReleaseUnitsPerSecond: 12
+  gridFallMaximumDuration: 2
+  gridReleaseUnitsPerSecond: 8
   gridReleaseMinimumDuration: 0.06
-  gridReleaseMaximumDuration: 0.28
+  gridReleaseMaximumDuration: 2
   shredDuration: 0.3
   shredEase: 5
   iceCrackDuration: 0.16

@@ -49,11 +49,11 @@ MonoBehaviour:
   contactGlowPoolCapacity: 4
   physicsHandoffDistanceBelowMap: 1.5
   physicsFreefallDistanceBelowHandoff: 2
-  physicsFreefallGravityScale: 1
-  physicsFreefallEntrySpeed: 4.2
+  physicsFreefallGravityScale: 0
+  physicsFreefallEntrySpeed: 8
   physicsFreefallAngularDrag: 0.75
   enablePhysicsIsland: 1
-  physicsIslandGravityScale: 1
+  physicsIslandGravityScale: 0
   physicsIslandAngularDrag: 4
   physicsIslandCaptureDistance: 0.12
   physicsIslandGuideClearance: 0.25

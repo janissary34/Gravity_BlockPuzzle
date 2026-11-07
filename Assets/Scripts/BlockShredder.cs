@@ -19,6 +19,12 @@ namespace GravityPuzzle
     {
         private static readonly SpriteRenderer[] EmptyRenderers = new SpriteRenderer[0];
         private static readonly WaitForFixedUpdate FeedPhysicsStep = new WaitForFixedUpdate();
+        private const float FeedCeilingOverlapEpsilon = 0.05f;
+        private const float FeedCeilingSeamEpsilon = 0.01f;
+        private readonly List<PuzzlePiece> activeFeedPieces = new List<PuzzlePiece>();
+        private readonly List<Bounds> ceilingFreefallCells = new List<Bounds>();
+        private readonly List<Bounds> ceilingFeedCells = new List<Bounds>();
+        private readonly List<Bounds> sortCellBoundsBuffer = new List<Bounds>();
 
         [Header("Configuration")]
         [Tooltip("Authoring asset used for both this feed behaviour and runtime-created shredder wheels.")]
@@ -153,20 +159,171 @@ namespace GravityPuzzle
             }
         }
 
+        private float GetLowestCellY(PuzzlePiece piece)
+        {
+            if (piece == null)
+                return float.PositiveInfinity;
+
+            piece.GetActiveCellBounds(sortCellBoundsBuffer);
+            float lowest = float.PositiveInfinity;
+            for (int i = 0; i < sortCellBoundsBuffer.Count; i++)
+                lowest = Mathf.Min(lowest, sortCellBoundsBuffer[i].min.y);
+            return lowest;
+        }
+
         private void TickFreefallPieces()
         {
             for (int index = activeFreefallPieces.Count - 1; index >= 0; index--)
             {
                 ExitHandoff freefall = activeFreefallPieces[index];
                 if (freefall.Piece == null || !freefall.Piece.IsInOpenFreefall)
+                    activeFreefallPieces.RemoveAt(index);
+            }
+
+            if (activeFreefallPieces.Count == 0)
+                return;
+
+            // Sort ascending by lowest world-space cell Y.
+            // Lower pieces in the shaft are processed first, allowing pieces
+            // above them to cleanly align their velocity and contact position.
+            activeFreefallPieces.Sort((a, b) =>
+            {
+                if (a.Piece == b.Piece)
+                    return 0;
+                if (a.Piece == null)
+                    return 1;
+                if (b.Piece == null)
+                    return -1;
+                float aY = GetLowestCellY(a.Piece);
+                float bY = GetLowestCellY(b.Piece);
+                int cmp = aY.CompareTo(bY);
+                return cmp != 0 ? cmp : a.Piece.SourcePieceId.CompareTo(b.Piece.SourcePieceId);
+            });
+
+            for (int index = 0; index < activeFreefallPieces.Count; index++)
+            {
+                ExitHandoff freefall = activeFreefallPieces[index];
+                if (freefall.Piece == null || !freefall.Piece.IsInOpenFreefall)
+                    continue;
+
+                if (TryCaptureFreefallPieceAtCutter(freefall.Piece, freefall.Zone))
                 {
                     activeFreefallPieces.RemoveAt(index);
+                    index--;
                     continue;
                 }
 
-                if (TryCaptureFreefallPieceAtCutter(freefall.Piece, freefall.Zone))
-                    activeFreefallPieces.RemoveAt(index);
+                LimitFreefallDescentAboveObstacles(freefall.Piece, freefall.Zone, index);
             }
+        }
+
+        private void LimitFreefallDescentAboveObstacles(PuzzlePiece piece, ShredderCatchZone zone, int freefallIndex)
+        {
+            Rigidbody2D body = piece.Body;
+            if (body == null || zone == null || shredderConfig == null)
+                return;
+
+            float seamY = zone.ShredY - zone.WheelRadius * Mathf.Clamp(shredderConfig.GearClippingRatio, 0.1f, 0.9f);
+            piece.GetActiveCellBounds(ceilingFreefallCells);
+            float minGap = float.PositiveInfinity;
+            float targetFeedSpeed = shredderConfig.FeedSpeed > 0f ? shredderConfig.FeedSpeed : 3.8f;
+            float closestObstacleSpeed = targetFeedSpeed;
+
+            // 1. Check active feeding pieces currently being shredded
+            for (int i = activeFeedPieces.Count - 1; i >= 0; i--)
+            {
+                PuzzlePiece feed = activeFeedPieces[i];
+                if (feed == null || feed.PhysicsProfile != PiecePhysicsProfile.Shredding)
+                {
+                    activeFeedPieces.RemoveAt(i);
+                    continue;
+                }
+
+                if (feed == piece)
+                    continue;
+
+                feed.GetActiveCellBounds(ceilingFeedCells);
+                float drop = ComputeFeedCeilingDrop(ceilingFreefallCells, ceilingFeedCells, seamY);
+                if (drop < minGap)
+                {
+                    minGap = drop;
+                    closestObstacleSpeed = targetFeedSpeed;
+                }
+            }
+
+            // 2. Check other freefall pieces that are strictly below this piece (earlier in sorted order)
+            for (int i = 0; i < freefallIndex; i++)
+            {
+                PuzzlePiece other = activeFreefallPieces[i].Piece;
+                if (other == null || other == piece || !other.IsInOpenFreefall)
+                    continue;
+
+                other.GetActiveCellBounds(ceilingFeedCells);
+                float drop = ComputeFeedCeilingDrop(ceilingFreefallCells, ceilingFeedCells, float.NegativeInfinity);
+                if (drop < minGap)
+                {
+                    minGap = drop;
+                    closestObstacleSpeed = other.Body != null ? Mathf.Max(targetFeedSpeed, -other.Body.velocity.y) : targetFeedSpeed;
+                }
+            }
+
+            float targetFreefallSpeed = shredderConfig.PhysicsFreefallEntrySpeed > 0f ? shredderConfig.PhysicsFreefallEntrySpeed : 8f;
+
+            if (float.IsPositiveInfinity(minGap))
+            {
+                body.velocity = new Vector2(0f, -targetFreefallSpeed);
+                body.angularVelocity = 0f;
+                return;
+            }
+
+            // Instantly resolve penetration so colliders never stay inside one another
+            if (minGap < 0f)
+            {
+                Vector2 newPos = new Vector2(body.position.x, body.position.y - minGap);
+                body.position = newPos;
+                piece.transform.position = new Vector3(newPos.x, newPos.y, piece.transform.position.z);
+                minGap = 0f;
+            }
+
+            // Descend matching the obstacle's speed when resting on it; never clamp to 0 (which causes mid-air hanging)
+            float dt = Time.fixedDeltaTime;
+            float maxAllowedSpeed = Mathf.Max(closestObstacleSpeed, minGap / dt);
+            float desiredSpeed = Mathf.Min(targetFreefallSpeed, maxAllowedSpeed);
+            body.velocity = new Vector2(0f, -desiredSpeed);
+            body.angularVelocity = 0f;
+        }
+
+        /// <summary>
+        /// Calculates the maximum vertical drop before contacting any active feeding cells.
+        /// Returns float.PositiveInfinity if there is no obstacle above the seam in shared columns.
+        /// </summary>
+        public static float ComputeFeedCeilingDrop(
+            IReadOnlyList<Bounds> freefallCells,
+            IReadOnlyList<Bounds> feedCells,
+            float seamY)
+        {
+            float allowedDrop = float.PositiveInfinity;
+            for (int a = 0; a < feedCells.Count; a++)
+            {
+                Bounds under = feedCells[a];
+                if (under.max.y <= seamY + FeedCeilingSeamEpsilon)
+                    continue;
+
+                for (int b = 0; b < freefallCells.Count; b++)
+                {
+                    Bounds above = freefallCells[b];
+                    if (above.max.y <= under.min.y)
+                        continue;
+
+                    float overlap = Mathf.Min(above.max.x, under.max.x) - Mathf.Max(above.min.x, under.min.x);
+                    if (overlap <= FeedCeilingOverlapEpsilon)
+                        continue;
+
+                    allowedDrop = Mathf.Min(allowedDrop, above.min.y - under.max.y);
+                }
+            }
+
+            return allowedDrop;
         }
 
         /// <summary>
@@ -218,6 +375,7 @@ namespace GravityPuzzle
             if (particleShredAudioSource != null && particleShredAudioSource.isPlaying)
                 particleShredAudioSource.Stop();
             activeShredSoundCount = 0;
+            activeFeedPieces.Clear();
         }
 
         private void OnDestroy()
@@ -254,6 +412,9 @@ namespace GravityPuzzle
                     piece);
                 return false;
             }
+
+            board.JointSpringPresenter?.PrepareForShredder(piece);
+            board.BreakJointsForPiece(piece);
 
             // There is deliberately no transform-driven approach phase here.
             // The exact grid-exit pose becomes the initial Dynamic pose and
@@ -698,6 +859,7 @@ namespace GravityPuzzle
             int hapticPieceId = piece.SourcePieceId;
             ShredderContactGlowView activeGlowView = null;
             ShredderContactGlowPool.TryRent(out activeGlowView);
+            activeFeedPieces.Add(piece);
 
             try
             {
@@ -1017,6 +1179,7 @@ namespace GravityPuzzle
             }
             finally
             {
+                activeFeedPieces.Remove(piece);
                 PrototypeBoard.Active?.JointSpringPresenter?.FinishShredderSprings(piece);
                 IReadOnlyList<ShredderWheel> activeWheels = ShredderWheel.ActiveWheels;
                 for (int w = 0; w < activeWheels.Count; w++)

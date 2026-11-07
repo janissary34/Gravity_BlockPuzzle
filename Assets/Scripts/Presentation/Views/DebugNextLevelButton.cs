@@ -12,6 +12,7 @@ namespace GravityPuzzle.Presentation.Views
     public sealed class DebugNextLevelButton : MonoBehaviour
     {
         [SerializeField] private Button button;
+        private bool transitionStarted;
 
         private void Awake()
         {
@@ -22,7 +23,26 @@ namespace GravityPuzzle.Presentation.Views
             {
                 Debug.LogWarning("[DebugNextLevel] Button reference is missing; control is disabled.", this);
                 enabled = false;
+                return;
             }
+
+            // Ensure the button has an enabled, raycastable graphic so user clicks are received
+            Image image = GetComponent<Image>();
+            if (image != null)
+            {
+                image.enabled = true;
+                image.raycastTarget = true;
+                button.targetGraphic = image;
+            }
+
+            Graphic[] childGraphics = GetComponentsInChildren<Graphic>(true);
+            for (int i = 0; i < childGraphics.Length; i++)
+            {
+                if (childGraphics[i] != null)
+                    childGraphics[i].raycastTarget = true;
+            }
+
+            button.interactable = true;
         }
 
         private void OnEnable()
@@ -31,11 +51,18 @@ namespace GravityPuzzle.Presentation.Views
                 return;
 
             button.onClick.AddListener(AdvanceToNextLevel);
+            RefreshAvailability();
         }
 
         private void Start()
         {
             RefreshAvailability();
+        }
+
+        private void Update()
+        {
+            if (button != null && !button.interactable && !transitionStarted)
+                RefreshAvailability();
         }
 
         private void OnDisable()
@@ -46,20 +73,41 @@ namespace GravityPuzzle.Presentation.Views
 
         private void AdvanceToNextLevel()
         {
-            PrototypeBoard activeBoard = PrototypeBoard.Active;
-            if (activeBoard == null || !activeBoard.TryAdvanceToNextLevelForDebug())
-            {
-                RefreshAvailability();
+            if (transitionStarted)
                 return;
-            }
 
-            button.interactable = false;
+            transitionStarted = true;
+            if (button != null)
+                button.interactable = false;
+
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            if (activeBoard != null)
+            {
+                if (!activeBoard.TryAdvanceToNextLevelForDebug())
+                {
+                    transitionStarted = false;
+                    RefreshAvailability();
+                    return;
+                }
+            }
+            else
+            {
+                if (!GravityLevelRuntime.TryAdvanceToNextLevel())
+                {
+                    transitionStarted = false;
+                    RefreshAvailability();
+                    return;
+                }
+
+                UnityEngine.SceneManagement.Scene activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                Infrastructure.Services.SplashSceneLoader.LoadViaSplash(activeScene.name);
+            }
         }
 
         private void RefreshAvailability()
         {
-            if (button != null)
-                button.interactable = PrototypeBoard.Active != null && GravityLevelRuntime.HasNextLevel;
+            if (button != null && !transitionStarted)
+                button.interactable = GravityLevelRuntime.HasNextLevel;
         }
     }
 }

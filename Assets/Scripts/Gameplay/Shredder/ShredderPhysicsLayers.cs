@@ -65,10 +65,10 @@ namespace GravityPuzzle
             // share the same authoritative blocked cells as the grid; all
             // other Default-layer scene objects remain isolated.
             Physics2D.IgnoreLayerCollision(pieceLayer, blockerLayer, false);
-            // An off-board freefall body must only interact with other
-            // off-board freefall bodies. In particular it cannot touch map
-            // blockers, temporary mouth guides, or support-island members.
-            Physics2D.IgnoreLayerCollision(freefallLayer, freefallLayer, false);
+            // Off-board freefall bodies are deterministically stacked and controlled
+            // by BlockShredder without engine collision solver artifacts (such as
+            // SAT contact normal flips or penetration catapulting).
+            Physics2D.IgnoreLayerCollision(freefallLayer, freefallLayer, true);
             // This project keeps normally managed pieces on Default. Make the
             // normal board's relationship with the migrated blocker geometry
             // explicit too, rather than relying on the project matrix's
