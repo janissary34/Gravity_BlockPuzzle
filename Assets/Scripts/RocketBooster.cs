@@ -187,18 +187,19 @@ namespace GravityPuzzle
                 return;
 
             lastActivationFrame = Time.frameCount;
-            SynchronizeLevel();
-            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
-            if (tutorialGate != null && !tutorialGate.AllowsBoosterActivation(BoosterRewardType.Rocket))
-                return;
-            // Only one board-targeting tool may own the next board tap.
-            HammerBooster.CancelActiveSelection();
 
             if (activeBooster == this)
             {
                 CancelRocketSelection();
                 return;
             }
+
+            SynchronizeLevel();
+            IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
+            if (tutorialGate != null && !tutorialGate.AllowsBoosterActivation(BoosterRewardType.Rocket))
+                return;
+            // Only one board-targeting tool may own the next board tap.
+            HammerBooster.CancelActiveSelection();
 
             int currentUses = RemainingCount;
             if (currentUses <= 0 ||
@@ -245,6 +246,44 @@ namespace GravityPuzzle
                 activeBooster.CancelRocketSelection();
         }
 
+        private bool IsPointerOverBoosterButton(Vector2 screenPosition)
+        {
+            if (boosterButton != null && IsPointerOverRect(boosterButton.transform as RectTransform, screenPosition))
+                return true;
+
+            if (boosterButtonRef != null && IsPointerOverRect(boosterButtonRef.transform as RectTransform, screenPosition))
+                return true;
+
+            IReadOnlyList<BoosterButton> registered = BoosterFirstUseTutorialRuntime.RegisteredButtons;
+            if (registered != null)
+            {
+                for (int i = 0; i < registered.Count; i++)
+                {
+                    BoosterButton btn = registered[i];
+                    if (btn != null && IsPointerOverRect(btn.transform as RectTransform, screenPosition))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsPointerOverRect(RectTransform rectTransform, Vector2 screenPosition)
+        {
+            if (rectTransform == null)
+                return false;
+
+            Canvas canvas = rectTransform.GetComponentInParent<Canvas>();
+            Camera uiCamera = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                ? canvas.worldCamera
+                : null;
+
+            if (uiCamera == null && canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                uiCamera = PrototypeBootstrap.SceneCamera;
+
+            return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPosition, uiCamera);
+        }
+
         private void ProcessTargetInput()
         {
             int currentUses = RemainingCount;
@@ -261,11 +300,15 @@ namespace GravityPuzzle
             bool receivedPointerDown = false;
             if (Input.touchCount > 0)
             {
-                Touch touch = Input.GetTouch(0);
-                if (touch.phase == TouchPhase.Began)
+                for (int i = 0; i < Input.touchCount; i++)
                 {
-                    screenPosition = touch.position;
-                    receivedPointerDown = true;
+                    Touch touch = Input.GetTouch(i);
+                    if (touch.phase == TouchPhase.Began)
+                    {
+                        screenPosition = touch.position;
+                        receivedPointerDown = true;
+                        break;
+                    }
                 }
             }
 
@@ -279,6 +322,11 @@ namespace GravityPuzzle
             }
 
             if (!receivedPointerDown)
+                return;
+
+            // When tapping the booster button itself, let the UI Button Click event
+            // toggle targeting off instead of canceling in Update.
+            if (IsPointerOverBoosterButton(screenPosition))
                 return;
 
             ProcessTargetPosition(screenPosition);
@@ -330,9 +378,6 @@ namespace GravityPuzzle
                     RefreshButtonState();
                     return;
                 }
-
-                if (tutorialGate != null && tutorialGate.BlocksBoardDrag)
-                    return;
 
                 Debug.LogWarning(
                     $"[RocketBooster] Target was resolved but rejected before launch: '{target.Piece.name}'.",

@@ -332,7 +332,7 @@ namespace GravityPuzzle.Presentation.Views
             if (isRocket)
                 ApplyRocketPieceHighlights();
             else
-                ShowHammerCellOutlines();
+                ApplyHammerPieceHighlights();
 
             // Hammer outline setup clears the previous Rocket/Tutorial state,
             // so acquire the shared foreground lease only after either mode's
@@ -951,6 +951,21 @@ namespace GravityPuzzle.Presentation.Views
                 // Rocket explicitly breaks ice before carrying the underlying
                 // piece, so frozen pieces are valid rocket targets.
                 bool isValidTarget = !piece.IsShredderInteractionLocked;
+                piece.SetBoosterTargeted(isValidTarget);
+            }
+        }
+
+        private static void ApplyHammerPieceHighlights()
+        {
+            var pieces = PuzzlePiece.ActivePieces;
+            for (int index = 0; index < pieces.Count; index++)
+            {
+                PuzzlePiece piece = pieces[index];
+                if (piece == null)
+                    continue;
+
+                // Hammer can target any piece that is not frozen and not in shredder.
+                bool isValidTarget = !piece.IsFrozen && !piece.IsShredderInteractionLocked;
                 piece.SetBoosterTargeted(isValidTarget);
             }
         }

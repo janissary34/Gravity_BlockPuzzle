@@ -1581,10 +1581,13 @@ namespace GravityPuzzle
             if (cell == null)
                 return false;
 
+            SpriteRenderer visual = collisionCellVisuals != null && targetIndex < collisionCellVisuals.Count
+                ? collisionCellVisuals[targetIndex]
+                : null;
             Vector3 scale = cell.transform.lossyScale;
             Vector2 localSize = fullCollisionCellSizes[targetIndex];
             targetableCell = new TargetableCell(
-                cell.bounds.center,
+                GetCellWorldCenter(cell, visual),
                 new Vector2(
                     localSize.x * Mathf.Abs(scale.x),
                     localSize.y * Mathf.Abs(scale.y)));
@@ -1765,7 +1768,7 @@ namespace GravityPuzzle
             for (int index = 0; index < collisionCells.Count; index++)
             {
                 BoxCollider2D cell = collisionCells[index];
-                if (cell == null || !cell.enabled)
+                if (cell == null)
                     continue;
 
                 // The resting collision profile deliberately shrinks colliders
@@ -2986,14 +2989,10 @@ namespace GravityPuzzle
                     ? collisionCellVisuals[index]
                     : null;
 
-                if (cell != null && !cell.enabled)
-                    continue;
                 if (cell == null && (visual == null || !visual.gameObject.activeInHierarchy))
                     continue;
 
-                Vector2 cellWorldCenter = cell != null
-                    ? (Vector2)cell.bounds.center
-                    : (visual != null ? (Vector2)visual.bounds.center : Vector2.zero);
+                Vector2 cellWorldCenter = GetCellWorldCenter(cell, visual);
                 Vector2 cellLocalCenter = transform.InverseTransformPoint(cellWorldCenter);
 
                 Vector2 localSize = fullCollisionCellSizes[index];

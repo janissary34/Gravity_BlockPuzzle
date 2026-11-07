@@ -638,7 +638,7 @@ MonoBehaviour:
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
   initialCount: 9
-  rocketVisualPrefab: {fileID: 4589897246359763626, guid: 12d907748e4f84b8585c8cc374be6014, type: 3}
+  rocketVisualPrefab: {fileID: 7493041916773665842, guid: 1aecc361d76654386a4eea2ba1adca2e, type: 3}
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   gameplayCamera: {fileID: 0}
   rocketScale: {x: 1, y: 1, z: 1}
@@ -885,7 +885,7 @@ MonoBehaviour:
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
   initialCount: 9
-  rocketVisualPrefab: {fileID: 4589897246359763626, guid: 12d907748e4f84b8585c8cc374be6014, type: 3}
+  rocketVisualPrefab: {fileID: 7493041916773665842, guid: 1aecc361d76654386a4eea2ba1adca2e, type: 3}
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   gameplayCamera: {fileID: 0}
   rocketScale: {x: 1, y: 1, z: 1}

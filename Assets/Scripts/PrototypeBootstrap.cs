@@ -684,6 +684,7 @@ namespace GravityPuzzle
         private bool awaitingBoosterRewardDismissal;
         private BoosterRewardConfig pendingBoosterRewardConfig;
         private BoosterFirstUseTutorialCoordinator boosterFirstUseTutorial;
+        private int timerExpiryContinueCount;
         private readonly HashSet<object> timerPauseOwners = new HashSet<object>();
         private readonly Dictionary<string, IRevealAreaPresentation> revealPresentations =
             new Dictionary<string, IRevealAreaPresentation>();
@@ -770,7 +771,8 @@ namespace GravityPuzzle
         public bool IsLevelRunning => GameState == GameState.Ready || GameState == GameState.Playing;
         public bool HasFailed => boardFailed;
         public bool WasTimerExpiryFailure { get; private set; }
-        public bool HasUsedTimerExpiryContinue { get; private set; }
+        public bool HasUsedTimerExpiryContinue => timerExpiryContinueCount > 0;
+        public int TimerExpiryContinueCount => timerExpiryContinueCount;
         public GameState GameState => gameStateMachine.Current;
         public LevelBoardSnapshot BoardSnapshot { get; private set; }
         public PieceJointGraph PieceJointGraph => pieceJointGraph;
@@ -930,7 +932,7 @@ namespace GravityPuzzle
             timerPauseOwners.Clear();
             finalShredderOutcomeLocked = false;
             WasTimerExpiryFailure = false;
-            HasUsedTimerExpiryContinue = false;
+            timerExpiryContinueCount = 0;
             bombElapsedSeconds = 0f;
         }
 
@@ -2678,7 +2680,6 @@ namespace GravityPuzzle
                 boardCleared ||
                 GameState != GameState.Result ||
                 !WasTimerExpiryFailure ||
-                HasUsedTimerExpiryContinue ||
                 TimeRemaining > 0f)
             {
                 Debug.LogWarning("[Timer] Continue was rejected because the board is not awaiting a timer-expiry recovery.", this);
@@ -2689,11 +2690,12 @@ namespace GravityPuzzle
             WasTimerExpiryFailure = false;
             finalShredderOutcomeLocked = false;
             timerPauseOwners.Clear();
-            AddTime(seconds);
+            TimeLimit = Mathf.Max(TimeLimit, seconds);
+            TimeRemaining = seconds;
 
             if (TryTransitionGameState(GameState.Playing))
             {
-                HasUsedTimerExpiryContinue = true;
+                timerExpiryContinueCount++;
                 return true;
             }
 
@@ -3027,7 +3029,7 @@ namespace GravityPuzzle
 
                 if (BoosterFirstUseTutorialCoordinator.Supports(config.BoosterType))
                 {
-                    if (!Application.isEditor &&
+                    if (!Application.isEditor && !Debug.isDebugBuild &&
                         BoosterFirstUseTutorialProgress.GetState(config) !=
                         BoosterFirstUseTutorialState.NotStarted)
                         continue;

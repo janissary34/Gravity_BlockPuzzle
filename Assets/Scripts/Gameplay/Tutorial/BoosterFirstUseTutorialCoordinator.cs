@@ -210,14 +210,14 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 return;
 
             BoosterFirstUseTutorialState persisted = BoosterFirstUseTutorialProgress.GetState(config);
-            bool isEditorMatch = Application.isEditor && config.PresentationLevel == GravityLevelRuntime.CurrentLevelNumber;
-            if (persisted == BoosterFirstUseTutorialState.Completed && !isEditorMatch)
+            bool isEditorOrDebugMatch = (Application.isEditor || Debug.isDebugBuild) && config.PresentationLevel == GravityLevelRuntime.CurrentLevelNumber;
+            if (persisted == BoosterFirstUseTutorialState.Completed && !isEditorOrDebugMatch)
             {
                 BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
                 return;
             }
 
-            if (persisted == BoosterFirstUseTutorialState.NotStarted || isEditorMatch)
+            if (persisted == BoosterFirstUseTutorialState.NotStarted || isEditorOrDebugMatch)
             {
                 int currentCount = BoosterInventoryRuntime.Current.GetCount(config.BoosterType);
                 if (currentCount < config.GrantAmount)
@@ -248,11 +248,11 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 bool isPending = persistedState != BoosterFirstUseTutorialState.NotStarted &&
                     persistedState != BoosterFirstUseTutorialState.Completed;
 
-                // In editor playtesting, always trigger the lesson on its authored introduction level
-                bool isEditorMatch = Application.isEditor;
+                // In editor or debug playtesting, always trigger the lesson on its authored introduction level
+                bool isEditorOrDebugMatch = Application.isEditor || Debug.isDebugBuild;
 
                 // A first-use lesson only begins on its exact authored introduction level
-                bool isInitialLevelNotStarted = persistedState == BoosterFirstUseTutorialState.NotStarted || isEditorMatch;
+                bool isInitialLevelNotStarted = persistedState == BoosterFirstUseTutorialState.NotStarted || isEditorOrDebugMatch;
 
                 if (!isPending && !isInitialLevelNotStarted)
                     continue;
@@ -605,6 +605,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
         private static readonly List<BoosterButton> registeredButtons = new List<BoosterButton>();
 
         public static IBoosterFirstUseTutorialGate Gate => current;
+        public static IReadOnlyList<BoosterButton> RegisteredButtons => registeredButtons;
 
         public static void Configure(BoosterFirstUseTutorialCoordinator coordinator)
         {

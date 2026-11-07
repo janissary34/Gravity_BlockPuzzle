@@ -1,5 +1,6 @@
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.UI;
 using GravityPuzzle;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Tutorial;
@@ -36,6 +37,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private Sequence loop;
         private Vector3 authoredScale;
+        private Image handImage;
 
         public bool IsPlaying => loop != null && loop.IsActive();
 
@@ -44,6 +46,8 @@ namespace GravityPuzzle.Presentation.Views
             Active = this;
             if (handRoot == null)
                 handRoot = transform as RectTransform;
+            if (handImage == null && handRoot != null)
+                handImage = handRoot.GetComponent<Image>();
             authoredScale = (handRoot != null && handRoot.localScale.sqrMagnitude > 0.001f)
                 ? handRoot.localScale
                 : Vector3.one;
@@ -159,20 +163,22 @@ namespace GravityPuzzle.Presentation.Views
             handRoot.SetAsLastSibling();
 
             Canvas handCanvas = handRoot.GetComponentInParent<Canvas>();
-            Camera handCam = handCanvas != null && handCanvas.renderMode != RenderMode.ScreenSpaceOverlay
-                ? (handCanvas.worldCamera != null ? handCanvas.worldCamera : (PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main))
-                : null;
-
-            if (handCanvas != null && handCanvas.renderMode == RenderMode.ScreenSpaceCamera && handCanvas.worldCamera == null && handCam != null)
-                handCanvas.worldCamera = handCam;
+            Camera handCam = null;
+            if (handCanvas != null && handCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            {
+                if (handCanvas.worldCamera == null)
+                    handCanvas.worldCamera = PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main;
+                handCam = handCanvas.worldCamera;
+            }
 
             Canvas targetCanvas = target.GetComponentInParent<Canvas>();
-            Camera targetCam = targetCanvas != null && targetCanvas.renderMode != RenderMode.ScreenSpaceOverlay
-                ? (targetCanvas.worldCamera != null ? targetCanvas.worldCamera : (PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main))
-                : null;
-
-            if (targetCanvas != null && targetCanvas.renderMode == RenderMode.ScreenSpaceCamera && targetCanvas.worldCamera == null && targetCam != null)
-                targetCanvas.worldCamera = targetCam;
+            Camera targetCam = null;
+            if (targetCanvas != null && targetCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            {
+                if (targetCanvas.worldCamera == null)
+                    targetCanvas.worldCamera = PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main;
+                targetCam = targetCanvas.worldCamera;
+            }
 
             Vector3 worldCenter = target.TransformPoint(target.rect.center);
             Vector2 localTarget;
@@ -216,12 +222,13 @@ namespace GravityPuzzle.Presentation.Views
                 return;
 
             Canvas canvas = handRoot.GetComponentInParent<Canvas>();
-            Camera camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
-                ? (canvas.worldCamera != null ? canvas.worldCamera : (PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main))
-                : null;
-
-            if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera && canvas.worldCamera == null && camera != null)
-                canvas.worldCamera = camera;
+            Camera camera = null;
+            if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            {
+                if (canvas.worldCamera == null)
+                    canvas.worldCamera = PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main;
+                camera = canvas.worldCamera;
+            }
 
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPosition, camera, out Vector2 localTarget))
                 return;
@@ -304,11 +311,27 @@ namespace GravityPuzzle.Presentation.Views
                 SetEffectsVisible(false);
             }
 
+            if (handImage == null && handRoot != null)
+                handImage = handRoot.GetComponent<Image>();
+
             if (handRoot != null)
             {
                 if (visible)
+                {
                     handRoot.SetAsLastSibling();
-                handRoot.gameObject.SetActive(visible);
+                    if (!handRoot.gameObject.activeSelf)
+                        handRoot.gameObject.SetActive(true);
+                    if (handImage != null)
+                        handImage.enabled = true;
+                }
+                else
+                {
+                    if (handImage != null)
+                        handImage.enabled = false;
+
+                    if (handRoot.gameObject != gameObject)
+                        handRoot.gameObject.SetActive(false);
+                }
             }
         }
 

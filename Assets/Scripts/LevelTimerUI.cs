@@ -55,7 +55,13 @@ namespace GravityPuzzle
         [Tooltip("Button that declines the continue offer and opens the fail panel.")]
         [SerializeField] private Button closeKeepOnPlayingButton;
 
-        [Tooltip("Seconds granted after the player accepts the continue offer.")]
+        [Tooltip("Body text on the continue panel displaying the seconds granted (e.g., 'Get 60 seconds to keep playing!').")]
+        [SerializeField] private TMP_Text keepOnPlayingText;
+
+        [Tooltip("Seconds granted for each progressive continue stage (e.g., 60, 120, 180).")]
+        [SerializeField] private float[] continueTimeStages = new float[] { 60f, 120f, 180f };
+
+        [Tooltip("Seconds granted after the player accepts the continue offer (fallback if stages not configured).")]
         [Min(0.01f)] [SerializeField] private float continueTimeSeconds = 60f;
 
         [Header("Buttons")]
@@ -102,12 +108,18 @@ namespace GravityPuzzle
         private float configuredSliderTimeLimit = -1f;
         private bool continueOfferIsActive;
         private bool levelFailureHandled;
+        private float currentContinueTimeSeconds = 60f;
         private PrototypeBoard retryConfirmationPausedBoard;
 
         private void Awake()
         {
             // Always ensure the game state is reset when this script wakes up (e.g. on scene reload)
             IsGameOver = false;
+
+            ResolveKeepOnPlayingTextReference();
+            int initialStage = board != null ? board.TimerExpiryContinueCount : 0;
+            currentContinueTimeSeconds = GetContinueSecondsForStage(initialStage);
+            UpdateKeepOnPlayingText(currentContinueTimeSeconds);
 
             // Keep the fail overlay out of the EventSystem raycast results as
             // soon as the scene is initialized. Waiting until Start leaves a
@@ -168,14 +180,7 @@ namespace GravityPuzzle
             if (mainMenuButton != null)
                 mainMenuButton.onClick.AddListener(OnMainMenuClicked);
 
-            if (liveAddsButton != null)
-                liveAddsButton.onClick.AddListener(OnLiveAddsClicked);
-
-            if (playOnButton != null)
-                playOnButton.onClick.AddListener(OnKeepOnPlayingClosed);
-
-            if (closeKeepOnPlayingButton != null)
-                closeKeepOnPlayingButton.onClick.AddListener(OnKeepOnPlayingClosed);
+            BindKeepOnPlayingButtons();
 
             if (openRetryConfirmationButton != null)
                 openRetryConfirmationButton.onClick.AddListener(OpenRetryConfirmation);
@@ -200,9 +205,7 @@ namespace GravityPuzzle
             // while the board remains failed.
             if (board != null && board.HasFailed)
             {
-                if (board.HasUsedTimerExpiryContinue)
-                    ShowFailPopup();
-                else if (!levelFailureHandled)
+                if (!levelFailureHandled)
                     HandleLevelFailed();
             }
 
@@ -259,9 +262,7 @@ namespace GravityPuzzle
 
             levelFailureHandled = true;
 
-            if (board != null &&
-                !board.HasUsedTimerExpiryContinue &&
-                board.WasTimerExpiryFailure)
+            if (board != null && board.WasTimerExpiryFailure)
             {
                 ShowKeepOnPlayingPopup();
                 return;
@@ -458,8 +459,128 @@ namespace GravityPuzzle
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(false);
 
+            int stageIndex = board != null ? board.TimerExpiryContinueCount : 0;
+            currentContinueTimeSeconds = GetContinueSecondsForStage(stageIndex);
+            UpdateKeepOnPlayingText(currentContinueTimeSeconds);
+            BindKeepOnPlayingButtons();
+
             if (keepOnPlayingPanel != null)
                 keepOnPlayingPanel.SetActive(true);
+        }
+
+        public float GetContinueSecondsForStage(int stageIndex)
+        {
+            float[] stages = (continueTimeStages != null && continueTimeStages.Length > 0)
+                ? continueTimeStages
+                : new float[] { 60f, 120f, 180f };
+
+            int clampedIndex = Mathf.Clamp(stageIndex, 0, stages.Length - 1);
+            return stages[clampedIndex];
+        }
+
+        private void UpdateKeepOnPlayingText(float seconds)
+        {
+            ResolveKeepOnPlayingTextReference();
+
+            if (keepOnPlayingText != null)
+            {
+                int totalSeconds = Mathf.RoundToInt(seconds);
+                keepOnPlayingText.text = $"Get {totalSeconds} seconds to keep playing!";
+            }
+        }
+
+        private void ResolveKeepOnPlayingTextReference()
+        {
+            if (keepOnPlayingText != null || keepOnPlayingPanel == null)
+                return;
+
+            TMP_Text[] texts = keepOnPlayingPanel.GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 0; i < texts.Length; i++)
+            {
+                if (texts[i] != null &&
+                    (texts[i].gameObject.name.Contains("(2)") ||
+                     texts[i].text.Contains("seconds") ||
+                     texts[i].text.Contains("Get ")))
+                {
+                    keepOnPlayingText = texts[i];
+                    break;
+                }
+            }
+        }
+
+        private void ResolveKeepOnPlayingButtons()
+        {
+            if (keepOnPlayingPanel == null)
+                return;
+
+            Button[] buttons = keepOnPlayingPanel.GetComponentsInChildren<Button>(true);
+
+            if (liveAddsButton == null || !liveAddsButton.transform.IsChildOf(keepOnPlayingPanel.transform))
+            {
+                for (int i = 0; i < buttons.Length; i++)
+                {
+                    if (buttons[i] != null &&
+                        (buttons[i].gameObject.name.Contains("Live_adds") ||
+                         buttons[i].gameObject.name.Contains("adds") ||
+                         buttons[i].gameObject.name.Contains("Free") ||
+                         buttons[i].gameObject.name.Contains("free")))
+                    {
+                        liveAddsButton = buttons[i];
+                        break;
+                    }
+                }
+            }
+
+            if (playOnButton == null || !playOnButton.transform.IsChildOf(keepOnPlayingPanel.transform))
+            {
+                for (int i = 0; i < buttons.Length; i++)
+                {
+                    if (buttons[i] != null &&
+                        (buttons[i].gameObject.name.Contains("Play_on") ||
+                         buttons[i].gameObject.name.Contains("play_on")))
+                    {
+                        playOnButton = buttons[i];
+                        break;
+                    }
+                }
+            }
+
+            if (closeKeepOnPlayingButton == null || !closeKeepOnPlayingButton.transform.IsChildOf(keepOnPlayingPanel.transform))
+            {
+                for (int i = 0; i < buttons.Length; i++)
+                {
+                    if (buttons[i] != null &&
+                        (buttons[i].gameObject.name.Contains("Close") ||
+                         buttons[i].gameObject.name.Contains("close")))
+                    {
+                        closeKeepOnPlayingButton = buttons[i];
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void BindKeepOnPlayingButtons()
+        {
+            ResolveKeepOnPlayingButtons();
+
+            if (liveAddsButton != null)
+            {
+                liveAddsButton.onClick.RemoveListener(OnLiveAddsClicked);
+                liveAddsButton.onClick.AddListener(OnLiveAddsClicked);
+            }
+
+            if (playOnButton != null)
+            {
+                playOnButton.onClick.RemoveListener(OnKeepOnPlayingClosed);
+                playOnButton.onClick.AddListener(OnKeepOnPlayingClosed);
+            }
+
+            if (closeKeepOnPlayingButton != null)
+            {
+                closeKeepOnPlayingButton.onClick.RemoveListener(OnKeepOnPlayingClosed);
+                closeKeepOnPlayingButton.onClick.AddListener(OnKeepOnPlayingClosed);
+            }
         }
 
         /// <summary>
@@ -468,11 +589,26 @@ namespace GravityPuzzle
         /// </summary>
         public void OnLiveAddsClicked()
         {
-            if (!continueOfferIsActive || board == null)
-                return;
+            if (board == null)
+                board = PrototypeBoard.Active;
 
-            if (!board.TryResumeAfterTimerExpiry(continueTimeSeconds))
+            if (board == null)
+            {
+                Debug.LogWarning("[LevelTimerUI] OnLiveAddsClicked ignored because board is null.");
                 return;
+            }
+
+            if (!continueOfferIsActive && (keepOnPlayingPanel == null || !keepOnPlayingPanel.activeSelf))
+            {
+                Debug.LogWarning("[LevelTimerUI] OnLiveAddsClicked ignored because continue offer is inactive.");
+                return;
+            }
+
+            if (!board.TryResumeAfterTimerExpiry(currentContinueTimeSeconds))
+            {
+                Debug.LogWarning($"[LevelTimerUI] TryResumeAfterTimerExpiry failed for {currentContinueTimeSeconds}s.");
+                return;
+            }
 
             continueOfferIsActive = false;
             levelFailureHandled = false;
@@ -487,8 +623,7 @@ namespace GravityPuzzle
 
         private void OnKeepOnPlayingClosed()
         {
-            if (continueOfferIsActive)
-                ShowFailPopup();
+            ShowFailPopup();
         }
 
         public void OpenRetryConfirmation()

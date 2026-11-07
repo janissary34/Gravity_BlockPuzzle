@@ -207,6 +207,13 @@ namespace GravityPuzzle
                 return;
 
             lastActivationFrame = Time.frameCount;
+
+            if (activeBooster == this)
+            {
+                CancelHammerSelection();
+                return;
+            }
+
             SynchronizeLevel();
             IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
             if (tutorialGate != null && !tutorialGate.AllowsBoosterActivation(BoosterRewardType.Hammer))
@@ -214,12 +221,6 @@ namespace GravityPuzzle
             // A player may change their mind after arming the rocket. Selection
             // belongs to one tool at a time, so cancel the other tool first.
             RocketBooster.CancelActiveSelection();
-
-            if (activeBooster == this)
-            {
-                CancelHammerSelection();
-                return;
-            }
 
             if (GetRemainingUseCount() <= 0 ||
                 boundBoard == null || !boundBoard.IsLevelRunning || LevelTimerUI.IsGameOver)
@@ -277,6 +278,44 @@ namespace GravityPuzzle
             return true;
         }
 
+        private bool IsPointerOverBoosterButton(Vector2 screenPosition)
+        {
+            if (boosterButton != null && IsPointerOverRect(boosterButton.transform as RectTransform, screenPosition))
+                return true;
+
+            if (boosterButtonRef != null && IsPointerOverRect(boosterButtonRef.transform as RectTransform, screenPosition))
+                return true;
+
+            IReadOnlyList<BoosterButton> registered = BoosterFirstUseTutorialRuntime.RegisteredButtons;
+            if (registered != null)
+            {
+                for (int i = 0; i < registered.Count; i++)
+                {
+                    BoosterButton btn = registered[i];
+                    if (btn != null && IsPointerOverRect(btn.transform as RectTransform, screenPosition))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsPointerOverRect(RectTransform rectTransform, Vector2 screenPosition)
+        {
+            if (rectTransform == null)
+                return false;
+
+            Canvas canvas = rectTransform.GetComponentInParent<Canvas>();
+            Camera uiCamera = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                ? canvas.worldCamera
+                : null;
+
+            if (uiCamera == null && canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                uiCamera = PrototypeBootstrap.SceneCamera;
+
+            return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPosition, uiCamera);
+        }
+
         private void ProcessTargetInput()
         {
             if (GetRemainingUseCount() <= 0 ||
@@ -290,11 +329,15 @@ namespace GravityPuzzle
             bool receivedPointerDown = false;
             if (Input.touchCount > 0)
             {
-                Touch touch = Input.GetTouch(0);
-                if (touch.phase == TouchPhase.Began)
+                for (int i = 0; i < Input.touchCount; i++)
                 {
-                    screenPosition = touch.position;
-                    receivedPointerDown = true;
+                    Touch touch = Input.GetTouch(i);
+                    if (touch.phase == TouchPhase.Began)
+                    {
+                        screenPosition = touch.position;
+                        receivedPointerDown = true;
+                        break;
+                    }
                 }
             }
 
@@ -308,6 +351,11 @@ namespace GravityPuzzle
             }
 
             if (!receivedPointerDown)
+                return;
+
+            // When tapping the booster button itself, let the UI Button Click event
+            // toggle targeting off instead of canceling in Update.
+            if (IsPointerOverBoosterButton(screenPosition))
                 return;
 
             ProcessTargetPosition(screenPosition);
@@ -349,9 +397,6 @@ namespace GravityPuzzle
                     return;
                 }
             }
-
-            if (tutorialGate != null && tutorialGate.BlocksBoardDrag)
-                return;
 
             // A target attempt always resolves the armed state. This lets the
             // player back out by tapping off the board or an empty board cell,
