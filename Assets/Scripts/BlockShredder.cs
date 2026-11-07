@@ -56,6 +56,7 @@ namespace GravityPuzzle
         {
             public PuzzlePiece Piece;
             public ShredderCatchZone Zone;
+            public float CachedLowestY;
         }
         private readonly List<PuzzlePiece> physicsIslandMemberBuffer =
             new List<PuzzlePiece>(8);
@@ -164,11 +165,10 @@ namespace GravityPuzzle
             if (piece == null)
                 return float.PositiveInfinity;
 
-            piece.GetActiveCellBounds(sortCellBoundsBuffer);
-            float lowest = float.PositiveInfinity;
-            for (int i = 0; i < sortCellBoundsBuffer.Count; i++)
-                lowest = Mathf.Min(lowest, sortCellBoundsBuffer[i].min.y);
-            return lowest;
+            if (piece.TryGetActiveCellVerticalExtents(out float lowestCellY, out _))
+                return lowestCellY;
+
+            return piece.transform.position.y;
         }
 
         private void TickFreefallPieces()
@@ -183,20 +183,30 @@ namespace GravityPuzzle
             if (activeFreefallPieces.Count == 0)
                 return;
 
+            for (int i = 0; i < activeFreefallPieces.Count; i++)
+            {
+                ExitHandoff freefall = activeFreefallPieces[i];
+                freefall.CachedLowestY = GetLowestCellY(freefall.Piece);
+            }
+
             // Sort ascending by lowest world-space cell Y.
             // Lower pieces in the shaft are processed first, allowing pieces
             // above them to cleanly align their velocity and contact position.
             activeFreefallPieces.Sort((a, b) =>
             {
-                if (a.Piece == b.Piece)
+                if (ReferenceEquals(a, b))
+                    return 0;
+                if (a == null)
+                    return 1;
+                if (b == null)
+                    return -1;
+                if (ReferenceEquals(a.Piece, b.Piece))
                     return 0;
                 if (a.Piece == null)
                     return 1;
                 if (b.Piece == null)
                     return -1;
-                float aY = GetLowestCellY(a.Piece);
-                float bY = GetLowestCellY(b.Piece);
-                int cmp = aY.CompareTo(bY);
+                int cmp = a.CachedLowestY.CompareTo(b.CachedLowestY);
                 return cmp != 0 ? cmp : a.Piece.SourcePieceId.CompareTo(b.Piece.SourcePieceId);
             });
 
@@ -222,6 +232,16 @@ namespace GravityPuzzle
             Rigidbody2D body = piece.Body;
             if (body == null || zone == null || shredderConfig == null)
                 return;
+
+
+            float targetFreefallSpeed = shredderConfig.PhysicsFreefallEntrySpeed > 0f ? shredderConfig.PhysicsFreefallEntrySpeed : 8f;
+
+            if (activeFeedPieces.Count == 0 && freefallIndex == 0)
+            {
+                body.velocity = new Vector2(0f, -targetFreefallSpeed);
+                body.angularVelocity = 0f;
+                return;
+            }
 
             float seamY = zone.ShredY - zone.WheelRadius * Mathf.Clamp(shredderConfig.GearClippingRatio, 0.1f, 0.9f);
             piece.GetActiveCellBounds(ceilingFreefallCells);
@@ -267,7 +287,6 @@ namespace GravityPuzzle
                 }
             }
 
-            float targetFreefallSpeed = shredderConfig.PhysicsFreefallEntrySpeed > 0f ? shredderConfig.PhysicsFreefallEntrySpeed : 8f;
 
             if (float.IsPositiveInfinity(minGap))
             {

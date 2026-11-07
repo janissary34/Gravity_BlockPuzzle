@@ -1369,6 +1369,9 @@ namespace GravityPuzzle
 
         private void ReleasePiece()
         {
+            if (selectedPiece == null)
+                return;
+
             Rigidbody2D body = selectedPiece.Body;
             TryMoveSelectedPieceOnGrid(selectedPiece);
 

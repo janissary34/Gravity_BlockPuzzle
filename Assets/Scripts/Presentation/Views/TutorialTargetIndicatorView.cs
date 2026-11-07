@@ -59,6 +59,9 @@ namespace GravityPuzzle.Presentation.Views
             if (renderer == null)
                 return;
 
+            if (renderer.sprite == null)
+                renderer.sprite = PrototypeBootstrap.GetSquareSprite();
+
             renderer.transform.localScale = new Vector3(scale.x, scale.y, 1f);
             renderer.sortingOrder = sortingOrder;
             renderer.enabled = true;

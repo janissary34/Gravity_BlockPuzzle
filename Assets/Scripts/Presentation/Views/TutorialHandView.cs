@@ -38,6 +38,7 @@ namespace GravityPuzzle.Presentation.Views
         private Sequence loop;
         private Vector3 authoredScale;
         private Image handImage;
+        private RectTransform currentTarget;
 
         public bool IsPlaying => loop != null && loop.IsActive();
 
@@ -60,6 +61,8 @@ namespace GravityPuzzle.Presentation.Views
             RefreshActiveTutorial();
         }
 
+        private float nextTutorialRefreshTime;
+
         private void Update()
         {
             IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
@@ -68,8 +71,9 @@ namespace GravityPuzzle.Presentation.Views
                  gate.IsBoosterHighlighted(BoosterRewardType.Hammer) ||
                  gate.IsBoosterHighlighted(BoosterRewardType.Rocket)))
             {
-                if (handRoot != null && (!handRoot.gameObject.activeSelf || !IsPlaying))
+                if (handRoot != null && (!handRoot.gameObject.activeSelf || !IsPlaying) && Time.unscaledTime >= nextTutorialRefreshTime)
                 {
+                    nextTutorialRefreshTime = Time.unscaledTime + 0.25f;
                     RefreshActiveTutorial();
                 }
             }
@@ -114,8 +118,6 @@ namespace GravityPuzzle.Presentation.Views
 
         public static void ShowForButton(BoosterButton button)
         {
-            if (Active == null)
-                Active = Object.FindFirstObjectByType<TutorialHandView>(FindObjectsInactive.Include);
             if (Active == null || button == null)
                 return;
 
@@ -131,10 +133,8 @@ namespace GravityPuzzle.Presentation.Views
 
         public static void ShowForBoardTarget(Vector2 worldPosition, Camera gameplayCamera)
         {
-            if (Active == null)
-                Active = Object.FindFirstObjectByType<TutorialHandView>(FindObjectsInactive.Include);
             if (gameplayCamera == null)
-                gameplayCamera = PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main;
+                gameplayCamera = PrototypeBootstrap.SceneCamera;
             if (Active == null || gameplayCamera == null)
                 return;
 
@@ -152,6 +152,11 @@ namespace GravityPuzzle.Presentation.Views
             if (target == null)
                 return;
 
+            if (target == currentTarget && IsPlaying)
+                return;
+
+            currentTarget = target;
+
             if (handRoot == null)
                 handRoot = transform as RectTransform;
 
@@ -167,7 +172,7 @@ namespace GravityPuzzle.Presentation.Views
             if (handCanvas != null && handCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
             {
                 if (handCanvas.worldCamera == null)
-                    handCanvas.worldCamera = PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main;
+                    handCanvas.worldCamera = PrototypeBootstrap.SceneCamera;
                 handCam = handCanvas.worldCamera;
             }
 
@@ -176,7 +181,7 @@ namespace GravityPuzzle.Presentation.Views
             if (targetCanvas != null && targetCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
             {
                 if (targetCanvas.worldCamera == null)
-                    targetCanvas.worldCamera = PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main;
+                    targetCanvas.worldCamera = PrototypeBootstrap.SceneCamera;
                 targetCam = targetCanvas.worldCamera;
             }
 
@@ -226,7 +231,7 @@ namespace GravityPuzzle.Presentation.Views
             if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
             {
                 if (canvas.worldCamera == null)
-                    canvas.worldCamera = PrototypeBootstrap.SceneCamera != null ? PrototypeBootstrap.SceneCamera : Camera.main;
+                    canvas.worldCamera = PrototypeBootstrap.SceneCamera;
                 camera = canvas.worldCamera;
             }
 
@@ -345,6 +350,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private void StopLoop()
         {
+            currentTarget = null;
             loop?.Kill();
             loop = null;
             if (handRoot != null)

@@ -1543,23 +1543,45 @@ namespace GravityPuzzle
         /// </summary>
         public void CollectTargetableCells(List<TargetableCell> results)
         {
-            if (results == null || IsFrozen || IsShredderInteractionLocked || collisionCells == null ||
-                fullCollisionCellSizes == null)
+            if (results == null || IsFrozen || IsShredderInteractionLocked)
                 return;
 
-            int cellCount = Mathf.Min(collisionCells.Count, fullCollisionCellSizes.Count);
+            int cellCount = collisionCells != null && collisionCells.Count > 0
+                ? collisionCells.Count
+                : (collisionCellVisuals != null ? collisionCellVisuals.Count : 0);
+            if (cellCount == 0)
+                return;
+
             for (int index = 0; index < cellCount; index++)
             {
-                BoxCollider2D cell = collisionCells[index];
-                if (cell == null || !cell.enabled)
+                BoxCollider2D cell = collisionCells != null && index < collisionCells.Count
+                    ? collisionCells[index]
+                    : null;
+                SpriteRenderer visual = collisionCellVisuals != null && index < collisionCellVisuals.Count
+                    ? collisionCellVisuals[index]
+                    : null;
+
+                if (cell == null && (visual == null || !visual.gameObject.activeInHierarchy))
                     continue;
 
-                Vector3 scale = cell.transform.lossyScale;
-                Vector2 localSize = fullCollisionCellSizes[index];
-                Vector2 worldSize = new Vector2(
-                    localSize.x * Mathf.Abs(scale.x),
-                    localSize.y * Mathf.Abs(scale.y));
-                results.Add(new TargetableCell(cell.bounds.center, worldSize));
+                Vector2 center = GetCellWorldCenter(cell, visual);
+                Vector2 worldSize;
+                if (fullCollisionCellSizes != null && index < fullCollisionCellSizes.Count)
+                {
+                    Vector3 scale = cell != null
+                        ? cell.transform.lossyScale
+                        : (visual != null ? visual.transform.lossyScale : Vector3.one);
+                    Vector2 localSize = fullCollisionCellSizes[index];
+                    worldSize = new Vector2(
+                        localSize.x * Mathf.Abs(scale.x),
+                        localSize.y * Mathf.Abs(scale.y));
+                }
+                else
+                {
+                    worldSize = GetCellWorldSize(cell, visual);
+                }
+
+                results.Add(new TargetableCell(center, worldSize));
             }
         }
 

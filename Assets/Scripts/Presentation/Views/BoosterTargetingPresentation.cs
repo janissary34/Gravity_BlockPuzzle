@@ -91,6 +91,11 @@ namespace GravityPuzzle.Presentation.Views
         private bool boosterButtonGroupsValid;
         private TutorialHandView cachedTutorialHand;
         private bool wasTutorialFocusActive;
+        private BoosterButton cachedRocketButton;
+        private BoosterButton cachedHammerButton;
+        private BoosterButton cachedTimerButton;
+        private TimerBooster cachedTimerBooster;
+        private BoosterRewardType? lastAppliedSelectionGlow;
         private readonly struct HudGroupState
         {
             public readonly CanvasGroup Group;
@@ -125,7 +130,11 @@ namespace GravityPuzzle.Presentation.Views
             if (boardDimRenderer == null && boardDimBackdrop != null)
                 boardDimRenderer = boardDimBackdrop.GetComponent<SpriteRenderer>();
             if (boardDimRenderer != null)
+            {
+                if (boardDimRenderer.sprite == null)
+                    boardDimRenderer.sprite = PrototypeBootstrap.GetSquareSprite();
                 boardDimRenderer.sortingOrder = tutorialDimSortingOrder;
+            }
 
             EnsureBoosterButtonGroups();
             PrewarmHammerOutlines();
@@ -332,7 +341,7 @@ namespace GravityPuzzle.Presentation.Views
             if (isRocket)
                 ApplyRocketPieceHighlights();
             else
-                ApplyHammerPieceHighlights();
+                ShowHammerCellOutlines();
 
             // Hammer outline setup clears the previous Rocket/Tutorial state,
             // so acquire the shared foreground lease only after either mode's
@@ -423,16 +432,20 @@ namespace GravityPuzzle.Presentation.Views
             {
                 if (expectedPiece != null)
                 {
-                    expectedPiece.SetBoosterTargeted(true);
-                    expectedPiece.SetTutorialTargeted(true, tutorialDimSortingOrder + 2);
-                    if (!UsesWholePieceHammerHighlight(expectedPiece))
+                    if (UsesWholePieceHammerHighlight(expectedPiece))
                     {
+                        expectedPiece.SetBoosterTargeted(true);
+                    }
+                    else
+                    {
+                        expectedPiece.SetBoosterTargeted(false);
                         ShowHammerCellOutlineForTutorial(
                             expectedPiece,
                             hammerCellCenter,
                             hammerCellSize,
                             tutorialDimSortingOrder + 2);
                     }
+                    expectedPiece.SetTutorialTargeted(true, tutorialDimSortingOrder + 2);
                 }
                 tutorialTargetIndicator?.Hide();
                 return;
@@ -825,6 +838,10 @@ namespace GravityPuzzle.Presentation.Views
 
         private void SetSelectionGlow(BoosterRewardType? focusedBooster)
         {
+            if (lastAppliedSelectionGlow == focusedBooster)
+                return;
+
+            lastAppliedSelectionGlow = focusedBooster;
             EnsureBoosterButtonGroups();
             ResolveButtonGlowReferences();
 
@@ -834,30 +851,28 @@ namespace GravityPuzzle.Presentation.Views
 
             if (rocketButtonGlow != null && rocketButtonGlow.activeSelf != rocketActive)
                 rocketButtonGlow.SetActive(rocketActive);
-            if (rocketBoosterButtonGroup != null)
-            {
-                BoosterButton button = rocketBoosterButtonGroup.GetComponent<BoosterButton>();
-                button?.SetSelectionGlowVisible(rocketActive);
-            }
+            if (cachedRocketButton == null && rocketBoosterButtonGroup != null)
+                cachedRocketButton = rocketBoosterButtonGroup.GetComponent<BoosterButton>();
+            cachedRocketButton?.SetSelectionGlowVisible(rocketActive);
 
             if (hammerButtonGlow != null && hammerButtonGlow.activeSelf != hammerActive)
                 hammerButtonGlow.SetActive(hammerActive);
-            if (hammerBoosterButtonGroup != null)
-            {
-                BoosterButton button = hammerBoosterButtonGroup.GetComponent<BoosterButton>();
-                button?.SetSelectionGlowVisible(hammerActive);
-            }
+            if (cachedHammerButton == null && hammerBoosterButtonGroup != null)
+                cachedHammerButton = hammerBoosterButtonGroup.GetComponent<BoosterButton>();
+            cachedHammerButton?.SetSelectionGlowVisible(hammerActive);
 
             if (timerButtonGlow != null && timerButtonGlow.activeSelf != timerActive)
                 timerButtonGlow.SetActive(timerActive);
-            if (timerBoosterButtonGroup != null)
-            {
-                BoosterButton button = timerBoosterButtonGroup.GetComponent<BoosterButton>();
-                button?.SetSelectionGlowVisible(timerActive);
+            if (cachedTimerButton == null && timerBoosterButtonGroup != null)
+                cachedTimerButton = timerBoosterButtonGroup.GetComponent<BoosterButton>();
+            cachedTimerButton?.SetSelectionGlowVisible(timerActive);
 
-                TimerBooster tb = timerBoosterButtonGroup.GetComponent<TimerBooster>();
-                if (tb != null && tb.SelectionGlow != null && tb.SelectionGlow.activeSelf != timerActive)
-                    tb.SelectionGlow.SetActive(timerActive);
+            if (cachedTimerBooster == null && timerBoosterButtonGroup != null)
+                cachedTimerBooster = timerBoosterButtonGroup.GetComponent<TimerBooster>();
+            if (cachedTimerBooster != null && cachedTimerBooster.SelectionGlow != null &&
+                cachedTimerBooster.SelectionGlow.activeSelf != timerActive)
+            {
+                cachedTimerBooster.SelectionGlow.SetActive(timerActive);
             }
 
             if (timerActive)
@@ -898,11 +913,9 @@ namespace GravityPuzzle.Presentation.Views
                 SetSelectionGlow(focus);
 
                 TutorialHandView hand = cachedTutorialHand != null ? cachedTutorialHand : TutorialHandView.Active;
-                if (hand == null)
-                {
-                    cachedTutorialHand = Object.FindFirstObjectByType<TutorialHandView>(FindObjectsInactive.Include);
-                    hand = cachedTutorialHand;
-                }
+                if (cachedTutorialHand == null && hand != null)
+                    cachedTutorialHand = hand;
+
                 if (hand != null && (!hand.gameObject.activeSelf || !hand.IsPlaying))
                 {
                     hand.RefreshActiveTutorial();
@@ -955,21 +968,6 @@ namespace GravityPuzzle.Presentation.Views
             }
         }
 
-        private static void ApplyHammerPieceHighlights()
-        {
-            var pieces = PuzzlePiece.ActivePieces;
-            for (int index = 0; index < pieces.Count; index++)
-            {
-                PuzzlePiece piece = pieces[index];
-                if (piece == null)
-                    continue;
-
-                // Hammer can target any piece that is not frozen and not in shredder.
-                bool isValidTarget = !piece.IsFrozen && !piece.IsShredderInteractionLocked;
-                piece.SetBoosterTargeted(isValidTarget);
-            }
-        }
-
         private void SetBoardPiecesInForeground(bool isForeground)
         {
             var pieces = PuzzlePiece.ActivePieces;
@@ -1010,6 +1008,8 @@ namespace GravityPuzzle.Presentation.Views
                 return;
             }
 
+            Material material = HammerTargetCellOutlineView.GetDefaultOutlineMaterial();
+
             var pieces = PuzzlePiece.ActivePieces;
             for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
             {
@@ -1026,21 +1026,20 @@ namespace GravityPuzzle.Presentation.Views
                     continue;
                 }
 
+                piece.SetBoosterTargeted(false);
+
                 targetableCellBuffer.Clear();
                 piece.CollectTargetableCells(targetableCellBuffer);
-                LineRenderer sourceOutline = piece.Outline;
-                Material material = sourceOutline != null ? sourceOutline.sharedMaterial : null;
-                int sortingOrder = Mathf.Max(
-                    tutorialDimSortingOrder + 2,
-                    sourceOutline != null ? sourceOutline.sortingOrder : 0);
+                int sortingOrder = tutorialDimSortingOrder + 2;
                 for (int cellIndex = 0; cellIndex < targetableCellBuffer.Count; cellIndex++)
                 {
                     if (availableHammerOutlines.Count == 0)
                     {
-                        Debug.LogWarning(
-                            "[BoosterTargetingPresentation] Hammer outline pool capacity was exhausted.",
-                            this);
-                        return;
+                        HammerTargetCellOutlineView outlineInstance = Instantiate(
+                            hammerCellOutlinePrefab,
+                            transform);
+                        outlineInstance.Hide();
+                        availableHammerOutlines.Push(outlineInstance);
                     }
 
                     HammerTargetCellOutlineView outline = availableHammerOutlines.Pop();
@@ -1061,18 +1060,19 @@ namespace GravityPuzzle.Presentation.Views
             Vector2 hammerCellSize,
             int sortingOrder)
         {
+            if (availableHammerOutlines.Count == 0 && hammerCellOutlinePrefab != null)
+            {
+                HammerTargetCellOutlineView outlineInstance = Instantiate(
+                    hammerCellOutlinePrefab,
+                    transform);
+                outlineInstance.Hide();
+                availableHammerOutlines.Push(outlineInstance);
+            }
+
             if (availableHammerOutlines.Count == 0 || hammerCellOutlinePrefab == null)
                 return;
 
-            LineRenderer sourceOutline = piece != null ? piece.Outline : null;
-            Material material = sourceOutline != null ? sourceOutline.sharedMaterial : null;
-            if (material == null && hammerCellOutlinePrefab != null)
-            {
-                LineRenderer prefabLine = hammerCellOutlinePrefab.GetComponent<LineRenderer>();
-                if (prefabLine != null)
-                    material = prefabLine.sharedMaterial;
-            }
-
+            Material material = HammerTargetCellOutlineView.GetDefaultOutlineMaterial();
             PuzzlePiece.TargetableCell cell = new PuzzlePiece.TargetableCell(hammerCellCenter, hammerCellSize);
             HammerTargetCellOutlineView outline = availableHammerOutlines.Pop();
             outline.Show(cell, material, sortingOrder);
