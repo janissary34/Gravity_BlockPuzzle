@@ -1,5 +1,6 @@
 using System;
 using GravityPuzzle.Config;
+using GravityPuzzle.Infrastructure.Services;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -7,7 +8,7 @@ using UnityEngine.UI;
 namespace GravityPuzzle.Presentation.Views
 {
     /// <summary>
-    /// Presentation owner for the authored New Booster popup. Gameplay can
+    /// Presentation owner for the authored New Booster and New Feature popup. Gameplay can
     /// subscribe to <see cref="Continued"/> without the popup owning booster state.
     /// </summary>
     [DisallowMultipleComponent]
@@ -16,6 +17,7 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private Button closeButton;
         [SerializeField] private Button continueButton;
         [SerializeField] private GameObject overlayRoot;
+        [SerializeField] private Transform boosterContentRoot;
         [SerializeField] private GameObject[] hudObjectsToHide;
         [SerializeField] private UnityEvent continueClicked;
         [SerializeField] private BoosterRewardConfig previewRewardConfig;
@@ -30,15 +32,50 @@ namespace GravityPuzzle.Presentation.Views
         public event Action Dismissed;
         public event Action<BoosterRewardConfig> Claimed;
 
+        public static string GetFeatureTargetNameForLevel(int levelNumber)
+        {
+            return levelNumber switch
+            {
+                4 => "Freeze_Timer",
+                6 => "Hammer",
+                8 => "Ice_block",
+                10 => "Rocket",
+                15 => "BombBlock",
+                21 => "CombinedBlock",
+                _ => null
+            };
+        }
+
         private void Awake()
         {
+            if (closeButton == null)
+            {
+                Transform btn = transform.Find("CloseButton");
+                if (btn != null)
+                    closeButton = btn.GetComponent<Button>();
+            }
+
             if (closeButton != null)
             {
                 closeButton.gameObject.SetActive(true);
                 closeButton.onClick.AddListener(Continue);
             }
+
+            if (continueButton == null)
+            {
+                Transform btn = transform.Find("ContinueButton");
+                if (btn != null)
+                    continueButton = btn.GetComponent<Button>();
+            }
+
             if (continueButton != null)
                 continueButton.onClick.AddListener(Continue);
+
+            ResolveBoosterContentRoot();
+            HideAllFeatureContents();
+
+            if (overlayRoot != null)
+                overlayRoot.SetActive(false);
         }
 
         private void OnEnable()
@@ -76,6 +113,61 @@ namespace GravityPuzzle.Presentation.Views
         }
 
         /// <summary>
+        /// Shows this popup for authored level milestone features (Freeze Timer, Hammer,
+        /// Rocket, Ice block, Bomb block, Combined block). Activates only the matching
+        /// child inside BoosterContent and deactivates all others.
+        /// </summary>
+        public bool ShowMilestoneFeatureForLevel(int levelNumber, PrototypeBoard board = null)
+        {
+            string targetFeature = GetFeatureTargetNameForLevel(levelNumber);
+            Transform contentRoot = ResolveBoosterContentRoot();
+
+            if (string.IsNullOrEmpty(targetFeature) || contentRoot == null)
+            {
+                HideAllFeatureContents();
+                SetOverlayVisible(false);
+                return false;
+            }
+
+            bool foundMatch = false;
+            int childCount = contentRoot.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                Transform child = contentRoot.GetChild(i);
+                bool isMatch = MatchesFeatureName(child.name, targetFeature);
+                child.gameObject.SetActive(isMatch);
+                if (isMatch)
+                    foundMatch = true;
+            }
+
+            if (!foundMatch)
+            {
+                Debug.LogWarning(
+                    $"[New Booster Panel] Feature '{targetFeature}' for Level {levelNumber} not found under BoosterContent.",
+                    this);
+                HideAllFeatureContents();
+                SetOverlayVisible(false);
+                return false;
+            }
+
+            if (board != null)
+            {
+                pausedBoard = board;
+                board.TryPauseTimer(this);
+            }
+            else
+            {
+                PrototypeBoard activeBoard = PrototypeBoard.Active;
+                if (activeBoard != null && activeBoard.TryPauseTimer(this))
+                    pausedBoard = activeBoard;
+            }
+
+            GrantInitialBoosterIfApplicable(levelNumber);
+            SetOverlayVisible(true);
+            return true;
+        }
+
+        /// <summary>
         /// Shows this popup with the scene-authored visual bound to the supplied
         /// config. The visual objects are activated in place; no prefab is
         /// instantiated at runtime.
@@ -98,42 +190,104 @@ namespace GravityPuzzle.Presentation.Views
             if (!IsOverlayVisible)
                 return;
 
-            if (selectedRewardConfig != null)
-            {
-                Debug.LogWarning("[New Booster Panel] A reward popup may only close through Claim.", this);
-                return;
-            }
-
             HideRewardContents();
+            HideAllFeatureContents();
             SetOverlayVisible(false);
+            ResumeTimer();
             Dismissed?.Invoke();
         }
 
         public void Continue()
         {
-            if (selectedRewardConfig == null)
-            {
-                Debug.LogWarning("[New Booster Panel] Claim requires a selected reward.", this);
-                return;
-            }
-
             BoosterRewardConfig claimedReward = selectedRewardConfig;
             selectedRewardConfig = null;
+
             Close();
 
             // The popup must restore its own HUD state before the tutorial
             // focus applies its dimmer and input restrictions.
-            Claimed?.Invoke(claimedReward);
+            if (claimedReward != null)
+                Claimed?.Invoke(claimedReward);
+
             Continued?.Invoke();
             continueClicked?.Invoke();
         }
 
+        public void HideAllFeatureContents()
+        {
+            Transform contentRoot = ResolveBoosterContentRoot();
+            if (contentRoot == null)
+                return;
+
+            int childCount = contentRoot.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                contentRoot.GetChild(i).gameObject.SetActive(false);
+            }
+        }
+
+        private Transform ResolveBoosterContentRoot()
+        {
+            if (boosterContentRoot != null)
+                return boosterContentRoot;
+
+            boosterContentRoot = transform.Find("BoosterContent");
+            if (boosterContentRoot == null && overlayRoot != null)
+                boosterContentRoot = overlayRoot.transform.Find("NewBooster_featurePanel/BoosterContent");
+
+            if (boosterContentRoot == null)
+            {
+                Transform[] transforms = GetComponentsInChildren<Transform>(true);
+                for (int i = 0; i < transforms.Length; i++)
+                {
+                    if (transforms[i].name == "BoosterContent")
+                    {
+                        boosterContentRoot = transforms[i];
+                        break;
+                    }
+                }
+            }
+
+            return boosterContentRoot;
+        }
+
+        private static bool MatchesFeatureName(string childName, string targetFeature)
+        {
+            if (string.Equals(childName, targetFeature, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            string normChild = childName.Replace("_", "").Replace(" ", "");
+            string normTarget = targetFeature.Replace("_", "").Replace(" ", "");
+            return string.Equals(normChild, normTarget, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void GrantInitialBoosterIfApplicable(int levelNumber)
+        {
+            BoosterRewardType? type = levelNumber switch
+            {
+                4 => BoosterRewardType.FreezeTimer,
+                6 => BoosterRewardType.Hammer,
+                10 => BoosterRewardType.Rocket,
+                _ => null
+            };
+
+            if (!type.HasValue)
+                return;
+
+            if (BoosterInventoryRuntime.Current.GetCount(type.Value) <= 0)
+            {
+                int grant = type.Value == BoosterRewardType.FreezeTimer ? 1 : 3;
+                BoosterInventoryRuntime.Current.Grant(type.Value, grant);
+            }
+        }
+
         private void ApplySelectedReward()
         {
-            BoosterRewardConfig targetConfig = selectedRewardConfig != null
-                ? selectedRewardConfig
-                : previewRewardConfig;
-            if (targetConfig == null || rewardContents == null)
+            if (selectedRewardConfig == null)
+                return;
+
+            BoosterRewardConfig targetConfig = selectedRewardConfig;
+            if (rewardContents == null)
                 return;
 
             bool foundMatch = false;

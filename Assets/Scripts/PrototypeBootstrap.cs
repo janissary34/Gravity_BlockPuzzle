@@ -900,7 +900,10 @@ namespace GravityPuzzle
             boosterFirstUseTutorial = new BoosterFirstUseTutorialCoordinator(this);
             BoosterFirstUseTutorialRuntime.Configure(boosterFirstUseTutorial);
             if (newBoosterPanel != null)
+            {
                 newBoosterPanel.Claimed += ClaimQueuedBoosterReward;
+                newBoosterPanel.Continued += HandleNewBoosterPanelContinued;
+            }
         }
 
         private void OnEnable()
@@ -919,7 +922,10 @@ namespace GravityPuzzle
             if (nextLevelButton != null)
                 nextLevelButton.onClick.RemoveListener(LoadNextLevelFromWinPanel);
             if (newBoosterPanel != null)
+            {
                 newBoosterPanel.Claimed -= ClaimQueuedBoosterReward;
+                newBoosterPanel.Continued -= HandleNewBoosterPanelContinued;
+            }
         }
 
         public void SetTimeLimit(float timeLimit)
@@ -3049,6 +3055,14 @@ namespace GravityPuzzle
         /// <summary>Shows a queued unlock after the destination level is ready.</summary>
         public void ShowQueuedBoosterReward()
         {
+            int currentLevel = ResolveCurrentLevelNumber();
+
+            if (newBoosterPanel != null && newBoosterPanel.ShowMilestoneFeatureForLevel(currentLevel, this))
+            {
+                awaitingBoosterRewardDismissal = true;
+                return;
+            }
+
             if (newBoosterPanel != null &&
                 GravityLevelRuntime.TryTakeQueuedBoosterReward(out BoosterRewardConfig rewardConfig))
             {
@@ -3066,6 +3080,43 @@ namespace GravityPuzzle
             }
 
             boosterFirstUseTutorial?.ResumePending(boosterRewardConfigs);
+        }
+
+        private void HandleNewBoosterPanelContinued()
+        {
+            awaitingBoosterRewardDismissal = false;
+            boosterFirstUseTutorial?.ResumePending(boosterRewardConfigs);
+        }
+
+        private int ResolveCurrentLevelNumber()
+        {
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level != null)
+            {
+                if (TryParseLevelNumber(level.name, out int parsedByName))
+                    return parsedByName;
+                if (TryParseLevelNumber(level.levelName, out int parsedByTitle))
+                    return parsedByTitle;
+            }
+            return GravityLevelRuntime.CurrentLevelNumber;
+        }
+
+        private static bool TryParseLevelNumber(string levelName, out int levelNumber)
+        {
+            levelNumber = 0;
+            if (string.IsNullOrEmpty(levelName))
+                return false;
+
+            string digits = string.Empty;
+            for (int i = 0; i < levelName.Length; i++)
+            {
+                if (char.IsDigit(levelName[i]))
+                    digits += levelName[i];
+                else if (digits.Length > 0)
+                    break;
+            }
+
+            return int.TryParse(digits, out levelNumber);
         }
 
         private void ClaimQueuedBoosterReward(BoosterRewardConfig claimedConfig)
