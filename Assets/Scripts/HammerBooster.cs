@@ -17,6 +17,7 @@ namespace GravityPuzzle
     /// One-use-per-level hammer. Press the UI button to enter targeting mode,
     /// then tap one visible cell belonging to a movable puzzle piece.
     /// </summary>
+    [RequireComponent(typeof(AudioSource))]
     public sealed class HammerBooster : MonoBehaviour
     {
         // A valid hammer hit removes its targeted runtime cell, then commits
@@ -50,7 +51,7 @@ namespace GravityPuzzle
         private int initialCount = 3;
 
         [Header("Audio")]
-        [Tooltip("Audio clip played when hammer strikes a target (e.g. HitRock).")]
+        [Tooltip("Clip played when the hammer breaks a piece cell (e.g. HitRock).")]
         [SerializeField] private AudioClip impactAudioClip;
         [SerializeField] private AudioSource impactAudioSource;
 
@@ -110,6 +111,8 @@ namespace GravityPuzzle
 
             if (impactAudioSource == null)
                 impactAudioSource = GetComponent<AudioSource>();
+            if (impactAudioSource == null && impactAudioClip != null)
+                Debug.LogWarning("[HammerBooster] Break sound is assigned but no AudioSource is on the hammer booster; add one (Play On Awake off, Spatial Blend 2D).", this);
 
 #if UNITY_EDITOR
             if (impactAudioClip == null)
@@ -576,8 +579,6 @@ namespace GravityPuzzle
 
         private void ApplyHammerImpact(PuzzlePiece piece, Vector2 impactPosition)
         {
-            PlayImpactSound(impactPosition);
-
             int sourcePieceId = piece != null ? piece.SourcePieceId : -1;
             GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
             GridCoordinate targetCell = level != null
@@ -591,6 +592,7 @@ namespace GravityPuzzle
                 piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
                 impactSucceeded = true;
+                PlayBreakSound();
                 HapticFeedbackRuntime.HammerImpact(piece.IsBomb && piece.IsBombDefused);
                 if (cell.progressUnits > 0f)
                 {
@@ -620,18 +622,10 @@ namespace GravityPuzzle
                     .SetAutoKill(true);
         }
 
-        private void PlayImpactSound(Vector2 position)
+        private void PlayBreakSound()
         {
-            if (impactAudioClip == null)
-                return;
-
-            if (impactAudioSource == null)
-                impactAudioSource = GetComponent<AudioSource>();
-
-            if (impactAudioSource != null)
+            if (impactAudioClip != null && impactAudioSource != null)
                 impactAudioSource.PlayOneShot(impactAudioClip);
-            else
-                AudioSource.PlayClipAtPoint(impactAudioClip, position);
         }
 
         private static Vector3 GetViewportWorldPoint(Camera camera, float x, float y, float z)
