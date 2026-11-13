@@ -1,4 +1,5 @@
 using System;
+using Solo.MOST_IN_ONE;
 using UnityEngine;
 
 namespace GravityPuzzle.Config
@@ -6,96 +7,73 @@ namespace GravityPuzzle.Config
     [CreateAssetMenu(fileName = "HapticFeedbackConfig", menuName = "Gravity Puzzle/Config/Haptic Feedback")]
     public sealed class HapticFeedbackConfig : ScriptableObject
     {
+        /// <summary>One haptic cue played through a MOST preset (iOS UIKit feedback / Android waveform).</summary>
         [Serializable]
-        public struct Pulse
+        public struct Cue
         {
             [SerializeField] private bool enabled;
-            [Range(0f, 1f)] [SerializeField] private float intensity;
-            [Min(1)] [SerializeField] private int durationMilliseconds;
+            [SerializeField] private MOST_HapticFeedback.HapticTypes type;
             public bool Enabled => enabled;
-            public float Intensity => intensity;
-            public int DurationMilliseconds => durationMilliseconds;
+            public MOST_HapticFeedback.HapticTypes Type => type;
         }
 
-        [Serializable]
-        public struct Pattern
-        {
-            [SerializeField] private bool enabled;
-            [SerializeField] private Pulse first;
-            [SerializeField] private Pulse second;
-            [SerializeField] private Pulse third;
-            [Min(0)] [SerializeField] private int gapMilliseconds;
-            public bool Enabled => enabled;
-            public Pulse First => first;
-            public Pulse Second => second;
-            public Pulse Third => third;
-            public int GapMilliseconds => gapMilliseconds;
-        }
+        [Header("Global")]
+        [Tooltip("Minimum time between any two haptics. A cue with higher priority than the last played one may bypass it.")]
+        [Min(0)] [SerializeField] private int globalMinIntervalMilliseconds = 60;
 
         [Header("UI")]
-        [SerializeField] private Pulse pieceSelected = new Pulse();
-        [SerializeField] private Pulse invalidDrop = new Pulse();
-        [SerializeField] private Pulse validDrop = new Pulse();
+        [SerializeField] private Cue pieceSelected = new Cue();
+        [SerializeField] private Cue invalidDrop = new Cue();
+        [SerializeField] private Cue validDrop = new Cue();
         [Min(0)] [SerializeField] private int invalidDropCooldownMilliseconds = 250;
         [Min(0)] [SerializeField] private int uiCooldownMilliseconds = 0;
         [SerializeField] private int uiPriority = 1;
 
         [Header("Booster Impacts")]
-        [SerializeField] private Pulse hammerImpact = new Pulse();
-        [SerializeField] private Pattern bombDefused = new Pattern();
-        [SerializeField] private Pulse rocketImpact = new Pulse();
-        [SerializeField] private Pattern freezeActivated = new Pattern();
+        [SerializeField] private Cue hammerImpact = new Cue();
+        [SerializeField] private Cue bombDefused = new Cue();
+        [SerializeField] private Cue rocketImpact = new Cue();
+        [SerializeField] private Cue freezeActivated = new Cue();
         [Min(0)] [SerializeField] private int impactCooldownMilliseconds = 0;
         [SerializeField] private int impactPriority = 3;
 
         [Header("Shredder")]
-        [SerializeField] private bool shredderPatternEnabled = true;
-        [Range(0f, 1f)] [SerializeField] private float shredderStartIntensity = .20f;
-        [Range(0f, 1f)] [SerializeField] private float shredderEndIntensity = .08f;
-        [SerializeField] private AnimationCurve shredderIntensityByFeedProgress = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-        [Min(1)] [SerializeField] private int shredderOnMilliseconds = 28;
-        [Min(0)] [SerializeField] private int shredderOffMilliseconds = 92;
-        [Range(0f, 1f)] [SerializeField] private float shredderIntensityUpdateThreshold = .02f;
-        [SerializeField] private Pulse shredderPieceCompleted = new Pulse();
+        [Tooltip("Repeating tick played while at least one piece is being fed into the cutter.")]
+        [SerializeField] private Cue shredderTick = new Cue();
+        [Min(1)] [SerializeField] private int shredderTickIntervalMilliseconds = 90;
+        [SerializeField] private int shredderTickPriority = 0;
+        [SerializeField] private Cue shredderPieceCompleted = new Cue();
         [Min(0)] [SerializeField] private int shredderCompletionCooldownMilliseconds = 0;
         [SerializeField] private int shredderCompletionPriority = 2;
 
         [Header("Level Result")]
-        [SerializeField] private Pattern levelCompleted = new Pattern();
-        [SerializeField] private Pattern levelFailed = new Pattern();
+        [SerializeField] private Cue levelCompleted = new Cue();
+        [SerializeField] private Cue levelFailed = new Cue();
         [Min(0)] [SerializeField] private int resultCooldownMilliseconds = 0;
         [SerializeField] private int resultPriority = 3;
 
-        [Header("iOS Core Haptics")]
-        [Tooltip("Core Haptics sharpness for every cue: 0 = soft and round, 1 = crisp and clicky. Android has no equivalent.")]
-        [Range(0f, 1f)] [SerializeField] private float iosSharpness = .5f;
-
-        public Pulse PieceSelected => pieceSelected;
-        public Pulse InvalidDrop => invalidDrop;
-        public Pulse ValidDrop => validDrop;
+        public int GlobalMinIntervalMilliseconds => globalMinIntervalMilliseconds;
+        public Cue PieceSelected => pieceSelected;
+        public Cue InvalidDrop => invalidDrop;
+        public Cue ValidDrop => validDrop;
         public int InvalidDropCooldownMilliseconds => invalidDropCooldownMilliseconds;
         public int UiCooldownMilliseconds => uiCooldownMilliseconds;
         public int UiPriority => uiPriority;
-        public Pulse HammerImpact => hammerImpact;
-        public Pattern BombDefused => bombDefused;
-        public Pulse RocketImpact => rocketImpact;
-        public Pattern FreezeActivated => freezeActivated;
+        public Cue HammerImpact => hammerImpact;
+        public Cue BombDefused => bombDefused;
+        public Cue RocketImpact => rocketImpact;
+        public Cue FreezeActivated => freezeActivated;
         public int ImpactCooldownMilliseconds => impactCooldownMilliseconds;
         public int ImpactPriority => impactPriority;
-        public bool ShredderPatternEnabled => shredderPatternEnabled;
-        public float ShredderStartIntensity => shredderStartIntensity;
-        public float ShredderEndIntensity => shredderEndIntensity;
-        public AnimationCurve ShredderIntensityByFeedProgress => shredderIntensityByFeedProgress;
-        public int ShredderOnMilliseconds => shredderOnMilliseconds;
-        public int ShredderOffMilliseconds => shredderOffMilliseconds;
-        public float ShredderIntensityUpdateThreshold => shredderIntensityUpdateThreshold;
-        public Pulse ShredderPieceCompleted => shredderPieceCompleted;
+        public Cue ShredderTick => shredderTick;
+        public int ShredderTickIntervalMilliseconds => shredderTickIntervalMilliseconds;
+        public int ShredderTickPriority => shredderTickPriority;
+        public Cue ShredderPieceCompleted => shredderPieceCompleted;
         public int ShredderCompletionCooldownMilliseconds => shredderCompletionCooldownMilliseconds;
         public int ShredderCompletionPriority => shredderCompletionPriority;
-        public Pattern LevelCompleted => levelCompleted;
-        public Pattern LevelFailed => levelFailed;
+        public Cue LevelCompleted => levelCompleted;
+        public Cue LevelFailed => levelFailed;
         public int ResultCooldownMilliseconds => resultCooldownMilliseconds;
         public int ResultPriority => resultPriority;
-        public float IosSharpness => iosSharpness;
     }
 }

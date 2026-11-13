@@ -923,12 +923,7 @@ namespace GravityPuzzle
                         hapticSessionActive = true;
                     }
 
-                    // Progress is derived from material already consumed by the feed, rather
-                    // than wall-clock time, so pauses or a slower physical entry do not fade it.
-                    float feedProgress = totalProgress > 0f
-                        ? 1f - Mathf.Clamp01(remainingProgressToEmit / totalProgress)
-                        : 0f;
-                    HapticFeedbackRuntime.UpdateShredderProgress(hapticPieceId, feedProgress);
+                    HapticFeedbackRuntime.TickShredder();
 
                     // Apply high-frequency mechanical vibration to visual renderers without jittering the physics body
                     float shakeOffsetX = Mathf.Sin(Time.time * tremorFrequency) * tremorIntensity * shakeAmplitude;
