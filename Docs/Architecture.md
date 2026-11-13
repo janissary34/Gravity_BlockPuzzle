@@ -52,7 +52,10 @@ and enters `OpenFreefall` at that same exit boundary. There is no transform-
 driven approach phase: Rigidbody2D is the only movement owner below the map
 until the cutter seam. This prevents an invisible reservation from making
 pieces above wait and prevents a second motor from slowing or repositioning
-the freefall body.
+the freefall body. Because freefall cannot touch obstacles or the map floor,
+admission also requires every other exposed branch of the footprint to have an
+empty cell below it; a branch resting on an obstacle, another piece, or the
+floor beside the lane keeps the piece under grid gravity.
 
 `PieceModel` is the sole gameplay lifecycle authority. `PuzzlePiece` is the sole
 Unity-side writer of normal-piece Rigidbody2D, collider, material, and layer

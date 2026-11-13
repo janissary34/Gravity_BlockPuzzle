@@ -48,67 +48,11 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Validates a shredder handoff against both the displayed footprint and
-        /// the authoritative grid. A piece must have an exposed cell on the
-        /// final board row in this shredder lane; an obstacle-supported branch
-        /// cannot bypass that obstacle by entering the visual feed.
+        /// Grid-bottom admission for the exit handoff. The piece needs an
+        /// exposed cell on the final row inside this lane, and every other
+        /// exposed branch must be unsupported, since freefall cannot collide
+        /// with obstacles or the map floor.
         /// </summary>
-        public bool ContainsCaptureFootprint(PuzzlePiece piece)
-        {
-            if (piece == null || piece.IsShredderInteractionLocked || piece.IsFrozen)
-                return false;
-
-            if (piece.GridFallView != null && piece.GridFallView.IsAnimating)
-                return false;
-
-            if (!TryGetCellExtents(piece, out float lowestCellY, out _ ) ||
-                lowestCellY > captureTopY + captureApproachDistance)
-                return false;
-
-            PrototypeBoard board = PrototypeBoard.Active;
-            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
-            if (board == null || board.BoardSnapshot == null || level == null ||
-                !board.TryGetPieceModel(piece, out PieceModel model))
-                return false;
-
-            // A gravity destination is committed before its tween reaches the
-            // destination. Capture only a settled board piece (or a piece the
-            // player is actively dragging), never that in-flight projection.
-            // This prevents the cutter from taking ownership of a body whose
-            // visual position and authoritative anchor have not converged.
-            if (model.State != PieceState.Placed && model.State != PieceState.Dragging)
-                return false;
-
-            bool hasShredderEntryCell = false;
-            for (int index = 0; index < model.LocalCells.Count; index++)
-            {
-                GridCoordinate coordinate = model.GetWorldCell(index);
-                GridCoordinate below = coordinate.Offset(Down);
-                if (board.BoardSnapshot.Grid.TryGetOccupantId(below, out int occupantId) &&
-                    occupantId == model.Id)
-                    continue;
-
-                if (coordinate.Y == 0 && IsInsideShredderLane(level, coordinate))
-                {
-                    hasShredderEntryCell = true;
-                    continue;
-                }
-
-                // A separate support below a different branch means the piece
-                // would have to pass through that blocker during the feed.
-                // Keep it under grid gravity until that support is removed.
-                GridCellState supportState = board.BoardSnapshot.Grid.GetCellState(below);
-                if (supportState == GridCellState.Blocked ||
-                    supportState == GridCellState.Occupied ||
-                    supportState == GridCellState.Reserved)
-                    return false;
-            }
-
-            return hasShredderEntryCell;
-        }
-
-        /// <summary>Grid-bottom admission for the exit handoff; unlike mouth
-        /// capture it deliberately ignores world-space distance to the wheels.</summary>
         public bool ContainsMapExitFootprint(PuzzlePiece piece)
         {
             if (piece == null || piece.IsShredderInteractionLocked || piece.IsFrozen)
@@ -121,26 +65,40 @@ namespace GravityPuzzle
                 (model.State != PieceState.Placed && model.State != PieceState.Dragging && model.State != PieceState.Falling))
                 return false;
 
+            bool hasShredderEntryCell = false;
+            GravityBoardGrid grid = board.BoardSnapshot.Grid;
             for (int index = 0; index < model.LocalCells.Count; index++)
             {
                 GridCoordinate cell = model.GetWorldCell(index);
+                GridCoordinate below = cell.Offset(Down);
+                if (grid.TryGetOccupantId(below, out int occupantId) && occupantId == model.Id)
+                    continue;
+
                 if (cell.Y == 0 && IsInsideShredderLane(level, cell))
                 {
-                    if (model.State == PieceState.Falling)
-                    {
-                        // A falling piece is admitted once its visual cells arrive at or near
-                        // the mouth, preventing an unnatural freeze/snap at the boundary.
-                        if (!TryGetCellVerticalExtents(piece, out float lowestCellY, out _) ||
-                            lowestCellY > captureTopY + captureApproachDistance + 0.5f)
-                        {
-                            return false;
-                        }
-                    }
-                    return true;
+                    hasShredderEntryCell = true;
+                    continue;
                 }
+
+                // Open freefall ignores obstacles and the map floor (ADR-005).
+                // A branch resting on anything other than the exit would pass
+                // through it, so keep the piece under grid gravity until that
+                // support is gone. Outside the grid reads as Blocked.
+                if (grid.GetCellState(below) != GridCellState.Empty)
+                    return false;
             }
 
-            return false;
+            if (!hasShredderEntryCell)
+                return false;
+
+            // A falling piece is admitted once its visual cells arrive at or near
+            // the mouth, preventing an unnatural freeze/snap at the boundary.
+            if (model.State == PieceState.Falling &&
+                (!TryGetCellVerticalExtents(piece, out float lowestCellY, out _) ||
+                 lowestCellY > captureTopY + captureApproachDistance + 0.5f))
+                return false;
+
+            return true;
         }
 
 
@@ -239,36 +197,6 @@ namespace GravityPuzzle
             for (int index = 0; index < activeCellBoundsBuffer.Count; index++)
             {
                 Bounds bounds = activeCellBoundsBuffer[index];
-                lowestCellY = Mathf.Min(lowestCellY, bounds.min.y);
-                highestCellY = Mathf.Max(highestCellY, bounds.max.y);
-            }
-
-            return lowestCellY != float.PositiveInfinity;
-        }
-
-        private bool TryGetCellExtents(
-            PuzzlePiece piece,
-            out float lowestCellY,
-            out float highestCellY)
-        {
-            lowestCellY = float.PositiveInfinity;
-            highestCellY = float.NegativeInfinity;
-            if (piece == null)
-                return false;
-
-            piece.GetActiveCellBounds(activeCellBoundsBuffer);
-            if (activeCellBoundsBuffer.Count == 0)
-                return false;
-
-            for (int index = 0; index < activeCellBoundsBuffer.Count; index++)
-            {
-                Bounds bounds = activeCellBoundsBuffer[index];
-                if (bounds.min.x < leftX - CorridorEpsilon ||
-                    bounds.max.x > rightX + CorridorEpsilon)
-                {
-                    return false;
-                }
-
                 lowestCellY = Mathf.Min(lowestCellY, bounds.min.y);
                 highestCellY = Mathf.Max(highestCellY, bounds.max.y);
             }
