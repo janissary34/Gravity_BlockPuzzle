@@ -21,3 +21,6 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 4281a29818897491bbd1f5f16476bcb5, type: 3}
   - {fileID: 8300000, guid: 0462b6c901aaa4e699354381d642f78c, type: 3}
   pieceDropVolume: 1
+  hammerBreakClips:
+  - {fileID: 8300000, guid: 004987eaeea064c77a8523b2e279b85c, type: 3}
+  hammerBreakVolume: 1

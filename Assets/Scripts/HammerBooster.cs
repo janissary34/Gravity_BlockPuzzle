@@ -17,7 +17,6 @@ namespace GravityPuzzle
     /// One-use-per-level hammer. Press the UI button to enter targeting mode,
     /// then tap one visible cell belonging to a movable puzzle piece.
     /// </summary>
-    [RequireComponent(typeof(AudioSource))]
     public sealed class HammerBooster : MonoBehaviour
     {
         // A valid hammer hit removes its targeted runtime cell, then commits
@@ -49,11 +48,6 @@ namespace GravityPuzzle
         [SerializeField] private float hammerHoverHeightOffset = .85f;
         [SerializeField, Tooltip("Fallback count when no BoosterButton is present.")]
         private int initialCount = 3;
-
-        [Header("Audio")]
-        [Tooltip("Clip played when the hammer breaks a piece cell (e.g. HitRock).")]
-        [SerializeField] private AudioClip impactAudioClip;
-        [SerializeField] private AudioSource impactAudioSource;
 
         // Testing override: the hammer can be used repeatedly without waiting
         // for a new level.
@@ -108,16 +102,6 @@ namespace GravityPuzzle
                 }
             }
             SetSelectionGlowVisible(false);
-
-            if (impactAudioSource == null)
-                impactAudioSource = GetComponent<AudioSource>();
-            if (impactAudioSource == null && impactAudioClip != null)
-                Debug.LogWarning("[HammerBooster] Break sound is assigned but no AudioSource is on the hammer booster; add one (Play On Awake off, Spatial Blend 2D).", this);
-
-#if UNITY_EDITOR
-            if (impactAudioClip == null)
-                impactAudioClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/HitRock 6095_59_1.wav");
-#endif
 
             remainingCount = initialCount;
             InitializeHammerVisualPool();
@@ -592,7 +576,7 @@ namespace GravityPuzzle
                 piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
             {
                 impactSucceeded = true;
-                PlayBreakSound();
+                SoundFeedbackRuntime.HammerBreak();
                 HapticFeedbackRuntime.HammerImpact(piece.IsBomb && piece.IsBombDefused);
                 if (cell.progressUnits > 0f)
                 {
@@ -620,12 +604,6 @@ namespace GravityPuzzle
                         true)
                     .SetLink(camera.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
-        }
-
-        private void PlayBreakSound()
-        {
-            if (impactAudioClip != null && impactAudioSource != null)
-                impactAudioSource.PlayOneShot(impactAudioClip);
         }
 
         private static Vector3 GetViewportWorldPoint(Camera camera, float x, float y, float z)

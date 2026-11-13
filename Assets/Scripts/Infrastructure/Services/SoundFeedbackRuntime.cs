@@ -15,6 +15,7 @@ namespace GravityPuzzle.Infrastructure.Services
         private static AudioSource source;
         private static readonly ShuffledClipSequence buttonClicks = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence pieceDrops = new ShuffledClipSequence();
+        private static readonly ShuffledClipSequence hammerBreaks = new ShuffledClipSequence();
 
         public static void Configure(SoundFeedbackConfig value, AudioSource audioSource)
         {
@@ -22,6 +23,7 @@ namespace GravityPuzzle.Infrastructure.Services
             source = audioSource;
             buttonClicks.Reset(config != null ? config.ButtonClickClips : null);
             pieceDrops.Reset(config != null ? config.PieceDropClips : null);
+            hammerBreaks.Reset(config != null ? config.HammerBreakClips : null);
 
             if (config == null)
                 Debug.LogWarning("[Sound] SoundFeedbackConfig is not assigned on the bootstrap; sound cues are disabled.");
@@ -44,6 +46,11 @@ namespace GravityPuzzle.Infrastructure.Services
         public static void PieceDropped()
         {
             if (config != null) Play(pieceDrops.Next(), config.PieceDropVolume);
+        }
+
+        public static void HammerBreak()
+        {
+            if (config != null) Play(hammerBreaks.Next(), config.HammerBreakVolume);
         }
 
         private static void Play(AudioClip clip, float volume)

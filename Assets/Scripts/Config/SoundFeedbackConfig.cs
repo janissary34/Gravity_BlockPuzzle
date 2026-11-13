@@ -16,9 +16,16 @@ namespace GravityPuzzle.Config
         [SerializeField] private AudioClip[] pieceDropClips = new AudioClip[0];
         [Range(0f, 1f)] [SerializeField] private float pieceDropVolume = 1f;
 
+        [Header("Boosters")]
+        [Tooltip("Played when the hammer breaks a piece cell.")]
+        [SerializeField] private AudioClip[] hammerBreakClips = new AudioClip[0];
+        [Range(0f, 1f)] [SerializeField] private float hammerBreakVolume = 1f;
+
         public AudioClip[] ButtonClickClips => buttonClickClips;
         public float ButtonClickVolume => buttonClickVolume;
         public AudioClip[] PieceDropClips => pieceDropClips;
         public float PieceDropVolume => pieceDropVolume;
+        public AudioClip[] HammerBreakClips => hammerBreakClips;
+        public float HammerBreakVolume => hammerBreakVolume;
     }
 }
