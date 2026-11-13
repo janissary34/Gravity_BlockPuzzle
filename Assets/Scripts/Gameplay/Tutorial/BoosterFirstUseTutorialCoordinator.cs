@@ -25,9 +25,11 @@ namespace GravityPuzzle.Gameplay.Tutorial
         bool BlocksBoardDrag { get; }
         bool IsBoosterHighlighted(BoosterRewardType boosterType);
         bool IsFirstUseActive(BoosterRewardType boosterType);
+        bool IsResolvingEffect(BoosterRewardType boosterType);
         bool AllowsBoosterActivation(BoosterRewardType boosterType);
         bool AllowsTarget(BoosterRewardType boosterType, BoardTargetResolver.Target target);
         void NotifyBoosterActivated(BoosterRewardType boosterType);
+        void NotifyTargetCommitted(BoosterRewardType boosterType);
         void NotifyEffectApplied(BoosterRewardType boosterType);
     }
 
@@ -170,6 +172,12 @@ namespace GravityPuzzle.Gameplay.Tutorial
                    state != BoosterFirstUseTutorialState.NotStarted;
         }
 
+        public bool IsResolvingEffect(BoosterRewardType boosterType)
+        {
+            return state == BoosterFirstUseTutorialState.ResolvingEffect &&
+                   activeConfig != null && activeConfig.BoosterType == boosterType;
+        }
+
         public static bool Supports(BoosterRewardType boosterType)
         {
             return boosterType == BoosterRewardType.Rocket ||
@@ -286,8 +294,12 @@ namespace GravityPuzzle.Gameplay.Tutorial
 
         public void NotifyBoosterActivated(BoosterRewardType boosterType)
         {
+            // A committed board target whose effect failed re-arms the lesson
+            // from ResolvingEffect; FreezeTimer resolves without a board target.
+            bool canRearmTarget = state == BoosterFirstUseTutorialState.ResolvingEffect &&
+                                  boosterType != BoosterRewardType.FreezeTimer;
             if (activeConfig == null || activeConfig.BoosterType != boosterType ||
-                state != BoosterFirstUseTutorialState.AwaitingBoosterTap)
+                (state != BoosterFirstUseTutorialState.AwaitingBoosterTap && !canRearmTarget))
                 return;
 
             state = boosterType == BoosterRewardType.FreezeTimer
@@ -319,6 +331,20 @@ namespace GravityPuzzle.Gameplay.Tutorial
 
             return TryGetExpectedHammerCell(target.Piece, out GridCoordinate expectedCell) &&
                    IsSameAuthoredBlock(target.Cell, expectedCell);
+        }
+
+        /// <summary>
+        /// The exact lesson target was accepted and the booster effect is now
+        /// playing; focus presentation (dimmer, hand) is no longer required.
+        /// </summary>
+        public void NotifyTargetCommitted(BoosterRewardType boosterType)
+        {
+            if (activeConfig == null || activeConfig.BoosterType != boosterType ||
+                state != BoosterFirstUseTutorialState.AwaitingExactTarget)
+                return;
+
+            state = BoosterFirstUseTutorialState.ResolvingEffect;
+            TutorialHandView.Hide();
         }
 
         public void NotifyEffectApplied(BoosterRewardType boosterType)

@@ -346,7 +346,7 @@ namespace GravityPuzzle.Presentation.Views
             // Hammer outline setup clears the previous Rocket/Tutorial state,
             // so acquire the shared foreground lease only after either mode's
             // mode-specific feedback has been rebuilt.
-            SetBoardPiecesInForeground(true);
+            SetBoardPiecesInForeground(true, excludeFrozen: isRocket);
         }
 
         private void ShowFirstUseBoosterFocusInternal(BoosterRewardType boosterType)
@@ -896,7 +896,11 @@ namespace GravityPuzzle.Presentation.Views
         {
             IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
             bool isTimer = gate != null && (gate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer) || gate.IsFirstUseActive(BoosterRewardType.FreezeTimer));
-            bool isHammer = gate != null && (gate.IsBoosterHighlighted(BoosterRewardType.Hammer) || gate.IsFirstUseActive(BoosterRewardType.Hammer));
+            // The hammer strike plays on the undimmed board once its lesson
+            // target is committed.
+            bool isHammer = gate != null &&
+                            (gate.IsBoosterHighlighted(BoosterRewardType.Hammer) || gate.IsFirstUseActive(BoosterRewardType.Hammer)) &&
+                            !gate.IsResolvingEffect(BoosterRewardType.Hammer);
             bool isRocket = gate != null && (gate.IsBoosterHighlighted(BoosterRewardType.Rocket) || gate.IsFirstUseActive(BoosterRewardType.Rocket));
             bool isAnyTutorialActive = isTimer || isHammer || isRocket;
 
@@ -961,21 +965,27 @@ namespace GravityPuzzle.Presentation.Views
                 if (piece == null)
                     continue;
 
-                // Rocket explicitly breaks ice before carrying the underlying
-                // piece, so frozen pieces are valid rocket targets.
-                bool isValidTarget = !piece.IsShredderInteractionLocked;
+                // Rocket cannot lift frozen pieces; they get no target glow.
+                bool isValidTarget = !piece.IsFrozen && !piece.IsShredderInteractionLocked;
                 piece.SetBoosterTargeted(isValidTarget);
             }
         }
 
-        private void SetBoardPiecesInForeground(bool isForeground)
+        /// <param name="excludeFrozen">
+        /// Leaves frozen pieces behind the dimmer so non-targetable ice blocks
+        /// read as dark like the rest of the board.
+        /// </param>
+        private void SetBoardPiecesInForeground(bool isForeground, bool excludeFrozen = false)
         {
             var pieces = PuzzlePiece.ActivePieces;
             for (int index = 0; index < pieces.Count; index++)
             {
                 PuzzlePiece piece = pieces[index];
-                if (piece != null)
-                    piece.SetBoosterTargetingForeground(isForeground, tutorialDimSortingOrder + 2);
+                if (piece == null)
+                    continue;
+
+                bool pieceForeground = isForeground && !(excludeFrozen && piece.IsFrozen);
+                piece.SetBoosterTargetingForeground(pieceForeground, tutorialDimSortingOrder + 2);
             }
         }
 

@@ -59,6 +59,7 @@ namespace GravityPuzzle
         private RocketBooster rocketBooster;
         private HammerBooster hammerBooster;
         private TimerBooster timerBooster;
+        private bool selectionGlowSearched;
         private FreezeTimerBooster freezeTimerBooster;
         private BoosterRewardType boosterType;
         private bool hasBoosterType;
@@ -122,8 +123,7 @@ namespace GravityPuzzle
             if (selectionGlow != null && selectionGlow.activeSelf != visible)
                 selectionGlow.SetActive(visible);
 
-            if (timerBooster == null)
-                timerBooster = GetComponent<TimerBooster>();
+            // timerBooster is cached in Awake; this runs every frame from booster Updates.
             if (timerBooster != null && timerBooster.SelectionGlow != null && timerBooster.SelectionGlow.activeSelf != visible)
                 timerBooster.SelectionGlow.SetActive(visible);
         }
@@ -367,8 +367,12 @@ namespace GravityPuzzle
 
         private void FindSelectionGlowReferences()
         {
-            if (selectionGlow != null)
+            // Buttons without a glow child would otherwise repeat this
+            // hierarchy search (and allocate name strings) every frame.
+            if (selectionGlow != null || selectionGlowSearched)
                 return;
+
+            selectionGlowSearched = true;
 
             Transform child = transform.Find("HammerSelectionGlow")
                 ?? transform.Find("RocketSelectionGlow")

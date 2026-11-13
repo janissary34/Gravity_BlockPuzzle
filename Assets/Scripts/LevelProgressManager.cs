@@ -81,6 +81,11 @@ namespace GravityPuzzle
         private Canvas progressCanvas;
         private RectTransform progressCanvasRect;
         private RectTransform progressTargetRect;
+        private RectTransform progressFillRect;
+        private Image progressFillImage;
+        private readonly Vector3[] progressFillCorners = new Vector3[4];
+        private int cachedFillTipFrame = -1;
+        private Vector2 cachedFillTipCanvasPoint;
         private Tweener sliderFillTween;
         private Tween sliderPunchTween;
         private bool levelCompletedTriggered;
@@ -121,6 +126,7 @@ namespace GravityPuzzle
                                                       pendingVfxProgressArrivalCount > 0 ||
                                                       (sliderFillTween != null && sliderFillTween.IsActive());
         public bool IsCompletionPresentationFinished => completionPresentationFinished;
+        public float CompletionRevealMaxDelay => hasTweenConfig ? tweenConfig.LevelCompleteRevealMaxDelay : 0f;
         private bool HasInFlightProgressPresentation => HasActiveFlyingVoxels || pendingVfxProgressArrivalCount > 0;
 
         /// <summary>
@@ -327,6 +333,9 @@ namespace GravityPuzzle
                 : progressSlider.fillRect != null
                     ? progressSlider.fillRect
                     : progressSlider.GetComponent<RectTransform>();
+            progressFillRect = progressSlider.fillRect;
+            progressFillImage = progressFillRect != null ? progressFillRect.GetComponent<Image>() : null;
+            cachedFillTipFrame = -1;
 
             if (progressCanvas == null || progressCanvasRect == null || progressTargetRect == null)
                 Debug.LogError("[LevelProgress] Slider presentation references are incomplete. The Slider must be inside an authored Canvas.", this);
@@ -445,13 +454,10 @@ namespace GravityPuzzle
 
             Camera uiCamera = progressCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : progressCanvas.worldCamera;
             Vector2 start = ScreenToCanvasPoint(progressCanvasRect, mainCamera.WorldToScreenPoint(startWorldPos), uiCamera);
-            Vector2 target = ScreenToCanvasPoint(
-                progressCanvasRect,
-                RectTransformUtility.WorldToScreenPoint(uiCamera, progressTargetRect.position),
-                uiCamera);
             // Keep a very small spread so separate grains remain visible while
-            // still clearly converging on the Handle game object's position.
-            target += new Vector2(UnityEngine.Random.Range(-6f, 6f), UnityEngine.Random.Range(-3f, 3f));
+            // still clearly converging on the fill tip.
+            Vector2 targetJitter = new Vector2(UnityEngine.Random.Range(-6f, 6f), UnityEngine.Random.Range(-3f, 3f));
+            Vector2 target = GetFillTipCanvasPoint(uiCamera) + targetJitter;
 
             if (flyingProgressVoxelPool == null || !flyingProgressVoxelPool.TryRent(out FlyingProgressVoxelView flyingVoxel))
             {
@@ -505,8 +511,14 @@ namespace GravityPuzzle
 
             flightSequence.Append(DOVirtual.Float(0f, 1f, spillDuration, progress =>
                 voxelRect.anchoredPosition = Vector2.LerpUnclamped(start, spillEnd, progress * progress)));
+            // The fill keeps advancing while grains are airborne, so the end
+            // point is re-read every frame instead of frozen at spawn.
             flightSequence.Append(DOVirtual.Float(0f, 1f, riseDuration, progress =>
-                voxelRect.anchoredPosition = QuadraticBezier(spillEnd, riseControl, target, progress)).SetEase(VoxelFlightEase));
+                voxelRect.anchoredPosition = QuadraticBezier(
+                    spillEnd,
+                    riseControl,
+                    GetFillTipCanvasPoint(uiCamera) + targetJitter,
+                    progress)).SetEase(VoxelFlightEase));
             flightSequence.Insert(startDelay, voxelRect.DORotate(new Vector3(0f, 0f, UnityEngine.Random.Range(-VoxelRotationRange, VoxelRotationRange)), flightDuration, RotateMode.FastBeyond360));
             bool flightResolved = false;
             void ResolveFlight()
@@ -633,7 +645,7 @@ namespace GravityPuzzle
                 ? progressCanvas.worldCamera
                 : null;
 
-            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(uiCamera, progressTargetRect.position);
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(uiCamera, GetFillTipUiWorldPosition());
             if (mainCamera != null)
             {
                 Ray targetRay = mainCamera.ScreenPointToRay(screenPoint);
@@ -651,6 +663,68 @@ namespace GravityPuzzle
             Vector3 fallback = progressTargetRect.position;
             fallback.z = 0f;
             return fallback;
+        }
+
+        /// <summary>
+        /// Canvas-local position of the fill's leading edge, computed at most
+        /// once per frame and shared by every airborne voxel.
+        /// </summary>
+        private Vector2 GetFillTipCanvasPoint(Camera uiCamera)
+        {
+            if (cachedFillTipFrame == Time.frameCount)
+                return cachedFillTipCanvasPoint;
+
+            cachedFillTipFrame = Time.frameCount;
+            cachedFillTipCanvasPoint = ScreenToCanvasPoint(
+                progressCanvasRect,
+                RectTransformUtility.WorldToScreenPoint(uiCamera, GetFillTipUiWorldPosition()),
+                uiCamera);
+            return cachedFillTipCanvasPoint;
+        }
+
+        /// <summary>
+        /// UI-space world position of the visible end of the slider fill.
+        /// Supports both rect-driven fills and Image.Type.Filled fills.
+        /// </summary>
+        private Vector3 GetFillTipUiWorldPosition()
+        {
+            if (progressFillRect == null || progressSlider == null)
+                return progressTargetRect != null ? progressTargetRect.position : Vector3.zero;
+
+            // Corners: 0 bottom-left, 1 top-left, 2 top-right, 3 bottom-right.
+            progressFillRect.GetWorldCorners(progressFillCorners);
+            Vector3 leftEdge = (progressFillCorners[0] + progressFillCorners[1]) * .5f;
+            Vector3 rightEdge = (progressFillCorners[2] + progressFillCorners[3]) * .5f;
+            Vector3 bottomEdge = (progressFillCorners[0] + progressFillCorners[3]) * .5f;
+            Vector3 topEdge = (progressFillCorners[1] + progressFillCorners[2]) * .5f;
+
+            Vector3 startEdge;
+            Vector3 endEdge;
+            switch (progressSlider.direction)
+            {
+                case Slider.Direction.RightToLeft:
+                    startEdge = rightEdge;
+                    endEdge = leftEdge;
+                    break;
+                case Slider.Direction.BottomToTop:
+                    startEdge = bottomEdge;
+                    endEdge = topEdge;
+                    break;
+                case Slider.Direction.TopToBottom:
+                    startEdge = topEdge;
+                    endEdge = bottomEdge;
+                    break;
+                default:
+                    startEdge = leftEdge;
+                    endEdge = rightEdge;
+                    break;
+            }
+
+            // A Filled image keeps a full-size rect and clips by fillAmount.
+            if (progressFillImage != null && progressFillImage.type == Image.Type.Filled)
+                return Vector3.LerpUnclamped(startEdge, endEdge, progressFillImage.fillAmount);
+
+            return endEdge;
         }
 
         private static Vector2 ScreenToCanvasPoint(RectTransform canvasRect, Vector2 screenPoint, Camera uiCamera)
@@ -753,7 +827,6 @@ namespace GravityPuzzle
                 return;
 
             completionPresentationFinished = true;
-            Debug.Log($"<color=green>[LevelProgressManager] 🌟 LEVEL COMPLETED! All {totalBlockUnitsInLevel} units shredded.</color>");
             OnLevelCompleted?.Invoke();
         }
 

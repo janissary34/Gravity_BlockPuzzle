@@ -200,6 +200,7 @@ namespace GravityPuzzle
         private Transform iceSlotsRoot;
         private readonly List<PiecePartSlot> partSlots = new List<PiecePartSlot>();
         private CompositeCollider2D compositeCollider;
+        private bool isBatchingCompositeGeometry;
         private LineRenderer rootOutline;
         // The prefab owns these renderers. They are cached once because a grid
         // silhouette can have an outer loop plus interior or island loops.
@@ -1616,7 +1617,7 @@ namespace GravityPuzzle
             return true;
         }
 
-        private void ApplyOutlinePresentation()
+        internal void ApplyOutlinePresentation()
         {
             bool useTargetOutline = isSelected || isBoosterTargeted || isTutorialTargeted;
             float outlineWidth = useTargetOutline ? selectedOutlineWidth : restingOutlineWidth;
@@ -1917,6 +1918,38 @@ namespace GravityPuzzle
             ShredderConfig shredderConfig = null,
             float downwardEntrySpeed = 0f)
         {
+            // Each per-cell collider write in a profile (layer, material, size,
+            // trigger, enabled) regenerates a Synchronous composite on its own.
+            // On large pieces that cost grows quadratically and froze device
+            // frames for seconds, so the whole profile shares one generation.
+            bool batchCompositeGeometry = compositeCollider != null &&
+                compositeCollider.generationType == CompositeCollider2D.GenerationType.Synchronous;
+            if (batchCompositeGeometry)
+            {
+                compositeCollider.generationType = CompositeCollider2D.GenerationType.Manual;
+                isBatchingCompositeGeometry = true;
+            }
+
+            try
+            {
+                ApplyLifecyclePhysicsProfileCore(state, shredderConfig, downwardEntrySpeed);
+            }
+            finally
+            {
+                if (batchCompositeGeometry)
+                {
+                    isBatchingCompositeGeometry = false;
+                    compositeCollider.GenerateGeometry();
+                    compositeCollider.generationType = CompositeCollider2D.GenerationType.Synchronous;
+                }
+            }
+        }
+
+        private void ApplyLifecyclePhysicsProfileCore(
+            PieceState state,
+            ShredderConfig shredderConfig,
+            float downwardEntrySpeed)
+        {
             switch (state)
             {
                 case PieceState.Spawned:
@@ -1949,6 +1982,11 @@ namespace GravityPuzzle
         /// </summary>
         private void ApplyGridPhysicsProfile()
         {
+            // Leave the simulation first so collider writes below do not
+            // update broadphase shapes one by one.
+            if (Body != null)
+                Body.simulated = false;
+
             RestoreDefaultPhysicsLayers();
             RestoreDefaultCollisionMaterials();
             useFullCollisionGeometry = false;
@@ -2024,7 +2062,8 @@ namespace GravityPuzzle
             {
                 if (config.FeedPhysicsMaterial != null)
                     compositeCollider.sharedMaterial = config.FeedPhysicsMaterial;
-                compositeCollider.GenerateGeometry();
+                if (!isBatchingCompositeGeometry)
+                    compositeCollider.GenerateGeometry();
             }
             PhysicsProfile = PiecePhysicsProfile.OpenFreefall;
             if (Body == null)
@@ -2058,6 +2097,9 @@ namespace GravityPuzzle
         /// </summary>
         private void ApplyShreddingPhysicsProfile()
         {
+            if (Body != null)
+                Body.simulated = false;
+
             RestoreDefaultPhysicsLayers();
             RestoreDefaultCollisionMaterials();
             useFullCollisionGeometry = true;
@@ -2131,11 +2173,14 @@ namespace GravityPuzzle
             for (int index = 0; index < solidColliders.Length; index++)
             {
                 Collider2D collider = solidColliders[index];
-                if (collider != null)
-                {
+                if (collider == null)
+                    continue;
+
+                // Unchanged writes still dirty the collider on device.
+                if (collider.isTrigger != isTrigger)
                     collider.isTrigger = isTrigger;
+                if (collider.enabled != enabled)
                     collider.enabled = enabled;
-                }
             }
         }
 
@@ -2580,25 +2625,6 @@ namespace GravityPuzzle
                     Body.WakeUp();
 
             }
-        }
-
-        /// <summary>
-        /// Removes this piece's ice presentation for a rocket action. The
-        /// rocket owns the already-reserved piece, so the frozen state is
-        /// cleared before the carrier takes transform ownership.
-        /// </summary>
-        public void BreakIceForRocket(
-            int? effectSortingLayerId = null,
-            int? effectSortingOrder = null)
-        {
-            if (!IsFrozen)
-                return;
-
-            CaptureWholePieceIceReleaseLayer();
-            IsFrozen = false;
-            previousFrozenRemaining = -1;
-            RefreshWholePiecePresentation();
-            PlayIceReleaseAnimation(effectSortingLayerId, effectSortingOrder);
         }
 
         public void ReportDestroyed()
@@ -3235,7 +3261,7 @@ namespace GravityPuzzle
                     Mathf.Max(.01f, fullSize.y - inset * 2f));
             }
 
-            if (compositeCollider != null)
+            if (compositeCollider != null && !isBatchingCompositeGeometry)
                 compositeCollider.GenerateGeometry();
 
             if (Body != null)
@@ -3863,16 +3889,10 @@ namespace GravityPuzzle
             }
         }
 
-        private void PlayIceReleaseAnimation(
-            int? effectSortingLayerId = null,
-            int? effectSortingOrder = null)
+        private void PlayIceReleaseAnimation()
         {
             iceReleaseAnimating = true;
             GetIceEffectPresentation(out Vector3 position, out int sortingLayerId, out int sortingOrder);
-            if (effectSortingLayerId.HasValue)
-                sortingLayerId = effectSortingLayerId.Value;
-            if (effectSortingOrder.HasValue)
-                sortingOrder = effectSortingOrder.Value;
             iceParticleVfxHandle?.PlayBreak(position, sortingLayerId, sortingOrder);
             TweenConfig tweenConfig = GridFallView != null ? GridFallView.Config : null;
             if (tweenConfig == null)

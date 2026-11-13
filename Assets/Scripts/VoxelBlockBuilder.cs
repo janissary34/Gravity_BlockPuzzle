@@ -46,16 +46,25 @@ namespace GravityPuzzle
                 voxelPool.Return(shard);
         }
 
-        public static int EstimateMaximumVoxelCount(GravityLevelDefinition level, int configuredSubdivisions)
+        /// <summary>
+        /// Counts voxels only for pieces that actually render through the
+        /// legacy voxel grid. Pieces with an authored sprite never rent voxels,
+        /// so prewarming for them only created (and later destroyed) thousands
+        /// of idle GameObjects per level.
+        /// </summary>
+        public static int EstimateMaximumVoxelCount(
+            GravityLevelDefinition level,
+            int configuredSubdivisions,
+            System.Func<PieceDefinition, bool> usesVoxelGrid)
         {
-            if (level == null)
+            if (level == null || usesVoxelGrid == null)
                 return 0;
 
             int voxelsPerCell = configuredSubdivisions * configuredSubdivisions;
             int total = 0;
             foreach (PieceDefinition piece in level.EnumerateAllPieceDefinitions())
             {
-                if (piece == null || piece.cells == null)
+                if (piece == null || piece.cells == null || !usesVoxelGrid(piece))
                     continue;
 
                 int fineCellsPerBoardBlock = level.subdivisions * level.subdivisions;

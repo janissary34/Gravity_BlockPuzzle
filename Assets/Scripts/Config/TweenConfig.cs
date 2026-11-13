@@ -47,6 +47,8 @@ namespace GravityPuzzle.Config
         [Min(1)] [SerializeField] private int progressSliderPunchVibrato = 6;
         [Range(0f, 1f)] [SerializeField] private float progressSliderPunchElasticity = .5f;
         [Min(0f)] [SerializeField] private float progressSliderPulseCooldown = .09f;
+        [Tooltip("Longest time the win panel waits for the final progress flights and slider fill after the board is cleared. It opens earlier when that presentation finishes first.")]
+        [Min(0f)] [SerializeField] private float levelCompleteRevealMaxDelay = .3f;
 
         [Header("Timer Booster Presentation")]
         [Min(.001f)] [SerializeField] private float timerEntranceDuration = .75f;
@@ -219,6 +221,7 @@ namespace GravityPuzzle.Config
         public int ProgressSliderPunchVibrato => progressSliderPunchVibrato;
         public float ProgressSliderPunchElasticity => progressSliderPunchElasticity;
         public float ProgressSliderPulseCooldown => progressSliderPulseCooldown;
+        public float LevelCompleteRevealMaxDelay => levelCompleteRevealMaxDelay;
         public float TimerEntranceDuration => timerEntranceDuration;
         public Ease TimerEntranceEase => timerEntranceEase;
         public float TimerFreezeFillDuration => timerFreezeFillDuration;

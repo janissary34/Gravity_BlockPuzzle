@@ -199,7 +199,8 @@ namespace GravityPuzzle.Bootstrap
                 {
                     int requiredVoxelCapacity = VoxelBlockBuilder.EstimateMaximumVoxelCount(
                         selectedLevel,
-                        poolConfig.VoxelSubdivisions);
+                        poolConfig.VoxelSubdivisions,
+                        RuntimePieceFactory.UsesLegacyVoxelPresentation);
                     int voxelCapacity = Mathf.Max(poolConfig.ShredVoxelCapacity, requiredVoxelCapacity);
 
                     GameObjectPool<VoxelShard> voxelPool = new GameObjectPool<VoxelShard>(

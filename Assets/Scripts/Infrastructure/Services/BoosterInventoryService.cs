@@ -93,14 +93,32 @@ namespace GravityPuzzle.Infrastructure.Services
         }
 #endif
 
+        // HUD buttons query counts every frame; building these keys there
+        // allocated a string (and boxed the enum) per call.
+        private static readonly Dictionary<BoosterRewardType, string> countKeys = BuildKeys(CountSuffix);
+        private static readonly Dictionary<BoosterRewardType, string> unlockedKeys = BuildKeys(UnlockedSuffix);
+
+        private static Dictionary<BoosterRewardType, string> BuildKeys(string suffix)
+        {
+            Array values = Enum.GetValues(typeof(BoosterRewardType));
+            var keys = new Dictionary<BoosterRewardType, string>(values.Length);
+            foreach (BoosterRewardType value in values)
+                keys[value] = KeyPrefix + value + suffix;
+            return keys;
+        }
+
         private static string GetCountKey(BoosterRewardType boosterType)
         {
-            return KeyPrefix + boosterType + CountSuffix;
+            return countKeys.TryGetValue(boosterType, out string key)
+                ? key
+                : KeyPrefix + boosterType + CountSuffix;
         }
 
         private static string GetUnlockedKey(BoosterRewardType boosterType)
         {
-            return KeyPrefix + boosterType + UnlockedSuffix;
+            return unlockedKeys.TryGetValue(boosterType, out string key)
+                ? key
+                : KeyPrefix + boosterType + UnlockedSuffix;
         }
     }
 

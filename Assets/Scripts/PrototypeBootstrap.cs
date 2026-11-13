@@ -689,7 +689,8 @@ namespace GravityPuzzle
         private float removalHeight = -5.5f;
         private bool finalShredderOutcomeLocked;
         private bool boardCleared;
-        private bool boardClearCompletionPending;
+        private bool winPanelRevealPending;
+        private float winPanelRevealDeadline;
         private bool boardFailed;
         private float bombElapsedSeconds;
         private bool sequentialLevelsEnabled = true;
@@ -946,7 +947,7 @@ namespace GravityPuzzle
             TimeRemaining = timeLimit;
             IsTimerStarted = false;
             DestroyedPieceCount = 0;
-            boardClearCompletionPending = false;
+            winPanelRevealPending = false;
             timerPauseOwners.Clear();
             finalShredderOutcomeLocked = false;
             WasTimerExpiryFailure = false;
@@ -2716,6 +2717,11 @@ namespace GravityPuzzle
 
         private void Update()
         {
+            // LevelComplete is already committed here, so this runs before
+            // the IsLevelRunning guard below.
+            if (winPanelRevealPending)
+                TryRevealPendingWinPanel();
+
             // The scene-authored board exists before the selected level has
             // supplied its snapshot and pooled pieces. Keep it inert during
             // Initialize so an empty runtime list is not treated as a win.
@@ -2761,25 +2767,20 @@ namespace GravityPuzzle
                 LevelProgressManager progress = LevelProgressManager.Instance;
                 bool revealReady = revealAreaCoordinator == null ||
                                    !revealAreaCoordinator.HasPendingRevealContent;
-                if (!boardClearCompletionPending && !HasRemainingBoardPieces() && revealReady)
+                if (!HasRemainingBoardPieces() && revealReady)
                 {
                     // Completion starts only after the final shredder feed has
                     // fully released its pooled piece. Shredding is an active
                     // lifecycle state: its feed still owns renderer clipping,
                     // progress scheduling, audio and the Despawn transition.
-                    boardClearCompletionPending = true;
+                    // The progress bar's flights and fill are presentation only;
+                    // they finish alongside the win panel instead of gating it.
                     progress?.CompleteForBoardClear();
-                }
-
-                if (boardClearCompletionPending &&
-                    (progress == null || progress.IsCompletionPresentationFinished))
-                {
-                    boardClearCompletionPending = false;
                     boardCleared = true;
                     TryTransitionGameState(GameState.LevelComplete);
-                    ShowWinPanel();
-                    PlayLevelClearParticleEffects();
-                    Debug.Log("LEVEL CLEARED!");
+                    winPanelRevealPending = true;
+                    winPanelRevealDeadline = Time.unscaledTime + (progress != null ? progress.CompletionRevealMaxDelay : 0f);
+                    TryRevealPendingWinPanel();
 
                     OnLevelCleared?.Invoke();
                     LevelCleared?.Invoke();
@@ -2900,6 +2901,22 @@ namespace GravityPuzzle
             PlayParticleEffect(levelClearParticleEffectG);
         }
 
+        /// <summary>
+        /// Opens the win presentation once the final progress presentation has
+        /// finished, or when its configured maximum wait has elapsed.
+        /// </summary>
+        private void TryRevealPendingWinPanel()
+        {
+            LevelProgressManager progress = LevelProgressManager.Instance;
+            bool presentationFinished = progress == null || progress.IsCompletionPresentationFinished;
+            if (!presentationFinished && Time.unscaledTime < winPanelRevealDeadline)
+                return;
+
+            winPanelRevealPending = false;
+            ShowWinPanel();
+            PlayLevelClearParticleEffects();
+        }
+
         private void ShowWinPanel()
         {
             if (winPanel == null)
@@ -3015,6 +3032,10 @@ namespace GravityPuzzle
 
             if (newBoosterPanel != null && newBoosterPanel.ShowMilestoneFeatureForLevel(currentLevel, this))
             {
+                // The milestone panel already introduces this level's feature;
+                // consume the queued reward so it does not resurface on the
+                // following level start.
+                GravityLevelRuntime.TryTakeQueuedBoosterReward(out _);
                 awaitingBoosterRewardDismissal = true;
                 return;
             }

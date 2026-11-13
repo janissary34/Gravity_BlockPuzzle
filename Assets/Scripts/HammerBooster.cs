@@ -387,6 +387,7 @@ namespace GravityPuzzle
                 {
                     boundBoard.StartTimer();
                     activeBooster = null;
+                    tutorialGate?.NotifyTargetCommitted(BoosterRewardType.Hammer);
                     BoosterTargetingPresentation.Hide();
                     // Update order between UI/booster/drag components is not fixed.
                     // Suppress the rest of this frame so the target tap cannot also

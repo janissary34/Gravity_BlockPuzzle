@@ -122,6 +122,25 @@ namespace GravityPuzzle.Gameplay.Pieces
         }
 
         /// <summary>
+        /// True when this definition has no presentation sprite and therefore
+        /// falls back to the legacy VoxelShard grid. Mirrors the decision in
+        /// the slot build path so pool sizing matches actual rentals.
+        /// </summary>
+        public static bool UsesLegacyVoxelPresentation(PieceDefinition definition)
+        {
+            if (!useVoxelShardGrid || definition == null)
+                return false;
+
+            // Hammer fragments always rebuild with the normal fallback sprite,
+            // so a missing one makes every piece a potential voxel renter.
+            if (GetFallbackSprite(false) == null)
+                return true;
+
+            ResolveVisual(definition, out _, out Sprite voxelSprite, out _);
+            return voxelSprite == null;
+        }
+
+        /// <summary>
         /// Appends the same base sprite composition that an unmodified pooled
         /// piece will receive. This intentionally excludes counters, colliders
         /// and runtime effects because callers use it only as a transient
@@ -349,6 +368,10 @@ namespace GravityPuzzle.Gameplay.Pieces
                 return;
 
             ConfigureOutline(piece);
+            // Contour rebuilds reset every loop to resting style. Reapply the
+            // piece's selection/targeting style so a held piece keeps its glow
+            // when an unrelated board event refreshes its presentation.
+            piece.ApplyOutlinePresentation();
         }
 
         /// <summary>

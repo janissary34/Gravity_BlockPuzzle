@@ -384,7 +384,8 @@ namespace GravityPuzzle
         private bool TryStartRocketImpact(PuzzlePiece piece)
         {
             int currentUses = RemainingCount;
-            if (piece == null || piece.IsShredderInteractionLocked || launchInProgress || currentUses <= 0)
+            // Frozen pieces stay anchored: the rocket cannot lift ice blocks.
+            if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked || launchInProgress || currentUses <= 0)
                 return false;
 
             // Prevent an in-flight grid presentation tween from continuing to
@@ -433,13 +434,9 @@ namespace GravityPuzzle
             // on a prefab being configured.
             if (!TryRentRocketVisual(out BoosterVisualView rocketView))
             {
-                // Preserve the same ice-impact timing when the optional
-                // visual is unavailable: the ice breaks only once the
-                // entrance travel has reached the targeted piece.
+                // Preserve the same impact timing when the optional visual is
+                // unavailable.
                 yield return new WaitForSeconds(tweenConfig.RocketEntranceDuration);
-                if (piece != null && piece.IsFrozen)
-                    piece.BreakIceForRocket();
-
                 yield return new WaitForSeconds(tweenConfig.RocketTargetPauseDuration);
                 BreakTargetJointsForLaunch(piece);
                 yield return new WaitForSeconds(tweenConfig.RocketLaunchDuration);
@@ -467,14 +464,7 @@ namespace GravityPuzzle
                 yield break;
             }
 
-            // 3. The rocket reached the piece. Ice is broken at this impact
-            // moment, rather than when the player first selected the target.
-            if (piece.IsFrozen)
-                piece.BreakIceForRocket(
-                    GetRocketSortingLayerId(rocket),
-                    rocketSortingOrder + 1);
-
-            // 4. The rocket reached a real occupied cell, not the bounding-box
+            // 3. The rocket reached a real occupied cell, not the bounding-box
             // centre (which can be empty for an L-shaped piece). Parenting at
             // this point makes the carrier feel physically attached to it.
             piece.transform.SetParent(rocket.transform, true);
@@ -619,14 +609,6 @@ namespace GravityPuzzle
                     c.sortingOrder = order;
                 }
             }
-        }
-
-        private static int GetRocketSortingLayerId(GameObject rocket)
-        {
-            SpriteRenderer renderer = rocket != null
-                ? rocket.GetComponentInChildren<SpriteRenderer>(true)
-                : null;
-            return renderer != null ? renderer.sortingLayerID : 0;
         }
 
         private static void SetPieceSortingOrder(PuzzlePiece piece, int order)
