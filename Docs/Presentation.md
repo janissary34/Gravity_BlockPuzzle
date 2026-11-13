@@ -220,6 +220,9 @@ active cell bounds, and never writes gameplay or piece state.
   one-block drop) get no streak. The decision uses
   `PieceGridFallView.PlannedFallDistance`, which is known when the fall starts,
   so no streak flickers in and out; a retarget that lengthens the run can enable it.
+  Motion without a planned target (stacked pieces settling through physics,
+  open freefall, the feed) shows a streak only after the piece has moved that
+  far since it last rested. Once shown, a streak still retracts after landing.
 * Each piece gets one contiguous streak across its full width (minus
   `SideInset` for the art's transparent border), pointing straight back along
   the dominant motion axis. It starts just inside the nearest trailing column

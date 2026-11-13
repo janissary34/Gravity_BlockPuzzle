@@ -41,6 +41,12 @@ namespace GravityPuzzle.Presentation.VFX
             public float[] Times;
             public int Count;
             public int Stamp;
+            // Start of the current uninterrupted motion run and whether its
+            // streak has already been shown (so a landing still retracts).
+            public Vector2 RunOrigin;
+            public Vector2 LastPosition;
+            public bool HasLastPosition;
+            public bool RunVisible;
 
             public void Prepare(int capacity)
             {
@@ -51,6 +57,8 @@ namespace GravityPuzzle.Presentation.VFX
                 }
 
                 Count = 0;
+                HasLastPosition = false;
+                RunVisible = false;
             }
         }
 
@@ -128,31 +136,66 @@ namespace GravityPuzzle.Presentation.VFX
 
                 MotionHistory history = GetHistory(piece);
                 history.Stamp = frameStamp;
-                if (!IsTrailEligible(board, piece))
+                Vector2 position = piece.transform.position;
+                TrackMotionRun(history, position);
+                if (!IsTrailEligible(board, piece, out bool knownLongFall))
                 {
                     history.Count = 0;
+                    history.RunVisible = false;
                     continue;
                 }
 
-                RecordSample(history, piece.transform.position, now);
-                if (TryMeasureTrail(history, now, out float trailLength, out Vector2 motionDirection))
-                    AppendPieceTrail(piece, trailLength, motionDirection);
+                RecordSample(history, position, now);
+                if (!TryMeasureTrail(history, now, out float trailLength, out Vector2 motionDirection))
+                {
+                    history.RunVisible = false;
+                    continue;
+                }
+
+                // Board falls are judged up front by their planned distance.
+                // Other motion (stacked physics settling, feed descent) has no
+                // known target, so its streak waits until the run is long enough.
+                if (!knownLongFall && !history.RunVisible &&
+                    (position - history.RunOrigin).sqrMagnitude <
+                    config.MinimumGridFallDistance * config.MinimumGridFallDistance)
+                    continue;
+
+                history.RunVisible = true;
+                AppendPieceTrail(piece, trailLength, motionDirection);
             }
 
             ReturnStaleHistories();
             UploadMesh();
         }
 
-        private bool IsTrailEligible(PrototypeBoard board, PuzzlePiece piece)
+        /// <summary>
+        /// A motion run starts whenever the piece is found at rest, so the run
+        /// distance measures one uninterrupted movement.
+        /// </summary>
+        private static void TrackMotionRun(MotionHistory history, Vector2 position)
         {
+            if (!history.HasLastPosition ||
+                (position - history.LastPosition).sqrMagnitude <= GeometryEpsilon * GeometryEpsilon)
+                history.RunOrigin = position;
+
+            history.LastPosition = position;
+            history.HasLastPosition = true;
+        }
+
+        private bool IsTrailEligible(PrototypeBoard board, PuzzlePiece piece, out bool knownLongFall)
+        {
+            knownLongFall = false;
             if (board == null || !board.TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
             // Short board falls are known when they start; skip them outright.
             PieceGridFallView fallView = piece.GridFallView;
-            if (fallView != null && fallView.IsAnimating &&
-                fallView.PlannedFallDistance < config.MinimumGridFallDistance)
-                return false;
+            if (fallView != null && fallView.IsAnimating)
+            {
+                if (fallView.PlannedFallDistance < config.MinimumGridFallDistance)
+                    return false;
+                knownLongFall = true;
+            }
 
             switch (model.State)
             {

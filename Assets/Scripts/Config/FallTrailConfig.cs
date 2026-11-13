@@ -15,7 +15,7 @@ namespace GravityPuzzle.Config
         [SerializeField] private bool showWhileDragging;
         [Tooltip("Streaks shorter than this (world units) are hidden, so tiny grid slides do not flicker.")]
         [Min(0f)] [SerializeField] private float minimumVisibleLength = .45f;
-        [Tooltip("Board falls shorter than this distance (world units; 1 = one board block) never show a streak. Decided when the fall starts.")]
+        [Tooltip("Falls shorter than this distance (world units; 1 = one board block) never show a streak. Board falls are decided when they start; other motion (stacked pieces settling, freefall) shows a streak only after travelling this far without stopping.")]
         [Min(0f)] [SerializeField] private float minimumGridFallDistance = 1.5f;
 
         [Header("Shape")]
