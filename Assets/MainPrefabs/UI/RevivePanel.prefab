@@ -674,6 +674,7 @@ MonoBehaviour:
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   entranceStyle: 1
   immediateBackdrop: {fileID: 0}
+  centerScaleExcludedContent: []
   sequentialContent: []
   pulseComponentsAfterEntrance: []
 --- !u!222 &8022179220000791516
@@ -868,6 +869,7 @@ GameObject:
   - component: {fileID: 837821825917330157}
   - component: {fileID: 1640713206656466871}
   - component: {fileID: 8824679287257301735}
+  - component: {fileID: 8831398907197728967}
   m_Layer: 5
   m_Name: Play_on_btn
   m_TagString: Untagged
@@ -1013,6 +1015,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _pulseScale: 0.9
   _duration: 0.9
+--- !u!114 &8831398907197728967
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5429647497064626031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5478182591663243424
 GameObject:
   m_ObjectHideFlags: 0
@@ -1025,6 +1039,7 @@ GameObject:
   - component: {fileID: 7624917828198723527}
   - component: {fileID: 404176717640538588}
   - component: {fileID: 3598866901368586831}
+  - component: {fileID: 320318392882143712}
   m_Layer: 5
   m_Name: CloseButton
   m_TagString: Untagged
@@ -1133,6 +1148,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &320318392882143712
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5478182591663243424}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5517566934963579526
 GameObject:
   m_ObjectHideFlags: 0
@@ -1357,6 +1384,7 @@ GameObject:
   - component: {fileID: 7478974115683014812}
   - component: {fileID: 6219574605826651044}
   - component: {fileID: 582261450128328274}
+  - component: {fileID: 7407942517188541920}
   m_Layer: 5
   m_Name: Live_adds__btn
   m_TagString: Untagged
@@ -1502,6 +1530,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _pulseScale: 0.9
   _duration: 0.9
+--- !u!114 &7407942517188541920
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6957763368984265188}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7041465649364392819
 GameObject:
   m_ObjectHideFlags: 0

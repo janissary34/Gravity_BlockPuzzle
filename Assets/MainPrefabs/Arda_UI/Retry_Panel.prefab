@@ -395,6 +395,7 @@ MonoBehaviour:
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   entranceStyle: 0
   immediateBackdrop: {fileID: 7391648738805075824}
+  centerScaleExcludedContent: []
   sequentialContent: []
   pulseComponentsAfterEntrance:
   - {fileID: 2544177712017689073}
@@ -570,6 +571,7 @@ GameObject:
   - component: {fileID: 106146741822965173}
   - component: {fileID: 2223635934581424051}
   - component: {fileID: 3452975234891695883}
+  - component: {fileID: 8779417875878776404}
   m_Layer: 5
   m_Name: Retry_Panel_CloseButton
   m_TagString: Untagged
@@ -678,6 +680,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8779417875878776404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7012787445951103502}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7232462583594040957
 GameObject:
   m_ObjectHideFlags: 0
@@ -1036,6 +1050,7 @@ GameObject:
   - component: {fileID: 2147589291751136633}
   - component: {fileID: 2949680151601181881}
   - component: {fileID: 3937259223511125599}
+  - component: {fileID: 5986446682112877550}
   m_Layer: 5
   m_Name: retry_btn
   m_TagString: Untagged
@@ -1167,3 +1182,15 @@ MonoBehaviour:
   maxRotationAngle: 5
   rotationVibrato: 8
   ignoreTimeScale: 1
+--- !u!114 &5986446682112877550
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8888504785235834769}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

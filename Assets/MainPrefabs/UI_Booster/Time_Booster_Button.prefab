@@ -468,6 +468,7 @@ GameObject:
   - component: {fileID: 1547485982583232998}
   - component: {fileID: 6754513735071651958}
   - component: {fileID: 6512677557712557368}
+  - component: {fileID: 9120490172071264818}
   m_Layer: 5
   m_Name: Time_Booster_Button(Enable)
   m_TagString: Untagged
@@ -615,9 +616,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2f1400596db24156a5edc4760672461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initialCount: 9
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
+  buttonCanvasGroup: {fileID: 0}
+  lockRoot: {fileID: 0}
+  lockImage: {fileID: 0}
+  unlockLevelTmpText: {fileID: 0}
+  unlockLevelUiText: {fileID: 0}
+  unlockLevelFormat: Level {0}
+  countRoot: {fileID: 0}
+  selectionGlow: {fileID: 0}
   onBoosterClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -725,6 +733,18 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &9120490172071264818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5592688517786828910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6820492148733093303
 GameObject:
   m_ObjectHideFlags: 0
@@ -741,6 +761,7 @@ GameObject:
   - component: {fileID: 1832572822291872815}
   - component: {fileID: 6837486030145292219}
   - component: {fileID: 8709480879230231134}
+  - component: {fileID: 8652440427877578306}
   m_Layer: 5
   m_Name: Time_Booster_Button
   m_TagString: Untagged
@@ -856,9 +877,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2f1400596db24156a5edc4760672461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initialCount: 9
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
+  buttonCanvasGroup: {fileID: 0}
+  lockRoot: {fileID: 0}
+  lockImage: {fileID: 0}
+  unlockLevelTmpText: {fileID: 0}
+  unlockLevelUiText: {fileID: 0}
+  unlockLevelFormat: Level {0}
+  countRoot: {fileID: 0}
+  selectionGlow: {fileID: 0}
   onBoosterClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -966,6 +994,18 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &8652440427877578306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6820492148733093303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7019175187585455165
 GameObject:
   m_ObjectHideFlags: 0
@@ -1058,6 +1098,7 @@ GameObject:
   - component: {fileID: 4669455896029323135}
   - component: {fileID: 7733501489883852849}
   - component: {fileID: 4572298823339766968}
+  - component: {fileID: 6263555524429078313}
   m_Layer: 5
   m_Name: Time_Booster_Button(Disable)
   m_TagString: Untagged
@@ -1205,9 +1246,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2f1400596db24156a5edc4760672461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initialCount: 9
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
+  buttonCanvasGroup: {fileID: 0}
+  lockRoot: {fileID: 0}
+  lockImage: {fileID: 0}
+  unlockLevelTmpText: {fileID: 0}
+  unlockLevelUiText: {fileID: 0}
+  unlockLevelFormat: Level {0}
+  countRoot: {fileID: 0}
+  selectionGlow: {fileID: 0}
   onBoosterClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -1315,6 +1363,18 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &6263555524429078313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7380649028161219061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &8270896725483104970
 GameObject:
   m_ObjectHideFlags: 0

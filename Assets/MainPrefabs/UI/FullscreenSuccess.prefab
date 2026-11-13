@@ -321,6 +321,7 @@ GameObject:
   - component: {fileID: 2624119422903923941}
   - component: {fileID: 9134506171252306856}
   - component: {fileID: 2411088347097539524}
+  - component: {fileID: 8282067697836940778}
   m_Layer: 5
   m_Name: Claim_btn
   m_TagString: Untagged
@@ -452,6 +453,18 @@ MonoBehaviour:
   maxRotationAngle: 2.5
   rotationVibrato: 2
   ignoreTimeScale: 1
+--- !u!114 &8282067697836940778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 913855137128765352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1900661072560204830
 GameObject:
   m_ObjectHideFlags: 0
@@ -841,6 +854,7 @@ GameObject:
   - component: {fileID: 8245409418945395345}
   - component: {fileID: 4225579313229644725}
   - component: {fileID: 5879698448775260358}
+  - component: {fileID: 885572043237257036}
   m_Layer: 5
   m_Name: x2_add_btn
   m_TagString: Untagged
@@ -986,6 +1000,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _pulseScale: 1.01
   _duration: 1
+--- !u!114 &885572043237257036
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3645661166991961112}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &3814182223282718900
 GameObject:
   m_ObjectHideFlags: 0

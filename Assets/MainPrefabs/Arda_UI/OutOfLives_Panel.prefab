@@ -60,6 +60,7 @@ MonoBehaviour:
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   entranceStyle: 0
   immediateBackdrop: {fileID: 6482376326402978470}
+  centerScaleExcludedContent: []
   sequentialContent: []
   pulseComponentsAfterEntrance: []
 --- !u!1 &1625010448804310234
@@ -344,6 +345,7 @@ GameObject:
   - component: {fileID: 7605502178333245031}
   - component: {fileID: 7627698131629751976}
   - component: {fileID: 2155021498048305534}
+  - component: {fileID: 6945736614411808571}
   m_Layer: 5
   m_Name: Retry_Panel_CloseButton
   m_TagString: Untagged
@@ -452,6 +454,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6945736614411808571
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2148492885821839529}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &3005385396718844253
 GameObject:
   m_ObjectHideFlags: 0
@@ -541,6 +555,7 @@ GameObject:
   - component: {fileID: 5723706969863041412}
   - component: {fileID: 6073433030955361274}
   - component: {fileID: 8316710404163332852}
+  - component: {fileID: 951730679862156517}
   m_Layer: 5
   m_Name: Buy_live_btn
   m_TagString: Untagged
@@ -687,6 +702,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _pulseScale: 0.9
   _duration: 0.9
+--- !u!114 &951730679862156517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3024653812057093711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &3501019083158211149
 GameObject:
   m_ObjectHideFlags: 0
@@ -1154,6 +1181,7 @@ GameObject:
   - component: {fileID: 8605466059978129244}
   - component: {fileID: 4061431494188305808}
   - component: {fileID: 7196321767836609661}
+  - component: {fileID: 5159383259937108250}
   m_Layer: 5
   m_Name: Live_adds__btn
   m_TagString: Untagged
@@ -1300,6 +1328,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _pulseScale: 0.9
   _duration: 0.9
+--- !u!114 &5159383259937108250
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7352310650293976183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7421394250121609686
 GameObject:
   m_ObjectHideFlags: 0

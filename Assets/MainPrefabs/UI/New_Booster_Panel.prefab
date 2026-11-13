@@ -845,6 +845,7 @@ GameObject:
   - component: {fileID: 3792512351821233517}
   - component: {fileID: 1681367442407098241}
   - component: {fileID: 2668268277507435404}
+  - component: {fileID: 5014427406346574114}
   m_Layer: 5
   m_Name: ContinueButton
   m_TagString: Untagged
@@ -954,6 +955,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5014427406346574114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1613428751207252235}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1955009763777235679
 GameObject:
   m_ObjectHideFlags: 0
@@ -1171,6 +1184,7 @@ GameObject:
   - component: {fileID: 7538833618599495334}
   - component: {fileID: 243565329530768397}
   - component: {fileID: 3020213681073067186}
+  - component: {fileID: 9084004006427111593}
   m_Layer: 5
   m_Name: CloseButton
   m_TagString: Untagged
@@ -1279,6 +1293,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &9084004006427111593
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3595869160935010024}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &3751454479322506213
 GameObject:
   m_ObjectHideFlags: 0
@@ -2198,6 +2224,7 @@ MonoBehaviour:
   closeButton: {fileID: 3020213681073067186}
   continueButton: {fileID: 2668268277507435404}
   overlayRoot: {fileID: 6714560665763397745}
+  boosterContentRoot: {fileID: 0}
   hudObjectsToHide:
   - {fileID: 0}
   - {fileID: 0}

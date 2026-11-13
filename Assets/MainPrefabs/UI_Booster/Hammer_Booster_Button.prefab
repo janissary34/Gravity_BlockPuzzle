@@ -528,6 +528,7 @@ GameObject:
   - component: {fileID: 1964673020109224195}
   - component: {fileID: 1457221921970226446}
   - component: {fileID: 5394106191592027323}
+  - component: {fileID: 3580007670920053541}
   m_Layer: 5
   m_Name: Hammer_Booster_Button(Enable)
   m_TagString: Untagged
@@ -820,6 +821,18 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &3580007670920053541
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6766657809601002564}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6772730172519907570
 GameObject:
   m_ObjectHideFlags: 0
@@ -911,6 +924,7 @@ GameObject:
   - component: {fileID: 8699467379054502}
   - component: {fileID: 1474577781694981454}
   - component: {fileID: 374675080675048542}
+  - component: {fileID: 7037859822973881951}
   m_Layer: 5
   m_Name: Hammer_Booster_Button
   m_TagString: Untagged
@@ -1170,6 +1184,18 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &7037859822973881951
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6957382919499924901}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7468785735432730103
 GameObject:
   m_ObjectHideFlags: 0
@@ -1471,6 +1497,7 @@ GameObject:
   - component: {fileID: 1092690732885237822}
   - component: {fileID: 9168692451176863063}
   - component: {fileID: 3410269622546559200}
+  - component: {fileID: 8307699400242962518}
   m_Layer: 5
   m_Name: Hammer_Booster_Button(Disable)
   m_TagString: Untagged
@@ -1763,6 +1790,18 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &8307699400242962518
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8982850952443203832}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &771343113949917783
 PrefabInstance:
   m_ObjectHideFlags: 0

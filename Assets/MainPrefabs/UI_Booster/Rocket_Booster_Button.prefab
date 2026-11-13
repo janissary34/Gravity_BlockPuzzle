@@ -467,6 +467,7 @@ GameObject:
   - component: {fileID: 821964423115125620}
   - component: {fileID: 9139097655671340907}
   - component: {fileID: 6874071801883738601}
+  - component: {fileID: 665558031706940040}
   m_Layer: 5
   m_Name: Rocket_Booster_Button(Enable)
   m_TagString: Untagged
@@ -614,9 +615,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2f1400596db24156a5edc4760672461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initialCount: 3
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
+  buttonCanvasGroup: {fileID: 0}
+  lockRoot: {fileID: 0}
+  lockImage: {fileID: 0}
+  unlockLevelTmpText: {fileID: 0}
+  unlockLevelUiText: {fileID: 0}
+  unlockLevelFormat: Level {0}
+  countRoot: {fileID: 0}
+  selectionGlow: {fileID: 0}
   onBoosterClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -635,6 +643,7 @@ MonoBehaviour:
   boosterButtonRef: {fileID: 821964423115125620}
   boosterButton: {fileID: 3725920684580369741}
   buttonCanvasGroup: {fileID: 6874071801883738601}
+  selectionGlow: {fileID: 0}
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
   initialCount: 9
@@ -655,6 +664,18 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &665558031706940040
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2841741108915978630}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &4414259260038583845
 GameObject:
   m_ObjectHideFlags: 0
@@ -746,6 +767,7 @@ GameObject:
   - component: {fileID: 4825691057261913314}
   - component: {fileID: 8201114813977898633}
   - component: {fileID: 7551495038175468201}
+  - component: {fileID: 1170311802480997194}
   m_Layer: 5
   m_Name: Rocket_Booster_Button
   m_TagString: Untagged
@@ -861,9 +883,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2f1400596db24156a5edc4760672461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initialCount: 3
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
+  buttonCanvasGroup: {fileID: 0}
+  lockRoot: {fileID: 0}
+  lockImage: {fileID: 0}
+  unlockLevelTmpText: {fileID: 0}
+  unlockLevelUiText: {fileID: 0}
+  unlockLevelFormat: Level {0}
+  countRoot: {fileID: 0}
+  selectionGlow: {fileID: 0}
   onBoosterClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -882,6 +911,7 @@ MonoBehaviour:
   boosterButtonRef: {fileID: 4825691057261913314}
   boosterButton: {fileID: 5817890513203303818}
   buttonCanvasGroup: {fileID: 7551495038175468201}
+  selectionGlow: {fileID: 0}
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
   initialCount: 9
@@ -902,6 +932,18 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &1170311802480997194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4599625161556333484}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5374915991083073683
 GameObject:
   m_ObjectHideFlags: 0
@@ -1127,6 +1169,7 @@ GameObject:
   - component: {fileID: 2557951617717439228}
   - component: {fileID: 8116950841627693107}
   - component: {fileID: 2917428424004525736}
+  - component: {fileID: 1678814734493114715}
   m_Layer: 5
   m_Name: Rocket_Booster_Button (Disable)
   m_TagString: Untagged
@@ -1302,6 +1345,7 @@ MonoBehaviour:
   boosterButtonRef: {fileID: 2557951617717439228}
   boosterButton: {fileID: 8560800216404774946}
   buttonCanvasGroup: {fileID: 2917428424004525736}
+  selectionGlow: {fileID: 0}
   countTmpText: {fileID: 0}
   countUiText: {fileID: 0}
   initialCount: 9
@@ -1322,6 +1366,18 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &1678814734493114715
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7975405868047274103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &8683396046814041129
 GameObject:
   m_ObjectHideFlags: 0

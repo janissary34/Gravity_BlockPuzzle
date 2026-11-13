@@ -87,6 +87,7 @@ GameObject:
   - component: {fileID: 630895425733511341}
   - component: {fileID: 5373961024800728631}
   - component: {fileID: 7163062339074127198}
+  - component: {fileID: 6674614342015379596}
   m_Layer: 5
   m_Name: MusicToggle
   m_TagString: Untagged
@@ -195,6 +196,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6674614342015379596
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1119142949269512707}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1317854274011672272
 GameObject:
   m_ObjectHideFlags: 0
@@ -208,6 +221,7 @@ GameObject:
   - component: {fileID: 6166417558958901605}
   - component: {fileID: 8563306925551023955}
   - component: {fileID: 136938699761750397}
+  - component: {fileID: 8353577213663088974}
   m_Layer: 5
   m_Name: Resume_btn
   m_TagString: Untagged
@@ -339,6 +353,18 @@ MonoBehaviour:
   maxRotationAngle: 5
   rotationVibrato: 8
   ignoreTimeScale: 1
+--- !u!114 &8353577213663088974
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1317854274011672272}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1709304587099964008
 GameObject:
   m_ObjectHideFlags: 0
@@ -598,6 +624,7 @@ GameObject:
   - component: {fileID: 6948374092850420460}
   - component: {fileID: 972214862990995819}
   - component: {fileID: 6711710137103666877}
+  - component: {fileID: 5300528707239964215}
   m_Layer: 5
   m_Name: SoundToggle
   m_TagString: Untagged
@@ -706,6 +733,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5300528707239964215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4312546186044720321}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &4338693872703280673
 GameObject:
   m_ObjectHideFlags: 0
@@ -1106,6 +1145,7 @@ GameObject:
   - component: {fileID: 7745262034569678434}
   - component: {fileID: 6769387438173926971}
   - component: {fileID: 5889905576050350817}
+  - component: {fileID: 687070679533200058}
   m_Layer: 5
   m_Name: CloseButton
   m_TagString: Untagged
@@ -1214,6 +1254,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &687070679533200058
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5194624068045504685}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5247152280019864339
 GameObject:
   m_ObjectHideFlags: 0
@@ -1315,6 +1367,8 @@ MonoBehaviour:
   vibrationToggleImage: {fileID: 4750021791689652723}
   toggleOffSprite: {fileID: -722621198, guid: e6806e9b571d641229bcd51e248b7f2a, type: 3}
   toggleOnSprite: {fileID: 399107936, guid: e6806e9b571d641229bcd51e248b7f2a, type: 3}
+  soundDisabledIndicator: {fileID: 0}
+  vibrationDisabledIndicator: {fileID: 0}
   mainMenuSceneName: Main_Menu
 --- !u!114 &1989095928207794864
 MonoBehaviour:
@@ -1331,6 +1385,7 @@ MonoBehaviour:
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   entranceStyle: 0
   immediateBackdrop: {fileID: 0}
+  centerScaleExcludedContent: []
   sequentialContent: []
   pulseComponentsAfterEntrance: []
 --- !u!1 &6523539453859137148
@@ -1554,6 +1609,7 @@ GameObject:
   - component: {fileID: 665598743240463487}
   - component: {fileID: 4750021791689652723}
   - component: {fileID: 5558114578675379893}
+  - component: {fileID: 6280005426740555436}
   m_Layer: 5
   m_Name: VibrationToggle
   m_TagString: Untagged
@@ -1662,6 +1718,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6280005426740555436
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6706640644434518151}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6951051236197572929
 GameObject:
   m_ObjectHideFlags: 0
@@ -2135,6 +2203,7 @@ GameObject:
   - component: {fileID: 652366203699243674}
   - component: {fileID: 1845932951898936676}
   - component: {fileID: 3542922437838971882}
+  - component: {fileID: 1664787759451709412}
   m_Layer: 5
   m_Name: Quit_btn
   m_TagString: Untagged
@@ -2266,3 +2335,15 @@ MonoBehaviour:
   maxRotationAngle: 5
   rotationVibrato: 8
   ignoreTimeScale: 1
+--- !u!114 &1664787759451709412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9159548810683260027}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

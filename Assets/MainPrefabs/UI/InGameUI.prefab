@@ -4982,6 +4982,7 @@ GameObject:
   - component: {fileID: 2557387867774818186}
   - component: {fileID: 741087604953664887}
   - component: {fileID: 6796905749080738115}
+  - component: {fileID: 1991288060598176035}
   m_Layer: 5
   m_Name: Buy_live_btn
   m_TagString: Untagged
@@ -5128,6 +5129,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _pulseScale: 0.9
   _duration: 0.9
+--- !u!114 &1991288060598176035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 503327618302423417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &508326536587552208
 GameObject:
   m_ObjectHideFlags: 0
@@ -5382,6 +5395,7 @@ GameObject:
   - component: {fileID: 1395905387747932423}
   - component: {fileID: 4322896677629369945}
   - component: {fileID: 1144742401892494620}
+  - component: {fileID: 3845561432847572326}
   m_Layer: 5
   m_Name: Retry_Panel_CloseButton
   m_TagString: Untagged
@@ -5490,6 +5504,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3845561432847572326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 550807937316887466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &764921348916270000
 GameObject:
   m_ObjectHideFlags: 0
@@ -5503,6 +5529,7 @@ GameObject:
   - component: {fileID: 764921348916270004}
   - component: {fileID: 764921348916270005}
   - component: {fileID: 764921348916270003}
+  - component: {fileID: 7742107365060287976}
   m_Layer: 5
   m_Name: Debug_Next_Level_Button
   m_TagString: Untagged
@@ -5626,6 +5653,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &7742107365060287976
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764921348916270000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &764921348916270006
 GameObject:
   m_ObjectHideFlags: 0
@@ -17918,6 +17957,7 @@ GameObject:
   - component: {fileID: 6914274734536928503}
   - component: {fileID: 7623743798233662310}
   - component: {fileID: 7226014346923381288}
+  - component: {fileID: 4393584659586072081}
   m_Layer: 5
   m_Name: Live_adds__btn
   m_TagString: Untagged
@@ -18064,6 +18104,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _pulseScale: 0.9
   _duration: 0.9
+--- !u!114 &4393584659586072081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5459517418146411300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5489865998539496199
 GameObject:
   m_ObjectHideFlags: 0
@@ -33124,6 +33176,7 @@ GameObject:
   - component: {fileID: 6888851916132367585}
   - component: {fileID: 5023410032588313301}
   - component: {fileID: 3920571645269883067}
+  - component: {fileID: 3249660987787052985}
   m_Layer: 5
   m_Name: Retry_Panel_CloseButton
   m_TagString: Untagged
@@ -33232,6 +33285,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3249660987787052985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6422868711773176274}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6488818742213695063
 GameObject:
   m_ObjectHideFlags: 0
@@ -33684,6 +33749,7 @@ GameObject:
   - component: {fileID: 5273531126065687602}
   - component: {fileID: 4616609892553766876}
   - component: {fileID: 8890367270645621583}
+  - component: {fileID: 8395772524425833882}
   m_Layer: 5
   m_Name: retry_btn
   m_TagString: Untagged
@@ -33815,6 +33881,18 @@ MonoBehaviour:
   maxRotationAngle: 5
   rotationVibrato: 8
   ignoreTimeScale: 1
+--- !u!114 &8395772524425833882
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7431871829726766574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7435426784271782358
 GameObject:
   m_ObjectHideFlags: 0

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8702223444187086882}
   - component: {fileID: 9206735675170889440}
   - component: {fileID: 8066693467148411700}
+  - component: {fileID: 2197187698692358049}
   m_Layer: 5
   m_Name: try_again_btn
   m_TagString: Untagged
@@ -121,6 +122,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2197187698692358049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200030528257981045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &697271875196847888
 GameObject:
   m_ObjectHideFlags: 0
@@ -217,6 +230,7 @@ MonoBehaviour:
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   entranceStyle: 2
   immediateBackdrop: {fileID: 5346869871438003173}
+  centerScaleExcludedContent: []
   sequentialContent:
   - {fileID: 7597928610162245004}
   - {fileID: 3198833924997917528}

@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 2403785017219519807}
   - component: {fileID: 8240760473229738664}
   - component: {fileID: 6050767240228289682}
+  - component: {fileID: 3912706744754948373}
   m_Layer: 5
   m_Name: settings_icon
   m_TagString: Untagged
@@ -162,6 +163,18 @@ MonoBehaviour:
   musicButton: {fileID: 0}
   soundSources: []
   musicSources: []
+--- !u!114 &3912706744754948373
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2541572361357947752}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2817262597668863938
 GameObject:
   m_ObjectHideFlags: 0

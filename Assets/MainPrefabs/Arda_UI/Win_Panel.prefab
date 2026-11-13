@@ -726,6 +726,7 @@ GameObject:
   - component: {fileID: 1037173694835052758}
   - component: {fileID: 8437975713090216320}
   - component: {fileID: 4823038739665132485}
+  - component: {fileID: 7136944983145903679}
   m_Layer: 5
   m_Name: Next_btn
   m_TagString: Untagged
@@ -857,6 +858,18 @@ MonoBehaviour:
   maxRotationAngle: 5
   rotationVibrato: 8
   ignoreTimeScale: 1
+--- !u!114 &7136944983145903679
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4534593588042660060}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5287229316601318128
 GameObject:
   m_ObjectHideFlags: 0
@@ -1207,6 +1220,7 @@ MonoBehaviour:
   tweenConfig: {fileID: 11400000, guid: e6f747b5f2da4c3485355c0610d36f3b, type: 2}
   entranceStyle: 0
   immediateBackdrop: {fileID: 5351485224286631397}
+  centerScaleExcludedContent: []
   sequentialContent: []
   pulseComponentsAfterEntrance:
   - {fileID: 8925035381504082753}
@@ -1299,6 +1313,7 @@ GameObject:
   - component: {fileID: 5172923213515378999}
   - component: {fileID: 23645010235719614}
   - component: {fileID: 8925035381504082753}
+  - component: {fileID: 1046492244382673030}
   m_Layer: 5
   m_Name: x2_add_btn
   m_TagString: Untagged
@@ -1445,3 +1460,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _pulseScale: 1.01
   _duration: 1
+--- !u!114 &1046492244382673030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9058055052926517828}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

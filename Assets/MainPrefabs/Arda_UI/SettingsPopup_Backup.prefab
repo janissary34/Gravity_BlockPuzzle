@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 3272593507201346716}
   - component: {fileID: 6347360498181389233}
   - component: {fileID: 3662092377559617495}
+  - component: {fileID: 7359589537708265033}
   m_Layer: 5
   m_Name: SoundToggle
   m_TagString: Untagged
@@ -141,6 +142,18 @@ MonoBehaviour:
   m_FlexibleWidth: 0
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &7359589537708265033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 334400339791654113}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &698667762498909972
 GameObject:
   m_ObjectHideFlags: 0
@@ -335,6 +348,7 @@ GameObject:
   - component: {fileID: 1571858589089684034}
   - component: {fileID: 6478000152873202700}
   - component: {fileID: 4161868095804188107}
+  - component: {fileID: 5399599934062235290}
   m_Layer: 5
   m_Name: CloseButton
   m_TagString: Untagged
@@ -443,6 +457,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5399599934062235290
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1815023782035665270}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2234098427969720249
 GameObject:
   m_ObjectHideFlags: 0
@@ -685,6 +711,8 @@ MonoBehaviour:
   vibrationToggleImage: {fileID: 1061805207879641653}
   toggleOffSprite: {fileID: -722621198, guid: e6806e9b571d641229bcd51e248b7f2a, type: 3}
   toggleOnSprite: {fileID: 399107936, guid: e6806e9b571d641229bcd51e248b7f2a, type: 3}
+  soundDisabledIndicator: {fileID: 0}
+  vibrationDisabledIndicator: {fileID: 0}
   mainMenuSceneName: Main_Menu
 --- !u!1 &3707754085070944765
 GameObject:
@@ -1283,6 +1311,7 @@ GameObject:
   - component: {fileID: 3750337048446349685}
   - component: {fileID: 1061805207879641653}
   - component: {fileID: 1607570305511853321}
+  - component: {fileID: 5433700628341856310}
   m_Layer: 5
   m_Name: VibrationToggle
   m_TagString: Untagged
@@ -1391,6 +1420,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5433700628341856310
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7069212477933764310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c78ad856b0a240468b10eb4b4c616733, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7206243113762746535
 GameObject:
   m_ObjectHideFlags: 0
