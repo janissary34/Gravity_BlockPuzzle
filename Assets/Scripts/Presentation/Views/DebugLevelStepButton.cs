@@ -5,13 +5,14 @@ using UnityEngine.UI;
 namespace GravityPuzzle.Presentation.Views
 {
     /// <summary>
-    /// Build-time test control that advances the active campaign level without
-    /// completing the board or granting its completion rewards.
+    /// Build-time test control that moves the active campaign to the next or
+    /// previous level without completing the board or granting its rewards.
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class DebugNextLevelButton : MonoBehaviour
+    public sealed class DebugLevelStepButton : MonoBehaviour
     {
         [SerializeField] private Button button;
+        [SerializeField] private GravityLevelRuntime.LevelStep step = GravityLevelRuntime.LevelStep.Next;
         private bool transitionStarted;
 
         private void Awake()
@@ -21,7 +22,7 @@ namespace GravityPuzzle.Presentation.Views
 
             if (button == null)
             {
-                Debug.LogWarning("[DebugNextLevel] Button reference is missing; control is disabled.", this);
+                Debug.LogWarning("[DebugLevelStep] Button reference is missing; control is disabled.", this);
                 enabled = false;
                 return;
             }
@@ -50,7 +51,7 @@ namespace GravityPuzzle.Presentation.Views
             if (button == null)
                 return;
 
-            button.onClick.AddListener(AdvanceToNextLevel);
+            button.onClick.AddListener(StepLevel);
             RefreshAvailability();
         }
 
@@ -68,10 +69,10 @@ namespace GravityPuzzle.Presentation.Views
         private void OnDisable()
         {
             if (button != null)
-                button.onClick.RemoveListener(AdvanceToNextLevel);
+                button.onClick.RemoveListener(StepLevel);
         }
 
-        private void AdvanceToNextLevel()
+        private void StepLevel()
         {
             if (transitionStarted)
                 return;
@@ -83,7 +84,7 @@ namespace GravityPuzzle.Presentation.Views
             PrototypeBoard activeBoard = PrototypeBoard.Active;
             if (activeBoard != null)
             {
-                if (!activeBoard.TryAdvanceToNextLevelForDebug())
+                if (!activeBoard.TryStepLevelForDebug(step))
                 {
                     transitionStarted = false;
                     RefreshAvailability();
@@ -92,7 +93,7 @@ namespace GravityPuzzle.Presentation.Views
             }
             else
             {
-                if (!GravityLevelRuntime.TryAdvanceToNextLevel())
+                if (!GravityLevelRuntime.TryStepLevel(step))
                 {
                     transitionStarted = false;
                     RefreshAvailability();

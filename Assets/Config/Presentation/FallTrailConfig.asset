@@ -15,6 +15,7 @@ MonoBehaviour:
   trailEnabled: 1
   showWhileDragging: 0
   minimumVisibleLength: 0.45
+  minimumGridFallDistance: 1.5
   trailDuration: 0.1
   maximumLength: 1.125
   sideInset: 0.075

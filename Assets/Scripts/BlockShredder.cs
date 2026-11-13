@@ -277,7 +277,11 @@ namespace GravityPuzzle
                 return;
 
 
-            float targetFreefallSpeed = shredderConfig.PhysicsFreefallEntrySpeed > 0f ? shredderConfig.PhysicsFreefallEntrySpeed : 8f;
+            // Accelerate from the current descent speed toward terminal speed.
+            float currentDescentSpeed = Mathf.Max(shredderConfig.PhysicsFreefallEntrySpeed, -body.velocity.y);
+            float targetFreefallSpeed = Mathf.Min(
+                shredderConfig.PhysicsFreefallMaxSpeed,
+                currentDescentSpeed + shredderConfig.PhysicsFreefallAcceleration * Time.fixedDeltaTime);
 
             if (activeFeedPieces.Count == 0 && freefallIndex == 0)
             {
@@ -482,7 +486,10 @@ namespace GravityPuzzle
             // The exact grid-exit pose becomes the initial Dynamic pose and
             // Rigidbody2D is the sole movement owner until the cutter seam.
             Physics2D.SyncTransforms();
-            piece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, shredderConfig);
+            // Continue the board fall's momentum when the piece was captured
+            // in the same frame its grid fall arrived at the map exit.
+            float handoffSpeed = piece.GridFallView != null ? piece.GridFallView.ArrivalSpeedThisFrame : 0f;
+            piece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, shredderConfig, handoffSpeed);
             activeFreefallPieces.Add(new ExitHandoff
             {
                 Piece = piece,

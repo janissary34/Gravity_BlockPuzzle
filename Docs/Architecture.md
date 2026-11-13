@@ -5,7 +5,7 @@
 * `PrototypeBootstrap` is the scene composition root.
 * The board grid/matrix is authoritative for occupancy and gameplay rules.
 * Piece transforms, colliders, sprites, VFX, and tweens represent gameplay state; they do not define it.
-* Haptics are presentation-only. `HapticFeedbackConfig` owns cue tuning and per-cue gates; `RuntimePieceFactoryBootstrap` configures the centralized runtime adapter. Gameplay owners notify it only after a successful authoritative outcome. Shredder feedback begins at real cutter contact, aggregates concurrent feeds by their least feed progress, and always stops on cancellation, app pause, preference disable, or scene teardown.
+* Haptics are presentation-only. `HapticFeedbackConfig` owns cue tuning and per-cue gates; `RuntimePieceFactoryBootstrap` configures the centralized runtime adapter. Gameplay owners notify it only after a successful authoritative outcome. Shredder feedback begins at real cutter contact, aggregates concurrent feeds by their least feed progress, and always stops on cancellation, app pause, preference disable, or scene teardown. `DeviceHaptics` is the only platform backend: Android uses `Vibrator` waveforms (VIBRATE permission merged from `Plugins/Android/GravityHaptics.androidlib`); iOS uses Core Haptics through `Plugins/iOS/GravityHaptics.mm` (CoreHaptics weak-linked and ARC enforced by `Editor/IosHapticsPostProcessBuild`). Android has a single vibrator channel, so a one-shot interrupts the shredder loop; iOS layers players, so the loop keeps running.
 * Runtime piece roots come from the typed `BlockPiece` pool and must fully reset presentation, physics, subscriptions, and temporary state when returned.
 * `GravityLevelDefinition` and the associated ScriptableObject configs own authored level and tuning data. Mutable session state belongs to runtime objects. Each level also owns its authored difficulty label (`Normal`, `Hard`, or `Very Hard`); this is presentation metadata, with `Normal` reserved for the future Easy UI indicator. Level definitions own viewport coverage; `BoardPresentationConfig` owns the shared board-top viewport inset, which runtime applies through the gameplay camera when it builds every level.
 
@@ -68,7 +68,12 @@ straight drop; any drift is restored and logged once). No grid reservation,
 queue, drag, or targeting logic owns it after that release.
 
 Grid drag, gravity presentation, and release snap are transform-owned by
-`PieceGridFallView`; they do not tween the non-simulated grid Rigidbody2D. When
+`PieceGridFallView`; they do not tween the non-simulated grid Rigidbody2D. Gravity
+falls accelerate from a start speed to a terminal speed (`TweenConfig` grid-fall
+values); a retarget keeps the current speed. A piece captured in the same frame its
+fall arrives enters `OpenFreefall` with that arrival speed (never below
+`ShredderConfig.PhysicsFreefallEntrySpeed`) and keeps accelerating to
+`PhysicsFreefallMaxSpeed`, so the drop has no visible speed reset. When
 the presentation completes, `PuzzlePiece.SetGridPresentationPosition` synchronizes
 the dormant body pose with the committed grid transform before any later handoff.
 

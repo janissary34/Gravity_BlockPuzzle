@@ -66,6 +66,10 @@ namespace GravityPuzzle.Config
         [Min(0)] [SerializeField] private int resultCooldownMilliseconds = 0;
         [SerializeField] private int resultPriority = 3;
 
+        [Header("iOS Core Haptics")]
+        [Tooltip("Core Haptics sharpness for every cue: 0 = soft and round, 1 = crisp and clicky. Android has no equivalent.")]
+        [Range(0f, 1f)] [SerializeField] private float iosSharpness = .5f;
+
         public Pulse PieceSelected => pieceSelected;
         public Pulse InvalidDrop => invalidDrop;
         public Pulse ValidDrop => validDrop;
@@ -92,5 +96,6 @@ namespace GravityPuzzle.Config
         public Pattern LevelFailed => levelFailed;
         public int ResultCooldownMilliseconds => resultCooldownMilliseconds;
         public int ResultPriority => resultPriority;
+        public float IosSharpness => iosSharpness;
     }
 }

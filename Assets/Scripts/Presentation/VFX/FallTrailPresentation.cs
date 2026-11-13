@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Pieces;
+using GravityPuzzle.Presentation.Views;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -145,6 +146,12 @@ namespace GravityPuzzle.Presentation.VFX
         private bool IsTrailEligible(PrototypeBoard board, PuzzlePiece piece)
         {
             if (board == null || !board.TryGetPieceModel(piece, out PieceModel model))
+                return false;
+
+            // Short board falls are known when they start; skip them outright.
+            PieceGridFallView fallView = piece.GridFallView;
+            if (fallView != null && fallView.IsAnimating &&
+                fallView.PlannedFallDistance < config.MinimumGridFallDistance)
                 return false;
 
             switch (model.State)

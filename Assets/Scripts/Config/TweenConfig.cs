@@ -10,15 +10,15 @@ namespace GravityPuzzle.Config
         [Min(1)] [SerializeField] private int sequenceCapacity = 125;
         [SerializeField] private float pieceMoveDuration = .12f;
         [SerializeField] private Ease pieceMoveEase = Ease.OutQuad;
-        [SerializeField] private Ease gridFallEase = Ease.Linear;
-        [Tooltip("Speed (world units/second) of a piece falling inside the board under gravity.")]
-        [Min(.001f)] [SerializeField] private float gridFallUnitsPerSecond = 8f;
-        [Min(.001f)] [SerializeField] private float gridFallMinimumDuration = .08f;
-        [Min(.001f)] [SerializeField] private float gridFallMaximumDuration = 2f;
-        [Tooltip("Speed (world units/second) of a piece falling inside the board after it is released or space opens below it.")]
-        [Min(.001f)] [SerializeField] private float gridReleaseUnitsPerSecond = 8f;
-        [Min(.001f)] [SerializeField] private float gridReleaseMinimumDuration = .06f;
-        [Min(.001f)] [SerializeField] private float gridReleaseMaximumDuration = 2f;
+        [Header("Grid Fall")]
+        [Tooltip("Speed (world units/second) at which a resting piece starts falling inside the board under gravity.")]
+        [Min(0f)] [SerializeField] private float gridFallStartUnitsPerSecond = 6f;
+        [Tooltip("Speed (world units/second) at which a piece starts falling after it is released or space opens below it.")]
+        [Min(0f)] [SerializeField] private float gridReleaseStartUnitsPerSecond = 6f;
+        [Tooltip("Downward acceleration (world units/second^2) applied while a piece falls inside the board.")]
+        [Min(.001f)] [SerializeField] private float gridFallAccelerationUnitsPerSecondSquared = 60f;
+        [Tooltip("Terminal speed (world units/second) of a piece falling inside the board.")]
+        [Min(.001f)] [SerializeField] private float gridFallMaxUnitsPerSecond = 25f;
         [SerializeField] private float shredDuration = .3f;
         [SerializeField] private Ease shredEase = Ease.InQuad;
 
@@ -158,22 +158,44 @@ namespace GravityPuzzle.Config
         public int SequenceCapacity => sequenceCapacity;
         public float PieceMoveDuration => pieceMoveDuration;
         public Ease PieceMoveEase => pieceMoveEase;
-        public Ease GridFallEase => gridFallEase;
-        public float GetGridFallDuration(float distance)
+        public float GridFallStartSpeed => Mathf.Min(gridFallStartUnitsPerSecond, gridFallMaxUnitsPerSecond);
+        public float GridReleaseStartSpeed => Mathf.Min(gridReleaseStartUnitsPerSecond, gridFallMaxUnitsPerSecond);
+
+        /// <summary>Time to travel <paramref name="distance"/> from <paramref name="startSpeed"/> under the grid-fall acceleration and terminal speed.</summary>
+        public float GetGridFallDuration(float distance, float startSpeed)
         {
-            return Mathf.Clamp(
-                distance / gridFallUnitsPerSecond,
-                gridFallMinimumDuration,
-                gridFallMaximumDuration);
+            if (distance <= 0f)
+                return 0f;
+
+            float v0 = Mathf.Clamp(startSpeed, 0f, gridFallMaxUnitsPerSecond);
+            float accelerationTime = (gridFallMaxUnitsPerSecond - v0) / gridFallAccelerationUnitsPerSecondSquared;
+            float accelerationDistance = v0 * accelerationTime +
+                .5f * gridFallAccelerationUnitsPerSecondSquared * accelerationTime * accelerationTime;
+            if (distance >= accelerationDistance)
+                return accelerationTime + (distance - accelerationDistance) / gridFallMaxUnitsPerSecond;
+
+            return (Mathf.Sqrt(v0 * v0 + 2f * gridFallAccelerationUnitsPerSecondSquared * distance) - v0) /
+                gridFallAccelerationUnitsPerSecondSquared;
         }
 
-        public float GetGridReleaseDuration(float distance)
+        /// <summary>Distance travelled after <paramref name="elapsed"/> seconds of a grid fall that began at <paramref name="startSpeed"/>.</summary>
+        public float GetGridFallDistance(float elapsed, float startSpeed)
         {
-            return Mathf.Clamp(
-                distance / gridReleaseUnitsPerSecond,
-                gridReleaseMinimumDuration,
-                gridReleaseMaximumDuration);
+            float v0 = Mathf.Clamp(startSpeed, 0f, gridFallMaxUnitsPerSecond);
+            float accelerationTime = (gridFallMaxUnitsPerSecond - v0) / gridFallAccelerationUnitsPerSecondSquared;
+            float acceleratingTime = Mathf.Min(elapsed, accelerationTime);
+            float distance = v0 * acceleratingTime +
+                .5f * gridFallAccelerationUnitsPerSecondSquared * acceleratingTime * acceleratingTime;
+            return distance + Mathf.Max(0f, elapsed - accelerationTime) * gridFallMaxUnitsPerSecond;
         }
+
+        /// <summary>Speed after <paramref name="elapsed"/> seconds of a grid fall that began at <paramref name="startSpeed"/>.</summary>
+        public float GetGridFallSpeed(float elapsed, float startSpeed)
+        {
+            float v0 = Mathf.Clamp(startSpeed, 0f, gridFallMaxUnitsPerSecond);
+            return Mathf.Min(gridFallMaxUnitsPerSecond, v0 + gridFallAccelerationUnitsPerSecondSquared * elapsed);
+        }
+
         public float ShredDuration => shredDuration;
         public Ease ShredEase => shredEase;
         public float IceCrackDuration => iceCrackDuration;

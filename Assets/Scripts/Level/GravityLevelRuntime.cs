@@ -244,7 +244,23 @@ namespace GravityPuzzle
             return requested;
         }
 
+        /// <summary>Campaign step direction used by level transitions.</summary>
+        public enum LevelStep
+        {
+            Next,
+            Previous
+        }
+
         public static bool TryAdvanceToNextLevel()
+        {
+            return TryStepLevel(LevelStep.Next);
+        }
+
+        /// <summary>
+        /// Moves the campaign one level in the requested direction, wrapping at
+        /// both ends of the sequence.
+        /// </summary>
+        public static bool TryStepLevel(LevelStep step)
         {
             // If levels is empty or needs population, attempt to load from sequence
             if (levels == null || levels.Length == 0)
@@ -253,7 +269,7 @@ namespace GravityPuzzle
                 currentLevelIndex = -1;
             }
 
-            // If we only had a single preview level, pull the full campaign sequence so Next Level advances
+            // If we only had a single preview level, pull the full campaign sequence so stepping can move
             if (levels != null && levels.Length <= 1)
             {
                 GravityLevelDefinition[] sequenceLevels = FindAllLevels();
@@ -267,11 +283,17 @@ namespace GravityPuzzle
             if (levels == null || levels.Length == 0)
                 return false;
 
-            currentLevelIndex++;
-            if (currentLevelIndex >= levels.Length)
+            if (step == LevelStep.Next)
             {
-                // Wrap around to the start of the sequence
-                currentLevelIndex = 0;
+                currentLevelIndex++;
+                if (currentLevelIndex >= levels.Length)
+                    currentLevelIndex = 0;
+            }
+            else
+            {
+                currentLevelIndex--;
+                if (currentLevelIndex < 0)
+                    currentLevelIndex = levels.Length - 1;
             }
 
             levelSequenceInitialized = true;

@@ -16,13 +16,10 @@ MonoBehaviour:
   sequenceCapacity: 384
   pieceMoveDuration: 0.12
   pieceMoveEase: 6
-  gridFallEase: 1
-  gridFallUnitsPerSecond: 12.5
-  gridFallMinimumDuration: 0.08
-  gridFallMaximumDuration: 2
-  gridReleaseUnitsPerSecond: 12.5
-  gridReleaseMinimumDuration: 0.06
-  gridReleaseMaximumDuration: 2
+  gridFallStartUnitsPerSecond: 6
+  gridReleaseStartUnitsPerSecond: 6
+  gridFallAccelerationUnitsPerSecondSquared: 60
+  gridFallMaxUnitsPerSecond: 25
   shredDuration: 0.3
   shredEase: 5
   iceCrackDuration: 0.16

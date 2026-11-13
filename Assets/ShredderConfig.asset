@@ -51,6 +51,8 @@ MonoBehaviour:
   physicsFreefallDistanceBelowHandoff: 2
   physicsFreefallGravityScale: 0
   physicsFreefallEntrySpeed: 12.5
+  physicsFreefallAcceleration: 60
+  physicsFreefallMaxSpeed: 25
   enablePhysicsIsland: 1
   physicsIslandGravityScale: 0
   physicsIslandAngularDrag: 4

@@ -2046,7 +2046,7 @@ namespace GravityPuzzle
             Body.useFullKinematicContacts = false;
             Body.interpolation = RigidbodyInterpolation2D.Interpolate;
             Body.sleepMode = RigidbodySleepMode2D.NeverSleep;
-            Body.velocity = Vector2.down * (config.PhysicsFreefallEntrySpeed > 0f ? config.PhysicsFreefallEntrySpeed : 8f);
+            Body.velocity = Vector2.down * Mathf.Max(downwardSpeed, config.PhysicsFreefallEntrySpeed);
             Body.angularVelocity = 0f;
             Body.WakeUp();
         }

@@ -5247,7 +5247,6 @@ RectTransform:
   - {fileID: 198711976011555698}
   - {fileID: 6052630843869062295}
   - {fileID: 2635441210621500620}
-  - {fileID: 5381370130811555701}
   - {fileID: 2790531703334255556}
   - {fileID: 8676440478946922057}
   - {fileID: 767218635201226127}
@@ -5262,6 +5261,7 @@ RectTransform:
   - {fileID: 764921348916270001}
   - {fileID: 3148551791949080}
   - {fileID: 7700000000000000002}
+  - {fileID: 5381370130811555701}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -5356,6 +5356,11 @@ MonoBehaviour:
   liveAddsButton: {fileID: 4520693379649865734}
   playOnButton: {fileID: 5969124909035696759}
   closeKeepOnPlayingButton: {fileID: 7532168781206999765}
+  keepOnPlayingText: {fileID: 0}
+  continueTimeStages:
+  - 60
+  - 120
+  - 180
   continueTimeSeconds: 60
   retryButton: {fileID: 5067800990691057563}
   mainMenuButton: {fileID: 0}
@@ -5590,6 +5595,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   button: {fileID: 764921348916270004}
+  step: 0
 --- !u!114 &764921348916270003
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5603,15 +5609,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.12, g: 0.12, b: 0.28, a: 0.94}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10906, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
+  m_Sprite: {fileID: 21300000, guid: 0f875e49fba604c7ca96883377d9a667, type: 3}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -49291,7 +49297,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &5381370130811555701
 RectTransform:
   m_ObjectHideFlags: 0

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Unity adds VIBRATE only when Handheld.Vibrate is referenced. HapticFeedbackRuntime
+     calls the platform Vibrator directly, so the permission is merged in from here. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.gravitypuzzle.haptics">
+    <uses-permission android:name="android.permission.VIBRATE" />
+</manifest>

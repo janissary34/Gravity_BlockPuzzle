@@ -81,3 +81,4 @@ MonoBehaviour:
     gapMilliseconds: 90
   resultCooldownMilliseconds: 0
   resultPriority: 3
+  iosSharpness: 0.5

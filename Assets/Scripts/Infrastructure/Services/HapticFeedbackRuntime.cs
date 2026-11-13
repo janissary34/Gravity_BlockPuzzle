@@ -23,6 +23,9 @@ namespace GravityPuzzle.Infrastructure.Services
         {
             StopAll();
             config = value;
+            DeviceHaptics.Configure(value);
+            if (config == null)
+                Debug.LogWarning("[Haptics] HapticFeedbackConfig is not assigned on the bootstrap; haptics are disabled.");
         }
 
         public static void NotifyApplicationPaused(bool paused)
@@ -70,7 +73,7 @@ namespace GravityPuzzle.Infrastructure.Services
         {
             shredderProgressByPiece.Clear();
             StopShredderPattern();
-            AndroidHaptics.Cancel();
+            DeviceHaptics.Cancel();
         }
 
         private static bool IsEnabled() => config != null && PlayerPrefs.GetInt(PreferenceKey, 1) == 1 && !Application.isEditor;
@@ -83,24 +86,28 @@ namespace GravityPuzzle.Infrastructure.Services
             float curveProgress = Mathf.Clamp01(config.ShredderIntensityByFeedProgress.Evaluate(leastProgress));
             float intensity = Mathf.Lerp(config.ShredderStartIntensity, config.ShredderEndIntensity, curveProgress);
             if (shredderPatternPlaying && Mathf.Abs(intensity - lastShredderIntensity) < config.ShredderIntensityUpdateThreshold) return;
-            AndroidHaptics.StartRepeating(config.ShredderOnMilliseconds, config.ShredderOffMilliseconds, intensity);
+            DeviceHaptics.StartRepeating(config.ShredderOnMilliseconds, config.ShredderOffMilliseconds, intensity);
             shredderPatternPlaying = true;
             lastShredderIntensity = intensity;
         }
-        private static void StopShredderPattern() { if (!shredderPatternPlaying) return; AndroidHaptics.Cancel(); shredderPatternPlaying = false; lastShredderIntensity = -1f; }
+        private static void StopShredderPattern() { if (!shredderPatternPlaying) return; DeviceHaptics.Cancel(); shredderPatternPlaying = false; lastShredderIntensity = -1f; }
         private static void TryPulse(HapticFeedbackConfig.Pulse pulse, int priority, int cooldown, ref float lastTime)
         {
             if (!IsEnabled() || !pulse.Enabled || !TryAcquireOneShot(priority, cooldown, ref lastTime)) return;
             // Android exposes one vibrator channel. A one-shot therefore replaces the
             // waveform briefly; the next active shredder feed tick restarts its pattern.
-            shredderPatternPlaying = false;
-            lastShredderIntensity = -1f;
-            AndroidHaptics.Pulse(pulse.DurationMilliseconds, pulse.Intensity);
+            // Core Haptics layers players, so on iOS the loop keeps running and stays tracked.
+            if (DeviceHaptics.OneShotReplacesRepeating)
+            {
+                shredderPatternPlaying = false;
+                lastShredderIntensity = -1f;
+            }
+            DeviceHaptics.Pulse(pulse.DurationMilliseconds, pulse.Intensity);
         }
         private static void TryPattern(HapticFeedbackConfig.Pattern pattern, int priority, int cooldown, ref float lastTime)
         {
             if (!IsEnabled() || !pattern.Enabled || !TryAcquireOneShot(priority, cooldown, ref lastTime)) return;
-            AndroidHaptics.Pattern(pattern.First, pattern.Second, pattern.Third, pattern.GapMilliseconds);
+            DeviceHaptics.Pattern(pattern.First, pattern.Second, pattern.Third, pattern.GapMilliseconds);
         }
         private static bool TryAcquireOneShot(int priority, int cooldown, ref float lastTime)
         {
@@ -110,32 +117,102 @@ namespace GravityPuzzle.Infrastructure.Services
         }
     }
 
-    internal static class AndroidHaptics
+    /// <summary>Platform vibration backend: Android Vibrator waveforms or the iOS Core Haptics plugin.</summary>
+    internal static class DeviceHaptics
     {
+#if UNITY_IOS && !UNITY_EDITOR
+        public static readonly bool OneShotReplacesRepeating = false;
+        private static float iosSharpness;
+
+        public static void Configure(HapticFeedbackConfig config) => iosSharpness = config != null ? config.IosSharpness : 0f;
+#else
+        public static readonly bool OneShotReplacesRepeating = true;
+
+        public static void Configure(HapticFeedbackConfig config) { }
+#endif
+
         public static void Cancel()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-            using (AndroidJavaObject activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-            using (AndroidJavaObject vibrator = activity.Call<AndroidJavaObject>("getSystemService", "vibrator")) vibrator?.Call("cancel");
+            AndroidBackend.Cancel();
+#elif UNITY_IOS && !UNITY_EDITOR
+            IosBackend.GravityHaptics_Cancel();
 #endif
         }
-        public static void Pulse(int duration, float intensity) => StartWaveform(new[] { 0L, (long)duration }, new[] { 0, ToAmplitude(intensity) }, -1);
-        public static void StartRepeating(int on, int off, float intensity) => StartWaveform(new[] { 0L, (long)on, (long)off }, new[] { 0, ToAmplitude(intensity), 0 }, 0);
-        public static void Pattern(HapticFeedbackConfig.Pulse a, HapticFeedbackConfig.Pulse b, HapticFeedbackConfig.Pulse c, int gap)
-        {
-            StartWaveform(new[] { 0L, (long)a.DurationMilliseconds, (long)gap, (long)b.DurationMilliseconds, (long)gap, (long)c.DurationMilliseconds }, new[] { 0, ToAmplitude(a.Intensity), 0, ToAmplitude(b.Intensity), 0, ToAmplitude(c.Intensity) }, -1);
-        }
-        private static int ToAmplitude(float value) => Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp01(value) * 255f), 1, 255);
-        private static void StartWaveform(long[] timings, int[] amplitudes, int repeat)
+
+        public static void Pulse(int duration, float intensity)
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-            using (AndroidJavaObject activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-            using (AndroidJavaObject vibrator = activity.Call<AndroidJavaObject>("getSystemService", "vibrator"))
-            using (AndroidJavaClass vibrationEffect = new AndroidJavaClass("android.os.VibrationEffect"))
-            using (AndroidJavaObject effect = vibrationEffect.CallStatic<AndroidJavaObject>("createWaveform", timings, amplitudes, repeat)) vibrator?.Call("vibrate", effect);
+            AndroidBackend.StartWaveform(new[] { 0L, (long)duration }, new[] { 0, AndroidBackend.ToAmplitude(intensity) }, -1);
+#elif UNITY_IOS && !UNITY_EDITOR
+            IosBackend.GravityHaptics_Pulse(Mathf.Clamp01(intensity), duration, iosSharpness);
 #endif
         }
+
+        public static void StartRepeating(int on, int off, float intensity)
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            AndroidBackend.StartWaveform(new[] { 0L, (long)on, (long)off }, new[] { 0, AndroidBackend.ToAmplitude(intensity), 0 }, 0);
+#elif UNITY_IOS && !UNITY_EDITOR
+            IosBackend.GravityHaptics_StartRepeating(on, off, Mathf.Clamp01(intensity), iosSharpness);
+#endif
+        }
+
+        public static void Pattern(HapticFeedbackConfig.Pulse a, HapticFeedbackConfig.Pulse b, HapticFeedbackConfig.Pulse c, int gap)
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            AndroidBackend.StartWaveform(new[] { 0L, (long)a.DurationMilliseconds, (long)gap, (long)b.DurationMilliseconds, (long)gap, (long)c.DurationMilliseconds }, new[] { 0, AndroidBackend.ToAmplitude(a.Intensity), 0, AndroidBackend.ToAmplitude(b.Intensity), 0, AndroidBackend.ToAmplitude(c.Intensity) }, -1);
+#elif UNITY_IOS && !UNITY_EDITOR
+            // A disabled pulse is sent with zero intensity so the native side keeps its timing slot silent.
+            IosBackend.GravityHaptics_Pattern(
+                IosIntensity(a), a.DurationMilliseconds,
+                IosIntensity(b), b.DurationMilliseconds,
+                IosIntensity(c), c.DurationMilliseconds,
+                gap, iosSharpness);
+#endif
+        }
+
+#if UNITY_IOS && !UNITY_EDITOR
+        private static float IosIntensity(HapticFeedbackConfig.Pulse pulse) => pulse.Enabled ? Mathf.Clamp01(pulse.Intensity) : 0f;
+
+        /// <summary>Entry points of Assets/Plugins/iOS/GravityHaptics.mm.</summary>
+        private static class IosBackend
+        {
+            [System.Runtime.InteropServices.DllImport("__Internal")] public static extern void GravityHaptics_Pulse(float intensity, int durationMilliseconds, float sharpness);
+            [System.Runtime.InteropServices.DllImport("__Internal")] public static extern void GravityHaptics_Pattern(float intensityA, int durationA, float intensityB, int durationB, float intensityC, int durationC, int gapMilliseconds, float sharpness);
+            [System.Runtime.InteropServices.DllImport("__Internal")] public static extern void GravityHaptics_StartRepeating(int onMilliseconds, int offMilliseconds, float intensity, float sharpness);
+            [System.Runtime.InteropServices.DllImport("__Internal")] public static extern void GravityHaptics_Cancel();
+        }
+#endif
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private static class AndroidBackend
+        {
+            // VibrationEffect requires API 26; the project's minimum SDK is lower.
+            private const int VibrationEffectMinApiLevel = 26;
+            private static int apiLevel = -1;
+
+            public static int ToAmplitude(float value) => Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp01(value) * 255f), 1, 255);
+
+            public static void Cancel()
+            {
+                using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (AndroidJavaObject activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                using (AndroidJavaObject vibrator = activity.Call<AndroidJavaObject>("getSystemService", "vibrator")) vibrator?.Call("cancel");
+            }
+
+            public static void StartWaveform(long[] timings, int[] amplitudes, int repeat)
+            {
+                if (apiLevel < 0)
+                    using (AndroidJavaClass version = new AndroidJavaClass("android.os.Build$VERSION")) apiLevel = version.GetStatic<int>("SDK_INT");
+                if (apiLevel < VibrationEffectMinApiLevel) return;
+                using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (AndroidJavaObject activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                using (AndroidJavaObject vibrator = activity.Call<AndroidJavaObject>("getSystemService", "vibrator"))
+                using (AndroidJavaClass vibrationEffect = new AndroidJavaClass("android.os.VibrationEffect"))
+                using (AndroidJavaObject effect = vibrationEffect.CallStatic<AndroidJavaObject>("createWaveform", timings, amplitudes, repeat)) vibrator?.Call("vibrate", effect);
+            }
+        }
+#endif
     }
 }

@@ -84,8 +84,12 @@ namespace GravityPuzzle.Config
         [Min(0f)] [SerializeField] private float physicsFreefallDistanceBelowHandoff = 2f;
         [Tooltip("Gravity applied only while an off-board piece is in the isolated open-freefall profile.")]
         [Range(0f, 5f)] [SerializeField] private float physicsFreefallGravityScale = 0f;
-        [Tooltip("Speed (world units/second) of a piece falling through the open area below the board toward the shredder. Keep it at or above the board fall speeds in TweenConfig.")]
+        [Tooltip("Minimum speed (world units/second) at which a piece enters the open area below the board. A piece arriving faster from a board fall keeps its speed.")]
         [Min(.01f)] [SerializeField] private float physicsFreefallEntrySpeed = 8f;
+        [Tooltip("Downward acceleration (world units/second^2) of a piece falling through the open area toward the shredder. Keep it close to the board fall acceleration in TweenConfig.")]
+        [Min(0f)] [SerializeField] private float physicsFreefallAcceleration = 60f;
+        [Tooltip("Terminal speed (world units/second) of a piece falling toward the shredder. Keep it at or above the board fall terminal speed in TweenConfig.")]
+        [Min(.01f)] [SerializeField] private float physicsFreefallMaxSpeed = 25f;
         [Tooltip("Lets only a contact-connected stack above a shredder feed use Unity physics briefly. Normal board gravity remains grid-owned.")]
         [SerializeField] private bool enablePhysicsIsland = true;
         [Tooltip("Gravity applied to a temporary dynamic support piece inside the shredder mouth.")]
@@ -183,6 +187,8 @@ namespace GravityPuzzle.Config
         public float PhysicsFreefallDistanceBelowHandoff => physicsFreefallDistanceBelowHandoff;
         public float PhysicsFreefallGravityScale => physicsFreefallGravityScale;
         public float PhysicsFreefallEntrySpeed => physicsFreefallEntrySpeed;
+        public float PhysicsFreefallAcceleration => physicsFreefallAcceleration;
+        public float PhysicsFreefallMaxSpeed => Mathf.Max(physicsFreefallMaxSpeed, physicsFreefallEntrySpeed);
         public float PhysicsIslandGravityScale => physicsIslandGravityScale;
         public float PhysicsIslandAngularDrag => physicsIslandAngularDrag;
         public float PhysicsIslandCaptureDistance => physicsIslandCaptureDistance;

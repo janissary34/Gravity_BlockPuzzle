@@ -27,6 +27,7 @@ namespace GravityPuzzle.Presentation.Views
         private BoosterRewardConfig selectedRewardConfig;
         private bool[] hudObjectsWereActive;
         private bool hudIsHidden;
+        private bool isOpening;
 
         public event Action Continued;
         public event Action Dismissed;
@@ -72,6 +73,13 @@ namespace GravityPuzzle.Presentation.Views
                 continueButton.onClick.AddListener(Continue);
 
             ResolveBoosterContentRoot();
+
+            // The overlay is authored inactive, so Awake can first run inside
+            // SetOverlayVisible(true). Hiding here would close the panel and
+            // its selected content in the same frame it is being opened.
+            if (isOpening)
+                return;
+
             HideAllFeatureContents();
 
             if (overlayRoot != null)
@@ -340,7 +348,9 @@ namespace GravityPuzzle.Presentation.Views
                 HideHud();
 
             GameObject target = overlayRoot != null ? overlayRoot : gameObject;
+            isOpening = visible;
             target.SetActive(visible);
+            isOpening = false;
 
             // The timer HUD and targeting UI share this canvas. Keep the modal
             // above all of them so their graphics cannot consume its button

@@ -3102,10 +3102,10 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Advances the campaign for build verification without treating the
+        /// Steps the campaign for build verification without treating the
         /// current board as completed or granting its completion rewards.
         /// </summary>
-        public bool TryAdvanceToNextLevelForDebug()
+        public bool TryStepLevelForDebug(GravityLevelRuntime.LevelStep step)
         {
             if (nextLevelTransitionPending || !GravityLevelRuntime.HasNextLevel)
                 return false;
@@ -3113,7 +3113,7 @@ namespace GravityPuzzle
             nextLevelTransitionPending = true;
             TryTransitionGameState(GameState.Result);
 
-            if (!GravityLevelRuntime.TryAdvanceToNextLevel())
+            if (!GravityLevelRuntime.TryStepLevel(step))
             {
                 nextLevelTransitionPending = false;
                 return false;

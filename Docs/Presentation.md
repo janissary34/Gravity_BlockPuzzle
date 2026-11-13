@@ -150,7 +150,7 @@ A presentation refresh may rewrite sprites, materials, visibility, sorting, and 
 
 ## Build verification level advance
 
-`InGameUI` contains the authored `Debug_Next_Level_Button` for device-build verification. `DebugNextLevelButton` is an input adapter only: it delegates to `PrototypeBoard.TryAdvanceToNextLevelForDebug`, which advances the existing `GravityLevelRuntime` campaign sequence and reloads the active scene through `SplashSceneLoader`. It intentionally does not clear the board, grant completion rewards, queue booster unlocks, or persist tutorial progress. The control is disabled on the final configured level.
+`InGameUI` contains authored debug level buttons for device-build verification. `DebugLevelStepButton` is an input adapter only; its `step` field (Next/Previous) selects the direction. It delegates to `PrototypeBoard.TryStepLevelForDebug`, which steps the existing `GravityLevelRuntime` campaign sequence (wrapping at both ends) and reloads the active scene through `SplashSceneLoader`. It intentionally does not clear the board, grant completion rewards, queue booster unlocks, or persist tutorial progress.
 
 ## Directional Board Frame
 
@@ -216,6 +216,10 @@ active cell bounds, and never writes gameplay or piece state.
 * All streaks are one dynamic world-space mesh rebuilt in `LateUpdate`, so the
   feature has no pooled objects and costs one draw call. The object must stay
   at the world origin with identity rotation and scale.
+* Board falls shorter than `FallTrailConfig.MinimumGridFallDistance` (e.g. a
+  one-block drop) get no streak. The decision uses
+  `PieceGridFallView.PlannedFallDistance`, which is known when the fall starts,
+  so no streak flickers in and out; a retarget that lengthens the run can enable it.
 * Each piece gets one contiguous streak across its full width (minus
   `SideInset` for the art's transparent border), pointing straight back along
   the dominant motion axis. It starts just inside the nearest trailing column
