@@ -2085,25 +2085,15 @@ namespace GravityPuzzle
         /// Advances the non-physical shred presentation after its lifecycle
         /// has entered Shredding. No Rigidbody state is mutated here.
         /// </summary>
-        public void MoveShreddingPresentation(
-            float downwardDistance,
-            float maximumTiltAngle,
-            float alignmentSpeed,
-            float deltaTime)
+        public void MoveShreddingPresentation(float downwardDistance)
         {
             if (PhysicsProfile != PiecePhysicsProfile.Shredding)
                 return;
 
-            transform.position += Vector3.down * downwardDistance;
-            float currentAngle = transform.eulerAngles.z;
-            float cardinalAngle = Mathf.Round(currentAngle / 90f) * 90f;
-            if (Mathf.Abs(Mathf.DeltaAngle(currentAngle, cardinalAngle)) > maximumTiltAngle)
-            {
-                transform.rotation = Quaternion.Euler(
-                    0f,
-                    0f,
-                    Mathf.MoveTowardsAngle(currentAngle, cardinalAngle, alignmentSpeed * deltaTime));
-            }
+            // Pieces never tilt; the feed is a straight vertical descent.
+            transform.SetPositionAndRotation(
+                transform.position + Vector3.down * downwardDistance,
+                Quaternion.identity);
         }
 
         /// <summary>
@@ -3298,7 +3288,6 @@ namespace GravityPuzzle
             shredderHandoffMode = ShredderHandoffMode.None;
             keepShredderGridReservationUntilDespawn = false;
             SetSelected(false);
-            Debug.Log($"[ShredderHandoff] Exit handoff locked targeting for piece {SourcePieceId}.", this);
             return true;
         }
 
@@ -3328,7 +3317,6 @@ namespace GravityPuzzle
             shredderHandoffMode = ShredderHandoffMode.PhysicsIsland;
             keepShredderGridReservationUntilDespawn = true;
             SetSelected(false);
-            Debug.Log($"[ShredderHandoff] Targeting locked at handoff for piece {SourcePieceId}.", this);
             return true;
         }
 

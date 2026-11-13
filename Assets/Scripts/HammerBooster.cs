@@ -236,7 +236,6 @@ namespace GravityPuzzle
             SetSelectionGlowVisible(true);
             BoosterTargetingPresentation.Show(BoosterTargetingPresentation.Mode.Hammer);
             tutorialGate?.NotifyBoosterActivated(BoosterRewardType.Hammer);
-            Debug.Log("[HammerBooster] Targeting enabled.", this);
             RefreshButtonState();
         }
 

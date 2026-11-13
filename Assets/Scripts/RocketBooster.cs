@@ -216,7 +216,6 @@ namespace GravityPuzzle
             SetSelectionGlowVisible(true);
             BoosterTargetingPresentation.Show(BoosterTargetingPresentation.Mode.Rocket);
             tutorialGate?.NotifyBoosterActivated(BoosterRewardType.Rocket);
-            Debug.Log($"[RocketBooster] Targeting enabled. remainingUses={currentUses}.", this);
             RefreshButtonState();
         }
 
@@ -358,19 +357,12 @@ namespace GravityPuzzle
                 return;
             }
 
-            Debug.Log($"[RocketBooster] Target click received at screen={screenPosition}, world={worldPosition}.", this);
-
             IBoosterFirstUseTutorialGate tutorialGate = BoosterFirstUseTutorialRuntime.Gate;
             if (BoardTargetResolver.TryResolve(boundBoard, worldPosition, out BoardTargetResolver.Target target))
             {
-                Debug.Log(
-                    $"[RocketBooster] Target resolved: piece='{target.Piece.name}', sourceId={target.Piece.SourcePieceId}, cell={target.Cell}, world={target.WorldPosition}.",
-                    target.Piece);
-
                 if ((tutorialGate == null || tutorialGate.AllowsTarget(BoosterRewardType.Rocket, target)) &&
                     TryStartRocketImpact(target.Piece))
                 {
-                    Debug.Log($"[RocketBooster] Target tap accepted: {target.Piece.name}");
                     boundBoard.StartTimer();
                     activeBooster = null;
                     BoosterTargetingPresentation.Hide();

@@ -50,8 +50,7 @@ MonoBehaviour:
   physicsHandoffDistanceBelowMap: 1.5
   physicsFreefallDistanceBelowHandoff: 2
   physicsFreefallGravityScale: 0
-  physicsFreefallEntrySpeed: 8
-  physicsFreefallAngularDrag: 0.75
+  physicsFreefallEntrySpeed: 12.5
   enablePhysicsIsland: 1
   physicsIslandGravityScale: 0
   physicsIslandAngularDrag: 4
@@ -82,7 +81,4 @@ MonoBehaviour:
   tremorIntensity: 0.045
   tremorFrequency: 55
   feedShakeAmplitude: 1.2
-  feedAngularDrag: 6
-  tumbleTorque: 7.5
-  maxFeedTiltAngle: 5
   finalPieceTimerGraceSeconds: 1.8

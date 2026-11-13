@@ -954,8 +954,6 @@ namespace GravityPuzzle
                 yield break;
             }
 
-            Debug.Log($"[TimerBooster] Timer frozen for {duration} seconds!");
-
             float elapsed = 0f;
             while (elapsed < duration && targetBoard != null &&
                    targetBoard == PrototypeBoard.Active &&
@@ -966,10 +964,7 @@ namespace GravityPuzzle
             }
 
             if (targetBoard != null)
-            {
                 ReleaseSequenceTimerPause();
-                Debug.Log("[TimerBooster] Timer resumed after 8s freeze!");
-            }
 
             freezeRoutine = null;
             PlayFreezeExpirationSequence();    // FAZ 7: staggered new FX cleanup

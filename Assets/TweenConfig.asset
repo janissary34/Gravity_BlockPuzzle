@@ -17,10 +17,10 @@ MonoBehaviour:
   pieceMoveDuration: 0.12
   pieceMoveEase: 6
   gridFallEase: 1
-  gridFallUnitsPerSecond: 8
+  gridFallUnitsPerSecond: 12.5
   gridFallMinimumDuration: 0.08
   gridFallMaximumDuration: 2
-  gridReleaseUnitsPerSecond: 8
+  gridReleaseUnitsPerSecond: 12.5
   gridReleaseMinimumDuration: 0.06
   gridReleaseMaximumDuration: 2
   shredDuration: 0.3

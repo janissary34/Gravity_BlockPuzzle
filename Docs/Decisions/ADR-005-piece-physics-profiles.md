@@ -38,8 +38,11 @@ velocities, constraints, colliders, and simulation state cannot leak.
 
 ## Consequences
 
-Open freefall pieces may stack and rotate naturally only against one another.
-They cannot use map or mouth geometry as invisible support. Changes to freefall
+Pieces never tilt in any phase. Open freefall keeps its map-exit X and zero
+rotation; stacking between freefall pieces is resolved by `BlockShredder`'s
+vertical descent limits, not by engine contacts. The cutter feed is likewise a
+straight vertical descent; its tremor is a visual offset only. Freefall pieces
+cannot use map or mouth geometry as invisible support. Changes to freefall
 contacts require both the dedicated layer and `ShredderPhysicsLayers.Configure`;
 they must not be made by mutating individual pieces at runtime. No lifecycle
 phase may use Physics2D collider ordering to select a grid piece.

@@ -340,12 +340,7 @@ namespace GravityPuzzle
                     if (zone == null)
                         continue;
                     if (!zone.ContainsMapExitFootprint(piece))
-                    {
-#if UNITY_EDITOR
-                        zone.LogCaptureRejection(piece, shredder);
-#endif
                         continue;
-                    }
 
                     // The feed cancels its presentation tween internally. Clear
                     // this controller's matching fall record first, without snapping
@@ -970,7 +965,6 @@ namespace GravityPuzzle
 
             lastResolvedDragPosition = selectedPresentationPosition;
             hasLastResolvedDragPosition = true;
-            HapticFeedbackRuntime.PieceSelected();
             if (isCombined)
                 Physics2D.SyncTransforms();
             return true;
@@ -1093,49 +1087,6 @@ namespace GravityPuzzle
 
             step = new GridCoordinate(0, fineDragRemainder.y > 0f ? 1 : -1);
             return true;
-        }
-
-        private void LogDragStepFailure(
-            PrototypeBoard board,
-            GravityLevelDefinition level,
-            PuzzlePiece piece,
-            PieceModel model,
-            GridCoordinate desiredPivot,
-            GridCoordinate attemptedAnchor,
-            GridPlacementResult result)
-        {
-            if (board == null || level == null || piece == null || piece.Body == null || model == null)
-                return;
-
-            Vector2 pointerPosition = dragTarget - grabOffset;
-            board.CollectJointGroupPieces(piece, selectedJointGroupPieces);
-            string groupAnchors = string.Empty;
-            for (int index = 0; index < selectedJointGroupPieces.Count; index++)
-            {
-                PuzzlePiece groupPiece = selectedJointGroupPieces[index];
-                if (groupPiece == null || !board.TryGetPieceModel(groupPiece, out PieceModel groupModel))
-                    continue;
-
-                if (groupAnchors.Length > 0)
-                    groupAnchors += ",";
-
-                groupAnchors += $"{groupModel.Id}:({groupModel.Anchor.X},{groupModel.Anchor.Y})";
-            }
-
-            Debug.Log(
-                $"[DragTarget] FAIL member={model.Id} " +
-                $"pointer=({pointerPosition.x:F3},{pointerPosition.y:F3}) " +
-                $"grabOffset=({grabOffset.x:F3},{grabOffset.y:F3}) " +
-                $"dragTarget=({dragTarget.x:F3},{dragTarget.y:F3}) " +
-                $"body=({piece.Body.position.x:F3},{piece.Body.position.y:F3}) " +
-                $"anchor=({model.Anchor.X},{model.Anchor.Y}) " +
-                $"pivotOffset=({model.PivotOffset.X},{model.PivotOffset.Y}) " +
-                $"desiredPivot=({desiredPivot.X},{desiredPivot.Y}) " +
-                $"attemptedAnchor=({attemptedAnchor.X},{attemptedAnchor.Y}) " +
-                $"failureCell=({result.Coordinate.X},{result.Coordinate.Y}) " +
-                $"reason={result.Reason} cellState={result.CellState} occupant={result.OccupantId} " +
-                $"boardFineSize=({level.FineColumns},{level.FineRows}) " +
-                $"groupAnchors=[{groupAnchors}]");
         }
 
         private static bool TryGetSnapshotPiece(
@@ -1287,6 +1238,9 @@ namespace GravityPuzzle
 
             Rigidbody2D body = piece.Body;
             selectedPiece = piece;
+            // One pulse per pick-up. Pulsing from the per-frame drag path ran a
+            // native vibrator call every frame on Android and stalled the drag.
+            HapticFeedbackRuntime.PieceSelected();
             PrototypeBoard.Active.CollectJointGroupPieces(piece, selectedJointGroupPieces);
             // A queued gravity plan or a still-owned fall tween can otherwise
             // restore an old body pose after this drag has started.

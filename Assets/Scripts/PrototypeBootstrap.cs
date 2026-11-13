@@ -342,6 +342,7 @@ namespace GravityPuzzle
             texture.SetPixel(0, 0, Color.white);
             texture.Apply();
             squareSprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(.5f, .5f), 1f);
+            KeepGeneratedSpriteLoaded(squareSprite);
             return squareSprite;
         }
 
@@ -373,7 +374,18 @@ namespace GravityPuzzle
                 new Rect(0, 0, textureSize, textureSize),
                 new Vector2(.5f, .5f),
                 textureSize);
+            KeepGeneratedSpriteLoaded(circleSprite);
             return circleSprite;
+        }
+
+        // These process-wide generated sprites are cached statically and are
+        // referenced by pooled UI Images. Scene loads run UnloadUnusedAssets,
+        // which would otherwise destroy them while an Image still points at
+        // them (MissingReferenceException on Image.m_Sprite).
+        private static void KeepGeneratedSpriteLoaded(Sprite sprite)
+        {
+            sprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            sprite.texture.hideFlags = HideFlags.DontUnloadUnusedAsset;
         }
     }
 
@@ -2213,7 +2225,6 @@ namespace GravityPuzzle
                         targetAnchor,
                         GridCellState.Empty,
                         default);
-                    LogGroupMoveFailure(delta, source, false, result);
                     return false;
                 }
 
@@ -2223,7 +2234,6 @@ namespace GravityPuzzle
                         source.Id,
                         out result))
                 {
-                    LogGroupMoveFailure(delta, source, true, result);
                     return false;
                 }
 
@@ -2248,7 +2258,6 @@ namespace GravityPuzzle
                         memberTarget,
                         GridCellState.Empty,
                         default);
-                    LogGroupMoveFailure(delta, member, false, result);
                     return false;
                 }
 
@@ -2261,11 +2270,6 @@ namespace GravityPuzzle
                 out result);
             if (!moved)
             {
-                LogGroupMoveFailure(
-                    delta,
-                    FindGroupMemberAtTargetCoordinate(result.Coordinate, jointGroupTargetAnchors),
-                    true,
-                    result);
                 return false;
             }
 
@@ -2288,15 +2292,7 @@ namespace GravityPuzzle
                 bool revealOk = revealAreaCoordinator == null ||
                                 revealAreaCoordinator.CanMovePiece(member, nextAnchor);
                 if (!revealOk)
-                {
-                    GridPlacementResult revealFailure = GridPlacementResult.Failure(
-                        GridPlacementFailureReason.EmptyPiece,
-                        nextAnchor,
-                        GridCellState.Empty,
-                        default);
-                    LogGroupMoveFailure(delta, member, false, revealFailure);
                     return false;
-                }
             }
 
             for (int index = 0; index < jointGroupTargetAnchors.Count; index++)
@@ -2307,11 +2303,6 @@ namespace GravityPuzzle
                 jointGroupTargetAnchors);
             if (!result.IsSuccess)
             {
-                LogGroupMoveFailure(
-                    delta,
-                    FindGroupMemberAtTargetCoordinate(result.Coordinate, jointGroupTargetAnchors),
-                    true,
-                    result);
                 // A rejected candidate must not become the basis for the
                 // orthogonal slide fallback. Keep traversal state equal to the
                 // last confirmed anchor for every group member.
@@ -2322,41 +2313,6 @@ namespace GravityPuzzle
             }
 
             return true;
-        }
-
-        private PieceModel FindGroupMemberAtTargetCoordinate(
-            GridCoordinate coordinate,
-            IReadOnlyList<GridCoordinate> targetAnchors)
-        {
-            for (int memberIndex = 0; memberIndex < jointGroupModels.Count; memberIndex++)
-            {
-                PieceModel member = jointGroupModels[memberIndex];
-                if (member == null || memberIndex >= targetAnchors.Count)
-                    continue;
-
-                GridCoordinate memberAnchor = targetAnchors[memberIndex];
-                for (int cellIndex = 0; cellIndex < member.LocalCells.Count; cellIndex++)
-                {
-                    if (memberAnchor.Offset(member.LocalCells[cellIndex]).Equals(coordinate))
-                        return member;
-                }
-            }
-
-            return jointGroupModels.Count > 0 ? jointGroupModels[0] : null;
-        }
-
-        private void LogGroupMoveFailure(
-            GridCoordinate delta,
-            PieceModel member,
-            bool revealOk,
-            GridPlacementResult result)
-        {
-            int memberId = member != null ? member.Id : default;
-            Debug.Log(
-                $"[GroupMove] FAIL delta={delta} member={memberId} " +
-                $"reveal={revealOk} reason={result.Reason} cell={result.Coordinate} " +
-                $"cellState={result.CellState} occupant={result.OccupantId} " +
-                $"groupIds=[{string.Join(",", jointGroupModels.ConvertAll(model => model.Id))}]");
         }
 
         private bool TryCollectJointGroupModels(int sourceId, List<PieceModel> results)

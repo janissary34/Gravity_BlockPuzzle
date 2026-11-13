@@ -357,8 +357,6 @@ namespace GravityPuzzle
                 authoredBlockUnits = CountActiveBlockUnitsInScene();
             totalBlockUnitsInLevel = authoredBlockUnits;
             ResetProgress();
-            Debug.Log($"[LevelProgress] Initialized maxValue={(progressSlider != null ? progressSlider.maxValue : -1f)}, " +
-                      $"authoredUnits={authoredBlockUnits}, level='{level.levelName}'.");
         }
 
         private void ResetProgress()

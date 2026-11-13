@@ -62,9 +62,10 @@ authoritative grid cell rather than a physics overlap. `OpenFreefall` is Dynamic
 pieces on that layer; `Shredding` disables simulation and colliders before the
 controlled cutter presentation starts. In particular, open freefall
 must never inherit the support-island layer, feed material, blocker contacts, or
-guide contacts. No shredder tick clamps its velocity or rotation while the model
-is `OpenFreefall`, and no grid reservation, queue, drag, or targeting logic owns
-it after that release.
+guide contacts. While the model is `OpenFreefall`, `BlockShredder` owns only its
+vertical descent speed and keeps it on its map-exit X with zero rotation (a
+straight drop; any drift is restored and logged once). No grid reservation,
+queue, drag, or targeting logic owns it after that release.
 
 Grid drag, gravity presentation, and release snap are transform-owned by
 `PieceGridFallView`; they do not tween the non-simulated grid Rigidbody2D. When

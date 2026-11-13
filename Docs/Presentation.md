@@ -204,3 +204,34 @@ Run `Gravity Puzzle/Level Authoring/Rebuild Level Runtime Root` after changing m
   * Rented once per piece feed coroutine and tracked against `TryGetCutterContactSurface` bounds without per-frame garbage allocations, then safely returned in the feed coroutine's `finally` block.
 
 
+
+## Piece Motion Trail
+
+`Presentation/VFX/FallTrailPresentation` draws a straight, flat streak in the
+piece's own colour behind moving pieces (grid falls, open freefall, the shredder feed and, when
+`FallTrailConfig.ShowWhileDragging` is on, drag). It is presentation only: it
+reads `PuzzlePiece.ActivePieces`, each piece's lifecycle state, transform and
+active cell bounds, and never writes gameplay or piece state.
+
+* All streaks are one dynamic world-space mesh rebuilt in `LateUpdate`, so the
+  feature has no pooled objects and costs one draw call. The object must stay
+  at the world origin with identity rotation and scale.
+* Each piece gets one contiguous streak across its full width (minus
+  `SideInset` for the art's transparent border), pointing straight back along
+  the dominant motion axis. It starts just inside the nearest trailing column
+  (hidden behind the piece art), so stepped shapes such as L read as one
+  streak. It extends past the piece's back-most edge by the distance travelled
+  during `TrailDuration` (capped by `MaximumLength`) and fades continuously
+  along its whole length.
+* Colour is `PuzzlePiece.VisualColor` blended toward white by `WhiteBlend`,
+  `HeadAlpha` opaque behind the piece and fading along `alphaOverLength`. The mesh sorts below piece art (order 5) via
+  `SortingOrder`.
+* When a piece stops, its samples age out and the streak retracts; a per-frame
+  jump above `TeleportDistance` resets it so pool reuse and snaps never draw a
+  streak across the board.
+* `Assets/Shaders/FallTrail.shader` renders the mesh with premultiplied vertex
+  colour. Blend mode (Alpha Blend or Additive) and Intensity are set on
+  `Assets/Materials/M_FallTrail.mat`, the material is their single owner.
+* Scene setup: `Gravity Puzzle/Presentation/Create Fall Trail In Active Scene`
+  creates `Assets/Config/Presentation/FallTrailConfig.asset`,
+  `Assets/Materials/M_FallTrail.mat` and the scene object.

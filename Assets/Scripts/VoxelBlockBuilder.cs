@@ -123,6 +123,9 @@ namespace GravityPuzzle
                 tex.SetPixels(pixels);
                 tex.Apply();
                 defaultVoxelSprite = Sprite.Create(tex, new Rect(0, 0, 16, 16), new Vector2(0.5f, 0.5f), 16);
+                // Static cache: must survive scene-load UnloadUnusedAssets.
+                tex.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                defaultVoxelSprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
             }
             return defaultVoxelSprite;
         }

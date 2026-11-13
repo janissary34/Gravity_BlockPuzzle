@@ -21,6 +21,7 @@ namespace GravityPuzzle
         private static readonly WaitForFixedUpdate FeedPhysicsStep = new WaitForFixedUpdate();
         private const float FeedCeilingOverlapEpsilon = 0.05f;
         private const float FeedCeilingSeamEpsilon = 0.01f;
+        private const float FreefallLateralDriftEpsilon = 0.0005f;
         private readonly List<PuzzlePiece> activeFeedPieces = new List<PuzzlePiece>();
         private readonly List<Bounds> ceilingFreefallCells = new List<Bounds>();
         private readonly List<Bounds> ceilingFeedCells = new List<Bounds>();
@@ -57,6 +58,9 @@ namespace GravityPuzzle
             public PuzzlePiece Piece;
             public ShredderCatchZone Zone;
             public float CachedLowestY;
+            // Map-exit X; open freefall is a straight vertical drop.
+            public float EntryX;
+            public bool LateralDriftReported;
         }
         private readonly List<PuzzlePiece> physicsIslandMemberBuffer =
             new List<PuzzlePiece>(8);
@@ -88,10 +92,6 @@ namespace GravityPuzzle
         private readonly List<Bounds> cachedCellBoundsBuffer = new List<Bounds>(32);
         private readonly List<Bounds> guideDepthCellBoundsBuffer = new List<Bounds>(32);
 
-#if UNITY_EDITOR
-        private readonly Dictionary<int, string> admissionDiagnosticStates =
-            new Dictionary<int, string>();
-#endif
 
         private void Awake()
         {
@@ -216,6 +216,7 @@ namespace GravityPuzzle
                 if (freefall.Piece == null || !freefall.Piece.IsInOpenFreefall)
                     continue;
 
+                KeepFreefallVertical(freefall);
                 if (TryCaptureFreefallPieceAtCutter(freefall.Piece, freefall.Zone))
                 {
                     activeFreefallPieces.RemoveAt(index);
@@ -225,6 +226,48 @@ namespace GravityPuzzle
 
                 LimitFreefallDescentAboveObstacles(freefall.Piece, freefall.Zone, index);
             }
+        }
+
+        /// <summary>
+        /// Open freefall must stay on its map-exit column with no tilt. The
+        /// profile already freezes X/rotation; this restores that pose if any
+        /// other writer moved the body or transform, and reports it once.
+        /// </summary>
+        private static void KeepFreefallVertical(ExitHandoff freefall)
+        {
+            PuzzlePiece piece = freefall.Piece;
+            Rigidbody2D body = piece.Body;
+            Transform pieceTransform = piece.transform;
+            bool bodyDrifted = body != null &&
+                               (Mathf.Abs(body.position.x - freefall.EntryX) > FreefallLateralDriftEpsilon ||
+                                !Mathf.Approximately(body.rotation, 0f));
+            bool transformDrifted =
+                Mathf.Abs(pieceTransform.position.x - freefall.EntryX) > FreefallLateralDriftEpsilon ||
+                pieceTransform.rotation != Quaternion.identity;
+            if (!bodyDrifted && !transformDrifted)
+                return;
+
+            if (!freefall.LateralDriftReported)
+            {
+                freefall.LateralDriftReported = true;
+                Debug.LogWarning(
+                    $"[ShredderFreefall] Piece {piece.SourcePieceId} drifted off its vertical freefall " +
+                    $"(entryX={freefall.EntryX:F3}, bodyX={(body != null ? body.position.x : float.NaN):F3}, " +
+                    $"transformX={pieceTransform.position.x:F3}, bodyRot={(body != null ? body.rotation : 0f):F2}). Restoring.",
+                    piece);
+            }
+
+            if (body != null)
+            {
+                body.position = new Vector2(freefall.EntryX, body.position.y);
+                body.rotation = 0f;
+                body.angularVelocity = 0f;
+            }
+
+            Vector3 position = pieceTransform.position;
+            pieceTransform.SetPositionAndRotation(
+                new Vector3(freefall.EntryX, position.y, position.z),
+                Quaternion.identity);
         }
 
         private void LimitFreefallDescentAboveObstacles(PuzzlePiece piece, ShredderCatchZone zone, int freefallIndex)
@@ -440,7 +483,12 @@ namespace GravityPuzzle
             // Rigidbody2D is the sole movement owner until the cutter seam.
             Physics2D.SyncTransforms();
             piece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, shredderConfig);
-            activeFreefallPieces.Add(new ExitHandoff { Piece = piece, Zone = zone });
+            activeFreefallPieces.Add(new ExitHandoff
+            {
+                Piece = piece,
+                Zone = zone,
+                EntryX = piece.Body != null ? piece.Body.position.x : piece.transform.position.x,
+            });
             return true;
         }
 
@@ -697,55 +745,6 @@ namespace GravityPuzzle
             return true;
         }
 
-#if UNITY_EDITOR
-        internal void DebugLogAdmission(
-            PuzzlePiece piece, ShredderCatchZone zone, string stage, string reason, PuzzlePiece blocker)
-        {
-            if (piece == null || zone == null)
-                return;
-
-            int key = piece.GetInstanceID();
-            string state = stage + ":" + reason + ":" + (blocker != null ? blocker.GetInstanceID() : 0) +
-                           ":" + zone.GetInstanceID();
-            if (admissionDiagnosticStates.TryGetValue(key, out string previous) && previous == state)
-                return;
-            admissionDiagnosticStates[key] = state;
-
-            string candidate = DebugDescribePiece(piece);
-            string other = blocker != null ? DebugDescribePiece(blocker) : "none";
-            Debug.Log($"[ShredAdmission] frame={Time.frameCount} stage={stage} reason={reason} " +
-                      $"zone={zone.GetInstanceID()} candidate={candidate} blocker={other}", piece);
-        }
-
-        private string DebugDescribePiece(PuzzlePiece piece)
-        {
-            PrototypeBoard board = PrototypeBoard.Active;
-            string modelInfo = "model=unavailable";
-            if (board != null && board.TryGetPieceModel(piece, out PieceModel model))
-            {
-                var columns = new System.Text.StringBuilder();
-                for (int i = 0; i < model.LocalCells.Count; i++)
-                {
-                    if (i > 0) columns.Append(',');
-                    columns.Append(model.GetWorldCell(i).X);
-                }
-                modelInfo = $"state={model.State} anchor=({model.Anchor.X},{model.Anchor.Y}) gridX=[{columns}]";
-            }
-
-            var cells = new List<Bounds>();
-            piece.GetActiveCellBounds(cells);
-            var intervals = new System.Text.StringBuilder();
-            for (int i = 0; i < cells.Count; i++)
-            {
-                if (i > 0) intervals.Append(',');
-                intervals.AppendFormat("{0:F3}..{1:F3}", cells[i].min.x, cells[i].max.x);
-            }
-            float angle = piece.Body != null ? piece.Body.rotation : piece.transform.eulerAngles.z;
-            bool falling = piece.GridFallView != null && piece.GridFallView.IsAnimating;
-            return $"'{piece.name}' id={piece.SourcePieceId} {modelInfo} " +
-                   $"fallTween={falling} angle={angle:F3} cellX=[{intervals}]";
-        }
-#endif
 
         private void AcquireFeedMask(float shredderY)
         {
@@ -853,10 +852,6 @@ namespace GravityPuzzle
             float tremorIntensity = shredderConfig != null ? shredderConfig.TremorIntensity : .045f;
             float tremorFrequency = shredderConfig != null ? shredderConfig.TremorFrequency : 55f;
             float shakeAmplitude = shredderConfig != null ? shredderConfig.FeedShakeAmplitude : 2.5f;
-            float maxTiltAngle = shredderConfig != null ? shredderConfig.MaxFeedTiltAngle : 5f;
-            float feedAlignmentSpeed = shredderConfig != null
-                ? shredderConfig.FeedAlignmentAngularSpeed
-                : 360f;
             float currentFeedSpeed = feedSpeed;
             float debrisAccumulator = 0f;
             // The clipping seam sits at the center/upper-middle line of the wheels.
@@ -891,11 +886,7 @@ namespace GravityPuzzle
                 elapsed += feedDeltaTime;
                 PrototypeBoard.Active?.JointSpringPresenter?.UpdateShredderSprings(piece, clippingSeamY, shredderConfig);
 
-                piece.MoveShreddingPresentation(
-                    currentFeedSpeed * feedDeltaTime,
-                    maxTiltAngle,
-                    feedAlignmentSpeed,
-                    feedDeltaTime);
+                piece.MoveShreddingPresentation(currentFeedSpeed * feedDeltaTime);
 
                 // Sample active block cells directly so concave/notched pieces (L, U, etc.)
                 // never produce false contact in empty air.

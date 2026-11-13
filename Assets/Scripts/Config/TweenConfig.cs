@@ -11,9 +11,11 @@ namespace GravityPuzzle.Config
         [SerializeField] private float pieceMoveDuration = .12f;
         [SerializeField] private Ease pieceMoveEase = Ease.OutQuad;
         [SerializeField] private Ease gridFallEase = Ease.Linear;
+        [Tooltip("Speed (world units/second) of a piece falling inside the board under gravity.")]
         [Min(.001f)] [SerializeField] private float gridFallUnitsPerSecond = 8f;
         [Min(.001f)] [SerializeField] private float gridFallMinimumDuration = .08f;
         [Min(.001f)] [SerializeField] private float gridFallMaximumDuration = 2f;
+        [Tooltip("Speed (world units/second) of a piece falling inside the board after it is released or space opens below it.")]
         [Min(.001f)] [SerializeField] private float gridReleaseUnitsPerSecond = 8f;
         [Min(.001f)] [SerializeField] private float gridReleaseMinimumDuration = .06f;
         [Min(.001f)] [SerializeField] private float gridReleaseMaximumDuration = 2f;

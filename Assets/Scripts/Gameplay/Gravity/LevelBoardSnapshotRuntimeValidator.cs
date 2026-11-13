@@ -46,7 +46,7 @@ namespace GravityPuzzle.Gameplay.Gravity
                     context);
             }
 
-            int anchorMismatchCount = ValidatePieceAnchors(level, snapshot, runtimePieces, context);
+            ValidatePieceAnchors(level, snapshot, runtimePieces, context);
 
             if (snapshotIssueCount > 0)
             {
@@ -54,15 +54,7 @@ namespace GravityPuzzle.Gameplay.Gravity
                     $"[LevelSnapshot] Built with {snapshotIssueCount} placement issue(s). " +
                     $"Level='{level.levelName}'. Check earlier Level snapshot warnings for details.",
                     context);
-                return;
             }
-
-            Debug.Log(
-                $"[LevelSnapshot] Validated level='{level.levelName}', " +
-                $"authoredPieces={authoredPieceCount}, runtimePieces={runtimePieceCount}, " +
-                $"authoredProgressUnits={authoredProgressUnits}, runtimeProgressUnits={runtimeProgressUnits}, " +
-                $"anchorMismatches={anchorMismatchCount}, issues=0.",
-                context);
         }
 
         private static void CountRuntimePieces(
