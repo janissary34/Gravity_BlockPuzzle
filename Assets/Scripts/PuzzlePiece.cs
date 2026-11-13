@@ -2020,6 +2020,21 @@ namespace GravityPuzzle
         /// </summary>
         public void PrepareGridPresentationProfile()
         {
+            // Drag start/release and grid falls call this for pieces that are
+            // already grid-owned. Rebuilding every collider and the composite
+            // geometry again stalled the release frame on large pieces, which
+            // delayed the selection outline from clearing. Grid-profile collider
+            // edits regenerate their own geometry, so only the pose needs sync.
+            if (PhysicsProfile == PiecePhysicsProfile.Grid)
+            {
+                if (Body != null)
+                {
+                    Body.position = transform.position;
+                    Body.rotation = transform.eulerAngles.z;
+                }
+                return;
+            }
+
             ApplyLifecyclePhysicsProfile(PieceState.Placed);
         }
 
