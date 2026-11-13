@@ -63,7 +63,9 @@ A Hammer hit on an armed bomb removes only its icon and countdown, preserving ev
 piece cell, joint, and authoritative grid footprint. After defusal, the piece is
 handled as a normal block by later Hammer hits and by the shredder.
 While Hammer targeting is active, normal and defused pieces use the pooled per-cell
-outline. An armed bomb instead uses its existing composite whole-piece outline, so
+outline. Each cell outline rounds only the corners that lie on the piece silhouette
+(no same-piece cell continues either adjacent edge), matching the rounded brick art;
+corners shared with neighbouring cells stay square. An armed bomb instead uses its existing composite whole-piece outline, so
 the target feedback matches Hammer's one-action bomb defuse behavior.
 The Hammer's visual strike is centered on the armed Bomb icon while gameplay still
 validates the selected grid cell. At impact, two temporary pooled presentation slots

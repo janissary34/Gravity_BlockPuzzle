@@ -68,6 +68,10 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private HammerTargetCellOutlineView hammerCellOutlinePrefab;
         [SerializeField, Min(1)] private int hammerCellOutlinePrewarmCount = 128;
 
+        // Probe distance outside a cell edge, as a fraction of the cell size,
+        // used to detect a neighbouring cell of the same piece.
+        private const float SilhouetteProbeFraction = .1f;
+
         [Header("Copy")]
         [SerializeField] private string rocketTitle = "Rocket";
         [SerializeField] private string rocketInstruction = "Select a piece to eliminate";
@@ -1052,8 +1056,13 @@ namespace GravityPuzzle.Presentation.Views
                         availableHammerOutlines.Push(outlineInstance);
                     }
 
+                    PuzzlePiece.TargetableCell cell = targetableCellBuffer[cellIndex];
                     HammerTargetCellOutlineView outline = availableHammerOutlines.Pop();
-                    outline.Show(targetableCellBuffer[cellIndex], material, sortingOrder);
+                    outline.Show(
+                        cell,
+                        ResolveSilhouetteCorners(cell, targetableCellBuffer),
+                        material,
+                        sortingOrder);
                     activeHammerOutlines.Add(outline);
                 }
             }
@@ -1084,9 +1093,58 @@ namespace GravityPuzzle.Presentation.Views
 
             Material material = HammerTargetCellOutlineView.GetDefaultOutlineMaterial();
             PuzzlePiece.TargetableCell cell = new PuzzlePiece.TargetableCell(hammerCellCenter, hammerCellSize);
+            targetableCellBuffer.Clear();
+            piece.CollectTargetableCells(targetableCellBuffer);
             HammerTargetCellOutlineView outline = availableHammerOutlines.Pop();
-            outline.Show(cell, material, sortingOrder);
+            outline.Show(
+                cell,
+                ResolveSilhouetteCorners(cell, targetableCellBuffer),
+                material,
+                sortingOrder);
             activeHammerOutlines.Add(outline);
+        }
+
+        /// <summary>
+        /// A cell corner lies on the piece silhouette when neither edge next to
+        /// it continues into another cell of the same piece. Only those corners
+        /// match the rounded brick art; shared corners stay square. Probe
+        /// points sit just outside the cell, so the cell never matches itself.
+        /// Runs once per targeting start, not per frame.
+        /// </summary>
+        private static HammerTargetCellOutlineView.RoundedCorners ResolveSilhouetteCorners(
+            PuzzlePiece.TargetableCell cell,
+            List<PuzzlePiece.TargetableCell> pieceCells)
+        {
+            float probe = Mathf.Min(cell.Size.x, cell.Size.y) * SilhouetteProbeFraction;
+            Vector2 half = cell.Size * .5f;
+            var corners = HammerTargetCellOutlineView.RoundedCorners.None;
+            // Order matches RoundedCorners bits: BL, TL, TR, BR.
+            for (int corner = 0; corner < 4; corner++)
+            {
+                float signX = corner < 2 ? -1f : 1f;
+                float signY = corner == 0 || corner == 3 ? -1f : 1f;
+                Vector2 point = cell.Center + new Vector2(signX * half.x, signY * half.y);
+                Vector2 besideX = point + new Vector2(signX * probe, -signY * probe);
+                Vector2 besideY = point + new Vector2(-signX * probe, signY * probe);
+                if (!AnyCellContains(pieceCells, besideX) && !AnyCellContains(pieceCells, besideY))
+                    corners |= (HammerTargetCellOutlineView.RoundedCorners)(1 << corner);
+            }
+
+            return corners;
+        }
+
+        private static bool AnyCellContains(List<PuzzlePiece.TargetableCell> cells, Vector2 point)
+        {
+            for (int index = 0; index < cells.Count; index++)
+            {
+                PuzzlePiece.TargetableCell other = cells[index];
+                Vector2 half = other.Size * .5f;
+                if (Mathf.Abs(point.x - other.Center.x) < half.x &&
+                    Mathf.Abs(point.y - other.Center.y) < half.y)
+                    return true;
+            }
+
+            return false;
         }
 
         private void ReturnHammerCellOutlines()
