@@ -77,6 +77,13 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Presentation-only mobile haptic tuning. Leave unassigned only for scenes that intentionally have no haptic feedback.")]
         [SerializeField] private HapticFeedbackConfig hapticFeedbackConfig;
 
+        [Header("Sound")]
+        [Tooltip("Presentation-only one-shot sound cues (button clicks, piece drops).")]
+        [SerializeField] private SoundFeedbackConfig soundFeedbackConfig;
+
+        [Tooltip("2D AudioSource that plays the sound cues. Uses the AudioSource on this object when empty.")]
+        [SerializeField] private AudioSource soundFeedbackAudioSource;
+
         [Header("Ice Block Particles")]
         [Tooltip("Prefab template prewarmed once per possible ice block. A separate instance plays at every ice block.")]
         [SerializeField] private ParticleSystem iceCrackParticleSystem;
@@ -100,6 +107,9 @@ namespace GravityPuzzle.Bootstrap
             // adapter reads one persistent authority from its first refresh.
             BoosterInventoryRuntime.Configure(new PlayerPrefsBoosterInventory());
             HapticFeedbackRuntime.Configure(hapticFeedbackConfig);
+            if (soundFeedbackAudioSource == null)
+                soundFeedbackAudioSource = GetComponent<AudioSource>();
+            SoundFeedbackRuntime.Configure(soundFeedbackConfig, soundFeedbackAudioSource);
 
             if (gameplayCamera == null)
             {
@@ -225,6 +235,7 @@ namespace GravityPuzzle.Bootstrap
         private void OnDestroy()
         {
             HapticFeedbackRuntime.StopAll();
+            SoundFeedbackRuntime.Release(soundFeedbackAudioSource);
         }
 
         private void ResolveCoinDisplayText()

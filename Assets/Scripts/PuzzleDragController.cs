@@ -1349,6 +1349,7 @@ namespace GravityPuzzle
                 if (TryCommitSafeSnapRelease(selectedPiece, out _))
                 {
                     HapticFeedbackRuntime.ValidDrop();
+                    SoundFeedbackRuntime.PieceDropped();
                     StartGridReleasePresentation(selectedPiece, selectedJointGroupPieces);
                 }
 
@@ -1365,6 +1366,7 @@ namespace GravityPuzzle
             if (TryCommitSafeSnapRelease(selectedPiece, out Vector2 releasePosition))
             {
                 HapticFeedbackRuntime.ValidDrop();
+                SoundFeedbackRuntime.PieceDropped();
                 PuzzlePiece releasePiece = selectedPiece;
                 StartGridReleasePresentation(releasePiece, releasePosition);
                 selectedPiece = null;

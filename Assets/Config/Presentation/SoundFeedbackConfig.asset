@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fcb8123c8414438a9d3aa20d8cde9da1, type: 3}
+  m_Name: SoundFeedbackConfig
+  m_EditorClassIdentifier: 
+  buttonClickClips:
+  - {fileID: 8300000, guid: b9a5cc6d4856245dab5250b76233bcac, type: 3}
+  - {fileID: 8300000, guid: d2655604ff5b94062873df0ec762dec0, type: 3}
+  - {fileID: 8300000, guid: ece4fd32eccb6453883ef43bd456e20f, type: 3}
+  buttonClickVolume: 1
+  pieceDropClips:
+  - {fileID: 8300000, guid: 4281a29818897491bbd1f5f16476bcb5, type: 3}
+  - {fileID: 8300000, guid: 0462b6c901aaa4e699354381d642f78c, type: 3}
+  pieceDropVolume: 1
