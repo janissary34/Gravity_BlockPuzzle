@@ -286,6 +286,9 @@ namespace GravityPuzzle
         private bool destructionReported;
         private bool iceReleaseAnimating;
         private int frozenUntilDestroyedCount;
+        // Per-piece ice progress from direct Hammer hits; added to the
+        // board-wide destroyed count when evaluating the freeze countdown.
+        private int hammerIceHitCount;
         private int previousFrozenRemaining = -1;
         private TextMeshPro iceCounterText;
         private TextMeshPro bombCounterText;
@@ -533,6 +536,7 @@ namespace GravityPuzzle
             destructionReported = false;
             iceReleaseAnimating = false;
             previousFrozenRemaining = -1;
+            hammerIceHitCount = 0;
             useFullCollisionGeometry = false;
             isSelected = false;
             isBoosterTargeted = false;
@@ -2514,6 +2518,7 @@ namespace GravityPuzzle
             int counterSortingOrder)
         {
             frozenUntilDestroyedCount = Mathf.Max(0, requiredDestroyedPieces);
+            hammerIceHitCount = 0;
             iceCounterFont = counterFont;
             iceCounterFontSize = counterFontSize > 5f
                 ? Mathf.Clamp((counterFontSize / 36f) * .55f, .1f, 3f)
@@ -2601,8 +2606,23 @@ namespace GravityPuzzle
             return true;
         }
 
+        /// <summary>
+        /// Applies one Hammer hit to this piece's ice countdown. Returns false
+        /// when the piece is not frozen, leaving state untouched.
+        /// </summary>
+        public bool TryChipIceWithHammer(int destroyedPieceCount)
+        {
+            if (!IsFrozen)
+                return false;
+
+            hammerIceHitCount++;
+            RefreshFreezeState(destroyedPieceCount);
+            return true;
+        }
+
         public void RefreshFreezeState(int destroyedPieceCount)
         {
+            destroyedPieceCount += hammerIceHitCount;
             bool shouldBeFrozen =
                 frozenUntilDestroyedCount > 0 &&
                 destroyedPieceCount < frozenUntilDestroyedCount &&

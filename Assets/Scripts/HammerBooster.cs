@@ -15,7 +15,8 @@ namespace GravityPuzzle
 {
     /// <summary>
     /// One-use-per-level hammer. Press the UI button to enter targeting mode,
-    /// then tap one visible cell belonging to a movable puzzle piece.
+    /// then tap one visible cell belonging to a movable puzzle piece. A frozen
+    /// piece is targeted as a whole: the hit lowers its ice counter by one.
     /// </summary>
     public sealed class HammerBooster : MonoBehaviour
     {
@@ -59,6 +60,9 @@ namespace GravityPuzzle
         private BoosterButton boosterButtonRef;
         private bool impactInProgress;
         private bool impactSucceeded;
+        // Fixed at target selection so an ice hit stays an ice hit even if
+        // the piece thaws from another source during the swing.
+        private bool impactTargetsIce;
         private int remainingCount;
         private int lastActivationFrame = -1;
         private BoosterVisualView hammerVisualPrefabView;
@@ -398,17 +402,20 @@ namespace GravityPuzzle
         {
             // Validate before consuming the booster. The actual removal happens
             // at the animation impact frame, not at target selection.
-            // Ice is a rocket-only obstacle. Keep this validation here as the
-            // authoritative gameplay guard; targeting presentation is only a
-            // visual affordance and must not decide the outcome.
-            if (piece == null || piece.IsFrozen || impactInProgress)
+            // Keep this validation here as the authoritative gameplay guard;
+            // targeting presentation is only a visual affordance and must not
+            // decide the outcome.
+            if (piece == null || impactInProgress)
                 return false;
 
             // A falling piece has already committed its destination in the
             // board model while its visible cells are still travelling. The
             // hammer is intentionally aimed at the visible cell, so stop the
-            // presentation owner before scheduling the strike.
-            PuzzleDragController.CancelGridFallForTargetedAction(piece);
+            // presentation owner before scheduling the strike. Frozen pieces
+            // never fall and keep their cells; the hit only chips their ice.
+            impactTargetsIce = piece.IsFrozen;
+            if (!impactTargetsIce)
+                PuzzleDragController.CancelGridFallForTargetedAction(piece);
             impactInProgress = true;
             impactSucceeded = false;
             PlayHammerSwing(piece, gameplayImpactPosition, visualImpactPosition);
@@ -528,7 +535,7 @@ namespace GravityPuzzle
         {
             if (!impactSucceeded)
             {
-                Debug.LogWarning("[HammerBooster] Hammer impact did not remove a cell; restoring targeting state.", this);
+                Debug.LogWarning("[HammerBooster] Hammer impact had no effect; restoring targeting state.", this);
                 IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
                 if (gate != null && gate.BlocksBoardDrag)
                 {
@@ -570,27 +577,16 @@ namespace GravityPuzzle
                 : default;
             PrototypeBoard board = PrototypeBoard.Active;
             hammerJointIds.Clear();
-            if (piece != null && level != null)
-                board?.CollectJointIdsAtPieceCell(sourcePieceId, targetCell, hammerJointIds);
-            if (TopologyEditingEnabled &&
-                piece != null && piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
+            if (impactTargetsIce)
             {
-                impactSucceeded = true;
-                SoundFeedbackRuntime.HammerBreak();
-                HapticFeedbackRuntime.HammerImpact(piece.IsBomb && piece.IsBombDefused);
-                if (cell.progressUnits > 0f)
-                {
-                    if (board?.BreakJointsById(hammerJointIds) > 0)
-                        PuzzleDragController.WakeUpGravity();
-                    Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
-                    LevelProgressManager manager = LevelProgressManager.Instance;
-                    if (manager != null)
-                        manager.SpawnFlyingVoxelBurst(
-                            cell.worldPosition,
-                            color,
-                            cell.progressUnits,
-                            cell.renderedVoxelCount);
-                }
+                if (piece != null)
+                    ApplyHammerIceHit(piece, board);
+            }
+            else
+            {
+                if (piece != null && level != null)
+                    board?.CollectJointIdsAtPieceCell(sourcePieceId, targetCell, hammerJointIds);
+                ApplyHammerCellRemoval(piece, impactPosition, board);
             }
 
             Camera camera = gameplayCamera;
@@ -604,6 +600,46 @@ namespace GravityPuzzle
                         true)
                     .SetLink(camera.gameObject, LinkBehaviour.KillOnDisable)
                     .SetAutoKill(true);
+        }
+
+        private void ApplyHammerCellRemoval(PuzzlePiece piece, Vector2 impactPosition, PrototypeBoard board)
+        {
+            if (!TopologyEditingEnabled ||
+                piece == null || !piece.TryRemoveCellWithHammer(impactPosition, out PuzzlePiece.RemovedCell cell))
+                return;
+
+            impactSucceeded = true;
+            SoundFeedbackRuntime.HammerBreak();
+            HapticFeedbackRuntime.HammerImpact(piece.IsBomb && piece.IsBombDefused);
+            if (cell.progressUnits <= 0f)
+                return;
+
+            if (board?.BreakJointsById(hammerJointIds) > 0)
+                PuzzleDragController.WakeUpGravity();
+            Color color = new Color(cell.color.r, cell.color.g, cell.color.b, 1f);
+            LevelProgressManager manager = LevelProgressManager.Instance;
+            if (manager != null)
+                manager.SpawnFlyingVoxelBurst(
+                    cell.worldPosition,
+                    color,
+                    cell.progressUnits,
+                    cell.renderedVoxelCount);
+        }
+
+        /// <summary>
+        /// A hit on ice lowers the piece's counter by one instead of removing
+        /// a cell. Thawing on the last hit releases the piece to gravity.
+        /// </summary>
+        private void ApplyHammerIceHit(PuzzlePiece piece, PrototypeBoard board)
+        {
+            if (!piece.TryChipIceWithHammer(board != null ? board.DestroyedPieceCount : 0))
+                return;
+
+            impactSucceeded = true;
+            SoundFeedbackRuntime.HammerBreak();
+            HapticFeedbackRuntime.HammerImpact(false);
+            if (!piece.IsFrozen)
+                PuzzleDragController.WakeUpGravity();
         }
 
         private static Vector3 GetViewportWorldPoint(Camera camera, float x, float y, float z)

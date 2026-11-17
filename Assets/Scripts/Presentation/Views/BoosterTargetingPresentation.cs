@@ -1028,12 +1028,13 @@ namespace GravityPuzzle.Presentation.Views
             for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
             {
                 PuzzlePiece piece = pieces[pieceIndex];
-                if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked)
+                if (piece == null || piece.IsShredderInteractionLocked)
                     continue;
 
-                // Hammer defuses an armed bomb as one gameplay action. Reuse
-                // the piece's composite outline so targeting reflects that
-                // whole-piece outcome instead of suggesting a single-cell hit.
+                // Hammer defuses an armed bomb and chips a frozen piece's ice
+                // as one gameplay action. Reuse the piece's composite outline
+                // so targeting reflects that whole-piece outcome instead of
+                // suggesting a single-cell hit.
                 if (UsesWholePieceHammerHighlight(piece))
                 {
                     piece.SetBoosterTargeted(true);
@@ -1070,7 +1071,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private static bool UsesWholePieceHammerHighlight(PuzzlePiece piece)
         {
-            return piece != null && piece.IsBomb && !piece.IsBombDefused;
+            return piece != null && (piece.IsFrozen || (piece.IsBomb && !piece.IsBombDefused));
         }
 
         private void ShowHammerCellOutlineForTutorial(
