@@ -3714,12 +3714,15 @@ namespace GravityPuzzle
                 return;
             }
 
-            GetModularPresentationBounds(out Vector2 localCenter, out _);
+            Vector2 localCenter = GetIceCounterLocalCenter();
 
             iceCounterText.gameObject.SetActive(true);
             iceCounterText.isOrthographic = true;
             iceCounterText.enabled = true;
             iceCounterText.enableAutoSizing = false;
+            // Centre the digit's glyph mesh, not its font line box, so the
+            // number sits visually in the middle of the piece.
+            iceCounterText.alignment = TextAlignmentOptions.MidlineGeoAligned;
 
             if (iceCounterFont != null)
                 iceCounterText.font = iceCounterFont;
@@ -4487,6 +4490,59 @@ namespace GravityPuzzle
                 if (voxel != null)
                     voxel.Renderer.enabled = visible;
             }
+        }
+
+        /// <summary>
+        /// Local-space anchor for the ice counter: the piece bounds centre when
+        /// a cell covers it, otherwise (concave shapes such as L) the occupied
+        /// cell closest to the area-weighted shape centre.
+        /// </summary>
+        private Vector2 GetIceCounterLocalCenter()
+        {
+            GetModularPresentationBounds(out Vector2 boundsCenter, out _);
+
+            Vector2 weightedSum = Vector2.zero;
+            float totalArea = 0f;
+            bool boundsCenterCovered = false;
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[index];
+                if (visual == null || index >= fullCollisionCellSizes.Count)
+                    continue;
+
+                Vector2 size = fullCollisionCellSizes[index];
+                Vector2 position = visual.transform.localPosition;
+                float area = size.x * size.y;
+                weightedSum += position * area;
+                totalArea += area;
+                Vector2 half = size * .5f;
+                if (Mathf.Abs(boundsCenter.x - position.x) <= half.x &&
+                    Mathf.Abs(boundsCenter.y - position.y) <= half.y)
+                    boundsCenterCovered = true;
+            }
+
+            if (boundsCenterCovered || totalArea <= 0f)
+                return boundsCenter;
+
+            Vector2 shapeCenter = weightedSum / totalArea;
+            Vector2 closest = boundsCenter;
+            float closestDistance = float.PositiveInfinity;
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[index];
+                if (visual == null || index >= fullCollisionCellSizes.Count)
+                    continue;
+
+                Vector2 position = visual.transform.localPosition;
+                float distance = (position - shapeCenter).sqrMagnitude;
+                if (distance >= closestDistance)
+                    continue;
+
+                closest = position;
+                closestDistance = distance;
+            }
+
+            return closest;
         }
 
         private void GetModularPresentationBounds(out Vector2 center, out Vector2 size)
