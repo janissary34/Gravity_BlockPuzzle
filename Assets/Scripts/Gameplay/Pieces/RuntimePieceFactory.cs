@@ -637,7 +637,12 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineColor : definition.bombCounterOutlineColor,
                 pieceVisualConfig != null ? pieceVisualConfig.BombCounterOutlineWidth : definition.bombCounterOutlineWidth,
                 pieceVisualConfig != null && pieceVisualConfig.BombCounterOffset != Vector2.zero ? pieceVisualConfig.BombCounterOffset : definition.bombCounterOffset,
-                pieceVisualConfig != null ? pieceVisualConfig.BombCounterSortingOrder : 50));
+                pieceVisualConfig != null ? pieceVisualConfig.BombCounterSortingOrder : 50,
+                ResolveKeyLinkId(definition),
+                pieceVisualConfig != null ? pieceVisualConfig.KeyBadgeSprite : null,
+                pieceVisualConfig != null ? pieceVisualConfig.LockBadgeSprite : null,
+                pieceVisualConfig != null ? pieceVisualConfig.KeyLockBadgeFill : .8f,
+                GetFallbackSpriteMaterial()));
             puzzlePiece.ConfigureOutlineGrid(outlineGrid);
             ConfigureOutline(puzzlePiece);
             if (content.VoxelShards != null && content.VoxelShards.Count > 0)
@@ -647,6 +652,19 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             ConfigureOutlinePresentation(puzzlePiece);
             puzzlePiece.ApplyLifecyclePhysicsProfile(PieceState.Placed);
+        }
+
+        private static string ResolveKeyLinkId(PieceDefinition definition)
+        {
+            switch (definition.specialBlockType)
+            {
+                case PieceSpecialBlockType.Key:
+                    return definition.pieceId;
+                case PieceSpecialBlockType.Lock:
+                    return definition.lockKeyPieceId;
+                default:
+                    return null;
+            }
         }
 
         private static PieceRuntimeContent BuildRuntimeContent(

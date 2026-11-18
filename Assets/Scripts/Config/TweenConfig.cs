@@ -85,6 +85,22 @@ namespace GravityPuzzle.Config
         [Min(.001f)] [SerializeField] private float bombDefuseFadeDuration = .2f;
         [SerializeField] private Ease bombDefuseFadeEase = Ease.InQuad;
 
+        [Header("Key / Lock Presentation")]
+        [Tooltip("Seconds the Key icon takes to jump from its destroyed block to the centre of its Lock.")]
+        [Min(.001f)] [SerializeField] private float keyFlightDuration = .6f;
+        [Tooltip("World-space height of the Key icon's jump arc.")]
+        [Min(0f)] [SerializeField] private float keyFlightArcHeight = 1.2f;
+        [SerializeField] private Ease keyFlightEase = Ease.InOutSine;
+        [Tooltip("Seconds the arrived Key turns inside the Lock before the Lock breaks.")]
+        [Min(.001f)] [SerializeField] private float keyTurnDuration = .14f;
+        [Tooltip("Z rotation, in degrees, of the arrived Key's turn.")]
+        [SerializeField] private float keyTurnAngle = -90f;
+        [Tooltip("Seconds the broken Lock and Key icons grow and fade after the Lock opens.")]
+        [Min(.001f)] [SerializeField] private float lockBreakDuration = .28f;
+        [Tooltip("Scale multiplier the broken Lock and Key icons reach while fading.")]
+        [Min(1f)] [SerializeField] private float lockBreakScale = 1.45f;
+        [SerializeField] private Ease lockBreakEase = Ease.OutQuad;
+
         [Header("Rocket Booster Presentation")]
         [Min(.001f)] [SerializeField] private float rocketEntranceDuration = .75f;
         [SerializeField] private Ease rocketEntranceEase = Ease.OutCubic;
@@ -248,6 +264,14 @@ namespace GravityPuzzle.Config
         public Ease BombDefuseSplitEase => bombDefuseSplitEase;
         public float BombDefuseFadeDuration => bombDefuseFadeDuration;
         public Ease BombDefuseFadeEase => bombDefuseFadeEase;
+        public float KeyFlightDuration => keyFlightDuration;
+        public float KeyFlightArcHeight => keyFlightArcHeight;
+        public Ease KeyFlightEase => keyFlightEase;
+        public float KeyTurnDuration => keyTurnDuration;
+        public float KeyTurnAngle => keyTurnAngle;
+        public float LockBreakDuration => lockBreakDuration;
+        public float LockBreakScale => lockBreakScale;
+        public Ease LockBreakEase => lockBreakEase;
         public float RocketEntranceDuration => rocketEntranceDuration;
         public Ease RocketEntranceEase => rocketEntranceEase;
         public float RocketTargetPauseDuration => rocketTargetPauseDuration;

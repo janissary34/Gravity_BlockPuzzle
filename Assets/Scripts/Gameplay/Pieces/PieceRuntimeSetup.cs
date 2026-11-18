@@ -36,7 +36,12 @@ namespace GravityPuzzle.Gameplay.Pieces
             Color bombCounterOutlineColor,
             float bombCounterOutlineWidth,
             Vector2 bombCounterOffset,
-            int bombCounterSortingOrder)
+            int bombCounterSortingOrder,
+            string keyLinkId,
+            Sprite keyBadgeSprite,
+            Sprite lockBadgeSprite,
+            float keyLockBadgeFill,
+            Material keyLockBadgeMaterial)
         {
             SourcePieceId = sourcePieceId;
             ProgressUnits = progressUnits;
@@ -68,6 +73,11 @@ namespace GravityPuzzle.Gameplay.Pieces
             BombCounterOutlineWidth = bombCounterOutlineWidth;
             BombCounterOffset = bombCounterOffset;
             BombCounterSortingOrder = bombCounterSortingOrder;
+            KeyLinkId = keyLinkId;
+            KeyBadgeSprite = keyBadgeSprite;
+            LockBadgeSprite = lockBadgeSprite;
+            KeyLockBadgeFill = keyLockBadgeFill;
+            KeyLockBadgeMaterial = keyLockBadgeMaterial;
         }
 
         public int SourcePieceId { get; }
@@ -100,5 +110,14 @@ namespace GravityPuzzle.Gameplay.Pieces
         public float BombCounterOutlineWidth { get; }
         public Vector2 BombCounterOffset { get; }
         public int BombCounterSortingOrder { get; }
+        /// <summary>
+        /// Stable authored pair identity: a Key piece's own Piece Id, or the
+        /// Key Piece Id referenced by a Lock piece. Empty for other types.
+        /// </summary>
+        public string KeyLinkId { get; }
+        public Sprite KeyBadgeSprite { get; }
+        public Sprite LockBadgeSprite { get; }
+        public float KeyLockBadgeFill { get; }
+        public Material KeyLockBadgeMaterial { get; }
     }
 }

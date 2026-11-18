@@ -12,8 +12,8 @@ This directory contains durable technical knowledge that is useful beyond a sing
 * `KnownIssues.md`: verified unresolved defects and architectural gaps.
 * `Decisions/`: architectural decision records for choices that should remain understandable after the original implementation context is gone.
 
-Current accepted decisions include presentation authority boundaries and the
-scene-authored hybrid level-geometry root.
+Current accepted decisions include presentation authority boundaries, the
+scene-authored hybrid level-geometry root, and the Key/Lock arrival contract.
 
 ## When to update
 

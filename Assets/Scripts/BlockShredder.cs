@@ -463,7 +463,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryCapturePiece(PuzzlePiece piece, ShredderCatchZone zone)
         {
-            if (piece == null || piece.IsFrozen || zone == null || shredderConfig == null ||
+            if (piece == null || piece.IsMovementLocked || zone == null || shredderConfig == null ||
                 !zone.ContainsMapExitFootprint(piece))
                 return false;
 

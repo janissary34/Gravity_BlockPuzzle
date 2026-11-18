@@ -1081,7 +1081,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private static bool UsesWholePieceHammerHighlight(PuzzlePiece piece)
         {
-            return piece != null && (piece.IsFrozen || (piece.IsBomb && !piece.IsBombDefused));
+            return piece != null && (piece.IsMovementLocked || (piece.IsBomb && !piece.IsBombDefused));
         }
 
         private void ShowHammerCellOutlineForTutorial(

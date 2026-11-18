@@ -17,6 +17,7 @@ namespace GravityPuzzle
     /// One-use-per-level hammer. Press the UI button to enter targeting mode,
     /// then tap one visible cell belonging to a movable puzzle piece. A frozen
     /// piece is targeted as a whole: the hit lowers its ice counter by one.
+    /// A locked piece is also targeted as a whole: the hit breaks its lock.
     /// </summary>
     public sealed class HammerBooster : MonoBehaviour
     {
@@ -65,7 +66,7 @@ namespace GravityPuzzle
         private bool impactSucceeded;
         // Fixed at target selection so an ice hit stays an ice hit even if
         // the piece thaws from another source during the swing.
-        private bool impactTargetsIce;
+        private bool impactTargetsWholePiece;
         // Non-null while the pending swing targets a closed Box instead of a piece.
         private string impactBoxAreaId;
         private int remainingCount;
@@ -375,10 +376,11 @@ namespace GravityPuzzle
                 if (target.Piece != null && target.Piece.TryGetTargetableCellAt(target.WorldPosition, out PuzzlePiece.TargetableCell targetableCell))
                     impactPosition = targetableCell.Center;
 
-                Vector2 visualImpactPosition = target.Piece != null &&
-                    target.Piece.TryGetBombVisualImpactPoint(out Vector2 bombVisualImpactPoint)
-                    ? bombVisualImpactPoint
-                    : impactPosition;
+                Vector2 visualImpactPosition = impactPosition;
+                if (target.Piece != null &&
+                    (target.Piece.TryGetBombVisualImpactPoint(out Vector2 iconImpactPoint) ||
+                     target.Piece.TryGetLockVisualImpactPoint(out iconImpactPoint)))
+                    visualImpactPosition = iconImpactPoint;
                 if (TryStartHammerImpact(target.Piece, impactPosition, visualImpactPosition))
                 {
                     CommitTargetSelection(tutorialGate);
@@ -417,7 +419,7 @@ namespace GravityPuzzle
             if (impactInProgress || string.IsNullOrEmpty(target.AreaId))
                 return false;
 
-            impactTargetsIce = false;
+            impactTargetsWholePiece = false;
             impactBoxAreaId = target.AreaId;
             impactInProgress = true;
             impactSucceeded = false;
@@ -441,11 +443,12 @@ namespace GravityPuzzle
             // A falling piece has already committed its destination in the
             // board model while its visible cells are still travelling. The
             // hammer is intentionally aimed at the visible cell, so stop the
-            // presentation owner before scheduling the strike. Frozen pieces
-            // never fall and keep their cells; the hit only chips their ice.
-            impactTargetsIce = piece.IsFrozen;
+            // presentation owner before scheduling the strike. Frozen and
+            // locked pieces never fall and keep their cells; the hit only
+            // chips their ice or breaks their lock.
+            impactTargetsWholePiece = piece.IsMovementLocked;
             impactBoxAreaId = null;
-            if (!impactTargetsIce)
+            if (!impactTargetsWholePiece)
                 PuzzleDragController.CancelGridFallForTargetedAction(piece);
             impactInProgress = true;
             impactSucceeded = false;
@@ -613,10 +616,10 @@ namespace GravityPuzzle
                 ApplyHammerBoxHit(impactBoxAreaId, board);
                 impactBoxAreaId = null;
             }
-            else if (impactTargetsIce)
+            else if (impactTargetsWholePiece)
             {
                 if (piece != null)
-                    ApplyHammerIceHit(piece, board);
+                    ApplyHammerWholePieceHit(piece, board);
             }
             else
             {
@@ -663,18 +666,22 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// A hit on ice lowers the piece's counter by one instead of removing
-        /// a cell. Thawing on the last hit releases the piece to gravity.
+        /// A hit on a locked piece breaks its lock. A hit on ice lowers the
+        /// piece's counter by one instead of removing a cell. Either release
+        /// returns the piece to gravity.
         /// </summary>
-        private void ApplyHammerIceHit(PuzzlePiece piece, PrototypeBoard board)
+        private void ApplyHammerWholePieceHit(PuzzlePiece piece, PrototypeBoard board)
         {
-            if (!piece.TryChipIceWithHammer(board != null ? board.DestroyedPieceCount : 0))
+            bool hit = piece.IsKeyLocked
+                ? piece.TryReleaseKeyLock()
+                : piece.TryChipIceWithHammer(board != null ? board.DestroyedPieceCount : 0);
+            if (!hit)
                 return;
 
             impactSucceeded = true;
             SoundFeedbackRuntime.HammerBreak();
             HapticFeedbackRuntime.HammerImpact(false);
-            if (!piece.IsFrozen)
+            if (!piece.IsMovementLocked)
                 PuzzleDragController.WakeUpGravity();
         }
 

@@ -115,6 +115,17 @@ namespace GravityPuzzle
         public bool IsFrozen { get; private set; }
         public bool IsBomb { get; private set; }
         public bool IsBombDefused { get; private set; }
+        /// <summary>True for an authored Key piece. Its Key leaves for its Lock when the piece is destroyed.</summary>
+        public bool IsKey { get; private set; }
+        /// <summary>True while this Lock piece waits for its Key. Like ice, it stays fixed and supports others.</summary>
+        public bool IsKeyLocked { get; private set; }
+        /// <summary>Authored Key/Lock pair identity (the Key piece's Piece Id); null for other pieces.</summary>
+        public string KeyLinkId { get; private set; }
+        /// <summary>
+        /// Ice or an unopened Lock: the piece cannot be dragged, fall, or enter
+        /// a shredder, and it acts as a fixed gravity support.
+        /// </summary>
+        public bool IsMovementLocked => IsFrozen || IsKeyLocked;
         public float BombTimerSeconds { get; private set; }
         public int SourcePieceId { get; private set; } = -1;
         /// <summary>Authored board-block units represented by this draggable piece.</summary>
@@ -309,6 +320,14 @@ namespace GravityPuzzle
         private float bombCounterOutlineWidth = .18f;
         private Vector2 bombCounterOffset;
         private SpriteRenderer bombOverlayRenderer;
+        private KeyLockBadgePresentation keyLockBadge;
+        private Sprite keyBadgeSprite;
+        private Sprite lockBadgeSprite;
+        private float keyLockBadgeFill = .8f;
+        private Material keyLockBadgeMaterial;
+        private bool keyBadgeDetached;
+        private Action<PuzzlePiece> keyArrivalHandler;
+        private TweenCallback keyArrivedCallback;
         private SpriteRenderer bombDefuseLeftRenderer;
         private SpriteRenderer bombDefuseRightRenderer;
         private readonly List<SpriteRenderer> bombShredderFragmentRenderers =
@@ -407,6 +426,9 @@ namespace GravityPuzzle
 
             if (iceSlots.Count > 0)
                 wholePieceRenderer = iceSlots[0];
+
+            keyLockBadge = new KeyLockBadgePresentation(iceSlotsRoot);
+            keyArrivedCallback = HandleKeyArrived;
         }
 
         public int PartSlotCount => partSlots.Count;
@@ -545,6 +567,7 @@ namespace GravityPuzzle
             RestoreTargetingForegroundSorting();
             IsFrozen = false;
             IsBombDefused = false;
+            ResetKeyLockState();
             SourcePieceId = -1;
             SetOutlineRenderersEnabled(true);
             ApplyOutlinePresentation();
@@ -568,6 +591,7 @@ namespace GravityPuzzle
             returnToPool = null;
             ClearIceVisuals();
             ClearBombVisuals();
+            ResetKeyLockState();
             ClearWholePiecePresentation();
             RestoreShredderPresentation();
             ApplyLifecyclePhysicsProfile(PieceState.Despawned);
@@ -744,6 +768,7 @@ namespace GravityPuzzle
         {
             ClearIceVisuals();
             ClearBombVisuals();
+            keyLockBadge?.ClearBadge();
             ClearJoinedPiecePresentation();
             wholePieceNormalSprite = normalSprite;
             wholePieceIceSprite = iceSprite;
@@ -755,6 +780,7 @@ namespace GravityPuzzle
             PrototypeBoard board = PrototypeBoard.Active;
             RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
             RefreshBombState();
+            RefreshKeyLockBadge();
         }
 
         /// <summary>
@@ -771,6 +797,7 @@ namespace GravityPuzzle
         {
             ClearIceVisuals();
             ClearBombVisuals();
+            keyLockBadge?.ClearBadge();
             ClearWholePiecePresentation();
             if (moduleCells == null || moduleCells.Count == 0 ||
                 singleModuleSprite == null || horizontalBarSprite == null ||
@@ -907,6 +934,7 @@ namespace GravityPuzzle
             PrototypeBoard board = PrototypeBoard.Active;
             RefreshFreezeState(board != null ? board.DestroyedPieceCount : 0);
             RefreshBombState();
+            RefreshKeyLockBadge();
         }
 
         public void ClearWholePiecePresentation()
@@ -1387,7 +1415,7 @@ namespace GravityPuzzle
         {
             // A piece is committed to the shredder as soon as it enters the
             // catch zone. It must not regain drag selection during the feed.
-            if (isSelected && (IsFrozen || IsShredderInteractionLocked))
+            if (isSelected && (IsMovementLocked || IsShredderInteractionLocked))
                 return;
 
             this.isSelected = isSelected;
@@ -1548,7 +1576,7 @@ namespace GravityPuzzle
         /// </summary>
         public void CollectTargetableCells(List<TargetableCell> results)
         {
-            if (results == null || IsFrozen || IsShredderInteractionLocked)
+            if (results == null || IsMovementLocked || IsShredderInteractionLocked)
                 return;
 
             int cellCount = collisionCells != null && collisionCells.Count > 0
@@ -1694,8 +1722,9 @@ namespace GravityPuzzle
             bombOverlayFill = setup.BombOverlayFill;
             bombDefuseSplitMaterial = setup.BombDefuseSplitMaterial;
             bombShredderVoxelSubdivisions = Mathf.Clamp(setup.BombShredderVoxelSubdivisions, 2, 8);
+            bool usesIce = UsesIceCountdown(setup.SpecialBlockType);
             ConfigureFreeze(
-                setup.SpecialBlockType == PieceSpecialBlockType.Bomb ? 0 : setup.FrozenMoveCount,
+                usesIce ? setup.FrozenMoveCount : 0,
                 setup.IceCounterFont,
                 setup.IceCounterFontSize,
                 setup.IceCounterTextColor,
@@ -1703,7 +1732,7 @@ namespace GravityPuzzle
                 setup.IceCounterOutlineWidth,
                 setup.IceCounterOffset,
                 setup.IceCounterSortingOrder);
-            iceParticleVfxHandle = setup.SpecialBlockType != PieceSpecialBlockType.Bomb && setup.FrozenMoveCount > 0
+            iceParticleVfxHandle = usesIce && setup.FrozenMoveCount > 0
                 ? iceParticleVfx?.RentPair()
                 : null;
             ConfigureBomb(
@@ -1716,6 +1745,16 @@ namespace GravityPuzzle
                 setup.BombCounterOffset,
                 setup.BombCounterFont,
                 setup.BombCounterSortingOrder);
+            ConfigureKeyLock(setup);
+        }
+
+        /// <summary>
+        /// Legacy Normal pieces with a positive frozen count are ice; every
+        /// other special type ignores the ice countdown.
+        /// </summary>
+        public static bool UsesIceCountdown(PieceSpecialBlockType type)
+        {
+            return type == PieceSpecialBlockType.Normal || type == PieceSpecialBlockType.Ice;
         }
 
         public void ConfigureIceParticleVfx(IIceBlockParticleVfx particleVfx)
@@ -1727,6 +1766,7 @@ namespace GravityPuzzle
         {
             ClearIceVisuals();
             ClearBombVisuals();
+            ResetKeyLockState();
             ClearWholePiecePresentation();
             iceOverlaySprite = null;
             iceOverlayTint = new Color(1f, 1f, 1f, .42f);
@@ -2606,6 +2646,166 @@ namespace GravityPuzzle
             return true;
         }
 
+        private void ConfigureKeyLock(PieceRuntimeSetup setup)
+        {
+            keyBadgeSprite = setup.KeyBadgeSprite;
+            lockBadgeSprite = setup.LockBadgeSprite;
+            keyLockBadgeFill = setup.KeyLockBadgeFill;
+            keyLockBadgeMaterial = setup.KeyLockBadgeMaterial;
+
+            bool isKeyType = setup.SpecialBlockType == PieceSpecialBlockType.Key;
+            bool isLockType = setup.SpecialBlockType == PieceSpecialBlockType.Lock;
+            if (!isKeyType && !isLockType)
+                return;
+
+            if (string.IsNullOrEmpty(setup.KeyLinkId))
+            {
+                Debug.LogWarning(
+                    $"[KeyLock] '{name}' is a {setup.SpecialBlockType} piece without a Key link. It behaves as a normal piece.",
+                    this);
+                return;
+            }
+
+            KeyLinkId = setup.KeyLinkId;
+            IsKey = isKeyType;
+
+            // A Lock activated later (for example from a Box) opens at once
+            // when its Key has already been destroyed.
+            PrototypeBoard board = PrototypeBoard.Active;
+            IsKeyLocked = isLockType && (board == null || !board.IsKeyConsumed(KeyLinkId));
+            RefreshKeyLockBadge();
+        }
+
+        private void ResetKeyLockState()
+        {
+            keyLockBadge?.Clear();
+            IsKey = false;
+            IsKeyLocked = false;
+            KeyLinkId = null;
+            keyBadgeDetached = false;
+            keyArrivalHandler = null;
+        }
+
+        /// <summary>
+        /// Rebuilds the Key or Lock icon after a presentation rebuild. The
+        /// icon reflects gameplay state; it never decides it.
+        /// </summary>
+        public void RefreshKeyLockBadge()
+        {
+            if (keyLockBadge == null || keyLockBadge.HasBadge)
+                return;
+
+            Sprite sprite = IsKeyLocked
+                ? lockBadgeSprite
+                : IsKey && !keyBadgeDetached ? keyBadgeSprite : null;
+            if (sprite == null ||
+                !TryResolveCentralOverlayPlacement(
+                    out SpriteRenderer sortingSource,
+                    out Vector2 center,
+                    out Vector2 targetSize))
+                return;
+
+            if (!TryGetAvailableIceSlot(out SpriteRenderer slot))
+            {
+                Debug.LogWarning("[KeyLock] Key/Lock presentation slot capacity exceeded.", this);
+                return;
+            }
+
+            keyLockBadge.ShowBadge(
+                slot,
+                transform,
+                sprite,
+                keyLockBadgeMaterial,
+                new Vector3(center.x, center.y, transform.position.z - .01f),
+                GetOverlayScaleToFit(targetSize, sprite, keyLockBadgeFill),
+                sortingSource.sortingLayerID,
+                sortingSource.sortingOrder + 5,
+                IsKeyLocked ? "Lock Badge" : "Key Badge");
+        }
+
+        /// <summary>
+        /// Removes this Key piece's icon so its flight can start, and returns
+        /// where the flight begins. Called once, when the Key piece is destroyed.
+        /// </summary>
+        public Vector3 DetachKeyBadgeForFlight()
+        {
+            keyBadgeDetached = true;
+            Vector3 start = keyLockBadge != null && keyLockBadge.TryGetBadgeWorldPosition(out Vector3 position)
+                ? position
+                : transform.position;
+            keyLockBadge?.ClearBadge();
+            return start;
+        }
+
+        /// <summary>
+        /// Starts the Key's flight into this Lock. <paramref name="onArrived"/>
+        /// runs when the Key reaches the Lock centre; the caller then opens
+        /// the Lock. Returns false when no flight can be presented, so the
+        /// caller must open the Lock immediately.
+        /// </summary>
+        public bool TryBeginKeyArrival(Vector3 worldStart, Action<PuzzlePiece> onArrived)
+        {
+            if (!IsKeyLocked || IsShredderInteractionLocked || keyLockBadge == null ||
+                keyLockBadge.IsKeyFlightPlaying || keyBadgeSprite == null ||
+                !TryResolveCentralOverlayPlacement(out _, out _, out Vector2 targetSize) ||
+                !TryGetAvailableIceSlot(out SpriteRenderer slot))
+                return false;
+
+            keyArrivalHandler = onArrived;
+            bool isPlaying = keyLockBadge.PlayKeyArrival(
+                slot,
+                transform,
+                keyBadgeSprite,
+                keyLockBadgeMaterial,
+                worldStart,
+                GetOverlayScaleToFit(targetSize, keyBadgeSprite, keyLockBadgeFill),
+                GridFallView != null ? GridFallView.Config : null,
+                keyArrivedCallback);
+            if (!isPlaying)
+                keyArrivalHandler = null;
+            return isPlaying;
+        }
+
+        private void HandleKeyArrived()
+        {
+            Action<PuzzlePiece> handler = keyArrivalHandler;
+            keyArrivalHandler = null;
+            handler?.Invoke(this);
+        }
+
+        /// <summary>
+        /// Opens this Lock (Key arrival or Hammer hit) and plays the break
+        /// presentation. A Lock already carried away by the Rocket stays
+        /// locked until it despawns. Returns false when nothing changed.
+        /// </summary>
+        public bool TryReleaseKeyLock()
+        {
+            if (!IsKeyLocked || IsShredderInteractionLocked)
+                return false;
+
+            IsKeyLocked = false;
+            keyArrivalHandler = null;
+            keyLockBadge?.PlayLockBreak(GridFallView != null ? GridFallView.Config : null, transform);
+            if (Body != null)
+                Body.WakeUp();
+            return true;
+        }
+
+        /// <summary>
+        /// Returns the visible Lock icon centre for a Hammer-only presentation
+        /// strike. Gameplay targeting remains owned by the selected grid cell.
+        /// </summary>
+        public bool TryGetLockVisualImpactPoint(out Vector2 impactPoint)
+        {
+            impactPoint = default;
+            if (!IsKeyLocked || keyLockBadge == null ||
+                !keyLockBadge.TryGetBadgeWorldPosition(out Vector3 position))
+                return false;
+
+            impactPoint = position;
+            return true;
+        }
+
         /// <summary>
         /// Applies one Hammer hit to this piece's ice countdown. Returns false
         /// when the piece is not frozen, leaving state untouched.
@@ -2949,6 +3149,7 @@ namespace GravityPuzzle
 
             ClearIceVisuals();
             ClearBombVisuals();
+            keyLockBadge?.ClearBadge();
             ClearWholePiecePresentation();
 
             SpriteRenderer removedVisual = collisionCellVisuals[targetIndex];
@@ -3027,6 +3228,7 @@ namespace GravityPuzzle
                 // accepted retained-cell geometry. Split-off roots are normal
                 // fragments; the original root remains the sole bomb owner.
                 RefreshBombState();
+                RefreshKeyLockBadge();
             }
 
             return true;
@@ -3316,22 +3518,23 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryBeginShredderHandoff(bool reportDestructionImmediately = true)
         {
-            if (IsFrozen)
+            if (IsMovementLocked)
                 return false;
 
-            return TryBeginHandoff(reportDestructionImmediately, allowFrozen: false);
+            return TryBeginHandoff(reportDestructionImmediately, allowMovementLocked: false);
         }
 
         /// <summary>
         /// Rocket handoff. Unlike the shredder, the Rocket may take a frozen
-        /// piece: it is carried away whole, ice included, and never thaws.
+        /// or locked piece: it is carried away whole, ice or lock included,
+        /// and never thaws or opens.
         /// </summary>
         public bool TryBeginRocketHandoff()
         {
-            return TryBeginHandoff(reportDestructionImmediately: false, allowFrozen: true);
+            return TryBeginHandoff(reportDestructionImmediately: false, allowMovementLocked: true);
         }
 
-        private bool TryBeginHandoff(bool reportDestructionImmediately, bool allowFrozen)
+        private bool TryBeginHandoff(bool reportDestructionImmediately, bool allowMovementLocked)
         {
             if (IsShredderInteractionLocked)
                 return false;
@@ -3339,7 +3542,7 @@ namespace GravityPuzzle
             PrototypeBoard board = PrototypeBoard.Active;
             if (board != null)
             {
-                if (!board.TryReservePieceInGrid(this, PieceState.HandoffToPhysics, allowFrozen))
+                if (!board.TryReservePieceInGrid(this, PieceState.HandoffToPhysics, allowMovementLocked))
                     return false;
             }
 
@@ -3355,7 +3558,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryBeginShredderExitHandoff()
         {
-            if (IsShredderInteractionLocked || IsFrozen)
+            if (IsShredderInteractionLocked || IsMovementLocked)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
@@ -3383,7 +3586,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryEnterShredderPhysicsIslandHandoff()
         {
-            if (IsShredderInteractionLocked || IsFrozen)
+            if (IsShredderInteractionLocked || IsMovementLocked)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
@@ -3442,7 +3645,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryBeginOffBoardFreefallShredding()
         {
-            if (IsFrozen)
+            if (IsMovementLocked)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
@@ -3552,11 +3755,38 @@ namespace GravityPuzzle
 
         private void BuildBombVisuals()
         {
-            if (bombOverlaySprite == null || collisionCellVisuals == null)
+            if (bombOverlaySprite == null ||
+                !TryResolveCentralOverlayPlacement(
+                    out SpriteRenderer sortingSource,
+                    out Vector2 overlayCenter,
+                    out Vector2 targetSize))
                 return;
 
+            CreateBombOverlay(
+                sortingSource,
+                overlayCenter,
+                targetSize);
+        }
+
+        /// <summary>
+        /// Resolves where a whole-piece icon (Bomb, Key, Lock) is drawn. An
+        /// icon is a property of the complete authored piece, not of each
+        /// cell: it renders once at the shape's centre when a one-block
+        /// footprint fits there. Concave shapes instead use the most central
+        /// occupied cell so the icon never floats in empty space.
+        /// </summary>
+        private bool TryResolveCentralOverlayPlacement(
+            out SpriteRenderer sortingSource,
+            out Vector2 overlayCenter,
+            out Vector2 targetSize)
+        {
+            sortingSource = null;
+            overlayCenter = default;
+            targetSize = default;
+            if (collisionCellVisuals == null)
+                return false;
+
             Bounds combinedBounds = default;
-            SpriteRenderer sortingSource = null;
             Vector2 weightedCenter = Vector2.zero;
             float totalCellArea = 0f;
             for (int index = 0; index < collisionCellVisuals.Count; index++)
@@ -3585,24 +3815,16 @@ namespace GravityPuzzle
             }
 
             if (sortingSource == null)
-                return;
+                return false;
 
-            Vector2 targetSize = GetBombOverlayTargetSize();
+            targetSize = GetBombOverlayTargetSize();
             Vector2 desiredCenter = totalCellArea > Mathf.Epsilon
                 ? weightedCenter / totalCellArea
                 : combinedBounds.center;
-            Vector2 overlayCenter = DoesBombFootprintFitPiece(desiredCenter, targetSize)
+            overlayCenter = DoesBombFootprintFitPiece(desiredCenter, targetSize)
                 ? desiredCenter
                 : GetClosestBombCellCenter(desiredCenter, combinedBounds.center);
-
-            // A bomb is a property of the complete authored piece, not of
-            // each cell. It renders once at the shape's center when that
-            // one-block footprint fits. Concave shapes instead use the most
-            // central occupied cell so the icon never floats in empty space.
-            CreateBombOverlay(
-                sortingSource,
-                overlayCenter,
-                targetSize);
+            return true;
         }
 
         private void CreateBombOverlay(
@@ -3908,6 +4130,7 @@ namespace GravityPuzzle
             {
                 SpriteRenderer candidate = iceSlots[index];
                 if (candidate == null || candidate == wholePieceRenderer || candidate == bombOverlayRenderer ||
+                    (keyLockBadge != null && keyLockBadge.Owns(candidate)) ||
                     candidate == bombDefuseLeftRenderer || candidate == bombDefuseRightRenderer ||
                     bombShredderFragmentRenderers.Contains(candidate) || iceRenderers.Contains(candidate) ||
                     joinedPieceRenderers.Contains(candidate))

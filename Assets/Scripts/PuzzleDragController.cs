@@ -331,7 +331,7 @@ namespace GravityPuzzle
             for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
             {
                 PuzzlePiece piece = pieces[pieceIndex];
-                if (piece == null || piece == selectedPiece || piece.IsSelected || piece.IsShredderInteractionLocked || piece.IsFrozen)
+                if (piece == null || piece == selectedPiece || piece.IsSelected || piece.IsShredderInteractionLocked || piece.IsMovementLocked)
                     continue;
 
                 for (int zoneIndex = 0; zoneIndex < zones.Count; zoneIndex++)
@@ -714,7 +714,7 @@ namespace GravityPuzzle
             for (int index = 0; index < pieces.Count; index++)
             {
                 PuzzlePiece piece = pieces[index];
-                if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked ||
+                if (piece == null || piece.IsMovementLocked || piece.IsShredderInteractionLocked ||
                     piece.GridFallView == null || !piece.GridFallView.CanPlay ||
                     !board.TryGetPieceModel(piece, out PieceModel model) ||
                     model.State != PieceState.Placed ||
@@ -734,7 +734,7 @@ namespace GravityPuzzle
             PuzzlePiece piece = FindActivePiece(model.Id);
             PrototypeBoard board = PrototypeBoard.Active;
             return piece != null &&
-                   !piece.IsFrozen &&
+                   !piece.IsMovementLocked &&
                    board != null && board.CanPieceParticipateInGravity(model) &&
                    !piece.IsShredderInteractionLocked &&
                    model.State == PieceState.Placed &&
@@ -1288,13 +1288,13 @@ namespace GravityPuzzle
 
         private void ShowFrozenGroupFeedbackIfNeeded(PrototypeBoard board, PuzzlePiece piece)
         {
-            if (piece == null || piece.IsFrozen)
+            if (piece == null || piece.IsMovementLocked)
                 return;
 
             board.CollectJointGroupPieces(piece, selectedJointGroupPieces);
             for (int index = 0; index < selectedJointGroupPieces.Count; index++)
             {
-                if (selectedJointGroupPieces[index] == null || !selectedJointGroupPieces[index].IsFrozen)
+                if (selectedJointGroupPieces[index] == null || !selectedJointGroupPieces[index].IsMovementLocked)
                     continue;
 
                 frozenGroupFeedbackPiece = piece;

@@ -66,6 +66,14 @@ namespace GravityPuzzle.Config
         [SerializeField] private Vector2 bombCounterOffset = new Vector2(-0.055f, -0.059f);
         [SerializeField] private int bombCounterSortingOrder = 50;
 
+        [Header("Key / Lock Presentation")]
+        [Tooltip("Icon rendered at the centre of Key blocks. It flies to its Lock when the Key block is destroyed.")]
+        [SerializeField] private Sprite keyBadgeSprite;
+        [Tooltip("Icon rendered at the centre of Lock blocks until their Key arrives.")]
+        [SerializeField] private Sprite lockBadgeSprite;
+        [Tooltip("Fraction of one authored block that the Key and Lock icons fill.")]
+        [SerializeField, Range(.1f, 1f)] private float keyLockBadgeFill = .8f;
+
         [Header("Outline Presentation")]
         [SerializeField, Min(0.001f)] private float restingOutlineWidth = 0.05f;
         [SerializeField, Min(0.001f)] private float selectedOutlineWidth = 0.04f;
@@ -127,6 +135,9 @@ namespace GravityPuzzle.Config
         public float BombCounterOutlineWidth => Mathf.Clamp01(bombCounterOutlineWidth);
         public Vector2 BombCounterOffset => bombCounterOffset;
         public int BombCounterSortingOrder => bombCounterSortingOrder;
+        public Sprite KeyBadgeSprite => keyBadgeSprite;
+        public Sprite LockBadgeSprite => lockBadgeSprite;
+        public float KeyLockBadgeFill => keyLockBadgeFill;
         public float RestingOutlineWidth => restingOutlineWidth;
         public float SelectedOutlineWidth => selectedOutlineWidth;
         public Color RestingOutlineColor => restingOutlineColor;

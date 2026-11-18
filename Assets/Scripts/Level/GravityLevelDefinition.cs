@@ -190,7 +190,9 @@ namespace GravityPuzzle
     {
         Normal,
         Ice,
-        Bomb
+        Bomb,
+        Key,
+        Lock
     }
 
     [Serializable]
@@ -208,7 +210,7 @@ namespace GravityPuzzle
         public Color color = new Color(.2f, .65f, 1f);
         public Vector2Int origin = new Vector2Int(8, 10);
         [Range(0, 3)] public int quarterTurns;
-        [Tooltip("Normal pieces have no special behaviour. Ice and Bomb are mutually exclusive.")]
+        [Tooltip("Normal pieces have no special behaviour. Ice, Bomb, Key and Lock are mutually exclusive.")]
         public PieceSpecialBlockType specialBlockType;
         [Tooltip("Piece stays frozen until this many other pieces have been destroyed. 0 disables ice.")]
         [Min(0)] public int frozenMoveCount;
@@ -223,6 +225,8 @@ namespace GravityPuzzle
         public Color bombCounterOutlineColor = Color.white;
         [Range(0f, 1f)] public float bombCounterOutlineWidth = .18f;
         public Vector2 bombCounterOffset = Vector2.zero;
+        [Tooltip("Lock pieces only: Piece Id of the Key piece whose destruction opens this lock.")]
+        public string lockKeyPieceId;
         public List<PieceCellDefinition> cells = new List<PieceCellDefinition>();
     }
 

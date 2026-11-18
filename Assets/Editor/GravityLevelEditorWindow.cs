@@ -230,9 +230,13 @@ namespace GravityPuzzle.Editor
                 PieceDefinition listPiece = level.pieces[i];
                 string pieceLabel = listPiece.specialBlockType == PieceSpecialBlockType.Bomb
                     ? $"{listPiece.name} [Bomb {listPiece.bombTimerSeconds:0.#}s]"
-                    : listPiece.frozenMoveCount > 0
-                        ? $"{listPiece.name} [Ice {listPiece.frozenMoveCount}]"
-                        : listPiece.name;
+                    : listPiece.specialBlockType == PieceSpecialBlockType.Key
+                        ? $"{listPiece.name} [Key {GetKeyPairLabel(listPiece.pieceId)}]"
+                        : listPiece.specialBlockType == PieceSpecialBlockType.Lock
+                            ? $"{listPiece.name} [Lock {GetKeyPairLabel(listPiece.lockKeyPieceId)}]"
+                            : listPiece.frozenMoveCount > 0
+                                ? $"{listPiece.name} [Ice {listPiece.frozenMoveCount}]"
+                                : listPiece.name;
                 if (GUILayout.Button(pieceLabel))
                     SelectPiece(i, Event.current.command);
                 GUI.backgroundColor = previous;
@@ -775,7 +779,7 @@ namespace GravityPuzzle.Editor
                     ? PieceSpecialBlockType.Ice
                     : piece.specialBlockType;
                 PieceSpecialBlockType newSpecialBlockType = (PieceSpecialBlockType)EditorGUILayout.EnumPopup(
-                    new GUIContent("Block Type", "Ice and Bomb are mutually exclusive."), resolvedSpecialType);
+                    new GUIContent("Block Type", "Ice, Bomb, Key and Lock are mutually exclusive."), resolvedSpecialType);
                 int newFrozenMoveCount = piece.frozenMoveCount;
                 if (newSpecialBlockType == PieceSpecialBlockType.Ice)
                 {
@@ -825,6 +829,12 @@ namespace GravityPuzzle.Editor
                     newBombCounterOffset = EditorGUILayout.Vector2Field("Position Offset", piece.bombCounterOffset);
                 }
 
+                string newLockKeyPieceId = string.Empty;
+                if (newSpecialBlockType == PieceSpecialBlockType.Key)
+                    DrawKeyPieceStatus(piece);
+                else if (newSpecialBlockType == PieceSpecialBlockType.Lock)
+                    newLockKeyPieceId = DrawLockKeySelector(piece);
+
                 if (newName != piece.name || newColor != piece.color ||
                     newVisualId != piece.visualId || newPaletteId != piece.paletteId ||
                     newOrigin != piece.origin ||
@@ -839,7 +849,8 @@ namespace GravityPuzzle.Editor
                     newBombCounterTextColor != piece.bombCounterTextColor ||
                     newBombCounterOutlineColor != piece.bombCounterOutlineColor ||
                     !Mathf.Approximately(newBombCounterOutlineWidth, piece.bombCounterOutlineWidth) ||
-                    newBombCounterOffset != piece.bombCounterOffset)
+                    newBombCounterOffset != piece.bombCounterOffset ||
+                    !string.Equals(newLockKeyPieceId, piece.lockKeyPieceId ?? string.Empty, System.StringComparison.Ordinal))
                 {
                     Undo.RecordObject(level, "Edit puzzle piece");
                     piece.name = newName;
@@ -859,6 +870,7 @@ namespace GravityPuzzle.Editor
                     piece.bombCounterOutlineColor = newBombCounterOutlineColor;
                     piece.bombCounterOutlineWidth = newBombCounterOutlineWidth;
                     piece.bombCounterOffset = newBombCounterOffset;
+                    piece.lockKeyPieceId = newLockKeyPieceId;
                     MarkDirty();
                 }
 
@@ -1750,6 +1762,16 @@ namespace GravityPuzzle.Editor
                             new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f),
                             new Color(.35f, .08f, .06f, .52f));
                     }
+                    else if (piece.specialBlockType == PieceSpecialBlockType.Key ||
+                             piece.specialBlockType == PieceSpecialBlockType.Lock)
+                    {
+                        Color keyLockTint = piece.specialBlockType == PieceSpecialBlockType.Key
+                            ? new Color(1f, .82f, .2f, .45f)
+                            : new Color(.2f, .2f, .25f, .45f);
+                        EditorGUI.DrawRect(
+                            new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f),
+                            keyLockTint);
+                    }
                     else if (piece.frozenMoveCount > 0)
                     {
                         Color ice = new Color(.55f, .9f, 1f, .48f);
@@ -1766,6 +1788,11 @@ namespace GravityPuzzle.Editor
                         piece.bombCounterOffset.x * worldToEditorPixels,
                         -piece.bombCounterOffset.y * worldToEditorPixels);
                     DrawBombCounterPreview(pieceBounds, piece);
+                }
+                else if ((piece.specialBlockType == PieceSpecialBlockType.Key ||
+                          piece.specialBlockType == PieceSpecialBlockType.Lock) && hasVisibleCell)
+                {
+                    DrawKeyLockPreview(pieceBounds, piece);
                 }
                 else if (piece.frozenMoveCount > 0 && hasVisibleCell)
                 {
@@ -1850,6 +1877,123 @@ namespace GravityPuzzle.Editor
 
             textStyle.normal.textColor = piece.iceCounterTextColor;
             GUI.Label(bounds, count, textStyle);
+        }
+
+        private static void DrawKeyLockPreview(Rect bounds, PieceDefinition piece)
+        {
+            GUIStyle textStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 14
+            };
+            bool isKey = piece.specialBlockType == PieceSpecialBlockType.Key;
+            textStyle.normal.textColor = isKey ? new Color(.3f, .18f, 0f) : Color.white;
+            GUI.Label(bounds, isKey ? "KEY" : "LOCK", textStyle);
+        }
+
+        /// <summary>Short pair label: the Key's 1-based order among the level's Key pieces.</summary>
+        private string GetKeyPairLabel(string keyPieceId)
+        {
+            if (string.IsNullOrEmpty(keyPieceId))
+                return "?";
+
+            int keyNumber = 0;
+            foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
+            {
+                if (candidate == null || candidate.specialBlockType != PieceSpecialBlockType.Key)
+                    continue;
+
+                keyNumber++;
+                if (candidate.pieceId == keyPieceId)
+                    return "#" + keyNumber;
+            }
+
+            return "?";
+        }
+
+        private void DrawKeyPieceStatus(PieceDefinition keyPiece)
+        {
+            int lockCount = 0;
+            string lockName = null;
+            foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
+            {
+                if (candidate == null || candidate.specialBlockType != PieceSpecialBlockType.Lock ||
+                    candidate.lockKeyPieceId != keyPiece.pieceId)
+                    continue;
+
+                lockCount++;
+                lockName = candidate.name;
+            }
+
+            string pair = GetKeyPairLabel(keyPiece.pieceId);
+            if (lockCount == 0)
+                EditorGUILayout.HelpBox($"Key {pair}: no Lock uses this Key yet. Select a Lock piece and choose this Key.", MessageType.Warning);
+            else if (lockCount > 1)
+                EditorGUILayout.HelpBox($"Key {pair}: {lockCount} Locks use this Key. Each Key should open exactly one Lock.", MessageType.Warning);
+            else
+                EditorGUILayout.HelpBox($"Key {pair} opens '{lockName}'.", MessageType.Info);
+        }
+
+        private string DrawLockKeySelector(PieceDefinition lockPiece)
+        {
+            List<PieceDefinition> keys = new List<PieceDefinition>();
+            foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
+            {
+                if (candidate != null && candidate.specialBlockType == PieceSpecialBlockType.Key &&
+                    !string.IsNullOrEmpty(candidate.pieceId))
+                    keys.Add(candidate);
+            }
+
+            string currentKeyId = lockPiece.lockKeyPieceId ?? string.Empty;
+            if (keys.Count == 0)
+            {
+                EditorGUILayout.HelpBox("Add a Key piece first, then choose it here.", MessageType.Warning);
+                return currentKeyId;
+            }
+
+            string[] options = new string[keys.Count + 1];
+            options[0] = "None";
+            int selectedIndex = 0;
+            for (int index = 0; index < keys.Count; index++)
+            {
+                options[index + 1] = $"#{index + 1} {keys[index].name}";
+                if (keys[index].pieceId == currentKeyId)
+                    selectedIndex = index + 1;
+            }
+
+            int newIndex = EditorGUILayout.Popup(
+                new GUIContent("Opened By Key", "The Key piece whose destruction opens this Lock."),
+                selectedIndex,
+                options);
+            if (newIndex == 0)
+            {
+                // Viewing an orphaned link must not rewrite the asset; only an
+                // explicit change to None clears it.
+                bool isOrphaned = selectedIndex == 0 && !string.IsNullOrEmpty(currentKeyId);
+                EditorGUILayout.HelpBox(
+                    isOrphaned
+                        ? "The linked Key piece no longer exists. Choose another Key."
+                        : "Choose the Key that opens this Lock. Without a Key it plays as a normal piece.",
+                    MessageType.Warning);
+                return isOrphaned ? currentKeyId : string.Empty;
+            }
+
+            string newKeyId = keys[newIndex - 1].pieceId;
+
+            foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
+            {
+                if (candidate != null && candidate != lockPiece &&
+                    candidate.specialBlockType == PieceSpecialBlockType.Lock &&
+                    candidate.lockKeyPieceId == newKeyId)
+                {
+                    EditorGUILayout.HelpBox(
+                        $"'{candidate.name}' already uses this Key. Each Key should open exactly one Lock.",
+                        MessageType.Warning);
+                    break;
+                }
+            }
+
+            return newKeyId;
         }
 
         private static void DrawBombCounterPreview(Rect bounds, PieceDefinition piece)

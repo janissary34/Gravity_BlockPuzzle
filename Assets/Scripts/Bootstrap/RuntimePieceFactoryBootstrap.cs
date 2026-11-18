@@ -289,7 +289,7 @@ namespace GravityPuzzle.Bootstrap
             int count = 0;
             foreach (PieceDefinition piece in level.EnumerateAllPieceDefinitions())
             {
-                if (piece != null && piece.specialBlockType != PieceSpecialBlockType.Bomb && piece.frozenMoveCount > 0)
+                if (piece != null && PuzzlePiece.UsesIceCountdown(piece.specialBlockType) && piece.frozenMoveCount > 0)
                     count++;
             }
 

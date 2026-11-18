@@ -704,6 +704,8 @@ namespace GravityPuzzle
         // Board-owned runtime state for combined-piece edges. The serialized
         // level only provides joints; movement groups are derived here.
         private readonly PieceJointGraph pieceJointGraph = new PieceJointGraph();
+        private readonly KeyLockCoordinator keyLockCoordinator =
+            new KeyLockCoordinator(PuzzleDragController.WakeUpGravity);
         private readonly List<int> jointGroupMemberIds = new List<int>();
         private readonly List<PieceModel> jointGroupModels = new List<PieceModel>();
         private readonly List<GridCoordinate> jointGroupTargetAnchors = new List<GridCoordinate>();
@@ -801,7 +803,7 @@ namespace GravityPuzzle
                 return false;
 
             PuzzlePiece activePiece = FindActivePiece(piece.Id);
-            if (activePiece != null && activePiece.IsFrozen)
+            if (activePiece != null && activePiece.IsMovementLocked)
                 return false;
 
             return revealAreaCoordinator == null || revealAreaCoordinator.CanMovePiece(piece, targetAnchor);
@@ -813,7 +815,7 @@ namespace GravityPuzzle
                 return false;
 
             PuzzlePiece activePiece = FindActivePiece(piece.Id);
-            if (activePiece != null && activePiece.IsFrozen)
+            if (activePiece != null && activePiece.IsMovementLocked)
                 return false;
 
             return revealAreaCoordinator == null || revealAreaCoordinator.CanParticipateInGravity(piece);
@@ -976,6 +978,7 @@ namespace GravityPuzzle
             TimeRemaining = timeLimit;
             IsTimerStarted = false;
             DestroyedPieceCount = 0;
+            keyLockCoordinator.Reset();
             winPanelRevealPending = false;
             timerPauseOwners.Clear();
             finalShredderOutcomeLocked = false;
@@ -1159,10 +1162,10 @@ namespace GravityPuzzle
         /// through the shredder.  Reserved cells block placement and grid
         /// gravity, but are released normally when the pooled piece despawns.
         /// </summary>
-        /// <param name="allowFrozen">Only the Rocket may reserve a frozen piece: it carries the ice block away whole.</param>
-        public bool TryReservePieceInGrid(PuzzlePiece piece, PieceState state, bool allowFrozen = false)
+        /// <param name="allowMovementLocked">Only the Rocket may reserve a frozen or locked piece: it carries the piece away whole.</param>
+        public bool TryReservePieceInGrid(PuzzlePiece piece, PieceState state, bool allowMovementLocked = false)
         {
-            if (piece == null || (piece.IsFrozen && !allowFrozen) || !TryGetPieceModel(piece, out PieceModel model))
+            if (piece == null || (piece.IsMovementLocked && !allowMovementLocked) || !TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
             bool wasAlreadyReserved = BoardSnapshot.Grid.IsFullyReservedBy(model);
@@ -1242,7 +1245,7 @@ namespace GravityPuzzle
             {
                 PuzzlePiece piece = pieces[index];
                 if (piece == null ||
-                    piece.IsFrozen ||
+                    piece.IsMovementLocked ||
                     !TryGetPieceModel(piece, out PieceModel model) ||
                     !ids.Add(model.Id) ||
                     !CanEnterPhysicsIsland(model.State))
@@ -1939,7 +1942,7 @@ namespace GravityPuzzle
 
             for (int index = 0; index < jointGroupModels.Count; index++)
             {
-                if (jointGroupPieceBuffer[index].IsFrozen ||
+                if (jointGroupPieceBuffer[index].IsMovementLocked ||
                     jointGroupPieceBuffer[index].IsShredderInteractionLocked ||
                     (revealAreaCoordinator != null &&
                      !revealAreaCoordinator.CanBeginInteraction(jointGroupModels[index])))
@@ -2639,7 +2642,17 @@ namespace GravityPuzzle
                 }
             }
 
+            keyLockCoordinator.NotifyPieceDestroyed(destroyedPiece, pieces);
             PuzzleDragController.WakeUpGravity();
+        }
+
+        /// <summary>
+        /// True once the Key with this authored Piece Id has been destroyed.
+        /// A Lock spawned afterwards (for example from a Box) starts open.
+        /// </summary>
+        public bool IsKeyConsumed(string keyPieceId)
+        {
+            return keyLockCoordinator.IsKeyConsumed(keyPieceId);
         }
 
         /// <summary>

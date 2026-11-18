@@ -55,7 +55,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool ContainsMapExitFootprint(PuzzlePiece piece)
         {
-            if (piece == null || piece.IsShredderInteractionLocked || piece.IsFrozen)
+            if (piece == null || piece.IsShredderInteractionLocked || piece.IsMovementLocked)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
