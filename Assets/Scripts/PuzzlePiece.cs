@@ -325,6 +325,7 @@ namespace GravityPuzzle
         private Sprite lockBadgeSprite;
         private float keyLockBadgeFill = .8f;
         private Material keyLockBadgeMaterial;
+        private Color keyLockBadgeColor = Color.white;
         private bool keyBadgeDetached;
         private Action<PuzzlePiece> keyArrivalHandler;
         private TweenCallback keyArrivedCallback;
@@ -2652,6 +2653,7 @@ namespace GravityPuzzle
             lockBadgeSprite = setup.LockBadgeSprite;
             keyLockBadgeFill = setup.KeyLockBadgeFill;
             keyLockBadgeMaterial = setup.KeyLockBadgeMaterial;
+            keyLockBadgeColor = setup.KeyLockBadgeColor;
 
             bool isKeyType = setup.SpecialBlockType == PieceSpecialBlockType.Key;
             bool isLockType = setup.SpecialBlockType == PieceSpecialBlockType.Lock;
@@ -2682,6 +2684,7 @@ namespace GravityPuzzle
             IsKey = false;
             IsKeyLocked = false;
             KeyLinkId = null;
+            keyLockBadgeColor = Color.white;
             keyBadgeDetached = false;
             keyArrivalHandler = null;
         }
@@ -2716,6 +2719,7 @@ namespace GravityPuzzle
                 transform,
                 sprite,
                 keyLockBadgeMaterial,
+                keyLockBadgeColor,
                 new Vector3(center.x, center.y, transform.position.z - .01f),
                 GetOverlayScaleToFit(targetSize, sprite, keyLockBadgeFill),
                 sortingSource.sortingLayerID,
@@ -2757,6 +2761,7 @@ namespace GravityPuzzle
                 transform,
                 keyBadgeSprite,
                 keyLockBadgeMaterial,
+                keyLockBadgeColor,
                 worldStart,
                 GetOverlayScaleToFit(targetSize, keyBadgeSprite, keyLockBadgeFill),
                 GridFallView != null ? GridFallView.Config : null,

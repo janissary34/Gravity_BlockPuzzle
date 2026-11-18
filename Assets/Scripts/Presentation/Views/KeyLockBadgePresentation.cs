@@ -52,6 +52,7 @@ namespace GravityPuzzle.Presentation.Views
             Transform owner,
             Sprite sprite,
             Material material,
+            Color color,
             Vector3 worldPosition,
             Vector3 localScale,
             int sortingLayerId,
@@ -62,7 +63,7 @@ namespace GravityPuzzle.Presentation.Views
             if (slot == null || owner == null || sprite == null)
                 return;
 
-            ConfigureSlot(slot, owner, sprite, material, sortingLayerId, sortingOrder, objectName);
+            ConfigureSlot(slot, owner, sprite, material, color, sortingLayerId, sortingOrder, objectName);
             slot.transform.position = worldPosition;
             slot.transform.localScale = localScale;
             badgeRenderer = slot;
@@ -89,6 +90,7 @@ namespace GravityPuzzle.Presentation.Views
             Transform owner,
             Sprite keySprite,
             Material material,
+            Color color,
             Vector3 worldStart,
             Vector3 localScale,
             TweenConfig config,
@@ -104,6 +106,7 @@ namespace GravityPuzzle.Presentation.Views
                 owner,
                 keySprite,
                 material,
+                color,
                 badgeRenderer.sortingLayerID,
                 badgeRenderer.sortingOrder + 1,
                 "Key Flight");
@@ -180,6 +183,7 @@ namespace GravityPuzzle.Presentation.Views
             Transform owner,
             Sprite sprite,
             Material material,
+            Color color,
             int sortingLayerId,
             int sortingOrder,
             string objectName)
@@ -191,7 +195,7 @@ namespace GravityPuzzle.Presentation.Views
             if (material != null)
                 slot.sharedMaterial = material;
             slot.SetPropertyBlock(null);
-            slot.color = Color.white;
+            slot.color = color;
             slot.flipX = false;
             slot.flipY = false;
             slot.drawMode = SpriteDrawMode.Simple;

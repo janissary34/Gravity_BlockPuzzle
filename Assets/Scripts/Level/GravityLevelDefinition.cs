@@ -140,6 +140,30 @@ namespace GravityPuzzle
         public int FineRows => boardRows * subdivisions;
 
         /// <summary>
+        /// Zero-based order of the Key piece with this Piece Id among the
+        /// level's Key pieces (board first, then reveal content), or -1. The
+        /// level editor's "#n" label and the runtime pair colour both use it.
+        /// </summary>
+        public int GetKeyPairIndex(string keyPieceId)
+        {
+            if (string.IsNullOrEmpty(keyPieceId))
+                return -1;
+
+            int keyIndex = 0;
+            foreach (PieceDefinition piece in EnumerateAllPieceDefinitions())
+            {
+                if (piece == null || piece.specialBlockType != PieceSpecialBlockType.Key)
+                    continue;
+
+                if (piece.pieceId == keyPieceId)
+                    return keyIndex;
+                keyIndex++;
+            }
+
+            return -1;
+        }
+
+        /// <summary>
         /// Enumerates every authored gameplay piece, including content that is
         /// initially hidden by a reveal area. Callers that calculate a level
         /// total or pool capacity must use this rather than only <see cref="pieces"/>.

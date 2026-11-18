@@ -642,7 +642,8 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.KeyBadgeSprite : null,
                 pieceVisualConfig != null ? pieceVisualConfig.LockBadgeSprite : null,
                 pieceVisualConfig != null ? pieceVisualConfig.KeyLockBadgeFill : .8f,
-                GetFallbackSpriteMaterial()));
+                GetFallbackSpriteMaterial(),
+                ResolveKeyLockColor(level, definition)));
             puzzlePiece.ConfigureOutlineGrid(outlineGrid);
             ConfigureOutline(puzzlePiece);
             if (content.VoxelShards != null && content.VoxelShards.Count > 0)
@@ -665,6 +666,15 @@ namespace GravityPuzzle.Gameplay.Pieces
                 default:
                     return null;
             }
+        }
+
+        private static Color ResolveKeyLockColor(GravityLevelDefinition level, PieceDefinition definition)
+        {
+            string keyLinkId = ResolveKeyLinkId(definition);
+            if (pieceVisualConfig == null || level == null || string.IsNullOrEmpty(keyLinkId))
+                return Color.white;
+
+            return pieceVisualConfig.GetKeyLockPairColor(level.GetKeyPairIndex(keyLinkId));
         }
 
         private static PieceRuntimeContent BuildRuntimeContent(

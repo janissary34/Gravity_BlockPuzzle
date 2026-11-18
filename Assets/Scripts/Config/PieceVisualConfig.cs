@@ -73,6 +73,14 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite lockBadgeSprite;
         [Tooltip("Fraction of one authored block that the Key and Lock icons fill.")]
         [SerializeField, Range(.1f, 1f)] private float keyLockBadgeFill = .8f;
+        [Tooltip("Icon colour per Key/Lock pair, in Key order. A Key and its Lock share one colour. Keep these distinct from the block palette colours.")]
+        [SerializeField] private Color[] keyLockPairColors =
+        {
+            new Color(0f, .82f, .7f, 1f),
+            Color.white,
+            new Color(.55f, .29f, .11f, 1f),
+            new Color(.15f, .15f, .2f, 1f)
+        };
 
         [Header("Outline Presentation")]
         [SerializeField, Min(0.001f)] private float restingOutlineWidth = 0.05f;
@@ -138,6 +146,15 @@ namespace GravityPuzzle.Config
         public Sprite KeyBadgeSprite => keyBadgeSprite;
         public Sprite LockBadgeSprite => lockBadgeSprite;
         public float KeyLockBadgeFill => keyLockBadgeFill;
+
+        /// <summary>Colour shared by a Key and its Lock; pairs beyond the list reuse it cyclically.</summary>
+        public Color GetKeyLockPairColor(int pairIndex)
+        {
+            if (keyLockPairColors == null || keyLockPairColors.Length == 0 || pairIndex < 0)
+                return Color.white;
+
+            return keyLockPairColors[pairIndex % keyLockPairColors.Length];
+        }
         public float RestingOutlineWidth => restingOutlineWidth;
         public float SelectedOutlineWidth => selectedOutlineWidth;
         public Color RestingOutlineColor => restingOutlineColor;

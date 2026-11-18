@@ -41,7 +41,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             Sprite keyBadgeSprite,
             Sprite lockBadgeSprite,
             float keyLockBadgeFill,
-            Material keyLockBadgeMaterial)
+            Material keyLockBadgeMaterial,
+            Color keyLockBadgeColor)
         {
             SourcePieceId = sourcePieceId;
             ProgressUnits = progressUnits;
@@ -78,6 +79,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             LockBadgeSprite = lockBadgeSprite;
             KeyLockBadgeFill = keyLockBadgeFill;
             KeyLockBadgeMaterial = keyLockBadgeMaterial;
+            KeyLockBadgeColor = keyLockBadgeColor;
         }
 
         public int SourcePieceId { get; }
@@ -119,5 +121,7 @@ namespace GravityPuzzle.Gameplay.Pieces
         public Sprite LockBadgeSprite { get; }
         public float KeyLockBadgeFill { get; }
         public Material KeyLockBadgeMaterial { get; }
+        /// <summary>Icon tint shared by a Key and its Lock.</summary>
+        public Color KeyLockBadgeColor { get; }
     }
 }

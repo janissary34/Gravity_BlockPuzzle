@@ -1879,7 +1879,7 @@ namespace GravityPuzzle.Editor
             GUI.Label(bounds, count, textStyle);
         }
 
-        private static void DrawKeyLockPreview(Rect bounds, PieceDefinition piece)
+        private void DrawKeyLockPreview(Rect bounds, PieceDefinition piece)
         {
             GUIStyle textStyle = new GUIStyle(EditorStyles.boldLabel)
             {
@@ -1887,28 +1887,32 @@ namespace GravityPuzzle.Editor
                 fontSize = 14
             };
             bool isKey = piece.specialBlockType == PieceSpecialBlockType.Key;
-            textStyle.normal.textColor = isKey ? new Color(.3f, .18f, 0f) : Color.white;
-            GUI.Label(bounds, isKey ? "KEY" : "LOCK", textStyle);
+            string keyPieceId = isKey ? piece.pieceId : piece.lockKeyPieceId;
+            PieceVisualConfig config = AssetDatabase.LoadAssetAtPath<PieceVisualConfig>(
+                "Assets/PieceVisualConfig.asset");
+            int pairIndex = level.GetKeyPairIndex(keyPieceId);
+            Color pairColor = config != null && pairIndex >= 0
+                ? config.GetKeyLockPairColor(pairIndex)
+                : Color.white;
+
+            // Dark backing keeps every pair colour readable on any block colour.
+            GUIContent label = new GUIContent(isKey ? "KEY" : "LOCK");
+            Vector2 size = textStyle.CalcSize(label);
+            Rect backing = new Rect(
+                bounds.center.x - size.x * .5f - 3f,
+                bounds.center.y - size.y * .5f,
+                size.x + 6f,
+                size.y);
+            EditorGUI.DrawRect(backing, new Color(0f, 0f, 0f, .55f));
+            textStyle.normal.textColor = pairColor;
+            GUI.Label(bounds, label, textStyle);
         }
 
         /// <summary>Short pair label: the Key's 1-based order among the level's Key pieces.</summary>
         private string GetKeyPairLabel(string keyPieceId)
         {
-            if (string.IsNullOrEmpty(keyPieceId))
-                return "?";
-
-            int keyNumber = 0;
-            foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
-            {
-                if (candidate == null || candidate.specialBlockType != PieceSpecialBlockType.Key)
-                    continue;
-
-                keyNumber++;
-                if (candidate.pieceId == keyPieceId)
-                    return "#" + keyNumber;
-            }
-
-            return "?";
+            int pairIndex = level.GetKeyPairIndex(keyPieceId);
+            return pairIndex >= 0 ? "#" + (pairIndex + 1) : "?";
         }
 
         private void DrawKeyPieceStatus(PieceDefinition keyPiece)
