@@ -1159,9 +1159,10 @@ namespace GravityPuzzle
         /// through the shredder.  Reserved cells block placement and grid
         /// gravity, but are released normally when the pooled piece despawns.
         /// </summary>
-        public bool TryReservePieceInGrid(PuzzlePiece piece, PieceState state)
+        /// <param name="allowFrozen">Only the Rocket may reserve a frozen piece: it carries the ice block away whole.</param>
+        public bool TryReservePieceInGrid(PuzzlePiece piece, PieceState state, bool allowFrozen = false)
         {
-            if (piece == null || piece.IsFrozen || !TryGetPieceModel(piece, out PieceModel model))
+            if (piece == null || (piece.IsFrozen && !allowFrozen) || !TryGetPieceModel(piece, out PieceModel model))
                 return false;
 
             bool wasAlreadyReserved = BoardSnapshot.Grid.IsFullyReservedBy(model);

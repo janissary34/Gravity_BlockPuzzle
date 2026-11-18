@@ -396,8 +396,8 @@ namespace GravityPuzzle
         private bool TryStartRocketImpact(PuzzlePiece piece)
         {
             int currentUses = RemainingCount;
-            // Frozen pieces stay anchored: the rocket cannot lift ice blocks.
-            if (piece == null || piece.IsFrozen || piece.IsShredderInteractionLocked || launchInProgress || currentUses <= 0)
+            // Frozen pieces are valid: the rocket carries the ice block away whole.
+            if (piece == null || piece.IsShredderInteractionLocked || launchInProgress || currentUses <= 0)
                 return false;
 
             // Prevent an in-flight grid presentation tween from continuing to
@@ -407,7 +407,7 @@ namespace GravityPuzzle
             // Validate the authoritative grid handoff before consuming the
             // target tap. This keeps one-cell pieces selectable even when a
             // previous presentation left their grid state unavailable.
-            if (!piece.TryBeginShredderHandoff(reportDestructionImmediately: false))
+            if (!piece.TryBeginRocketHandoff())
             {
                 Debug.LogWarning(
                     $"[RocketBooster] Target '{piece.name}' could not reserve its grid cells for rocket handoff.",

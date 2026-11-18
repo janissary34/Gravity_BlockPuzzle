@@ -2622,6 +2622,12 @@ namespace GravityPuzzle
 
         public void RefreshFreezeState(int destroyedPieceCount)
         {
+            // A frozen piece can only become interaction-locked through the
+            // Rocket, which carries the ice block away whole. Keep its ice
+            // until it despawns instead of thawing it mid-flight.
+            if (IsFrozen && IsShredderInteractionLocked)
+                return;
+
             destroyedPieceCount += hammerIceHitCount;
             bool shouldBeFrozen =
                 frozenUntilDestroyedCount > 0 &&
@@ -3310,13 +3316,30 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryBeginShredderHandoff(bool reportDestructionImmediately = true)
         {
-            if (IsShredderInteractionLocked || IsFrozen)
+            if (IsFrozen)
+                return false;
+
+            return TryBeginHandoff(reportDestructionImmediately, allowFrozen: false);
+        }
+
+        /// <summary>
+        /// Rocket handoff. Unlike the shredder, the Rocket may take a frozen
+        /// piece: it is carried away whole, ice included, and never thaws.
+        /// </summary>
+        public bool TryBeginRocketHandoff()
+        {
+            return TryBeginHandoff(reportDestructionImmediately: false, allowFrozen: true);
+        }
+
+        private bool TryBeginHandoff(bool reportDestructionImmediately, bool allowFrozen)
+        {
+            if (IsShredderInteractionLocked)
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
             if (board != null)
             {
-                if (!board.TryReservePieceInGrid(this, PieceState.HandoffToPhysics))
+                if (!board.TryReservePieceInGrid(this, PieceState.HandoffToPhysics, allowFrozen))
                     return false;
             }
 

@@ -366,7 +366,7 @@ namespace GravityPuzzle.Presentation.Views
             // Hammer outline setup clears the previous Rocket/Tutorial state,
             // so acquire the shared foreground lease only after either mode's
             // mode-specific feedback has been rebuilt.
-            SetBoardPiecesInForeground(true, excludeFrozen: isRocket);
+            SetBoardPiecesInForeground(true);
         }
 
         private void ShowFirstUseBoosterFocusInternal(BoosterRewardType boosterType)
@@ -985,17 +985,12 @@ namespace GravityPuzzle.Presentation.Views
                 if (piece == null)
                     continue;
 
-                // Rocket cannot lift frozen pieces; they get no target glow.
-                bool isValidTarget = !piece.IsFrozen && !piece.IsShredderInteractionLocked;
+                bool isValidTarget = !piece.IsShredderInteractionLocked;
                 piece.SetBoosterTargeted(isValidTarget);
             }
         }
 
-        /// <param name="excludeFrozen">
-        /// Leaves frozen pieces behind the dimmer so non-targetable ice blocks
-        /// read as dark like the rest of the board.
-        /// </param>
-        private void SetBoardPiecesInForeground(bool isForeground, bool excludeFrozen = false)
+        private void SetBoardPiecesInForeground(bool isForeground)
         {
             var pieces = PuzzlePiece.ActivePieces;
             for (int index = 0; index < pieces.Count; index++)
@@ -1004,8 +999,7 @@ namespace GravityPuzzle.Presentation.Views
                 if (piece == null)
                     continue;
 
-                bool pieceForeground = isForeground && !(excludeFrozen && piece.IsFrozen);
-                piece.SetBoosterTargetingForeground(pieceForeground, tutorialDimSortingOrder + 2);
+                piece.SetBoosterTargetingForeground(isForeground, tutorialDimSortingOrder + 2);
             }
         }
 
