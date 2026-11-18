@@ -73,13 +73,13 @@ namespace GravityPuzzle.Config
         [SerializeField] private Sprite lockBadgeSprite;
         [Tooltip("Fraction of one authored block that the Key and Lock icons fill.")]
         [SerializeField, Range(.1f, 1f)] private float keyLockBadgeFill = .8f;
-        [Tooltip("Icon colour per Key/Lock pair, in Key order. A Key and its Lock share one colour. Keep these distinct from the block palette colours.")]
+        [Tooltip("Icon colour per Key/Lock pair, in Key order. A Key and its Lock share one colour. Use only neutral, high-contrast colours (white, near-black, brown, grey): any saturated hue matches some block palette colour and the icon disappears on it.")]
         [SerializeField] private Color[] keyLockPairColors =
         {
-            new Color(0f, .82f, .7f, 1f),
             Color.white,
+            new Color(.15f, .15f, .2f, 1f),
             new Color(.55f, .29f, .11f, 1f),
-            new Color(.15f, .15f, .2f, 1f)
+            new Color(.7f, .7f, .75f, 1f)
         };
 
         [Header("Outline Presentation")]
