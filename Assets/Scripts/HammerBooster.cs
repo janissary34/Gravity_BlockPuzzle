@@ -63,6 +63,8 @@ namespace GravityPuzzle
         // Fixed at target selection so an ice hit stays an ice hit even if
         // the piece thaws from another source during the swing.
         private bool impactTargetsIce;
+        // Non-null while the pending swing targets a closed Box instead of a piece.
+        private string impactBoxAreaId;
         private int remainingCount;
         private int lastActivationFrame = -1;
         private BoosterVisualView hammerVisualPrefabView;
@@ -376,23 +378,48 @@ namespace GravityPuzzle
                     : impactPosition;
                 if (TryStartHammerImpact(target.Piece, impactPosition, visualImpactPosition))
                 {
-                    boundBoard.StartTimer();
-                    activeBooster = null;
-                    tutorialGate?.NotifyTargetCommitted(BoosterRewardType.Hammer);
-                    BoosterTargetingPresentation.Hide();
-                    // Update order between UI/booster/drag components is not fixed.
-                    // Suppress the rest of this frame so the target tap cannot also
-                    // begin dragging the newly modified piece.
-                    suppressGameplayThroughFrame = Time.frameCount;
-                    RefreshButtonState();
+                    CommitTargetSelection(tutorialGate);
                     return;
                 }
+            }
+            else if ((tutorialGate == null || !tutorialGate.IsFirstUseActive(BoosterRewardType.Hammer)) &&
+                     BoardTargetResolver.TryResolveBox(boundBoard, worldPosition, out BoardTargetResolver.BoxTarget boxTarget) &&
+                     TryStartHammerBoxImpact(boxTarget))
+            {
+                CommitTargetSelection(tutorialGate);
+                return;
             }
 
             // A target attempt always resolves the armed state. This lets the
             // player back out by tapping off the board or an empty board cell,
             // while retaining the booster use for a later attempt.
             CancelHammerSelection();
+        }
+
+        private void CommitTargetSelection(IBoosterFirstUseTutorialGate tutorialGate)
+        {
+            boundBoard.StartTimer();
+            activeBooster = null;
+            tutorialGate?.NotifyTargetCommitted(BoosterRewardType.Hammer);
+            BoosterTargetingPresentation.Hide();
+            // Update order between UI/booster/drag components is not fixed.
+            // Suppress the rest of this frame so the target tap cannot also
+            // begin dragging the newly modified piece.
+            suppressGameplayThroughFrame = Time.frameCount;
+            RefreshButtonState();
+        }
+
+        private bool TryStartHammerBoxImpact(BoardTargetResolver.BoxTarget target)
+        {
+            if (impactInProgress || string.IsNullOrEmpty(target.AreaId))
+                return false;
+
+            impactTargetsIce = false;
+            impactBoxAreaId = target.AreaId;
+            impactInProgress = true;
+            impactSucceeded = false;
+            PlayHammerSwing(null, target.WorldCenter, target.WorldCenter);
+            return true;
         }
 
         private bool TryStartHammerImpact(
@@ -414,6 +441,7 @@ namespace GravityPuzzle
             // presentation owner before scheduling the strike. Frozen pieces
             // never fall and keep their cells; the hit only chips their ice.
             impactTargetsIce = piece.IsFrozen;
+            impactBoxAreaId = null;
             if (!impactTargetsIce)
                 PuzzleDragController.CancelGridFallForTargetedAction(piece);
             impactInProgress = true;
@@ -577,7 +605,12 @@ namespace GravityPuzzle
                 : default;
             PrototypeBoard board = PrototypeBoard.Active;
             hammerJointIds.Clear();
-            if (impactTargetsIce)
+            if (impactBoxAreaId != null)
+            {
+                ApplyHammerBoxHit(impactBoxAreaId, board);
+                impactBoxAreaId = null;
+            }
+            else if (impactTargetsIce)
             {
                 if (piece != null)
                     ApplyHammerIceHit(piece, board);
@@ -640,6 +673,17 @@ namespace GravityPuzzle
             HapticFeedbackRuntime.HammerImpact(false);
             if (!piece.IsFrozen)
                 PuzzleDragController.WakeUpGravity();
+        }
+
+        /// <summary>A hit on a closed Box lowers its remaining counter by one.</summary>
+        private void ApplyHammerBoxHit(string areaId, PrototypeBoard board)
+        {
+            if (board == null || !board.TryApplyHammerHitToBox(areaId))
+                return;
+
+            impactSucceeded = true;
+            SoundFeedbackRuntime.HammerBreak();
+            HapticFeedbackRuntime.HammerImpact(false);
         }
 
         private static Vector3 GetViewportWorldPoint(Camera camera, float x, float y, float z)

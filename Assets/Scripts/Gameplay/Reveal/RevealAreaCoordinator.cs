@@ -68,6 +68,8 @@ namespace GravityPuzzle.Gameplay.Reveal
             // hammer. The set keeps split/removal paths from double counting
             // the same authoritative piece id.
             public readonly HashSet<int> CountedRemovedPieceIds = new HashSet<int>();
+            // Each direct Hammer hit on the Box counts as one requirement step.
+            public int HammerHitCount;
             public readonly List<BoxContentRuntime> Contents = new List<BoxContentRuntime>();
             public float Exposure;
         }
@@ -212,16 +214,98 @@ namespace GravityPuzzle.Gameplay.Reveal
             for (int index = 0; index < boxes.Count; index++)
             {
                 BoxRuntime box = boxes[index];
-                if ((box.State != RevealAreaState.Locked && box.State != RevealAreaState.PartiallyRevealed) ||
-                    !box.CountedRemovedPieceIds.Add(pieceId))
+                if (!IsBoxClosed(box) || !box.CountedRemovedPieceIds.Add(pieceId))
                     continue;
 
-                if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
-                    presentation.SetBoxRemaining(box.Definition.targetShredCount - box.CountedRemovedPieceIds.Count, box.Definition.targetShredCount);
-
-                if (box.CountedRemovedPieceIds.Count >= box.Definition.targetShredCount)
-                    StartBoxUnlock(box);
+                PublishBoxProgress(box);
             }
+        }
+
+        /// <summary>
+        /// Resolves a still-closed Box whose footprint contains the given
+        /// fine-grid cell. Used by targeted boosters after no piece matched.
+        /// </summary>
+        public bool TryGetTargetableBox(GridCoordinate cell, out string areaId, out RevealAreaBounds bounds)
+        {
+            for (int index = 0; index < boxes.Count; index++)
+            {
+                BoxRuntime box = boxes[index];
+                RevealAreaBounds candidate = box.Definition.bounds;
+                if (!IsBoxClosed(box) ||
+                    cell.X < candidate.XMin || cell.X >= candidate.XMaxExclusive ||
+                    cell.Y < candidate.YMin || cell.Y >= candidate.YMaxExclusive)
+                    continue;
+
+                areaId = box.Definition.areaId;
+                bounds = candidate;
+                return true;
+            }
+
+            areaId = null;
+            bounds = default;
+            return false;
+        }
+
+        /// <summary>A Hammer hit lowers a closed Box's remaining counter by one.</summary>
+        public bool TryApplyHammerHitToBox(string areaId)
+        {
+            if (!TryFindClosedBox(areaId, out BoxRuntime box))
+                return false;
+
+            box.HammerHitCount++;
+            PublishBoxProgress(box);
+            return true;
+        }
+
+        /// <summary>A Rocket opens a closed Box immediately, regardless of its counter.</summary>
+        public bool TryBreakBoxWithRocket(string areaId)
+        {
+            if (!TryFindClosedBox(areaId, out BoxRuntime box))
+                return false;
+
+            if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
+                presentation.SetBoxRemaining(0, box.Definition.targetShredCount);
+
+            StartBoxUnlock(box);
+            return true;
+        }
+
+        private bool TryFindClosedBox(string areaId, out BoxRuntime result)
+        {
+            for (int index = 0; index < boxes.Count; index++)
+            {
+                BoxRuntime box = boxes[index];
+                if (IsBoxClosed(box) && box.Definition.areaId == areaId)
+                {
+                    result = box;
+                    return true;
+                }
+            }
+
+            result = null;
+            return false;
+        }
+
+        private static bool IsBoxClosed(BoxRuntime box)
+        {
+            return box.State == RevealAreaState.Locked || box.State == RevealAreaState.PartiallyRevealed;
+        }
+
+        private static int GetBoxRemaining(BoxRuntime box)
+        {
+            return Math.Max(
+                0,
+                box.Definition.targetShredCount - box.CountedRemovedPieceIds.Count - box.HammerHitCount);
+        }
+
+        private void PublishBoxProgress(BoxRuntime box)
+        {
+            int remaining = GetBoxRemaining(box);
+            if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
+                presentation.SetBoxRemaining(remaining, box.Definition.targetShredCount);
+
+            if (remaining <= 0)
+                StartBoxUnlock(box);
         }
 
         /// <summary>
@@ -346,7 +430,7 @@ namespace GravityPuzzle.Gameplay.Reveal
 
         private void StartBoxUnlock(BoxRuntime box)
         {
-            if (box.State != RevealAreaState.Locked && box.State != RevealAreaState.PartiallyRevealed)
+            if (!IsBoxClosed(box))
                 return;
 
             box.State = RevealAreaState.Unlocking;
@@ -440,9 +524,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             if (presentation is IBoxRevealExposurePresentation exposurePresentation)
                 exposurePresentation.SetBoxExposureChangedHandler(opening => HandleBoxExposure(box, opening));
 
-            presentation.SetBoxRemaining(
-                box.Definition.targetShredCount - box.CountedRemovedPieceIds.Count,
-                box.Definition.targetShredCount);
+            presentation.SetBoxRemaining(GetBoxRemaining(box), box.Definition.targetShredCount);
         }
 
         private void CreateBoxContentRecords(BoxRuntime box)

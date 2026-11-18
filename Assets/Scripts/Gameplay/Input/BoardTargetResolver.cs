@@ -26,6 +26,47 @@ namespace GravityPuzzle.Gameplay.Input
             }
         }
 
+        public readonly struct BoxTarget
+        {
+            public string AreaId { get; }
+            public Vector2 WorldCenter { get; }
+
+            public BoxTarget(string areaId, Vector2 worldCenter)
+            {
+                AreaId = areaId;
+                WorldCenter = worldCenter;
+            }
+        }
+
+        /// <summary>
+        /// Resolves a still-closed Box under the tap. Callers try piece
+        /// targets first, so a piece in front of a Box always wins.
+        /// </summary>
+        public static bool TryResolveBox(
+            PrototypeBoard board,
+            Vector2 worldPosition,
+            out BoxTarget target)
+        {
+            target = default;
+            if (board == null)
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null)
+                return false;
+
+            GridCoordinate cell = GravityLevelGridCoordinates.WorldToFineCell(level, worldPosition);
+            if (!board.TryGetTargetableBox(cell, out string areaId, out RevealAreaBounds bounds))
+                return false;
+
+            Vector2 min = GravityLevelGridCoordinates.FineCellToWorld(
+                level, new GridCoordinate(bounds.XMin, bounds.YMin));
+            Vector2 max = GravityLevelGridCoordinates.FineCellToWorld(
+                level, new GridCoordinate(bounds.XMaxExclusive - 1, bounds.YMaxExclusive - 1));
+            target = new BoxTarget(areaId, (min + max) * .5f);
+            return true;
+        }
+
         public static bool TryResolve(
             PrototypeBoard board,
             Vector2 worldPosition,

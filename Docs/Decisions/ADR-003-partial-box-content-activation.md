@@ -27,6 +27,7 @@ While a Tunnel is not fully unlocked:
 * an activated content blocked below remains recessed, hidden, and non-draggable inside the Tunnel;
 * unrelated pieces cannot enter any portion of the Tunnel; it remains a virtual solid obstacle;
 * Hammer and Rocket targeting reject every content record belonging to the still-partial Tunnel.
+* the Tunnel itself remains a Hammer/Rocket target: Hammer lowers its counter by one, Rocket starts final unlock immediately.
 
 After full unlock, all remaining definitions activate and every Box-specific movement, gravity, targetability, and presentation restriction is released.
 

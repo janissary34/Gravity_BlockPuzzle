@@ -375,6 +375,17 @@ namespace GravityPuzzle
                     $"[RocketBooster] Target was resolved but rejected before launch: '{target.Piece.name}'.",
                     target.Piece);
             }
+            else if ((tutorialGate == null || !tutorialGate.IsFirstUseActive(BoosterRewardType.Rocket)) &&
+                     BoardTargetResolver.TryResolveBox(boundBoard, worldPosition, out BoardTargetResolver.BoxTarget boxTarget) &&
+                     TryStartRocketBoxImpact(boxTarget))
+            {
+                boundBoard.StartTimer();
+                activeBooster = null;
+                BoosterTargetingPresentation.Hide();
+                suppressGameplayThroughFrame = Time.frameCount;
+                RefreshButtonState();
+                return;
+            }
 
             // Empty-space taps and rejected targets cancel targeting without
             // consuming the booster, so the player can resume normal play.
@@ -406,6 +417,109 @@ namespace GravityPuzzle
             launchInProgress = true;
             StartCoroutine(PlayRocketLaunchSequence(piece));
             return true;
+        }
+
+        private bool TryStartRocketBoxImpact(BoardTargetResolver.BoxTarget target)
+        {
+            if (launchInProgress || RemainingCount <= 0 || string.IsNullOrEmpty(target.AreaId))
+                return false;
+
+            launchInProgress = true;
+            StartCoroutine(PlayRocketBoxSequence(target.AreaId, target.WorldCenter));
+            return true;
+        }
+
+        /// <summary>
+        /// The rocket flies to the Box centre, blasts it open at the end of
+        /// the target pause, then leaves empty. Box opening and content
+        /// activation stay owned by the reveal coordinator.
+        /// </summary>
+        private IEnumerator PlayRocketBoxSequence(string areaId, Vector2 boxCenter)
+        {
+            if (tweenConfig == null)
+            {
+                Debug.LogError("[RocketBooster] TweenConfig is required for rocket presentation.", this);
+                launchInProgress = false;
+                yield break;
+            }
+
+            Camera camera = gameplayCamera;
+            float camY = camera != null ? camera.transform.position.y : 0f;
+            float camOrtho = camera != null ? camera.orthographicSize : 10f;
+            float targetY = camY + camOrtho + 7f;
+            Vector3 centerPos = new Vector3(boxCenter.x, boxCenter.y, -3f);
+
+            if (!TryRentRocketVisual(out BoosterVisualView rocketView))
+            {
+                yield return new WaitForSeconds(tweenConfig.RocketEntranceDuration);
+                yield return new WaitForSeconds(tweenConfig.RocketTargetPauseDuration);
+                CompleteRocketBoxImpact(areaId);
+                yield break;
+            }
+
+            GameObject rocket = rocketView.gameObject;
+            rocket.transform.position = new Vector3(boxCenter.x, camY - camOrtho - 6f, -3f);
+            rocket.transform.rotation = Quaternion.identity;
+            SetSortingOrder(rocket, rocketSortingOrder);
+
+            Tween entranceTween = rocket.transform.DOMove(centerPos, tweenConfig.RocketEntranceDuration)
+                .SetEase(tweenConfig.RocketEntranceEase)
+                .SetLink(rocket, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
+            yield return entranceTween.WaitForCompletion();
+
+            float elapsed = 0f;
+            while (rocket != null && elapsed < tweenConfig.RocketTargetPauseDuration)
+            {
+                elapsed += Time.deltaTime;
+                rocket.transform.position = centerPos + new Vector3(Random.Range(-0.06f, 0.06f), Random.Range(-0.03f, 0.03f), 0f);
+                yield return null;
+            }
+
+            if (rocket == null)
+            {
+                launchInProgress = false;
+                yield break;
+            }
+
+            rocket.transform.position = centerPos;
+            CompleteRocketBoxImpact(areaId);
+
+            Tween launchTween = rocket.transform.DOMoveY(targetY, tweenConfig.RocketLaunchDuration)
+                .SetEase(tweenConfig.RocketLaunchEase)
+                .SetLink(rocket, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true);
+            yield return launchTween.WaitForCompletion();
+            rocketVisualPool.Return(rocketView);
+        }
+
+        private void CompleteRocketBoxImpact(string areaId)
+        {
+            PrototypeBoard board = PrototypeBoard.Active;
+            bool broken = board != null && board.TryBreakBoxWithRocket(areaId);
+            bool consumed = false;
+            if (broken)
+            {
+                BoosterButton targetButton = GetRocketBoosterButton();
+                consumed = targetButton != null
+                    ? targetButton.TryConsumeUse()
+                    : BoosterInventoryRuntime.Current.TryConsume(BoosterRewardType.Rocket);
+                HapticFeedbackRuntime.RocketImpact();
+            }
+            else
+            {
+                Debug.LogWarning($"[RocketBooster] Box '{areaId}' was no longer closed at impact; rocket use kept.", this);
+            }
+
+            if (consumed)
+            {
+                SetSelectionGlowVisible(false);
+                BoosterFirstUseTutorialRuntime.Gate?.NotifyEffectApplied(BoosterRewardType.Rocket);
+            }
+
+            activeBooster = null;
+            launchInProgress = false;
+            RefreshButtonState();
         }
 
         private IEnumerator PlayRocketLaunchSequence(PuzzlePiece piece)

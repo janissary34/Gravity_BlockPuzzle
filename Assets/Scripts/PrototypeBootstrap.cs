@@ -825,6 +825,27 @@ namespace GravityPuzzle
                    (revealAreaCoordinator == null || revealAreaCoordinator.CanUseTargetedBooster(model));
         }
 
+        /// <summary>Resolves a still-closed Box at a fine-grid cell for targeted boosters.</summary>
+        public bool TryGetTargetableBox(GridCoordinate cell, out string areaId, out RevealAreaBounds bounds)
+        {
+            areaId = null;
+            bounds = default;
+            return IsLevelRunning && revealAreaCoordinator != null &&
+                   revealAreaCoordinator.TryGetTargetableBox(cell, out areaId, out bounds);
+        }
+
+        /// <summary>Hammer: lowers a closed Box's remaining counter by one.</summary>
+        public bool TryApplyHammerHitToBox(string areaId)
+        {
+            return revealAreaCoordinator != null && revealAreaCoordinator.TryApplyHammerHitToBox(areaId);
+        }
+
+        /// <summary>Rocket: opens a closed Box immediately and reveals its content.</summary>
+        public bool TryBreakBoxWithRocket(string areaId)
+        {
+            return revealAreaCoordinator != null && revealAreaCoordinator.TryBreakBoxWithRocket(areaId);
+        }
+
         public void WakeUpGravity()
         {
             PuzzleDragController.WakeUpGravity();
