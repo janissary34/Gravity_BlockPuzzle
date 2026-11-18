@@ -347,6 +347,11 @@ namespace GravityPuzzle.Presentation.Views
             else
                 ShowHammerCellOutlines();
 
+            // Boxes are not targetable during that booster's first-use lesson.
+            IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
+            BoosterRewardType boosterType = isRocket ? BoosterRewardType.Rocket : BoosterRewardType.Hammer;
+            PrototypeBoard.Active?.SetBoxBoosterTargetHighlight(gate == null || !gate.IsFirstUseActive(boosterType));
+
             // Hammer outline setup clears the previous Rocket/Tutorial state,
             // so acquire the shared foreground lease only after either mode's
             // mode-specific feedback has been rebuilt.
@@ -482,6 +487,7 @@ namespace GravityPuzzle.Presentation.Views
                 }
                 StopSelectionSparkles();
                 ClearPieceHighlights();
+                PrototypeBoard.Active?.SetBoxBoosterTargetHighlight(false);
                 ReturnHammerCellOutlines();
                 RestoreGameplayHud();
                 RestoreInactiveBoosterButtons();

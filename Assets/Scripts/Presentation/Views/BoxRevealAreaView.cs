@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace GravityPuzzle.Presentation.Views
 {
-    public sealed class BoxRevealAreaView : MonoBehaviour, IRevealAreaPresentation, IBoxRevealExposurePresentation, IPoolable, IPoolReturnReceiver<BoxRevealAreaView>
+    public sealed class BoxRevealAreaView : MonoBehaviour, IRevealAreaPresentation, IBoxRevealExposurePresentation, IBoxTargetHighlightPresentation, IPoolable, IPoolReturnReceiver<BoxRevealAreaView>
     {
         private const int BoxBurstTopCount = 6;
         private const int BoxBurstFragmentCount = 12;
@@ -36,6 +36,9 @@ namespace GravityPuzzle.Presentation.Views
         private RevealPresentationConfig config;
         private Sequence openingSequence;
         private Tween progressTween;
+        private Sequence targetHighlightSequence;
+        private Color targetHighlightBaseCoverColor;
+        private bool isTargetHighlighted;
         private float currentHeight;
         private float apertureHeight;
         private Vector4 panelSourceUvRect;
@@ -46,6 +49,7 @@ namespace GravityPuzzle.Presentation.Views
         private Vector3 shutterClosedPosition;
         private Vector3 coverClosedPosition;
         private Vector3 counterClosedPosition;
+        private Vector3 counterClosedScale = Vector3.one;
         private Vector2 authoredSize;
         private MeshRenderer counterRenderer;
         private Vector3[] fragmentClosedPositions;
@@ -86,6 +90,7 @@ namespace GravityPuzzle.Presentation.Views
             if (boxCounter != null)
             {
                 counterClosedPosition = boxCounter.transform.localPosition;
+                counterClosedScale = boxCounter.transform.localScale;
                 counterRenderer = boxCounter.GetComponent<MeshRenderer>();
             }
 
@@ -373,8 +378,53 @@ namespace GravityPuzzle.Presentation.Views
                 .SetAutoKill(true);
         }
 
+        public void SetBoosterTargetHighlight(bool highlighted)
+        {
+            if (highlighted == isTargetHighlighted)
+                return;
+
+            if (!highlighted)
+            {
+                StopTargetHighlight();
+                return;
+            }
+
+            if (config == null || boxCoverRenderer == null)
+                return;
+
+            isTargetHighlighted = true;
+            targetHighlightBaseCoverColor = boxCoverRenderer.color;
+            Color pulseColor = config.boxTargetHighlightColor;
+            pulseColor.a = targetHighlightBaseCoverColor.a;
+            float duration = config.boxTargetHighlightPulseDuration;
+            targetHighlightSequence = DOTween.Sequence()
+                .SetLink(gameObject, LinkBehaviour.KillOnDisable)
+                .SetAutoKill(true)
+                .SetLoops(-1, LoopType.Yoyo);
+            targetHighlightSequence.Join(boxCoverRenderer.DOColor(pulseColor, duration).SetEase(Ease.InOutSine));
+            if (boxCounter != null)
+                targetHighlightSequence.Join(boxCounter.transform
+                    .DOScale(counterClosedScale * config.boxTargetHighlightCounterScale, duration)
+                    .SetEase(Ease.InOutSine));
+        }
+
+        private void StopTargetHighlight()
+        {
+            if (!isTargetHighlighted)
+                return;
+
+            isTargetHighlighted = false;
+            targetHighlightSequence?.Kill();
+            targetHighlightSequence = null;
+            if (boxCoverRenderer != null)
+                boxCoverRenderer.color = targetHighlightBaseCoverColor;
+            if (boxCounter != null)
+                boxCounter.transform.localScale = counterClosedScale;
+        }
+
         public void PlayOpening(RevealAreaKind requestedKind, Action onCompleted)
         {
+            StopTargetHighlight();
             completion = onCompleted;
             isComplete = false;
             progressTween?.Kill();
@@ -752,6 +802,7 @@ namespace GravityPuzzle.Presentation.Views
 
         public void OnDespawn()
         {
+            StopTargetHighlight();
             progressTween?.Kill();
             progressTween = null;
             openingSequence?.Kill();

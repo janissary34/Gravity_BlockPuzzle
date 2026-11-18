@@ -32,6 +32,15 @@ namespace GravityPuzzle.Gameplay.Reveal
     }
 
     /// <summary>
+    /// Optional Box presentation extension: shows that a closed Box is a valid
+    /// Hammer/Rocket target. Presentation only; targeting rules stay here.
+    /// </summary>
+    public interface IBoxTargetHighlightPresentation
+    {
+        void SetBoosterTargetHighlight(bool highlighted);
+    }
+
+    /// <summary>
     /// Optional presentation extension for Boxes that can display the content
     /// which will be activated when their existing opening contract completes.
     /// It carries authored data only and never changes reveal authority.
@@ -270,6 +279,20 @@ namespace GravityPuzzle.Gameplay.Reveal
             return true;
         }
 
+        /// <summary>Highlights every closed Box while booster targeting is shown.</summary>
+        public void SetBoxBoosterTargetHighlight(bool highlighted)
+        {
+            for (int index = 0; index < boxes.Count; index++)
+                SetBoxTargetHighlight(boxes[index], highlighted && IsBoxClosed(boxes[index]));
+        }
+
+        private void SetBoxTargetHighlight(BoxRuntime box, bool highlighted)
+        {
+            if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation) &&
+                presentation is IBoxTargetHighlightPresentation highlight)
+                highlight.SetBoosterTargetHighlight(highlighted);
+        }
+
         private bool TryFindClosedBox(string areaId, out BoxRuntime result)
         {
             for (int index = 0; index < boxes.Count; index++)
@@ -433,6 +456,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             if (!IsBoxClosed(box))
                 return;
 
+            SetBoxTargetHighlight(box, false);
             box.State = RevealAreaState.Unlocking;
             BeginOpening(box.Definition, RevealAreaKind.Box, () => CompleteBoxUnlock(box));
         }
