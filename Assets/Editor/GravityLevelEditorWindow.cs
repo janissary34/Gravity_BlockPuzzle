@@ -1934,66 +1934,138 @@ namespace GravityPuzzle.Editor
                 EditorGUILayout.HelpBox($"Key {pair} opens '{lockName}'.", MessageType.Info);
         }
 
+        /// <summary>
+        /// Draws the Lock's Key selector. The menu is rebuilt every time it
+        /// opens, so newly added pieces appear at once, and its callback
+        /// writes the choice directly instead of relying on popup control IDs.
+        /// Returns the Lock's current Key id so the panel's change check is a no-op.
+        /// </summary>
         private string DrawLockKeySelector(PieceDefinition lockPiece)
         {
-            List<PieceDefinition> keys = new List<PieceDefinition>();
-            foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
-            {
-                if (candidate != null && candidate.specialBlockType == PieceSpecialBlockType.Key &&
-                    !string.IsNullOrEmpty(candidate.pieceId))
-                    keys.Add(candidate);
-            }
-
             string currentKeyId = lockPiece.lockKeyPieceId ?? string.Empty;
-            if (keys.Count == 0)
-            {
-                EditorGUILayout.HelpBox("Add a Key piece first, then choose it here.", MessageType.Warning);
-                return currentKeyId;
-            }
+            PieceDefinition currentKey = FindPieceById(currentKeyId);
+            string currentLabel = string.IsNullOrEmpty(currentKeyId)
+                ? "None"
+                : currentKey != null && currentKey.specialBlockType == PieceSpecialBlockType.Key
+                    ? $"{GetKeyPairLabel(currentKeyId)} {currentKey.name}"
+                    : "Missing Key";
 
-            string[] options = new string[keys.Count + 1];
-            options[0] = "None";
-            int selectedIndex = 0;
-            for (int index = 0; index < keys.Count; index++)
-            {
-                options[index + 1] = $"#{index + 1} {keys[index].name}";
-                if (keys[index].pieceId == currentKeyId)
-                    selectedIndex = index + 1;
-            }
+            Rect controlRect = EditorGUILayout.GetControlRect();
+            Rect buttonRect = EditorGUI.PrefixLabel(
+                controlRect,
+                new GUIContent("Opened By Key", "The piece whose destruction opens this Lock. Choosing a normal piece makes it a Key."));
+            if (EditorGUI.DropdownButton(buttonRect, new GUIContent(currentLabel), FocusType.Keyboard))
+                ShowLockKeyMenu(lockPiece, buttonRect);
 
-            int newIndex = EditorGUILayout.Popup(
-                new GUIContent("Opened By Key", "The Key piece whose destruction opens this Lock."),
-                selectedIndex,
-                options);
-            if (newIndex == 0)
+            if (string.IsNullOrEmpty(currentKeyId))
             {
-                // Viewing an orphaned link must not rewrite the asset; only an
-                // explicit change to None clears it.
-                bool isOrphaned = selectedIndex == 0 && !string.IsNullOrEmpty(currentKeyId);
                 EditorGUILayout.HelpBox(
-                    isOrphaned
-                        ? "The linked Key piece no longer exists. Choose another Key."
-                        : "Choose the Key that opens this Lock. Without a Key it plays as a normal piece.",
+                    "Choose the Key that opens this Lock. Without a Key it plays as a normal piece.",
                     MessageType.Warning);
-                return isOrphaned ? currentKeyId : string.Empty;
             }
-
-            string newKeyId = keys[newIndex - 1].pieceId;
-
-            foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
+            else if (currentKey == null || currentKey.specialBlockType != PieceSpecialBlockType.Key)
             {
-                if (candidate != null && candidate != lockPiece &&
-                    candidate.specialBlockType == PieceSpecialBlockType.Lock &&
-                    candidate.lockKeyPieceId == newKeyId)
+                EditorGUILayout.HelpBox("The linked Key piece no longer exists. Choose another Key.", MessageType.Warning);
+            }
+            else
+            {
+                foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
                 {
-                    EditorGUILayout.HelpBox(
-                        $"'{candidate.name}' already uses this Key. Each Key should open exactly one Lock.",
-                        MessageType.Warning);
-                    break;
+                    if (candidate != null && candidate != lockPiece &&
+                        candidate.specialBlockType == PieceSpecialBlockType.Lock &&
+                        candidate.lockKeyPieceId == currentKeyId)
+                    {
+                        EditorGUILayout.HelpBox(
+                            $"'{candidate.name}' already uses this Key. Each Key should open exactly one Lock.",
+                            MessageType.Warning);
+                        break;
+                    }
                 }
             }
 
-            return newKeyId;
+            return currentKeyId;
+        }
+
+        private void ShowLockKeyMenu(PieceDefinition lockPiece, Rect buttonRect)
+        {
+            if (EnsurePieceIds())
+                MarkDirty();
+
+            string currentKeyId = lockPiece.lockKeyPieceId ?? string.Empty;
+            GenericMenu menu = new GenericMenu();
+            menu.AddItem(new GUIContent("None"), string.IsNullOrEmpty(currentKeyId), () => AssignLockKey(lockPiece, null));
+
+            bool hasKey = false;
+            foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
+            {
+                if (candidate == null || candidate.specialBlockType != PieceSpecialBlockType.Key)
+                    continue;
+
+                if (!hasKey)
+                {
+                    menu.AddSeparator(string.Empty);
+                    hasKey = true;
+                }
+
+                PieceDefinition key = candidate;
+                menu.AddItem(
+                    new GUIContent($"{GetKeyPairLabel(key.pieceId)} {key.name}"),
+                    key.pieceId == currentKeyId,
+                    () => AssignLockKey(lockPiece, key));
+            }
+
+            bool hasNormal = false;
+            for (int index = 0; index < level.pieces.Count; index++)
+            {
+                PieceDefinition candidate = level.pieces[index];
+                if (candidate == null || candidate == lockPiece ||
+                    candidate.specialBlockType != PieceSpecialBlockType.Normal || candidate.frozenMoveCount > 0)
+                    continue;
+
+                if (!hasNormal)
+                {
+                    menu.AddSeparator(string.Empty);
+                    hasNormal = true;
+                }
+
+                PieceDefinition piece = candidate;
+                menu.AddItem(
+                    new GUIContent($"Make Key/{piece.name}"),
+                    false,
+                    () => AssignLockKey(lockPiece, piece));
+            }
+
+            menu.DropDown(buttonRect);
+        }
+
+        private void AssignLockKey(PieceDefinition lockPiece, PieceDefinition keyPiece)
+        {
+            if (level == null || lockPiece == null)
+                return;
+
+            Undo.RecordObject(level, "Assign Lock Key");
+            if (keyPiece != null && keyPiece.specialBlockType != PieceSpecialBlockType.Key)
+            {
+                keyPiece.specialBlockType = PieceSpecialBlockType.Key;
+                keyPiece.frozenMoveCount = 0;
+            }
+
+            lockPiece.lockKeyPieceId = keyPiece != null ? keyPiece.pieceId : string.Empty;
+            MarkDirty();
+        }
+
+        private PieceDefinition FindPieceById(string pieceId)
+        {
+            if (string.IsNullOrEmpty(pieceId))
+                return null;
+
+            foreach (PieceDefinition candidate in level.EnumerateAllPieceDefinitions())
+            {
+                if (candidate != null && candidate.pieceId == pieceId)
+                    return candidate;
+            }
+
+            return null;
         }
 
         private static void DrawBombCounterPreview(Rect bounds, PieceDefinition piece)
