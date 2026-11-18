@@ -80,12 +80,6 @@ namespace GravityPuzzle.Config
         [Tooltip("Frame recoil as a fraction of its current scale.")]
         [Range(0f, .2f)] public float boxBreakAnticipationScale = .04f;
         [Min(.01f)] public float boxBurstDuration = .38f;
-        [Tooltip("Frame tint the Box pulses toward while Hammer or Rocket targeting can hit it.")]
-        public Color boxTargetHighlightColor = new Color(1f, .93f, .45f, 1f);
-        [Tooltip("Seconds for one half of the Box targeting highlight pulse.")]
-        [Min(.05f)] public float boxTargetHighlightPulseDuration = .45f;
-        [Tooltip("Counter scale peak during the Box targeting highlight pulse.")]
-        [Range(1f, 1.5f)] public float boxTargetHighlightCounterScale = 1.15f;
         [Tooltip("Scale multiplier applied to the top and side frame fragments retained around the opening.")]
         [Range(1f, 1.5f)] public float boxBurstEdgeFragmentScale = 1.12f;
         [Tooltip("Fraction of each edge fragment's lifetime spent holding at the opening before it scatters.")]

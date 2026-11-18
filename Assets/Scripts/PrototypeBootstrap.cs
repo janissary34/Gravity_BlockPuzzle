@@ -834,10 +834,11 @@ namespace GravityPuzzle
                    revealAreaCoordinator.TryGetTargetableBox(cell, out areaId, out bounds);
         }
 
-        /// <summary>Presentation-only: highlights closed Boxes as booster targets.</summary>
-        public void SetBoxBoosterTargetHighlight(bool highlighted)
+        /// <summary>Read-only: bounds of every closed Box, for targeting presentation.</summary>
+        public void CollectTargetableBoxBounds(List<RevealAreaBounds> results)
         {
-            revealAreaCoordinator?.SetBoxBoosterTargetHighlight(highlighted);
+            if (IsLevelRunning)
+                revealAreaCoordinator?.CollectTargetableBoxBounds(results);
         }
 
         /// <summary>Hammer: lowers a closed Box's remaining counter by one.</summary>

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using GravityPuzzle.Config;
+using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Gameplay.Tutorial;
 using UnityEngine;
@@ -67,6 +68,10 @@ namespace GravityPuzzle.Presentation.Views
         [Header("Hammer Cell Outlines")]
         [SerializeField] private HammerTargetCellOutlineView hammerCellOutlinePrefab;
         [SerializeField, Min(1)] private int hammerCellOutlinePrewarmCount = 128;
+        [Tooltip("Base sorting order for closed-Box target outlines; keep above the Box frame and counter.")]
+        [SerializeField] private int boxOutlineSortingOrder = 201;
+        [Tooltip("World-space distance the Box target outline sits outside the Box bounds.")]
+        [SerializeField, Min(0f)] private float boxOutlinePadding = .06f;
 
         // Probe distance outside a cell edge, as a fraction of the cell size,
         // used to detect a neighbouring cell of the same piece.
@@ -82,6 +87,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private readonly Stack<HammerTargetCellOutlineView> availableHammerOutlines =
             new Stack<HammerTargetCellOutlineView>();
+        private readonly List<RevealAreaBounds> targetableBoxBoundsBuffer = new List<RevealAreaBounds>();
         private readonly List<HammerTargetCellOutlineView> activeHammerOutlines =
             new List<HammerTargetCellOutlineView>();
         private readonly List<PuzzlePiece.TargetableCell> targetableCellBuffer =
@@ -343,14 +349,19 @@ namespace GravityPuzzle.Presentation.Views
             PlaySelectionSparkles(isRocket);
 
             if (isRocket)
+            {
+                ReturnHammerCellOutlines();
                 ApplyRocketPieceHighlights();
+            }
             else
+            {
                 ShowHammerCellOutlines();
+            }
 
             // Boxes are not targetable during that booster's first-use lesson.
             IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
-            BoosterRewardType boosterType = isRocket ? BoosterRewardType.Rocket : BoosterRewardType.Hammer;
-            PrototypeBoard.Active?.SetBoxBoosterTargetHighlight(gate == null || !gate.IsFirstUseActive(boosterType));
+            if (gate == null || !gate.IsFirstUseActive(isRocket ? BoosterRewardType.Rocket : BoosterRewardType.Hammer))
+                ShowBoxTargetOutlines();
 
             // Hammer outline setup clears the previous Rocket/Tutorial state,
             // so acquire the shared foreground lease only after either mode's
@@ -487,7 +498,6 @@ namespace GravityPuzzle.Presentation.Views
                 }
                 StopSelectionSparkles();
                 ClearPieceHighlights();
-                PrototypeBoard.Active?.SetBoxBoosterTargetHighlight(false);
                 ReturnHammerCellOutlines();
                 RestoreGameplayHud();
                 RestoreInactiveBoosterButtons();
@@ -1152,6 +1162,49 @@ namespace GravityPuzzle.Presentation.Views
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Closed Boxes are whole-target booster hits, so they get the same
+        /// white outline as targetable pieces, drawn around the Box bounds.
+        /// </summary>
+        private void ShowBoxTargetOutlines()
+        {
+            PrototypeBoard board = PrototypeBoard.Active;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (board == null || level == null || hammerCellOutlinePrefab == null)
+                return;
+
+            targetableBoxBoundsBuffer.Clear();
+            board.CollectTargetableBoxBounds(targetableBoxBoundsBuffer);
+            Material material = HammerTargetCellOutlineView.GetDefaultOutlineMaterial();
+            float fineCellSize = 1f / Mathf.Max(1, level.subdivisions);
+            for (int index = 0; index < targetableBoxBoundsBuffer.Count; index++)
+            {
+                RevealAreaBounds bounds = targetableBoxBoundsBuffer[index];
+                Vector2 min = GravityLevelGridCoordinates.FineCellToWorld(
+                    level, new GridCoordinate(bounds.XMin, bounds.YMin));
+                Vector2 max = GravityLevelGridCoordinates.FineCellToWorld(
+                    level, new GridCoordinate(bounds.XMaxExclusive - 1, bounds.YMaxExclusive - 1));
+                Vector2 size = max - min + Vector2.one * (fineCellSize + boxOutlinePadding * 2f);
+                if (availableHammerOutlines.Count == 0)
+                {
+                    HammerTargetCellOutlineView outlineInstance = Instantiate(hammerCellOutlinePrefab, transform);
+                    outlineInstance.Hide();
+                    availableHammerOutlines.Push(outlineInstance);
+                }
+
+                HammerTargetCellOutlineView outline = availableHammerOutlines.Pop();
+                outline.Show(
+                    new PuzzlePiece.TargetableCell((min + max) * .5f, size),
+                    HammerTargetCellOutlineView.RoundedCorners.BottomLeft |
+                    HammerTargetCellOutlineView.RoundedCorners.TopLeft |
+                    HammerTargetCellOutlineView.RoundedCorners.TopRight |
+                    HammerTargetCellOutlineView.RoundedCorners.BottomRight,
+                    material,
+                    boxOutlineSortingOrder);
+                activeHammerOutlines.Add(outline);
+            }
         }
 
         private void ReturnHammerCellOutlines()
