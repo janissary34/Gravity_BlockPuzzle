@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using GravityPuzzle.Config;
 using GravityPuzzle.Core.StateMachine;
 using GravityPuzzle.Gameplay.Input;
+using GravityPuzzle.Gameplay.Reveal;
 using GravityPuzzle.Gameplay.Tutorial;
 using GravityPuzzle.Infrastructure.Pooling;
 using GravityPuzzle.Infrastructure.Services;
@@ -430,9 +431,9 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// The rocket flies to the Box centre, blasts it open at the end of
-        /// the target pause, then leaves empty. Box opening and content
-        /// activation stay owned by the reveal coordinator.
+        /// The rocket flies to the Box centre, grabs the Box like a piece and
+        /// carries it off-screen. The Box unlocks at take-off (counter is left
+        /// as is); its content stays where it was and resumes normal play.
         /// </summary>
         private IEnumerator PlayRocketBoxSequence(string areaId, Vector2 boxCenter)
         {
@@ -453,7 +454,8 @@ namespace GravityPuzzle
             {
                 yield return new WaitForSeconds(tweenConfig.RocketEntranceDuration);
                 yield return new WaitForSeconds(tweenConfig.RocketTargetPauseDuration);
-                CompleteRocketBoxImpact(areaId);
+                if (TryLiftBox(areaId, out IBoxRocketCarryPresentation unseenCarry))
+                    unseenCarry?.EndRocketCarry();
                 yield break;
             }
 
@@ -483,22 +485,37 @@ namespace GravityPuzzle
             }
 
             rocket.transform.position = centerPos;
-            CompleteRocketBoxImpact(areaId);
+            Transform carried = null;
+            if (TryLiftBox(areaId, out IBoxRocketCarryPresentation carry) && carry != null)
+            {
+                carried = carry.BeginRocketCarry();
+                if (carried != null)
+                    carried.SetParent(rocket.transform, true);
+            }
 
             Tween launchTween = rocket.transform.DOMoveY(targetY, tweenConfig.RocketLaunchDuration)
                 .SetEase(tweenConfig.RocketLaunchEase)
                 .SetLink(rocket, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
             yield return launchTween.WaitForCompletion();
+
+            // Return the carried Box to its own pool before the rocket goes
+            // back to its pool, so neither keeps the other as a child.
+            carry?.EndRocketCarry();
             rocketVisualPool.Return(rocketView);
         }
 
-        private void CompleteRocketBoxImpact(string areaId)
+        /// <summary>
+        /// Unlocks the Box through the board and settles the booster use.
+        /// Returns false (use kept) when the Box was no longer closed.
+        /// </summary>
+        private bool TryLiftBox(string areaId, out IBoxRocketCarryPresentation carry)
         {
+            carry = null;
             PrototypeBoard board = PrototypeBoard.Active;
-            bool broken = board != null && board.TryBreakBoxWithRocket(areaId);
+            bool lifted = board != null && board.TryLiftBoxWithRocket(areaId, out carry);
             bool consumed = false;
-            if (broken)
+            if (lifted)
             {
                 BoosterButton targetButton = GetRocketBoosterButton();
                 consumed = targetButton != null
@@ -508,7 +525,7 @@ namespace GravityPuzzle
             }
             else
             {
-                Debug.LogWarning($"[RocketBooster] Box '{areaId}' was no longer closed at impact; rocket use kept.", this);
+                Debug.LogWarning($"[RocketBooster] Box '{areaId}' was no longer closed at take-off; rocket use kept.", this);
             }
 
             if (consumed)
@@ -520,6 +537,7 @@ namespace GravityPuzzle
             activeBooster = null;
             launchInProgress = false;
             RefreshButtonState();
+            return lifted;
         }
 
         private IEnumerator PlayRocketLaunchSequence(PuzzlePiece piece)

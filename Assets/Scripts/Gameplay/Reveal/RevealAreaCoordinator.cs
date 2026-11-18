@@ -32,6 +32,20 @@ namespace GravityPuzzle.Gameplay.Reveal
     }
 
     /// <summary>
+    /// Optional Box extension that lets a Rocket carry the closed Box away.
+    /// The view stays intact (counter included) while it flies; the
+    /// coordinator has already unlocked the Box and activated its content.
+    /// </summary>
+    public interface IBoxRocketCarryPresentation
+    {
+        /// <summary>Stops Box tweens, hides content previews, returns the transform to carry.</summary>
+        Transform BeginRocketCarry();
+
+        /// <summary>Called once the carried Box is off-screen; returns the view to its pool.</summary>
+        void EndRocketCarry();
+    }
+
+    /// <summary>
     /// Optional presentation extension for Boxes that can display the content
     /// which will be activated when their existing opening contract completes.
     /// It carries authored data only and never changes reveal authority.
@@ -257,16 +271,23 @@ namespace GravityPuzzle.Gameplay.Reveal
             return true;
         }
 
-        /// <summary>A Rocket opens a closed Box immediately, regardless of its counter.</summary>
-        public bool TryBreakBoxWithRocket(string areaId)
+        /// <summary>
+        /// A Rocket lifts a closed Box away regardless of its counter. The Box
+        /// unlocks and its content activates immediately; the returned view
+        /// (null when none is authored) is only carried off as presentation.
+        /// </summary>
+        public bool TryLiftBoxWithRocket(string areaId, out IBoxRocketCarryPresentation carry)
         {
+            carry = null;
             if (!TryFindClosedBox(areaId, out BoxRuntime box))
                 return false;
 
             if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation))
-                presentation.SetBoxRemaining(0, box.Definition.targetShredCount);
+                carry = presentation as IBoxRocketCarryPresentation;
 
-            StartBoxUnlock(box);
+            box.State = RevealAreaState.Unlocking;
+            AreaUnlockStarted?.Invoke(new RevealAreaEvent(box.Definition.areaId, RevealAreaKind.Box));
+            CompleteBoxUnlock(box);
             return true;
         }
 

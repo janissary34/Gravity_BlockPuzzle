@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace GravityPuzzle.Presentation.Views
 {
-    public sealed class BoxRevealAreaView : MonoBehaviour, IRevealAreaPresentation, IBoxRevealExposurePresentation, IPoolable, IPoolReturnReceiver<BoxRevealAreaView>
+    public sealed class BoxRevealAreaView : MonoBehaviour, IRevealAreaPresentation, IBoxRevealExposurePresentation, IBoxRocketCarryPresentation, IPoolable, IPoolReturnReceiver<BoxRevealAreaView>
     {
         private const int BoxBurstTopCount = 6;
         private const int BoxBurstFragmentCount = 12;
@@ -371,6 +371,24 @@ namespace GravityPuzzle.Presentation.Views
                 .SetEase(config.boxOpenEase)
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
+        }
+
+        public Transform BeginRocketCarry()
+        {
+            progressTween?.Kill();
+            progressTween = null;
+            openingSequence?.Kill();
+            openingSequence = null;
+            completion = null;
+            // Real content roots take over at the Box position; the carried
+            // frame must not take preview copies with it.
+            ClearPreviewVisuals();
+            return transform;
+        }
+
+        public void EndRocketCarry()
+        {
+            Despawn();
         }
 
         public void PlayOpening(RevealAreaKind requestedKind, Action onCompleted)

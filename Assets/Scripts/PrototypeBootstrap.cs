@@ -847,10 +847,11 @@ namespace GravityPuzzle
             return revealAreaCoordinator != null && revealAreaCoordinator.TryApplyHammerHitToBox(areaId);
         }
 
-        /// <summary>Rocket: opens a closed Box immediately and reveals its content.</summary>
-        public bool TryBreakBoxWithRocket(string areaId)
+        /// <summary>Rocket: unlocks a closed Box immediately and hands back its view to carry away.</summary>
+        public bool TryLiftBoxWithRocket(string areaId, out IBoxRocketCarryPresentation carry)
         {
-            return revealAreaCoordinator != null && revealAreaCoordinator.TryBreakBoxWithRocket(areaId);
+            carry = null;
+            return revealAreaCoordinator != null && revealAreaCoordinator.TryLiftBoxWithRocket(areaId, out carry);
         }
 
         public void WakeUpGravity()
