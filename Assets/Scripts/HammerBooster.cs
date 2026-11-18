@@ -44,7 +44,10 @@ namespace GravityPuzzle
         private Camera gameplayCamera;
 
         [SerializeField] private float popScaleMultiplier = 1.7f;
-        [SerializeField] private int hammerSortingOrder = 100;
+        // Renamed from hammerSortingOrder (scene value 100) so the new default
+        // applies: the hammer must render above Boxes (200) and their counters.
+        [Tooltip("Sorting order for hammer renderers. Keep above board pieces, Boxes, and Box counters.")]
+        [SerializeField] private int hammerVisualSortingOrder = 30000;
         [Tooltip("World-space height of the hammer pivot above the selected block during the swing.")]
         [SerializeField] private float hammerHoverHeightOffset = .85f;
         [SerializeField, Tooltip("Fallback count when no BoosterButton is present.")]
@@ -743,7 +746,7 @@ namespace GravityPuzzle
         {
             SpriteRenderer[] renderers = hammer.GetComponentsInChildren<SpriteRenderer>(true);
             for (int i = 0; i < renderers.Length; i++)
-                renderers[i].sortingOrder = hammerSortingOrder + i;
+                renderers[i].sortingOrder = hammerVisualSortingOrder + i;
         }
 
         private bool TryRentHammerVisual(out BoosterVisualView hammerView)
