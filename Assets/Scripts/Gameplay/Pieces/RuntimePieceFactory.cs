@@ -268,6 +268,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             PuzzlePiece puzzlePiece = root.Piece;
             ApplyPieceSetup(
                 puzzlePiece,
+                level,
                 sourcePieceId,
                 definition,
                 visualColor,
@@ -586,6 +587,7 @@ namespace GravityPuzzle.Gameplay.Pieces
 
         private static void ApplyPieceSetup(
             PuzzlePiece puzzlePiece,
+            GravityLevelDefinition level,
             int sourcePieceId,
             PieceDefinition definition,
             Color visualColor,
