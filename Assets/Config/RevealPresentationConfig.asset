@@ -27,6 +27,8 @@ MonoBehaviour:
   elevatorFrameSprite: {fileID: 429497369, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   elevatorLeftDoorSprite: {fileID: 2066327055, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   elevatorRightDoorSprite: {fileID: 2066327055, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
+  elevatorDoorRimSprite: {fileID: 21300000, guid: 9defac49958f4e20872b6071e995a721, type: 3}
+  elevatorDoorPanelSprite: {fileID: 21300000, guid: 3c07348b4a1d4f37a4cf58b510bb8013, type: 3}
   elevatorDoorSprite: {fileID: 429497369, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   boxFrameThickness: 0.75
   boxFramePaddingBottomPixels: 46
@@ -63,10 +65,13 @@ MonoBehaviour:
   boxBreakRotation: 70
   elevatorOpenDuration: 0.4
   elevatorOpenEase: 6
-  elevatorDoorWidthRatio: 0.86
-  elevatorDoorHeightRatio: 0.83
+  elevatorDoorWidthRatio: 1
+  elevatorDoorHeightRatio: 1
   elevatorDoorCenterYOffset: 0
   elevatorVisualWidthScale: 1
+  elevatorDoorPanelColor: {r: 0.41, g: 0.46, b: 0.95, a: 1}
+  elevatorDoorPanelInsetPixels: 24
   elevatorOpeningColor: {r: 0.04, g: 0.08, b: 0.14, a: 1}
   elevatorSortingOrder: 1
+  elevatorDoorSortingOrder: 60
   boxSortingOrder: 200

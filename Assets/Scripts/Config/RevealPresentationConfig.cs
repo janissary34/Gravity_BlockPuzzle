@@ -107,10 +107,10 @@ namespace GravityPuzzle.Config
         [Header("Elevator")]
         [Min(.01f)] public float elevatorOpenDuration = .4f;
         public Ease elevatorOpenEase = Ease.OutQuad;
-        [Tooltip("Door aperture width as a fraction of the cabinet artwork. The cabinet keeps its aspect-correct rim; only its middle stretches to fill the area.")]
-        [Range(.1f, .9f)] public float elevatorDoorWidthRatio = .86f;
+        [Tooltip("Door aperture width as a fraction of the cabinet artwork. 1 lets the doors cover the whole Elevator area so no interior block shows outside the door rims.")]
+        [Range(.1f, 1f)] public float elevatorDoorWidthRatio = 1f;
         [Tooltip("Door aperture height as a fraction of the cabinet artwork.")]
-        [Range(.1f, .9f)] public float elevatorDoorHeightRatio = .83f;
+        [Range(.1f, 1f)] public float elevatorDoorHeightRatio = 1f;
         [Tooltip("Vertical position of the two door panels within the authored Elevator area.")]
         [Range(-.4f, .4f)] public float elevatorDoorCenterYOffset;
         [Tooltip("Optional horizontal fit correction for the authored Elevator cabinet.")]

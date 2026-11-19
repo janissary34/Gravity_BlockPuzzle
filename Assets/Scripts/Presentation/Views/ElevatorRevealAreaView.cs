@@ -44,8 +44,8 @@ namespace GravityPuzzle.Presentation.Views
             Vector2 areaSize = new Vector2(Mathf.Max(.01f, size.x), Mathf.Max(.01f, size.y));
 
             float widthScale = config != null ? config.elevatorVisualWidthScale : 1f;
-            float widthRatio = config != null ? config.elevatorDoorWidthRatio : .86f;
-            float heightRatio = config != null ? config.elevatorDoorHeightRatio : .83f;
+            float widthRatio = config != null ? config.elevatorDoorWidthRatio : 1f;
+            float heightRatio = config != null ? config.elevatorDoorHeightRatio : 1f;
             float doorCenterY = areaSize.y * (config != null ? config.elevatorDoorCenterYOffset : 0f);
             Vector2 frameSize = new Vector2(areaSize.x * widthScale, areaSize.y);
 
