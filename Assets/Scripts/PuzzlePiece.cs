@@ -2669,12 +2669,14 @@ namespace GravityPuzzle
             }
 
             KeyLinkId = setup.KeyLinkId;
-            IsKey = isKeyType;
 
             // A Lock activated later (for example from a Box) opens at once
-            // when its Key has already been destroyed.
+            // when its Key has already been destroyed. A Key activated after
+            // its Lock was carried away by the Rocket is a normal piece.
             PrototypeBoard board = PrototypeBoard.Active;
-            IsKeyLocked = isLockType && (board == null || !board.IsKeyConsumed(KeyLinkId));
+            bool isKeyConsumed = board != null && board.IsKeyConsumed(KeyLinkId);
+            IsKey = isKeyType && !isKeyConsumed;
+            IsKeyLocked = isLockType && !isKeyConsumed;
             RefreshKeyLockBadge();
         }
 
@@ -2733,6 +2735,7 @@ namespace GravityPuzzle
         /// </summary>
         public Vector3 DetachKeyBadgeForFlight()
         {
+            IsKey = false;
             keyBadgeDetached = true;
             Vector3 start = keyLockBadge != null && keyLockBadge.TryGetBadgeWorldPosition(out Vector3 position)
                 ? position
@@ -2749,7 +2752,24 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryBeginKeyArrival(Vector3 worldStart, Action<PuzzlePiece> onArrived)
         {
-            if (!IsKeyLocked || IsShredderInteractionLocked || keyLockBadge == null ||
+            if (IsShredderInteractionLocked)
+                return false;
+
+            return TryPlayKeyFlight(worldStart, onArrived);
+        }
+
+        /// <summary>
+        /// Presentation only: while the Rocket carries this Lock away, its Key
+        /// jumps in and leaves with it. The Lock stays locked until it despawns.
+        /// </summary>
+        public bool TryCatchKeyWhileCarried(Vector3 worldStart)
+        {
+            return IsShredderInteractionLocked && TryPlayKeyFlight(worldStart, null);
+        }
+
+        private bool TryPlayKeyFlight(Vector3 worldStart, Action<PuzzlePiece> onArrived)
+        {
+            if (!IsKeyLocked || keyLockBadge == null ||
                 keyLockBadge.IsKeyFlightPlaying || keyBadgeSprite == null ||
                 !TryResolveCentralOverlayPlacement(out _, out _, out Vector2 targetSize) ||
                 !TryGetAvailableIceSlot(out SpriteRenderer slot))
@@ -2769,6 +2789,12 @@ namespace GravityPuzzle
             if (!isPlaying)
                 keyArrivalHandler = null;
             return isPlaying;
+        }
+
+        /// <summary>Keeps Key/Lock icons in front of cells that a carrier re-sorted.</summary>
+        public void SetKeyLockIconSortingOrder(int sortingOrder)
+        {
+            keyLockBadge?.SetSortingOrder(sortingOrder);
         }
 
         private void HandleKeyArrived()
@@ -3536,7 +3562,13 @@ namespace GravityPuzzle
         /// </summary>
         public bool TryBeginRocketHandoff()
         {
-            return TryBeginHandoff(reportDestructionImmediately: false, allowMovementLocked: true);
+            if (!TryBeginHandoff(reportDestructionImmediately: false, allowMovementLocked: true))
+                return false;
+
+            // A Lock leaving the board takes its Key with it.
+            if (IsKeyLocked)
+                PrototypeBoard.Active?.NotifyLockCarriedAway(this);
+            return true;
         }
 
         private bool TryBeginHandoff(bool reportDestructionImmediately, bool allowMovementLocked)

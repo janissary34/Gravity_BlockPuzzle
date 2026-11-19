@@ -602,8 +602,9 @@ namespace GravityPuzzle
             piece.transform.SetParent(rocket.transform, true);
             // The carrier must remain visibly in front of the carried piece
             // for the entire flight.  The piece keeps a high order so it stays
-            // above the board, while the rocket is one step higher.
-            SetPieceSortingOrder(piece, rocketSortingOrder - 1);
+            // above the board; its Key/Lock icons and outline sit one step
+            // higher, and the rocket one step above those.
+            SetPieceSortingOrder(piece, rocketSortingOrder - 2);
 
             // 5. Pause at piece center for target-pause duration (with engine ignition micro-rumble)
             Vector3 initialPos = rocket.transform.position;
@@ -757,6 +758,7 @@ namespace GravityPuzzle
 
             if (piece.Outline != null)
                 piece.Outline.sortingOrder = order + 1;
+            piece.SetKeyLockIconSortingOrder(order + 1);
         }
 
         private void EnsureReferences()

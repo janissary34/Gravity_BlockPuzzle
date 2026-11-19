@@ -62,6 +62,29 @@ namespace GravityPuzzle.Gameplay.Pieces
                 wakeGravity?.Invoke();
         }
 
+        /// <summary>
+        /// The Rocket is carrying a still-locked Lock away. Its Key is
+        /// consumed, leaves its Key piece (which becomes a normal piece), and
+        /// jumps into the Lock to leave the board with it.
+        /// </summary>
+        public void NotifyLockCarriedAway(PuzzlePiece lockPiece, IReadOnlyList<PuzzlePiece> activePieces)
+        {
+            if (lockPiece == null || !lockPiece.IsKeyLocked ||
+                !consumedKeyIds.Add(lockPiece.KeyLinkId))
+                return;
+
+            for (int index = 0; index < activePieces.Count; index++)
+            {
+                PuzzlePiece keyPiece = activePieces[index];
+                if (keyPiece == null || keyPiece == lockPiece || !keyPiece.IsKey ||
+                    !string.Equals(keyPiece.KeyLinkId, lockPiece.KeyLinkId, StringComparison.Ordinal))
+                    continue;
+
+                lockPiece.TryCatchKeyWhileCarried(keyPiece.DetachKeyBadgeForFlight());
+                return;
+            }
+        }
+
         private void HandleKeyArrived(PuzzlePiece lockPiece)
         {
             if (lockPiece != null && lockPiece.TryReleaseKeyLock())

@@ -29,6 +29,14 @@ namespace GravityPuzzle.Presentation.Views
         public bool HasBadge => badgeRenderer != null;
         public bool IsKeyFlightPlaying => flightSequence != null && flightSequence.IsActive();
 
+        public void SetSortingOrder(int sortingOrder)
+        {
+            if (badgeRenderer != null)
+                badgeRenderer.sortingOrder = sortingOrder;
+            if (flightRenderer != null)
+                flightRenderer.sortingOrder = sortingOrder;
+        }
+
         /// <summary>
         /// Returns the live badge centre, or its last centre after it was
         /// cleared, so a Key destroyed by its final Hammer hit can still fly.
@@ -111,16 +119,20 @@ namespace GravityPuzzle.Presentation.Views
                 badgeRenderer.sortingOrder + 1,
                 "Key Flight");
 
-            Vector3 target = badgeRenderer.transform.position;
-            target.z -= .01f;
-            worldStart.z = target.z;
-            slot.transform.position = worldStart;
+            // The flight runs in the Lock's local space so it still lands on a
+            // Lock that moves meanwhile (for example one carried by the Rocket).
+            Vector3 localTarget = badgeRenderer.transform.localPosition;
+            localTarget.z -= .01f;
+            Vector3 localStart = owner.InverseTransformPoint(worldStart);
+            localStart.z = localTarget.z;
+            slot.transform.localPosition = localStart;
             slot.transform.localScale = localScale;
             flightRenderer = slot;
 
+            float ownerScale = Mathf.Max(Mathf.Abs(owner.lossyScale.y), .0001f);
             flightSequence = DOTween.Sequence()
                 .Append(slot.transform
-                    .DOJump(target, config.KeyFlightArcHeight, 1, config.KeyFlightDuration)
+                    .DOLocalJump(localTarget, config.KeyFlightArcHeight / ownerScale, 1, config.KeyFlightDuration)
                     .SetEase(config.KeyFlightEase))
                 .Append(slot.transform.DOLocalRotate(
                     new Vector3(0f, 0f, config.KeyTurnAngle),

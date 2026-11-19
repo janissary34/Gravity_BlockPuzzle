@@ -2655,6 +2655,12 @@ namespace GravityPuzzle
             return keyLockCoordinator.IsKeyConsumed(keyPieceId);
         }
 
+        /// <summary>Reports a still-locked Lock that the Rocket has taken off the board.</summary>
+        public void NotifyLockCarriedAway(PuzzlePiece lockPiece)
+        {
+            keyLockCoordinator.NotifyLockCarriedAway(lockPiece, PuzzlePiece.ActivePieces);
+        }
+
         /// <summary>
         /// Forwards a completed hammer removal after the board has committed
         /// the piece destruction. The reveal coordinator remains the sole
