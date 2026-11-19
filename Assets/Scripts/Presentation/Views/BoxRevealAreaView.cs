@@ -137,8 +137,9 @@ namespace GravityPuzzle.Presentation.Views
 
             if (boxCoverRenderer != null)
             {
-                boxCoverRenderer.transform.localPosition = coverClosedPosition +
-                    (config != null ? (Vector3)config.boxFrameOffset : Vector3.zero);
+                float framePadding = config != null ? config.boxFramePaddingBottomPixels * FramePixelToWorld() : 0f;
+                Vector2 frameSize = new Vector2(size.x, size.y + framePadding);
+                boxCoverRenderer.transform.localPosition = coverClosedPosition + Vector3.down * (framePadding * .5f);
                 boxCoverRenderer.transform.localScale = Vector3.one;
                 boxCoverRenderer.gameObject.SetActive(true);
                 Color c = boxCoverRenderer.color;
@@ -148,7 +149,7 @@ namespace GravityPuzzle.Presentation.Views
                 {
                     float thickness = config != null ? Mathf.Max(.01f, config.boxFrameThickness) : 1f;
                     boxCoverRenderer.drawMode = SpriteDrawMode.Sliced;
-                    boxCoverRenderer.size = size / thickness;
+                    boxCoverRenderer.size = frameSize / thickness;
                     boxCoverRenderer.transform.localScale = new Vector3(thickness, thickness, 1f);
                 }
                 else
@@ -156,10 +157,10 @@ namespace GravityPuzzle.Presentation.Views
                     boxCoverRenderer.drawMode = SpriteDrawMode.Simple;
                     Vector2 spriteSize = boxCoverRenderer.sprite != null
                         ? boxCoverRenderer.sprite.rect.size / boxCoverRenderer.sprite.pixelsPerUnit
-                        : size;
+                        : frameSize;
                     boxCoverRenderer.transform.localScale = new Vector3(
-                        spriteSize.x > 0f ? size.x / spriteSize.x : 1f,
-                        spriteSize.y > 0f ? size.y / spriteSize.y : 1f,
+                        spriteSize.x > 0f ? frameSize.x / spriteSize.x : 1f,
+                        spriteSize.y > 0f ? frameSize.y / spriteSize.y : 1f,
                         1f);
                 }
 
@@ -452,7 +453,8 @@ namespace GravityPuzzle.Presentation.Views
                 return;
             }
 
-            Vector2 panelSize = Vector2.Scale(size, config.boxPanelSizeMultiplier);
+            Vector4 inset = config.boxPanelInsetPixels * FramePixelToWorld();
+            Vector2 panelSize = new Vector2(size.x - inset.x - inset.y, size.y - inset.z - inset.w);
             if (panelSize.x <= 0f || panelSize.y <= 0f)
             {
                 Debug.LogError($"[BoxRevealAreaView] Box '{AreaId}' has a non-positive panel size.", this);
@@ -460,7 +462,8 @@ namespace GravityPuzzle.Presentation.Views
             }
 
             panelSourceUvRect = GetValidatedPanelSourceUvRect(config.boxPanelSourceUvRect);
-            Vector3 panelPosition = coverClosedPosition + (Vector3)config.boxPanelOffset;
+            Vector3 panelPosition = coverClosedPosition +
+                new Vector3((inset.x - inset.y) * .5f, (inset.w - inset.z) * .5f, 0f);
             apertureHeight = panelSize.y;
 
             boxBackingRenderer.transform.localPosition = panelPosition;
@@ -497,6 +500,15 @@ namespace GravityPuzzle.Presentation.Views
                 previewMask.frontSortingOrder = config.boxSortingOrder - 1;
                 previewMask.gameObject.SetActive(true);
             }
+        }
+
+        // World size of one Tunnel sprite pixel as rendered by the sliced frame.
+        private float FramePixelToWorld()
+        {
+            if (config == null || boxCoverRenderer == null || boxCoverRenderer.sprite == null)
+                return 0f;
+
+            return Mathf.Max(.01f, config.boxFrameThickness) / boxCoverRenderer.sprite.pixelsPerUnit;
         }
 
         private void ApplyShutterHeight(float height)
