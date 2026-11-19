@@ -20,7 +20,7 @@ namespace GravityPuzzle.Presentation.Views
         private Sequence openingSequence;
         private Action completion;
         private bool isComplete;
-        private float doorTravel;
+        private float doorWidth;
 
         public string AreaId { get; private set; }
 
@@ -66,7 +66,7 @@ namespace GravityPuzzle.Presentation.Views
                 Mathf.Max(.01f, frameSize.x - frameArtSize.x * (1f - widthRatio)),
                 Mathf.Max(.01f, frameSize.y - frameArtSize.y * (1f - heightRatio)));
             Vector2 doorSize = new Vector2(aperture.x * .5f, aperture.y);
-            doorTravel = doorSize.x;
+            doorWidth = doorSize.x;
 
             if (frameRenderer != null)
             {
@@ -193,26 +193,39 @@ namespace GravityPuzzle.Presentation.Views
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
 
-            // Each full-size panel slides straight outward by its own width,
-            // clearing the doorway and revealing the interior pieces.
+            // Each panel keeps its height and its outer edge at the cabinet
+            // side, while its X scale shrinks toward that edge, revealing the
+            // interior pieces from the middle outward.
             if (elevatorLeftDoor != null)
-            {
-                openingSequence.Join(elevatorLeftDoor
-                    .DOLocalMoveX(elevatorLeftDoor.localPosition.x - doorTravel, config.elevatorOpenDuration)
-                    .SetEase(config.elevatorOpenEase));
-            }
-
+                openingSequence.Join(CreateDoorCollapse(elevatorLeftDoor, -1f));
             if (elevatorRightDoor != null)
-            {
-                openingSequence.Join(elevatorRightDoor
-                    .DOLocalMoveX(elevatorRightDoor.localPosition.x + doorTravel, config.elevatorOpenDuration)
-                    .SetEase(config.elevatorOpenEase));
-            }
+                openingSequence.Join(CreateDoorCollapse(elevatorRightDoor, 1f));
 
             if (elevatorLeftDoor == null && elevatorRightDoor == null)
                 openingSequence.AppendInterval(config.elevatorOpenDuration);
 
             openingSequence.OnComplete(CompleteOpening);
+        }
+
+        private Tween CreateDoorCollapse(Transform door, float outwardSign)
+        {
+            Vector3 closedPosition = door.localPosition;
+            Vector3 closedScale = door.localScale;
+            float closedWidth = doorWidth;
+            float outerEdgeX = closedPosition.x + outwardSign * closedWidth * .5f;
+            return DOTween.To(
+                    () => 1f,
+                    widthFraction =>
+                    {
+                        door.localScale = new Vector3(closedScale.x * widthFraction, closedScale.y, closedScale.z);
+                        door.localPosition = new Vector3(
+                            outerEdgeX - outwardSign * closedWidth * widthFraction * .5f,
+                            closedPosition.y,
+                            closedPosition.z);
+                    },
+                    0f,
+                    config.elevatorOpenDuration)
+                .SetEase(config.elevatorOpenEase);
         }
 
         private void CompleteOpening()
