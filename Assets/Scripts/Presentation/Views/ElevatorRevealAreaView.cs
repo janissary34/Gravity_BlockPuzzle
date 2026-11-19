@@ -14,8 +14,6 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private Transform elevatorLeftDoor;
         [SerializeField] private Transform elevatorRightDoor;
         [SerializeField] private SpriteRenderer[] doorRenderers;
-        [Tooltip("Clips the sliding doors to the doorway so they disappear under the cabinet rim.")]
-        [SerializeField] private SpriteMask doorMask;
 
         private Action<ElevatorRevealAreaView> returnHandler;
         private RevealPresentationConfig config;
@@ -93,29 +91,6 @@ namespace GravityPuzzle.Presentation.Views
                 openingRenderer.transform.localPosition = new Vector3(0f, doorCenterY, 0f);
             }
 
-            int doorSortingOrder = config != null ? config.elevatorDoorSortingOrder : 60;
-            if (doorMask != null)
-            {
-                doorMask.gameObject.SetActive(true);
-                doorMask.transform.localPosition = new Vector3(0f, doorCenterY, 0f);
-                Vector2 maskSpriteSize = doorMask.sprite != null ? (Vector2)doorMask.sprite.bounds.size : Vector2.one;
-                doorMask.transform.localScale = new Vector3(
-                    aperture.x / Mathf.Max(.0001f, maskSpriteSize.x),
-                    aperture.y / Mathf.Max(.0001f, maskSpriteSize.y),
-                    1f);
-                // The custom range straddles only the two door orders so the
-                // aperture clip never affects pieces or other masked layers.
-                doorMask.isCustomRangeActive = true;
-                doorMask.backSortingOrder = doorSortingOrder - 1;
-                doorMask.frontSortingOrder = doorSortingOrder + 2;
-            }
-            else
-            {
-                Debug.LogWarning(
-                    $"[ElevatorRevealAreaView] '{name}' has no door mask; sliding doors will not be clipped to the doorway. Run Gravity Puzzle/Art/Add Elevator Door Mask.",
-                    this);
-            }
-
             bool usesSharedDoorSprite = config == null ||
                                         config.elevatorLeftDoorSprite == null ||
                                         config.elevatorRightDoorSprite == null ||
@@ -153,21 +128,15 @@ namespace GravityPuzzle.Presentation.Views
 
         /// <summary>
         /// Closed doors are board decoration behind the pieces standing on the
-        /// Elevator; opening doors sit above the interior and are clipped to the
-        /// doorway.
+        /// Elevator; opening doors sit above the interior pieces. Panels are
+        /// never clipped, so they keep their full size while sliding.
         /// </summary>
         private void SetDoorLayer(SpriteRenderer doorRenderer, int index, bool opening)
         {
-            if (opening)
-            {
-                doorRenderer.sortingOrder = (config != null ? config.elevatorDoorSortingOrder : 60) + index;
-                doorRenderer.maskInteraction = doorMask != null
-                    ? SpriteMaskInteraction.VisibleInsideMask
-                    : SpriteMaskInteraction.None;
-                return;
-            }
-
-            doorRenderer.sortingOrder = (config != null ? config.elevatorSortingOrder : 1) + 2 + index;
+            int baseOrder = opening
+                ? (config != null ? config.elevatorDoorSortingOrder : 60)
+                : (config != null ? config.elevatorSortingOrder : 1) + 2;
+            doorRenderer.sortingOrder = baseOrder + index;
             doorRenderer.maskInteraction = SpriteMaskInteraction.None;
         }
 
@@ -224,8 +193,8 @@ namespace GravityPuzzle.Presentation.Views
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
 
-            // Each panel slides straight outward by its own width behind the
-            // doorway mask, revealing the interior pieces between them.
+            // Each full-size panel slides straight outward by its own width,
+            // clearing the doorway and revealing the interior pieces.
             if (elevatorLeftDoor != null)
             {
                 openingSequence.Join(elevatorLeftDoor
@@ -268,8 +237,6 @@ namespace GravityPuzzle.Presentation.Views
                 frameRenderer.gameObject.SetActive(visible);
             if (openingRenderer != null)
                 openingRenderer.gameObject.SetActive(visible);
-            if (doorMask != null)
-                doorMask.gameObject.SetActive(visible);
 
             if (doorRenderers == null)
                 return;
