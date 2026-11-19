@@ -13,14 +13,16 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private SpriteRenderer openingRenderer;
         [SerializeField] private Transform elevatorLeftDoor;
         [SerializeField] private Transform elevatorRightDoor;
+        [Tooltip("Flat door panels; they collapse toward the outer edges while opening.")]
         [SerializeField] private SpriteRenderer[] doorRenderers;
+        [Tooltip("Fixed yellow door rims drawn above the panels; they never move or scale.")]
+        [SerializeField] private SpriteRenderer[] doorRimRenderers;
 
         private Action<ElevatorRevealAreaView> returnHandler;
         private RevealPresentationConfig config;
         private Sequence openingSequence;
         private Action completion;
         private bool isComplete;
-        private float doorWidth;
 
         public string AreaId { get; private set; }
 
@@ -66,7 +68,6 @@ namespace GravityPuzzle.Presentation.Views
                 Mathf.Max(.01f, frameSize.x - frameArtSize.x * (1f - widthRatio)),
                 Mathf.Max(.01f, frameSize.y - frameArtSize.y * (1f - heightRatio)));
             Vector2 doorSize = new Vector2(aperture.x * .5f, aperture.y);
-            doorWidth = doorSize.x;
 
             if (frameRenderer != null)
             {
@@ -95,49 +96,99 @@ namespace GravityPuzzle.Presentation.Views
                                         config.elevatorLeftDoorSprite == null ||
                                         config.elevatorRightDoorSprite == null ||
                                         config.elevatorLeftDoorSprite == config.elevatorRightDoorSprite;
+            Sprite rimSprite = config != null ? config.elevatorDoorRimSprite : null;
+            Sprite panelSprite = config != null ? config.elevatorDoorPanelSprite : null;
+            bool usesRimPanels = rimSprite != null && panelSprite != null &&
+                            GetDoorRimRenderer(0) != null && GetDoorRimRenderer(1) != null;
+            if (!usesRimPanels)
+            {
+                Debug.LogWarning(
+                    $"[ElevatorRevealAreaView] '{name}' has no door rim setup; the full door art will collapse instead of only its panel. Run Gravity Puzzle/Art/Author Elevator Doorway.",
+                    this);
+            }
+
             for (int i = 0; i < 2; i++)
             {
+                float side = i == 0 ? -1f : 1f;
+                Vector3 doorPosition = new Vector3(side * doorSize.x * .5f, doorCenterY, 0f);
                 Transform door = i == 0 ? elevatorLeftDoor : elevatorRightDoor;
-                SpriteRenderer doorRenderer = GetDoorRenderer(i);
                 if (door != null)
                 {
-                    float side = i == 0 ? -1f : 1f;
-                    door.localPosition = new Vector3(side * doorSize.x * .5f, doorCenterY, 0f);
+                    door.localPosition = doorPosition;
                     door.gameObject.SetActive(true);
                 }
 
-                if (doorRenderer == null)
-                    continue;
-
-                Color c = doorRenderer.color;
-                c.a = 1f;
-                doorRenderer.color = c;
-                if (config != null)
+                SpriteRenderer doorRenderer = GetDoorRenderer(i);
+                SpriteRenderer rimRenderer = GetDoorRimRenderer(i);
+                if (usesRimPanels)
                 {
-                    Sprite doorSprite = i == 0 ? config.elevatorLeftDoorSprite : config.elevatorRightDoorSprite;
-                    if (doorSprite != null)
-                        doorRenderer.sprite = doorSprite;
+                    // The yellow rim stays fixed for the whole opening; only the
+                    // flat panel inside it collapses toward the outer edge.
+                    rimRenderer.gameObject.SetActive(true);
+                    rimRenderer.transform.localPosition = doorPosition;
+                    rimRenderer.sprite = rimSprite;
+                    rimRenderer.flipX = i == 0;
+                    float rimArtScale = ResolveUniformFitScale(rimRenderer, doorSize);
+                    ApplySlicedSize(rimRenderer, doorSize, rimArtScale);
+
+                    if (doorRenderer != null)
+                    {
+                        float inset = config.elevatorDoorPanelInsetPixels / rimSprite.pixelsPerUnit * rimArtScale;
+                        Vector2 panelSize = new Vector2(
+                            Mathf.Max(.01f, doorSize.x - inset * 2f),
+                            Mathf.Max(.01f, doorSize.y - inset * 2f));
+                        doorRenderer.sprite = panelSprite;
+                        doorRenderer.color = config.elevatorDoorPanelColor;
+                        doorRenderer.flipX = false;
+                        ApplySlicedSize(doorRenderer, panelSize, 1f);
+                    }
                 }
-                SetDoorLayer(doorRenderer, i, opening: false);
-                doorRenderer.flipX = usesSharedDoorSprite && i == 0;
-                ApplySlicedSize(doorRenderer, doorSize, ResolveUniformFitScale(doorRenderer, doorSize));
+                else
+                {
+                    if (rimRenderer != null)
+                        rimRenderer.gameObject.SetActive(false);
+
+                    if (doorRenderer != null)
+                    {
+                        Sprite doorSprite = config != null
+                            ? (i == 0 ? config.elevatorLeftDoorSprite : config.elevatorRightDoorSprite)
+                            : null;
+                        if (doorSprite != null)
+                            doorRenderer.sprite = doorSprite;
+                        doorRenderer.color = Color.white;
+                        doorRenderer.flipX = usesSharedDoorSprite && i == 0;
+                        ApplySlicedSize(doorRenderer, doorSize, ResolveUniformFitScale(doorRenderer, doorSize));
+                    }
+                }
             }
 
+            SetDoorLayers(opening: false);
             isComplete = false;
         }
 
         /// <summary>
         /// Closed doors are board decoration behind the pieces standing on the
-        /// Elevator; opening doors sit above the interior pieces. Panels are
-        /// never clipped, so they keep their full size while sliding.
+        /// Elevator; opening doors sit above the interior pieces. Rims always
+        /// render directly above their panels.
         /// </summary>
-        private void SetDoorLayer(SpriteRenderer doorRenderer, int index, bool opening)
+        private void SetDoorLayers(bool opening)
         {
-            int baseOrder = opening
+            int panelOrder = opening
                 ? (config != null ? config.elevatorDoorSortingOrder : 60)
                 : (config != null ? config.elevatorSortingOrder : 1) + 2;
-            doorRenderer.sortingOrder = baseOrder + index;
-            doorRenderer.maskInteraction = SpriteMaskInteraction.None;
+            for (int i = 0; i < 2; i++)
+            {
+                SpriteRenderer doorRenderer = GetDoorRenderer(i);
+                if (doorRenderer != null)
+                {
+                    doorRenderer.sortingOrder = panelOrder;
+                    doorRenderer.maskInteraction = SpriteMaskInteraction.None;
+                }
+
+                SpriteRenderer rimRenderer = GetDoorRimRenderer(i);
+                if (rimRenderer != null)
+                    rimRenderer.sortingOrder = panelOrder + 1;
+            }
         }
 
         /// <summary>
@@ -182,19 +233,14 @@ namespace GravityPuzzle.Presentation.Views
 
             // Top-layer pieces have all left once opening starts, so only now
             // the doors lift above the freshly activated interior pieces.
-            for (int i = 0; i < 2; i++)
-            {
-                SpriteRenderer doorRenderer = GetDoorRenderer(i);
-                if (doorRenderer != null)
-                    SetDoorLayer(doorRenderer, i, opening: true);
-            }
+            SetDoorLayers(opening: true);
 
             openingSequence = DOTween.Sequence()
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
 
-            // Each panel keeps its height and its outer edge at the cabinet
-            // side, while its X scale shrinks toward that edge, revealing the
+            // Each panel keeps its height and its outer edge, while its X scale
+            // shrinks toward that edge inside the fixed rim, revealing the
             // interior pieces from the middle outward.
             if (elevatorLeftDoor != null)
                 openingSequence.Join(CreateDoorCollapse(elevatorLeftDoor, GetDoorRenderer(0), -1f));
@@ -220,7 +266,7 @@ namespace GravityPuzzle.Presentation.Views
             Vector3 closedScale = door.localScale;
 
             float closedCenterX = closedPosition.x;
-            float closedWidth = doorWidth;
+            float closedWidth = 0f;
             if (doorRenderer != null && parent != null)
             {
                 Bounds closedBounds = doorRenderer.bounds;
@@ -270,14 +316,14 @@ namespace GravityPuzzle.Presentation.Views
             if (openingRenderer != null)
                 openingRenderer.gameObject.SetActive(visible);
 
-            if (doorRenderers == null)
-                return;
-
-            for (int index = 0; index < doorRenderers.Length; index++)
+            for (int index = 0; index < 2; index++)
             {
-                SpriteRenderer renderer = doorRenderers[index];
-                if (renderer != null)
-                    renderer.gameObject.SetActive(visible);
+                SpriteRenderer doorRenderer = GetDoorRenderer(index);
+                if (doorRenderer != null)
+                    doorRenderer.gameObject.SetActive(visible);
+                SpriteRenderer rimRenderer = GetDoorRimRenderer(index);
+                if (rimRenderer != null)
+                    rimRenderer.gameObject.SetActive(visible);
             }
         }
 
@@ -285,6 +331,13 @@ namespace GravityPuzzle.Presentation.Views
         {
             return doorRenderers != null && index >= 0 && index < doorRenderers.Length
                 ? doorRenderers[index]
+                : null;
+        }
+
+        private SpriteRenderer GetDoorRimRenderer(int index)
+        {
+            return doorRimRenderers != null && index >= 0 && index < doorRimRenderers.Length
+                ? doorRimRenderers[index]
                 : null;
         }
 

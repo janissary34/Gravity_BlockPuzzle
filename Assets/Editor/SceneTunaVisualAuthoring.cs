@@ -21,6 +21,7 @@ namespace GravityPuzzle.Editor
         private const string TMPFontPath = "Assets/Layer Lab/GUI Pro-CasualGame/ResourcesData/Fonts/LilitaOne-Regular_BlueDark.asset";
         private const string BoxPanelPath = "Assets/Art/BoxReveal/TunnelShutter.png";
         private const string BoxBackingPath = "Assets/Art/BoxReveal/BoxBacking.png";
+        private const string ElevatorDoorRimPath = "Assets/Art/Generated/Elevator_DoorRim.png";
         private const string BoxFragmentMaterialPath = "Assets/Materials/BoxFragment.mat";
         private const string BoxPanelMaterialPath = "Assets/Materials/BoxShutter.mat";
         private const string BoxPrefabPath = "Assets/Prefabs/BoxRevealArea.prefab";
@@ -392,12 +393,22 @@ namespace GravityPuzzle.Editor
                     Object.DestroyImmediate(staleMask.gameObject);
 
                 EnsureElevatorDoorwayBackdrop(view, opaqueSprite);
+                EnsureElevatorDoorRims(view);
                 PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             }
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
+
+            Sprite rimSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ElevatorDoorRimPath);
+            if (rimSprite == null)
+                Debug.LogError($"[SceneTunaVisualAuthoring] Elevator door rim sprite is missing at '{ElevatorDoorRimPath}'.");
+            SerializedObject serializedConfig = new SerializedObject(config);
+            serializedConfig.FindProperty("elevatorDoorRimSprite").objectReferenceValue = rimSprite;
+            serializedConfig.FindProperty("elevatorDoorPanelSprite").objectReferenceValue = opaqueSprite;
+            serializedConfig.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(config);
 
             AssetDatabase.SaveAssets();
             Debug.Log($"[SceneTunaVisualAuthoring] Elevator doorway authored on '{prefabPath}'.");
@@ -407,6 +418,47 @@ namespace GravityPuzzle.Editor
         /// Gives the doorway backdrop an opaque sprite so the cabinet's baked
         /// door art is hidden while the real doors slide apart.
         /// </summary>
+        /// <summary>
+        /// Adds the fixed door-rim renderers. They are root children (not door
+        /// children) so the collapsing door panels never scale them.
+        /// </summary>
+        private static void EnsureElevatorDoorRims(ElevatorRevealAreaView view)
+        {
+            if (view == null)
+                return;
+
+            SerializedObject serializedView = new SerializedObject(view);
+            SerializedProperty doorRenderers = serializedView.FindProperty("doorRenderers");
+            SerializedProperty rimRenderers = serializedView.FindProperty("doorRimRenderers");
+            rimRenderers.arraySize = 2;
+            string[] rimNames = { "Left Door Rim", "Right Door Rim" };
+            for (int index = 0; index < 2; index++)
+            {
+                Transform rimTransform = view.transform.Find(rimNames[index]);
+                if (rimTransform == null)
+                {
+                    GameObject rimObject = new GameObject(rimNames[index]);
+                    rimObject.transform.SetParent(view.transform, false);
+                    rimTransform = rimObject.transform;
+                }
+
+                SpriteRenderer rimRenderer = rimTransform.GetComponent<SpriteRenderer>();
+                if (rimRenderer == null)
+                    rimRenderer = rimTransform.gameObject.AddComponent<SpriteRenderer>();
+                rimRenderer.drawMode = SpriteDrawMode.Sliced;
+
+                SpriteRenderer doorRenderer = index < doorRenderers.arraySize
+                    ? doorRenderers.GetArrayElementAtIndex(index).objectReferenceValue as SpriteRenderer
+                    : null;
+                if (doorRenderer != null)
+                    rimRenderer.sharedMaterial = doorRenderer.sharedMaterial;
+
+                rimRenderers.GetArrayElementAtIndex(index).objectReferenceValue = rimRenderer;
+            }
+
+            serializedView.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void EnsureElevatorDoorwayBackdrop(ElevatorRevealAreaView view, Sprite opaqueSprite)
         {
             if (view == null || opaqueSprite == null)
@@ -480,6 +532,7 @@ namespace GravityPuzzle.Editor
 
                 so.ApplyModifiedPropertiesWithoutUndo();
                 EnsureElevatorDoorwayBackdrop(view, AssetDatabase.LoadAssetAtPath<Sprite>(BoxBackingPath));
+                EnsureElevatorDoorRims(view);
 
                 GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(root, ElevatorPrefabPath);
                 return savedPrefab.GetComponent<ElevatorRevealAreaView>();

@@ -36,6 +36,10 @@ namespace GravityPuzzle.Config
         public Sprite elevatorLeftDoorSprite;
         [Tooltip("Right Elevator door panel. Assign the same map.png door sprite to use the mirrored shared-panel pair.")]
         public Sprite elevatorRightDoorSprite;
+        [Tooltip("Generated Elevator door rim (Elevator_Door with its blue panel cut out). Stays fixed while only the panel collapses.")]
+        public Sprite elevatorDoorRimSprite;
+        [Tooltip("Opaque sprite tinted with elevatorDoorPanelColor to draw the collapsing door panel inside the rim.")]
+        public Sprite elevatorDoorPanelSprite;
         [Tooltip("Legacy Elevator cabinet fallback used when the primary cabinet sprite is unavailable.")]
         public Sprite elevatorDoorSprite;
 
@@ -111,6 +115,10 @@ namespace GravityPuzzle.Config
         [Range(-.4f, .4f)] public float elevatorDoorCenterYOffset;
         [Tooltip("Optional horizontal fit correction for the authored Elevator cabinet.")]
         [Range(.8f, 1.4f)] public float elevatorVisualWidthScale = 1f;
+        [Tooltip("Flat colour of the collapsing door panels (matches the Elevator_Door blue).")]
+        public Color elevatorDoorPanelColor = new Color(.41f, .46f, .95f, 1f);
+        [Tooltip("Door panel inset from the rim's outer edge, in door-art pixels; the panel tucks just under the rim's inner bevel.")]
+        [Min(0f)] public float elevatorDoorPanelInsetPixels = 24f;
         [Tooltip("Colour shown in the doorway behind the interior pieces while the doors slide open.")]
         public Color elevatorOpeningColor = new Color(.04f, .08f, .14f, 1f);
         [Tooltip("Cabinet frame and doorway render behind normal piece visuals (which render at order 5).")]
