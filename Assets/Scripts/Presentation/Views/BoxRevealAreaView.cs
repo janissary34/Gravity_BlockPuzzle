@@ -137,7 +137,8 @@ namespace GravityPuzzle.Presentation.Views
 
             if (boxCoverRenderer != null)
             {
-                boxCoverRenderer.transform.localPosition = coverClosedPosition;
+                boxCoverRenderer.transform.localPosition = coverClosedPosition +
+                    (config != null ? (Vector3)config.boxFrameOffset : Vector3.zero);
                 boxCoverRenderer.transform.localScale = Vector3.one;
                 boxCoverRenderer.gameObject.SetActive(true);
                 Color c = boxCoverRenderer.color;

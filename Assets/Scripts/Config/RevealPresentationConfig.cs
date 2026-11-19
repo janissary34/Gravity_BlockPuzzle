@@ -42,6 +42,8 @@ namespace GravityPuzzle.Config
         [Header("Box")]
         [Tooltip("Frame border thickness relative to the authored sprite. Lower values make the border thinner. Reload the level to apply changes.")]
         [Range(.25f, 2f)] public float boxFrameThickness = 1f;
+        [Tooltip("Local offset of the static Tunnel frame only. The shutter, backing, and preview mask keep their own alignment from boxPanelOffset.")]
+        public Vector2 boxFrameOffset = Vector2.zero;
         [Tooltip("Independent size multiplier for the rectangular shutter interior. This is not derived from the Tunnel frame's 9-slice border.")]
         public Vector2 boxPanelSizeMultiplier = Vector2.one;
         [Tooltip("Independent local alignment of the shutter interior behind the static Tunnel frame.")]

@@ -29,6 +29,7 @@ MonoBehaviour:
   elevatorRightDoorSprite: {fileID: 2066327055, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   elevatorDoorSprite: {fileID: 429497369, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   boxFrameThickness: 0.75
+  boxFrameOffset: {x: 0, y: -0.15}
   boxPanelSizeMultiplier: {x: 1, y: 1}
   boxPanelOffset: {x: 0, y: 0}
   boxPanelSourceUvRect: {x: 0.02, y: 0.02, z: 0.96, w: 0.96}
