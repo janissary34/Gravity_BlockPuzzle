@@ -14,12 +14,15 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private Transform elevatorLeftDoor;
         [SerializeField] private Transform elevatorRightDoor;
         [SerializeField] private SpriteRenderer[] doorRenderers;
+        [Tooltip("Clips the sliding doors to the doorway so they disappear under the cabinet rim.")]
+        [SerializeField] private SpriteMask doorMask;
 
         private Action<ElevatorRevealAreaView> returnHandler;
         private RevealPresentationConfig config;
         private Sequence openingSequence;
         private Action completion;
         private bool isComplete;
+        private float doorTravel;
 
         public string AreaId { get; private set; }
 
@@ -41,69 +44,38 @@ namespace GravityPuzzle.Presentation.Views
             Vector2 areaSize = new Vector2(Mathf.Max(.01f, size.x), Mathf.Max(.01f, size.y));
 
             float widthScale = config != null ? config.elevatorVisualWidthScale : 1f;
-            float frameWidth = areaSize.x * widthScale;
-            float doorApertureWidth = areaSize.x *
-                (config != null ? config.elevatorDoorWidthRatio : .86f);
-            float doorApertureHeight = areaSize.y *
-                (config != null ? config.elevatorDoorHeightRatio : .83f);
-            float doorCenterY = areaSize.y *
-                (config != null ? config.elevatorDoorCenterYOffset : 0f);
-            float doorWidth = doorApertureWidth * .5f;
+            float widthRatio = config != null ? config.elevatorDoorWidthRatio : .86f;
+            float heightRatio = config != null ? config.elevatorDoorHeightRatio : .83f;
+            float doorCenterY = areaSize.y * (config != null ? config.elevatorDoorCenterYOffset : 0f);
+            Vector2 frameSize = new Vector2(areaSize.x * widthScale, areaSize.y);
 
-            if (elevatorLeftDoor != null)
+            if (frameRenderer != null && config != null)
             {
-                elevatorLeftDoor.localPosition = new Vector3(-doorWidth * .5f, doorCenterY, 0f);
-                elevatorLeftDoor.gameObject.SetActive(true);
+                if (config.elevatorFrameSprite != null)
+                    frameRenderer.sprite = config.elevatorFrameSprite;
+                else if (config.elevatorDoorSprite != null)
+                    frameRenderer.sprite = config.elevatorDoorSprite;
             }
 
-            if (elevatorRightDoor != null)
-            {
-                elevatorRightDoor.localPosition = new Vector3(doorWidth * .5f, doorCenterY, 0f);
-                elevatorRightDoor.gameObject.SetActive(true);
-            }
-
-            if (doorRenderers != null)
-            {
-                bool usesSharedDoorSprite = config == null ||
-                                            config.elevatorLeftDoorSprite == null ||
-                                            config.elevatorRightDoorSprite == null ||
-                                            config.elevatorLeftDoorSprite == config.elevatorRightDoorSprite;
-                for (int i = 0; i < doorRenderers.Length; i++)
-                {
-                    if (doorRenderers[i] != null)
-                    {
-                        Color c = doorRenderers[i].color;
-                        c.a = 1f;
-                        doorRenderers[i].color = c;
-                        if (config != null)
-                        {
-                            doorRenderers[i].sortingOrder = config.elevatorSortingOrder + 2 + i;
-                            Sprite doorSprite = i == 0
-                                ? config.elevatorLeftDoorSprite
-                                : config.elevatorRightDoorSprite;
-                            if (doorSprite != null)
-                                doorRenderers[i].sprite = doorSprite;
-                        }
-                        doorRenderers[i].drawMode = SpriteDrawMode.Sliced;
-                        doorRenderers[i].size = new Vector2(doorWidth, doorApertureHeight);
-                        doorRenderers[i].flipX = usesSharedDoorSprite && i == 0;
-                    }
-                }
-            }
+            // The cabinet is drawn at a uniform art scale (fitted to the shorter
+            // side) and 9-sliced to the area, so a wide area stretches only the
+            // cabinet middle instead of squashing its rim and corners.
+            float frameArtScale = ResolveUniformFitScale(frameRenderer, frameSize);
+            Vector2 frameArtSize = frameRenderer != null && frameRenderer.sprite != null
+                ? (Vector2)frameRenderer.sprite.bounds.size * frameArtScale
+                : frameSize;
+            Vector2 aperture = new Vector2(
+                Mathf.Max(.01f, frameSize.x - frameArtSize.x * (1f - widthRatio)),
+                Mathf.Max(.01f, frameSize.y - frameArtSize.y * (1f - heightRatio)));
+            Vector2 doorSize = new Vector2(aperture.x * .5f, aperture.y);
+            doorTravel = doorSize.x;
 
             if (frameRenderer != null)
             {
                 frameRenderer.gameObject.SetActive(true);
                 if (config != null)
-                {
-                    if (config.elevatorFrameSprite != null)
-                        frameRenderer.sprite = config.elevatorFrameSprite;
-                    else if (config.elevatorDoorSprite != null)
-                        frameRenderer.sprite = config.elevatorDoorSprite;
                     frameRenderer.sortingOrder = config.elevatorSortingOrder;
-                }
-                frameRenderer.drawMode = SpriteDrawMode.Sliced;
-                frameRenderer.size = new Vector2(frameWidth, areaSize.y);
+                ApplySlicedSize(frameRenderer, frameSize, frameArtScale);
             }
 
             if (openingRenderer != null)
@@ -117,11 +89,92 @@ namespace GravityPuzzle.Presentation.Views
                     openingRenderer.sortingOrder = config.elevatorSortingOrder + 1;
                 }
                 openingRenderer.drawMode = SpriteDrawMode.Sliced;
-                openingRenderer.size = new Vector2(doorApertureWidth, doorApertureHeight);
+                openingRenderer.size = aperture;
                 openingRenderer.transform.localPosition = new Vector3(0f, doorCenterY, 0f);
             }
 
+            int doorSortingOrder = config != null ? config.elevatorDoorSortingOrder : 60;
+            if (doorMask != null)
+            {
+                doorMask.gameObject.SetActive(true);
+                doorMask.transform.localPosition = new Vector3(0f, doorCenterY, 0f);
+                Vector2 maskSpriteSize = doorMask.sprite != null ? (Vector2)doorMask.sprite.bounds.size : Vector2.one;
+                doorMask.transform.localScale = new Vector3(
+                    aperture.x / Mathf.Max(.0001f, maskSpriteSize.x),
+                    aperture.y / Mathf.Max(.0001f, maskSpriteSize.y),
+                    1f);
+                // The custom range straddles only the two door orders so the
+                // aperture clip never affects pieces or other masked layers.
+                doorMask.isCustomRangeActive = true;
+                doorMask.backSortingOrder = doorSortingOrder - 1;
+                doorMask.frontSortingOrder = doorSortingOrder + 2;
+            }
+            else
+            {
+                Debug.LogWarning(
+                    $"[ElevatorRevealAreaView] '{name}' has no door mask; sliding doors will not be clipped to the doorway. Run Gravity Puzzle/Art/Add Elevator Door Mask.",
+                    this);
+            }
+
+            bool usesSharedDoorSprite = config == null ||
+                                        config.elevatorLeftDoorSprite == null ||
+                                        config.elevatorRightDoorSprite == null ||
+                                        config.elevatorLeftDoorSprite == config.elevatorRightDoorSprite;
+            for (int i = 0; i < 2; i++)
+            {
+                Transform door = i == 0 ? elevatorLeftDoor : elevatorRightDoor;
+                SpriteRenderer doorRenderer = GetDoorRenderer(i);
+                if (door != null)
+                {
+                    float side = i == 0 ? -1f : 1f;
+                    door.localPosition = new Vector3(side * doorSize.x * .5f, doorCenterY, 0f);
+                    door.gameObject.SetActive(true);
+                }
+
+                if (doorRenderer == null)
+                    continue;
+
+                Color c = doorRenderer.color;
+                c.a = 1f;
+                doorRenderer.color = c;
+                if (config != null)
+                {
+                    Sprite doorSprite = i == 0 ? config.elevatorLeftDoorSprite : config.elevatorRightDoorSprite;
+                    if (doorSprite != null)
+                        doorRenderer.sprite = doorSprite;
+                }
+                doorRenderer.sortingOrder = doorSortingOrder + i;
+                doorRenderer.maskInteraction = doorMask != null
+                    ? SpriteMaskInteraction.VisibleInsideMask
+                    : SpriteMaskInteraction.None;
+                doorRenderer.flipX = usesSharedDoorSprite && i == 0;
+                ApplySlicedSize(doorRenderer, doorSize, ResolveUniformFitScale(doorRenderer, doorSize));
+            }
+
             isComplete = false;
+        }
+
+        /// <summary>
+        /// Largest uniform scale at which the renderer's sprite still fits inside
+        /// <paramref name="targetSize"/>; keeps 9-slice borders at art proportions.
+        /// </summary>
+        private static float ResolveUniformFitScale(SpriteRenderer renderer, Vector2 targetSize)
+        {
+            if (renderer == null || renderer.sprite == null)
+                return 1f;
+
+            Vector2 spriteSize = renderer.sprite.bounds.size;
+            if (spriteSize.x <= 0f || spriteSize.y <= 0f)
+                return 1f;
+
+            return Mathf.Max(.0001f, Mathf.Min(targetSize.x / spriteSize.x, targetSize.y / spriteSize.y));
+        }
+
+        private static void ApplySlicedSize(SpriteRenderer renderer, Vector2 worldSize, float artScale)
+        {
+            renderer.drawMode = SpriteDrawMode.Sliced;
+            renderer.transform.localScale = new Vector3(artScale, artScale, 1f);
+            renderer.size = worldSize / artScale;
         }
 
         public void SetBoxRemaining(int remaining, int target)
@@ -145,58 +198,23 @@ namespace GravityPuzzle.Presentation.Views
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
 
-            bool hasDoorCollapse = false;
-            SpriteRenderer leftDoorRenderer = GetDoorRenderer(0);
-            if (elevatorLeftDoor != null && leftDoorRenderer != null)
+            // Each panel slides straight outward by its own width behind the
+            // doorway mask, revealing the interior pieces between them.
+            if (elevatorLeftDoor != null)
             {
-                Vector3 closedPosition = elevatorLeftDoor.localPosition;
-                float closedWidth = leftDoorRenderer.size.x;
-                float closedHeight = leftDoorRenderer.size.y;
-                float fixedLeftEdge = closedPosition.x - closedWidth * .5f;
-                openingSequence.Append(DOTween.To(
-                        () => leftDoorRenderer.size.x,
-                        width =>
-                        {
-                            leftDoorRenderer.size = new Vector2(width, closedHeight);
-                            elevatorLeftDoor.localPosition = new Vector3(
-                                fixedLeftEdge + width * .5f,
-                                closedPosition.y,
-                                closedPosition.z);
-                        },
-                        .001f,
-                        config.elevatorOpenDuration)
+                openingSequence.Join(elevatorLeftDoor
+                    .DOLocalMoveX(elevatorLeftDoor.localPosition.x - doorTravel, config.elevatorOpenDuration)
                     .SetEase(config.elevatorOpenEase));
-                hasDoorCollapse = true;
             }
 
-            SpriteRenderer rightDoorRenderer = GetDoorRenderer(1);
-            if (elevatorRightDoor != null && rightDoorRenderer != null)
+            if (elevatorRightDoor != null)
             {
-                Vector3 closedPosition = elevatorRightDoor.localPosition;
-                float closedWidth = rightDoorRenderer.size.x;
-                float closedHeight = rightDoorRenderer.size.y;
-                float fixedRightEdge = closedPosition.x + closedWidth * .5f;
-                Tween rightDoorTween = DOTween.To(
-                        () => rightDoorRenderer.size.x,
-                        width =>
-                        {
-                            rightDoorRenderer.size = new Vector2(width, closedHeight);
-                            elevatorRightDoor.localPosition = new Vector3(
-                                fixedRightEdge - width * .5f,
-                                closedPosition.y,
-                                closedPosition.z);
-                        },
-                        .001f,
-                        config.elevatorOpenDuration)
-                    .SetEase(config.elevatorOpenEase);
-                if (hasDoorCollapse)
-                    openingSequence.Join(rightDoorTween);
-                else
-                    openingSequence.Append(rightDoorTween);
-                hasDoorCollapse = true;
+                openingSequence.Join(elevatorRightDoor
+                    .DOLocalMoveX(elevatorRightDoor.localPosition.x + doorTravel, config.elevatorOpenDuration)
+                    .SetEase(config.elevatorOpenEase));
             }
 
-            if (!hasDoorCollapse)
+            if (elevatorLeftDoor == null && elevatorRightDoor == null)
                 openingSequence.AppendInterval(config.elevatorOpenDuration);
 
             openingSequence.OnComplete(CompleteOpening);
@@ -224,6 +242,8 @@ namespace GravityPuzzle.Presentation.Views
                 frameRenderer.gameObject.SetActive(visible);
             if (openingRenderer != null)
                 openingRenderer.gameObject.SetActive(visible);
+            if (doorMask != null)
+                doorMask.gameObject.SetActive(visible);
 
             if (doorRenderers == null)
                 return;

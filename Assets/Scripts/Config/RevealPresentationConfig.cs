@@ -101,18 +101,20 @@ namespace GravityPuzzle.Config
         [Header("Elevator")]
         [Min(.01f)] public float elevatorOpenDuration = .4f;
         public Ease elevatorOpenEase = Ease.OutQuad;
-        [Tooltip("Door aperture width as a fraction of the authored Elevator area.")]
+        [Tooltip("Door aperture width as a fraction of the cabinet artwork. The cabinet keeps its aspect-correct rim; only its middle stretches to fill the area.")]
         [Range(.1f, .9f)] public float elevatorDoorWidthRatio = .86f;
-        [Tooltip("Door aperture height as a fraction of the authored Elevator area.")]
+        [Tooltip("Door aperture height as a fraction of the cabinet artwork.")]
         [Range(.1f, .9f)] public float elevatorDoorHeightRatio = .83f;
         [Tooltip("Vertical position of the two door panels within the authored Elevator area.")]
         [Range(-.4f, .4f)] public float elevatorDoorCenterYOffset;
         [Tooltip("Optional horizontal fit correction for the authored Elevator cabinet.")]
         [Range(.8f, 1.4f)] public float elevatorVisualWidthScale = 1f;
-        [Tooltip("Colour shown in the doorway while the fixed interior content is being activated.")]
+        [Tooltip("Colour shown in the doorway behind the interior pieces while the doors slide open.")]
         public Color elevatorOpeningColor = new Color(.04f, .08f, .14f, 1f);
-        [Tooltip("The Elevator is board decoration: frame, opening and both doors render behind normal piece visuals (which render at order 5).")]
+        [Tooltip("Cabinet frame and doorway render behind normal piece visuals (which render at order 5).")]
         public int elevatorSortingOrder = 1;
+        [Tooltip("Sliding doors render above the interior pieces (and their counters) so the pieces are revealed as the doors slide apart. Keep below Box.")]
+        public int elevatorDoorSortingOrder = 60;
         [Tooltip("Box cover layer. Keep this higher than Elevator so overlapping Boxes remain in front.")]
         public int boxSortingOrder = 200;
     }

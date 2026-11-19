@@ -506,7 +506,19 @@ namespace GravityPuzzle.Gameplay.Reveal
                     RefreshElevatorOccupancy(elevator))
                     continue;
 
+                // Fixed interior content becomes live as soon as every top-layer
+                // piece has left, so the doors open over real board pieces.
+                // Unlocking is set first because activation re-enters this
+                // evaluation through the board-changed notification.
                 elevator.State = RevealAreaState.Unlocking;
+                if (!ActivateContent(elevator.Definition.hiddenPieces ?? EmptyPieces))
+                {
+                    elevator.State = RevealAreaState.Locked;
+                    Debug.LogWarning(
+                        $"[Reveal] Elevator '{elevator.Definition.areaId}' could not activate its interior content; it stays closed.");
+                    continue;
+                }
+
                 BeginOpening(
                     elevator.Definition,
                     RevealAreaKind.Elevator,
@@ -516,10 +528,7 @@ namespace GravityPuzzle.Gameplay.Reveal
 
         private void CompleteElevatorUnlock(ElevatorRuntime elevator)
         {
-            // Fixed interior content remains absent from the board until every
-            // top-layer piece has left and the opening presentation completes.
-            if (elevator.State != RevealAreaState.Unlocking ||
-                !ActivateContent(elevator.Definition.hiddenPieces ?? EmptyPieces))
+            if (elevator.State != RevealAreaState.Unlocking)
                 return;
 
             elevator.State = RevealAreaState.Unlocked;

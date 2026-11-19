@@ -365,6 +365,73 @@ namespace GravityPuzzle.Editor
             return int.TryParse(objectName.Substring(prefix.Length), out index);
         }
 
+        [MenuItem("Gravity Puzzle/Art/Add Elevator Door Mask")]
+        public static void AddElevatorDoorMask()
+        {
+            RevealPresentationConfig config = AssetDatabase.LoadAssetAtPath<RevealPresentationConfig>(RevealConfigPath);
+            string prefabPath = config != null && config.elevatorPrefab != null
+                ? AssetDatabase.GetAssetPath(config.elevatorPrefab)
+                : null;
+            Sprite maskSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxBackingPath);
+            if (string.IsNullOrEmpty(prefabPath) || maskSprite == null)
+            {
+                Debug.LogError("[SceneTunaVisualAuthoring] Elevator door mask needs RevealPresentationConfig.elevatorPrefab and the opaque Box backing sprite.");
+                return;
+            }
+
+            GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                ElevatorRevealAreaView view = root.GetComponent<ElevatorRevealAreaView>();
+                if (view == null)
+                    throw new System.InvalidOperationException($"'{prefabPath}' has no ElevatorRevealAreaView.");
+
+                EnsureElevatorDoorMask(view, maskSprite);
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SceneTunaVisualAuthoring] Elevator door mask authored on '{prefabPath}'.");
+        }
+
+        /// <summary>
+        /// Adds the doorway SpriteMask that clips the sliding doors and gives the
+        /// doorway backdrop an opaque sprite so the cabinet's baked door art is
+        /// hidden while the doors slide apart.
+        /// </summary>
+        private static void EnsureElevatorDoorMask(ElevatorRevealAreaView view, Sprite opaqueSprite)
+        {
+            if (view == null || opaqueSprite == null)
+                return;
+
+            Transform maskTransform = view.transform.Find("Door Mask");
+            if (maskTransform == null)
+            {
+                GameObject maskObject = new GameObject("Door Mask");
+                maskObject.transform.SetParent(view.transform, false);
+                maskTransform = maskObject.transform;
+            }
+
+            SpriteMask mask = maskTransform.GetComponent<SpriteMask>();
+            if (mask == null)
+                mask = maskTransform.gameObject.AddComponent<SpriteMask>();
+            mask.sprite = opaqueSprite;
+            mask.alphaCutoff = .2f;
+            mask.isCustomRangeActive = true;
+
+            SerializedObject serializedView = new SerializedObject(view);
+            serializedView.FindProperty("doorMask").objectReferenceValue = mask;
+            SpriteRenderer openingRenderer =
+                serializedView.FindProperty("openingRenderer").objectReferenceValue as SpriteRenderer;
+            if (openingRenderer != null && openingRenderer.sprite == null)
+                openingRenderer.sprite = opaqueSprite;
+            serializedView.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static ElevatorRevealAreaView CreateElevatorRevealPrefab(
             Sprite elevatorSprite,
             Sprite elevatorDoorSprite,
@@ -425,6 +492,7 @@ namespace GravityPuzzle.Editor
                 doorRendsProp.GetArrayElementAtIndex(1).objectReferenceValue = rightDoorRenderer;
 
                 so.ApplyModifiedPropertiesWithoutUndo();
+                EnsureElevatorDoorMask(view, AssetDatabase.LoadAssetAtPath<Sprite>(BoxBackingPath));
 
                 GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(root, ElevatorPrefabPath);
                 return savedPrefab.GetComponent<ElevatorRevealAreaView>();
