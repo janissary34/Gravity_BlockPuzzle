@@ -56,6 +56,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: 
     name: Piece 4
@@ -77,6 +78,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -194,6 +196,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -279,6 +282,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -332,6 +336,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: 
     name: Double 8
@@ -353,6 +358,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: 50eadae99c42472cb257197491467bd4
     name: Single 9
@@ -374,6 +380,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -427,6 +434,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: 8a807c863de84197901d97834ea69308
     name: Single 9
@@ -448,6 +456,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: bd39bfc3ac924a1bb8b7e77502590c5b
     name: Single 10
@@ -469,6 +478,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: 8dfa1d1a683444af9bce31081f59f3b5
     name: Single 11
@@ -490,6 +500,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: 455356b9e3174d78af5b930dcc40ff3c
     name: Single 12
@@ -511,6 +522,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   joints: []
   boxes:
@@ -541,6 +553,7 @@ MonoBehaviour:
       bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
       bombCounterOutlineWidth: 0.18
       bombCounterOffset: {x: 0, y: 0}
+      lockKeyPieceId: 
       cells:
       - localCell: {x: 0, y: 0}
         type: 0
@@ -626,6 +639,7 @@ MonoBehaviour:
       bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
       bombCounterOutlineWidth: 0.18
       bombCounterOffset: {x: 0, y: 0}
+      lockKeyPieceId: 
       cells:
       - localCell: {x: 0, y: 0}
         type: 0
@@ -679,6 +693,7 @@ MonoBehaviour:
       bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
       bombCounterOutlineWidth: 0.18
       bombCounterOffset: {x: 0, y: 0}
+      lockKeyPieceId: 
       cells:
       - localCell: {x: 0, y: 0}
         type: 0
@@ -732,6 +747,7 @@ MonoBehaviour:
       bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
       bombCounterOutlineWidth: 0.18
       bombCounterOffset: {x: 0, y: 0}
+      lockKeyPieceId: 
       cells:
       - localCell: {x: 0, y: 0}
         type: 0
