@@ -197,9 +197,9 @@ namespace GravityPuzzle.Presentation.Views
             // side, while its X scale shrinks toward that edge, revealing the
             // interior pieces from the middle outward.
             if (elevatorLeftDoor != null)
-                openingSequence.Join(CreateDoorCollapse(elevatorLeftDoor, -1f));
+                openingSequence.Join(CreateDoorCollapse(elevatorLeftDoor, GetDoorRenderer(0), -1f));
             if (elevatorRightDoor != null)
-                openingSequence.Join(CreateDoorCollapse(elevatorRightDoor, 1f));
+                openingSequence.Join(CreateDoorCollapse(elevatorRightDoor, GetDoorRenderer(1), 1f));
 
             if (elevatorLeftDoor == null && elevatorRightDoor == null)
                 openingSequence.AppendInterval(config.elevatorOpenDuration);
@@ -207,19 +207,38 @@ namespace GravityPuzzle.Presentation.Views
             openingSequence.OnComplete(CompleteOpening);
         }
 
-        private Tween CreateDoorCollapse(Transform door, float outwardSign)
+        /// <summary>
+        /// Shrinks one panel's X scale from 1 to 0 while its outer vertical edge
+        /// stays fixed and its height is untouched. Position is compensated from
+        /// the panel's measured closed bounds (so any sprite pivot works)
+        /// instead of creating runtime pivot parents.
+        /// </summary>
+        private Tween CreateDoorCollapse(Transform door, SpriteRenderer doorRenderer, float outwardSign)
         {
+            Transform parent = door.parent;
             Vector3 closedPosition = door.localPosition;
             Vector3 closedScale = door.localScale;
+
+            float closedCenterX = closedPosition.x;
             float closedWidth = doorWidth;
-            float outerEdgeX = closedPosition.x + outwardSign * closedWidth * .5f;
+            if (doorRenderer != null && parent != null)
+            {
+                Bounds closedBounds = doorRenderer.bounds;
+                closedCenterX = parent.InverseTransformPoint(closedBounds.center).x;
+                float parentScaleX = Mathf.Abs(parent.lossyScale.x);
+                closedWidth = closedBounds.size.x / Mathf.Max(.0001f, parentScaleX);
+            }
+
+            float pivotOffsetX = closedCenterX - closedPosition.x;
+            float outerEdgeX = closedCenterX + outwardSign * closedWidth * .5f;
             return DOTween.To(
                     () => 1f,
                     widthFraction =>
                     {
+                        float centerX = outerEdgeX - outwardSign * closedWidth * widthFraction * .5f;
                         door.localScale = new Vector3(closedScale.x * widthFraction, closedScale.y, closedScale.z);
                         door.localPosition = new Vector3(
-                            outerEdgeX - outwardSign * closedWidth * widthFraction * .5f,
+                            centerX - pivotOffsetX * widthFraction,
                             closedPosition.y,
                             closedPosition.z);
                     },
