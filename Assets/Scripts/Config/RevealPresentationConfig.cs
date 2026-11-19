@@ -36,7 +36,7 @@ namespace GravityPuzzle.Config
         public Sprite elevatorLeftDoorSprite;
         [Tooltip("Right Elevator door panel. Assign the same map.png door sprite to use the mirrored shared-panel pair.")]
         public Sprite elevatorRightDoorSprite;
-        [Tooltip("Generated Elevator door rim (Elevator_Door with its blue panel cut out). Stays fixed while only the panel collapses.")]
+        [Tooltip("Generated Elevator door rim (Elevator_Door with its blue panel cut out). Collapses together with its panel.")]
         public Sprite elevatorDoorRimSprite;
         [Tooltip("Opaque sprite tinted with elevatorDoorPanelColor to draw the collapsing door panel inside the rim.")]
         public Sprite elevatorDoorPanelSprite;

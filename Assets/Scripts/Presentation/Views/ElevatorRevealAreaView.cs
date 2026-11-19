@@ -13,9 +13,9 @@ namespace GravityPuzzle.Presentation.Views
         [SerializeField] private SpriteRenderer openingRenderer;
         [SerializeField] private Transform elevatorLeftDoor;
         [SerializeField] private Transform elevatorRightDoor;
-        [Tooltip("Flat door panels; they collapse toward the outer edges while opening.")]
+        [Tooltip("Flat door panels inside the rims; they collapse toward the outer edges while opening.")]
         [SerializeField] private SpriteRenderer[] doorRenderers;
-        [Tooltip("Fixed yellow door rims drawn above the panels; they never move or scale.")]
+        [Tooltip("Yellow door rims drawn above the panels; they collapse together with their panels.")]
         [SerializeField] private SpriteRenderer[] doorRimRenderers;
 
         private Action<ElevatorRevealAreaView> returnHandler;
@@ -122,8 +122,8 @@ namespace GravityPuzzle.Presentation.Views
                 SpriteRenderer rimRenderer = GetDoorRimRenderer(i);
                 if (usesRimPanels)
                 {
-                    // The yellow rim stays fixed for the whole opening; only the
-                    // flat panel inside it collapses toward the outer edge.
+                    // The yellow rim is a separate layer above the flat panel;
+                    // both collapse together toward the door's outer edge.
                     rimRenderer.gameObject.SetActive(true);
                     rimRenderer.transform.localPosition = doorPosition;
                     rimRenderer.sprite = rimSprite;
@@ -239,13 +239,13 @@ namespace GravityPuzzle.Presentation.Views
                 .SetLink(gameObject, LinkBehaviour.KillOnDisable)
                 .SetAutoKill(true);
 
-            // Each panel keeps its height and its outer edge, while its X scale
-            // shrinks toward that edge inside the fixed rim, revealing the
-            // interior pieces from the middle outward.
+            // Each door (panel and its yellow rim together) keeps its height and
+            // its outer edge, while its X scale shrinks to zero toward that edge,
+            // revealing the interior pieces from the middle outward.
             if (elevatorLeftDoor != null)
-                openingSequence.Join(CreateDoorCollapse(elevatorLeftDoor, GetDoorRenderer(0), -1f));
+                openingSequence.Join(CreateDoorCollapse(elevatorLeftDoor, GetDoorRenderer(0), GetDoorRimRenderer(0), -1f));
             if (elevatorRightDoor != null)
-                openingSequence.Join(CreateDoorCollapse(elevatorRightDoor, GetDoorRenderer(1), 1f));
+                openingSequence.Join(CreateDoorCollapse(elevatorRightDoor, GetDoorRenderer(1), GetDoorRimRenderer(1), 1f));
 
             if (elevatorLeftDoor == null && elevatorRightDoor == null)
                 openingSequence.AppendInterval(config.elevatorOpenDuration);
@@ -254,39 +254,56 @@ namespace GravityPuzzle.Presentation.Views
         }
 
         /// <summary>
-        /// Shrinks one panel's X scale from 1 to 0 while its outer vertical edge
-        /// stays fixed and its height is untouched. Position is compensated from
-        /// the panel's measured closed bounds (so any sprite pivot works)
+        /// Shrinks one door's X scale from 1 to 0 while its outer vertical edge
+        /// stays fixed and its height is untouched. The rim (when present) and
+        /// the panel inside it share one centre, so both collapse together.
+        /// Position is compensated from the door's measured closed bounds
         /// instead of creating runtime pivot parents.
         /// </summary>
-        private Tween CreateDoorCollapse(Transform door, SpriteRenderer doorRenderer, float outwardSign)
+        private Tween CreateDoorCollapse(
+            Transform door,
+            SpriteRenderer panelRenderer,
+            SpriteRenderer rimRenderer,
+            float outwardSign)
         {
             Transform parent = door.parent;
-            Vector3 closedPosition = door.localPosition;
-            Vector3 closedScale = door.localScale;
+            Transform rim = rimRenderer != null && rimRenderer.gameObject.activeSelf ? rimRenderer.transform : null;
+            SpriteRenderer outlineRenderer = rim != null ? rimRenderer : panelRenderer;
+            Vector3 closedDoorPosition = door.localPosition;
+            Vector3 closedDoorScale = door.localScale;
+            Vector3 closedRimPosition = rim != null ? rim.localPosition : Vector3.zero;
+            Vector3 closedRimScale = rim != null ? rim.localScale : Vector3.one;
 
-            float closedCenterX = closedPosition.x;
+            float closedCenterX = closedDoorPosition.x;
             float closedWidth = 0f;
-            if (doorRenderer != null && parent != null)
+            if (outlineRenderer != null && parent != null)
             {
-                Bounds closedBounds = doorRenderer.bounds;
+                Bounds closedBounds = outlineRenderer.bounds;
                 closedCenterX = parent.InverseTransformPoint(closedBounds.center).x;
-                float parentScaleX = Mathf.Abs(parent.lossyScale.x);
-                closedWidth = closedBounds.size.x / Mathf.Max(.0001f, parentScaleX);
+                closedWidth = closedBounds.size.x / Mathf.Max(.0001f, Mathf.Abs(parent.lossyScale.x));
             }
 
-            float pivotOffsetX = closedCenterX - closedPosition.x;
+            float doorOffsetX = closedDoorPosition.x - closedCenterX;
+            float rimOffsetX = closedRimPosition.x - closedCenterX;
             float outerEdgeX = closedCenterX + outwardSign * closedWidth * .5f;
             return DOTween.To(
                     () => 1f,
                     widthFraction =>
                     {
                         float centerX = outerEdgeX - outwardSign * closedWidth * widthFraction * .5f;
-                        door.localScale = new Vector3(closedScale.x * widthFraction, closedScale.y, closedScale.z);
+                        door.localScale = new Vector3(closedDoorScale.x * widthFraction, closedDoorScale.y, closedDoorScale.z);
                         door.localPosition = new Vector3(
-                            centerX - pivotOffsetX * widthFraction,
-                            closedPosition.y,
-                            closedPosition.z);
+                            centerX + doorOffsetX * widthFraction,
+                            closedDoorPosition.y,
+                            closedDoorPosition.z);
+                        if (rim == null)
+                            return;
+
+                        rim.localScale = new Vector3(closedRimScale.x * widthFraction, closedRimScale.y, closedRimScale.z);
+                        rim.localPosition = new Vector3(
+                            centerX + rimOffsetX * widthFraction,
+                            closedRimPosition.y,
+                            closedRimPosition.z);
                     },
                     0f,
                     config.elevatorOpenDuration)
