@@ -138,8 +138,10 @@ namespace GravityPuzzle.Presentation.Views
             if (boxCoverRenderer != null)
             {
                 float framePadding = config != null ? config.boxFramePaddingBottomPixels * FramePixelToWorld() : 0f;
-                Vector2 frameSize = new Vector2(size.x, size.y + framePadding);
-                boxCoverRenderer.transform.localPosition = coverClosedPosition + Vector3.down * (framePadding * .5f);
+                float frameOutset = config != null ? config.boxFrameOutsetPixels * FramePixelToWorld() : 0f;
+                Vector2 frameSize = new Vector2(size.x + frameOutset * 2f, size.y + framePadding + frameOutset);
+                boxCoverRenderer.transform.localPosition = coverClosedPosition +
+                    Vector3.up * ((frameOutset - framePadding) * .5f);
                 boxCoverRenderer.transform.localScale = Vector3.one;
                 boxCoverRenderer.gameObject.SetActive(true);
                 Color c = boxCoverRenderer.color;
@@ -453,7 +455,10 @@ namespace GravityPuzzle.Presentation.Views
                 return;
             }
 
-            Vector4 inset = config.boxPanelInsetPixels * FramePixelToWorld();
+            // Insets are measured from the frame's outer edges, which sit
+            // outside the area by the frame outset on the left, right and top.
+            float outset = config.boxFrameOutsetPixels;
+            Vector4 inset = (config.boxPanelInsetPixels - new Vector4(outset, outset, outset, 0f)) * FramePixelToWorld();
             Vector2 panelSize = new Vector2(size.x - inset.x - inset.y, size.y - inset.z - inset.w);
             if (panelSize.x <= 0f || panelSize.y <= 0f)
             {

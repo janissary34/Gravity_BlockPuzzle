@@ -44,7 +44,9 @@ namespace GravityPuzzle.Config
         [Range(.25f, 2f)] public float boxFrameThickness = 1f;
         [Tooltip("Transparent sprite rows below the Tunnel frame legs, in Tunnel sprite pixels. The frame is extended downward by this amount so its legs end at the reveal-area bottom at every size.")]
         [Min(0f)] public float boxFramePaddingBottomPixels = 46f;
-        [Tooltip("Shutter inset from the reveal-area edges as left, right, top, bottom, in Tunnel sprite pixels scaled by Box Frame Thickness. Keeps the rectangular shutter edges hidden under the frame tube at every Tunnel size.")]
+        [Tooltip("How far the Tunnel frame extends past the reveal area's left, right, and top edges, in Tunnel sprite pixels. Covers the square area corners behind the frame's rounded outer corners.")]
+        [Min(0f)] public float boxFrameOutsetPixels = 8f;
+        [Tooltip("Shutter inset from the frame's outer left, right, top edges and the area bottom, in Tunnel sprite pixels scaled by Box Frame Thickness. Keeps the rectangular shutter edges hidden under the frame tube at every Tunnel size.")]
         public Vector4 boxPanelInsetPixels = new Vector4(13f, 13f, 21f, 0f);
         [Tooltip("Normalized x, y, width, height source rectangle sampled from TunnelShutter. It excludes that artwork's rounded perimeter so the outer Tunnel remains the only visible frame.")]
         public Vector4 boxPanelSourceUvRect = new Vector4(.02f, .02f, .96f, .96f);

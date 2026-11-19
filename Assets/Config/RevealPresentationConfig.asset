@@ -30,6 +30,7 @@ MonoBehaviour:
   elevatorDoorSprite: {fileID: 429497369, guid: d03f20a08cf4f447c86b253a6ffc2ff6, type: 3}
   boxFrameThickness: 0.75
   boxFramePaddingBottomPixels: 46
+  boxFrameOutsetPixels: 8
   boxPanelInsetPixels: {x: 13, y: 13, z: 21, w: 0}
   boxPanelSourceUvRect: {x: 0.02, y: 0.02, z: 0.96, w: 0.96}
   boxBackingColor: {r: 0.035, g: 0.025, b: 0.16, a: 0.18}
