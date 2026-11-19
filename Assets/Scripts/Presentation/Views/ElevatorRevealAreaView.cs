@@ -143,15 +143,32 @@ namespace GravityPuzzle.Presentation.Views
                     if (doorSprite != null)
                         doorRenderer.sprite = doorSprite;
                 }
-                doorRenderer.sortingOrder = doorSortingOrder + i;
-                doorRenderer.maskInteraction = doorMask != null
-                    ? SpriteMaskInteraction.VisibleInsideMask
-                    : SpriteMaskInteraction.None;
+                SetDoorLayer(doorRenderer, i, opening: false);
                 doorRenderer.flipX = usesSharedDoorSprite && i == 0;
                 ApplySlicedSize(doorRenderer, doorSize, ResolveUniformFitScale(doorRenderer, doorSize));
             }
 
             isComplete = false;
+        }
+
+        /// <summary>
+        /// Closed doors are board decoration behind the pieces standing on the
+        /// Elevator; opening doors sit above the interior and are clipped to the
+        /// doorway.
+        /// </summary>
+        private void SetDoorLayer(SpriteRenderer doorRenderer, int index, bool opening)
+        {
+            if (opening)
+            {
+                doorRenderer.sortingOrder = (config != null ? config.elevatorDoorSortingOrder : 60) + index;
+                doorRenderer.maskInteraction = doorMask != null
+                    ? SpriteMaskInteraction.VisibleInsideMask
+                    : SpriteMaskInteraction.None;
+                return;
+            }
+
+            doorRenderer.sortingOrder = (config != null ? config.elevatorSortingOrder : 1) + 2 + index;
+            doorRenderer.maskInteraction = SpriteMaskInteraction.None;
         }
 
         /// <summary>
@@ -192,6 +209,15 @@ namespace GravityPuzzle.Presentation.Views
             {
                 CompleteOpening();
                 return;
+            }
+
+            // Top-layer pieces have all left once opening starts, so only now
+            // the doors lift above the freshly activated interior pieces.
+            for (int i = 0; i < 2; i++)
+            {
+                SpriteRenderer doorRenderer = GetDoorRenderer(i);
+                if (doorRenderer != null)
+                    SetDoorLayer(doorRenderer, i, opening: true);
             }
 
             openingSequence = DOTween.Sequence()

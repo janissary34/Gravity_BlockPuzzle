@@ -113,7 +113,7 @@ namespace GravityPuzzle.Config
         public Color elevatorOpeningColor = new Color(.04f, .08f, .14f, 1f);
         [Tooltip("Cabinet frame and doorway render behind normal piece visuals (which render at order 5).")]
         public int elevatorSortingOrder = 1;
-        [Tooltip("Sliding doors render above the interior pieces (and their counters) so the pieces are revealed as the doors slide apart. Keep below Box.")]
+        [Tooltip("While opening, the sliding doors render above the interior pieces (and their counters) so the pieces are revealed as the doors slide apart. Closed doors stay behind pieces at elevatorSortingOrder + 2. Keep below Box.")]
         public int elevatorDoorSortingOrder = 60;
         [Tooltip("Box cover layer. Keep this higher than Elevator so overlapping Boxes remain in front.")]
         public int boxSortingOrder = 200;
