@@ -154,6 +154,12 @@ namespace GravityPuzzle.Tests.Editor
             Assert.That(config.FreezeTimerImpactClips[0], Is.Not.Null);
             Assert.That(config.RocketLaunchClips, Is.Not.Null.And.Not.Empty);
             Assert.That(config.RocketLaunchClips[0], Is.Not.Null);
+            Assert.That(config.ElevatorOpenClips, Is.Not.Null.And.Not.Empty);
+            Assert.That(config.ElevatorOpenClips[0], Is.Not.Null);
+            Assert.That(config.BoxCounterStepClips, Is.Not.Null.And.Not.Empty);
+            Assert.That(config.BoxCounterStepClips[0], Is.Not.Null);
+            Assert.That(config.BoxBreakClips, Is.Not.Null.And.Not.Empty);
+            Assert.That(config.BoxBreakClips[0], Is.Not.Null);
         }
 
         private sealed class StubBoosterInventory : IPlayerBoosterInventory

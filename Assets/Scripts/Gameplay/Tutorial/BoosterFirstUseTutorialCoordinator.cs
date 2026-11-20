@@ -223,11 +223,12 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 return;
             }
 
-            if (config.PresentationLevel != GravityLevelRuntime.CurrentLevelNumber)
+            int unlockLevel = BoosterEconomyRuntime.Current.GetUnlockLevel(config.BoosterType);
+            if (unlockLevel != GravityLevelRuntime.CurrentLevelNumber)
                 return;
 
             BoosterFirstUseTutorialState persisted = BoosterFirstUseTutorialProgress.GetState(config);
-            bool isEditorOrDebugMatch = (Application.isEditor || Debug.isDebugBuild) && config.PresentationLevel == GravityLevelRuntime.CurrentLevelNumber;
+            bool isEditorOrDebugMatch = (Application.isEditor || Debug.isDebugBuild) && unlockLevel == GravityLevelRuntime.CurrentLevelNumber;
             if (persisted == BoosterFirstUseTutorialState.Completed && !isEditorOrDebugMatch)
             {
                 BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
@@ -236,9 +237,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
 
             if (persisted == BoosterFirstUseTutorialState.NotStarted || isEditorOrDebugMatch)
             {
-                int currentCount = BoosterInventoryRuntime.Current.GetCount(config.BoosterType);
-                if (currentCount < config.GrantAmount)
-                    BoosterInventoryRuntime.Current.Grant(config.BoosterType, config.GrantAmount - currentCount);
+                BoosterEconomyRuntime.Current.EnsureInitialUnlockGrantsForLevel(unlockLevel);
                 BoosterFirstUseTutorialProgress.SetState(config, BoosterFirstUseTutorialState.PendingRequiredUse);
             }
 
@@ -256,9 +255,10 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 if (config == null || !Supports(config.BoosterType))
                     continue;
 
-                // A first-use tutorial belongs strictly to its authored introduction level.
+                // A first-use tutorial belongs strictly to its configured unlock level.
                 // It must NEVER trigger or resume on an unrelated level (e.g. Level 27).
-                if (config.PresentationLevel != GravityLevelRuntime.CurrentLevelNumber)
+                int unlockLevel = BoosterEconomyRuntime.Current.GetUnlockLevel(config.BoosterType);
+                if (unlockLevel != GravityLevelRuntime.CurrentLevelNumber)
                     continue;
 
                 BoosterFirstUseTutorialState persistedState = BoosterFirstUseTutorialProgress.GetState(config);
@@ -285,9 +285,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
                 if (isInitialLevelNotStarted)
                 {
-                    int currentCount = BoosterInventoryRuntime.Current.GetCount(config.BoosterType);
-                    if (currentCount < config.GrantAmount)
-                        BoosterInventoryRuntime.Current.Grant(config.BoosterType, config.GrantAmount - currentCount);
+                    BoosterEconomyRuntime.Current.EnsureInitialUnlockGrantsForLevel(unlockLevel);
                     BoosterFirstUseTutorialProgress.SetState(config, BoosterFirstUseTutorialState.PendingRequiredUse);
                 }
                 StartPending(config);

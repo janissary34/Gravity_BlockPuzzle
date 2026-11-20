@@ -1,5 +1,6 @@
 using GravityPuzzle.Bootstrap;
 using GravityPuzzle.Config;
+using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -17,6 +18,18 @@ namespace GravityPuzzle.Editor
     {
         private const string PrefabFolder = "Assets/MainPrefabs";
         private const string ConfigPath = "Assets/Config/Presentation/SoundFeedbackConfig.asset";
+
+        [MenuItem("Gravity Puzzle/Audio/Unmute All Audio (Reset Sound Pref + Editor Audio)")]
+        private static void UnmuteAllAudio()
+        {
+            PlayerPrefs.SetInt(SoundFeedbackRuntime.SoundPreferenceKey, 1);
+            PlayerPrefs.Save();
+            EditorUtility.audioMasterMute = false;
+            AudioListener.pause = false;
+            AudioListener.volume = 1f;
+            SoundFeedbackRuntime.NotifyPreferenceChanged(true);
+            Debug.Log("[Sound] Sound re-enabled: GravityPuzzle.SoundEnabled = 1, Editor audioMasterMute = false, AudioListener.volume = 1.");
+        }
 
         [MenuItem("Gravity Puzzle/Audio/Wire Sound Feedback (MainPrefabs + Open Scenes)")]
         private static void WireSoundFeedback()

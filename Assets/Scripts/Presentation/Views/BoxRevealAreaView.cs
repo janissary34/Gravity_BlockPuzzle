@@ -5,6 +5,7 @@ using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Gameplay.Reveal;
 using GravityPuzzle.Infrastructure.Pooling;
+using GravityPuzzle.Infrastructure.Services;
 using TMPro;
 using UnityEngine;
 
@@ -61,6 +62,7 @@ namespace GravityPuzzle.Presentation.Views
         private int activePreviewCount;
         private float previewShadowBurstAlpha = 1f;
         private Action<float> exposureChanged;
+        private int lastReportedRemaining = -1;
 
         public string AreaId { get; private set; }
         private readonly struct PreviewContentRange
@@ -127,6 +129,7 @@ namespace GravityPuzzle.Presentation.Views
             authoredSize = size;
             currentHeight = Mathf.Max(0f, size.y);
             previewShadowBurstAlpha = 1f;
+            lastReportedRemaining = -1;
             transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
 
             if (boxShutter != null)
@@ -358,8 +361,14 @@ namespace GravityPuzzle.Presentation.Views
 
         public void SetBoxRemaining(int remaining, int target)
         {
+            int clampedRemaining = Mathf.Max(0, remaining);
             if (boxCounter != null)
-                boxCounter.SetText("{0}", Mathf.Max(0, remaining));
+                boxCounter.SetText("{0}", clampedRemaining);
+
+            bool didDecrement = lastReportedRemaining >= 0 && clampedRemaining < lastReportedRemaining;
+            lastReportedRemaining = clampedRemaining;
+            if (didDecrement)
+                SoundFeedbackRuntime.BoxCounterStep();
 
             // The final step is owned by PlayOpening so the burst and unlock
             // completion follow the same uninterrupted animation.
@@ -405,6 +414,7 @@ namespace GravityPuzzle.Presentation.Views
 
             if (config == null || boxShutter == null)
             {
+                SoundFeedbackRuntime.BoxBreak();
                 CompleteOpening();
                 return;
             }
@@ -676,6 +686,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private void BeginBoxBurst()
         {
+            SoundFeedbackRuntime.BoxBreak();
             if (boxCounter != null)
                 boxCounter.gameObject.SetActive(false);
             if (boxPanelRenderer != null)
@@ -782,6 +793,7 @@ namespace GravityPuzzle.Presentation.Views
         {
             isComplete = false;
             previewShadowBurstAlpha = 1f;
+            lastReportedRemaining = -1;
             progressTween?.Kill();
             openingSequence?.Kill();
         }
@@ -795,6 +807,7 @@ namespace GravityPuzzle.Presentation.Views
             completion = null;
             ClearPreviewVisuals();
             exposureChanged = null;
+            lastReportedRemaining = -1;
             ResetVisualState();
             AreaId = null;
             config = null;

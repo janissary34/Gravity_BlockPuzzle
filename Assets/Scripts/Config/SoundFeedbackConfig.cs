@@ -12,7 +12,7 @@ namespace GravityPuzzle.Config
         [Range(0f, 1f)] [SerializeField] private float buttonClickVolume = 1f;
 
         [Header("Pieces")]
-        [Tooltip("Played when a dragged piece is successfully placed on the grid.")]
+        [Tooltip("Played when a piece is grabbed/picked up for dragging.")]
         [SerializeField] private AudioClip[] pieceDropClips = new AudioClip[0];
         [Range(0f, 1f)] [SerializeField] private float pieceDropVolume = 1f;
 
@@ -39,6 +39,17 @@ namespace GravityPuzzle.Config
         [SerializeField] private AudioClip[] rocketLaunchClips = new AudioClip[0];
         [Range(0f, 1f)] [SerializeField] private float rocketLaunchVolume = 1f;
 
+        [Header("Reveal Areas")]
+        [Tooltip("Played when an Elevator block opens to reveal its hidden pieces.")]
+        [SerializeField] private AudioClip[] elevatorOpenClips = new AudioClip[0];
+        [Range(0f, 1f)] [SerializeField] private float elevatorOpenVolume = 1f;
+        [Tooltip("Played once each time a Box block's remaining counter decrements by one.")]
+        [SerializeField] private AudioClip[] boxCounterStepClips = new AudioClip[0];
+        [Range(0f, 1f)] [SerializeField] private float boxCounterStepVolume = 1f;
+        [Tooltip("Played when a Box block shatters open after reaching zero.")]
+        [SerializeField] private AudioClip[] boxBreakClips = new AudioClip[0];
+        [Range(0f, 1f)] [SerializeField] private float boxBreakVolume = 1f;
+
         public AudioClip[] ButtonClickClips => buttonClickClips;
         public float ButtonClickVolume => buttonClickVolume;
         public AudioClip[] PieceDropClips => pieceDropClips;
@@ -54,5 +65,11 @@ namespace GravityPuzzle.Config
         public float FreezeTimerImpactVolume => freezeTimerImpactVolume;
         public AudioClip[] RocketLaunchClips => rocketLaunchClips;
         public float RocketLaunchVolume => rocketLaunchVolume;
+        public AudioClip[] ElevatorOpenClips => elevatorOpenClips;
+        public float ElevatorOpenVolume => elevatorOpenVolume;
+        public AudioClip[] BoxCounterStepClips => boxCounterStepClips;
+        public float BoxCounterStepVolume => boxCounterStepVolume;
+        public AudioClip[] BoxBreakClips => boxBreakClips;
+        public float BoxBreakVolume => boxBreakVolume;
     }
 }

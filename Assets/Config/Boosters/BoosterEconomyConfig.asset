@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1f2a3b4c5d64e789a0b1c2d3e4f5a61, type: 3}
+  m_Name: BoosterEconomyConfig
+  m_EditorClassIdentifier: 
+  unlockRules:
+  - boosterType: 0
+    unlockLevel: 4
+    initialGrantAmount: 2
+    effectDurationSeconds: 10
+  - boosterType: 2
+    unlockLevel: 6
+    initialGrantAmount: 2
+    effectDurationSeconds: 0
+  - boosterType: 1
+    unlockLevel: 10
+    initialGrantAmount: 2
+    effectDurationSeconds: 0
+  periodicRewardBands:
+  - bandName: Levels 14-25
+    minLevel: 14
+    maxLevel: 25
+    grants:
+    - boosterType: 0
+      everyNLevels: 5
+      grantAmount: 1
+    - boosterType: 2
+      everyNLevels: 6
+      grantAmount: 1
+  - bandName: Levels 26-45
+    minLevel: 26
+    maxLevel: 45
+    grants:
+    - boosterType: 0
+      everyNLevels: 4
+      grantAmount: 1
+    - boosterType: 2
+      everyNLevels: 5
+      grantAmount: 1
+    - boosterType: 1
+      everyNLevels: 7
+      grantAmount: 1
+  - bandName: Levels 46-68
+    minLevel: 46
+    maxLevel: 68
+    grants:
+    - boosterType: 0
+      everyNLevels: 3
+      grantAmount: 1
+    - boosterType: 2
+      everyNLevels: 4
+      grantAmount: 1
+    - boosterType: 1
+      everyNLevels: 6
+      grantAmount: 1

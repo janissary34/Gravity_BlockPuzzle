@@ -146,13 +146,7 @@ namespace GravityPuzzle
 
         public static int GetIntroductionLevel(BoosterRewardType type)
         {
-            return type switch
-            {
-                BoosterRewardType.FreezeTimer => 4,
-                BoosterRewardType.Hammer => 6,
-                BoosterRewardType.Rocket => 10,
-                _ => 1
-            };
+            return BoosterEconomyRuntime.Current.GetUnlockLevel(type);
         }
 
         public bool IsIntroduced
@@ -220,6 +214,15 @@ namespace GravityPuzzle
             bool shouldGlow = hasBoosterType && gate != null &&
                 (gate.IsBoosterHighlighted(boosterType) || gate.IsFirstUseActive(boosterType));
             SetSelectionGlowVisible(shouldGlow);
+            UpdateCountUI();
+            RefreshButtonState();
+        }
+
+        private void Start()
+        {
+            // Refresh once after all Awake composition-root calls complete so
+            // configured BoosterEconomyConfig unlock levels and persisted counts
+            // are always reflected regardless of Awake/OnEnable ordering.
             UpdateCountUI();
             RefreshButtonState();
         }

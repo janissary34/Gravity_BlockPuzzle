@@ -36,3 +36,12 @@ MonoBehaviour:
   rocketLaunchClips:
   - {fileID: 8300000, guid: 10c6088bb195941a59a1789a1ef2fa9a, type: 3}
   rocketLaunchVolume: 1
+  elevatorOpenClips:
+  - {fileID: 8300000, guid: dd5d648f991fc495e970bc317cf6bb3c, type: 3}
+  elevatorOpenVolume: 1
+  boxCounterStepClips:
+  - {fileID: 8300000, guid: d4dd7fe0698d54ff9b679629f6e127a9, type: 3}
+  boxCounterStepVolume: 1
+  boxBreakClips:
+  - {fileID: 8300000, guid: cd16a221171174f01be1892f9f02cf97, type: 3}
+  boxBreakVolume: 1

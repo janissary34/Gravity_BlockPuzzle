@@ -41,13 +41,21 @@ namespace GravityPuzzle.Presentation.Views
 
         public static string GetFeatureTargetNameForLevel(int levelNumber)
         {
+            if (BoosterEconomyRuntime.Current.TryGetUnlockedBoosterForLevel(levelNumber, out BoosterRewardType unlockedBooster))
+            {
+                return unlockedBooster switch
+                {
+                    BoosterRewardType.FreezeTimer => "Freeze_Timer",
+                    BoosterRewardType.Hammer => "Hammer",
+                    BoosterRewardType.Rocket => "Rocket",
+                    _ => null
+                };
+            }
+
             return levelNumber switch
             {
-                4 => "Freeze_Timer",
                 5 => "CombinedBlock",
-                6 => "Hammer",
                 8 => "Ice_block",
-                10 => "Rocket",
                 16 => "BombBlock",
                 23 => "Box",
                 32 => "Elevator",
@@ -58,7 +66,7 @@ namespace GravityPuzzle.Presentation.Views
 
         public static bool IsBoosterMilestoneLevel(int levelNumber)
         {
-            return levelNumber == 4 || levelNumber == 6 || levelNumber == 10;
+            return BoosterEconomyRuntime.Current.TryGetUnlockedBoosterForLevel(levelNumber, out _);
         }
 
         private void Awake()
@@ -310,24 +318,11 @@ namespace GravityPuzzle.Presentation.Views
 
         private void GrantInitialBoosterIfApplicable(int levelNumber)
         {
-            BoosterRewardType? type = levelNumber switch
-            {
-                4 => BoosterRewardType.FreezeTimer,
-                6 => BoosterRewardType.Hammer,
-                10 => BoosterRewardType.Rocket,
-                _ => null
-            };
-
-            if (!type.HasValue)
+            if (!BoosterEconomyRuntime.Current.TryGetUnlockedBoosterForLevel(levelNumber, out BoosterRewardType unlockedBooster))
                 return;
 
-            if (BoosterInventoryRuntime.Current.GetCount(type.Value) <= 0)
-            {
-                int grant = type.Value == BoosterRewardType.FreezeTimer ? 1 : 3;
-                BoosterInventoryRuntime.Current.Grant(type.Value, grant);
-            }
-
-            BoosterFirstUseTutorialRuntime.RefreshButtons(type.Value);
+            BoosterEconomyRuntime.Current.EnsureInitialUnlockGrantsForLevel(levelNumber);
+            BoosterFirstUseTutorialRuntime.RefreshButtons(unlockedBooster);
         }
 
         private void ApplySelectedReward()

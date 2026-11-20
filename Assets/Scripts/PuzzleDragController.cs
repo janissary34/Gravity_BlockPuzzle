@@ -1241,6 +1241,7 @@ namespace GravityPuzzle
             // One pulse per pick-up. Pulsing from the per-frame drag path ran a
             // native vibrator call every frame on Android and stalled the drag.
             HapticFeedbackRuntime.PieceSelected();
+            SoundFeedbackRuntime.PieceSelected();
             PrototypeBoard.Active.CollectJointGroupPieces(piece, selectedJointGroupPieces);
             // A queued gravity plan or a still-owned fall tween can otherwise
             // restore an old body pose after this drag has started.
@@ -1349,7 +1350,6 @@ namespace GravityPuzzle
                 if (TryCommitSafeSnapRelease(selectedPiece, out _))
                 {
                     HapticFeedbackRuntime.ValidDrop();
-                    SoundFeedbackRuntime.PieceDropped();
                     StartGridReleasePresentation(selectedPiece, selectedJointGroupPieces);
                 }
 
@@ -1366,7 +1366,6 @@ namespace GravityPuzzle
             if (TryCommitSafeSnapRelease(selectedPiece, out Vector2 releasePosition))
             {
                 HapticFeedbackRuntime.ValidDrop();
-                SoundFeedbackRuntime.PieceDropped();
                 PuzzlePiece releasePiece = selectedPiece;
                 StartGridReleasePresentation(releasePiece, releasePosition);
                 selectedPiece = null;

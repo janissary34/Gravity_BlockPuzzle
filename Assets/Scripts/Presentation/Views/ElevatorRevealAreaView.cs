@@ -3,6 +3,7 @@ using DG.Tweening;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Reveal;
 using GravityPuzzle.Infrastructure.Pooling;
+using GravityPuzzle.Infrastructure.Services;
 using UnityEngine;
 
 namespace GravityPuzzle.Presentation.Views
@@ -224,6 +225,7 @@ namespace GravityPuzzle.Presentation.Views
             completion = onCompleted;
             isComplete = false;
             openingSequence?.Kill();
+            SoundFeedbackRuntime.ElevatorOpened();
 
             if (config == null)
             {

@@ -84,6 +84,10 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Presentation-only one-shot sound cues (button clicks, piece drops).")]
         [SerializeField] private SoundFeedbackConfig soundFeedbackConfig;
 
+        [Header("Boosters")]
+        [Tooltip("Centralized booster unlock levels, initial unlock gifts, and first-clear periodic rewards.")]
+        [SerializeField] private BoosterEconomyConfig boosterEconomyConfig;
+
         [Tooltip("2D AudioSource that plays the sound cues. Uses the AudioSource on this object when empty.")]
         [SerializeField] private AudioSource soundFeedbackAudioSource;
 
@@ -109,9 +113,19 @@ namespace GravityPuzzle.Bootstrap
             // This scene bootstrap is the first active gameplay composition root.
             Application.targetFrameRate = 60;
 
-            // Inventory is configured before level/UI setup so every booster
-            // adapter reads one persistent authority from its first refresh.
+            // Inventory and booster economy are configured before level/UI setup so every
+            // booster adapter reads one persistent authority from its first refresh.
             BoosterInventoryRuntime.Configure(new PlayerPrefsBoosterInventory());
+            if (boosterEconomyConfig == null)
+            {
+                Debug.LogWarning(
+                    "[BoosterEconomy] BoosterEconomyConfig is not assigned on RuntimePieceFactoryBootstrap; periodic level rewards are disabled.",
+                    this);
+            }
+            BoosterEconomyRuntime.Configure(new BoosterEconomyService(
+                boosterEconomyConfig,
+                BoosterInventoryRuntime.Current,
+                new PlayerPrefsBoosterEconomyPersistence()));
             HapticFeedbackRuntime.Configure(hapticFeedbackConfig);
             if (soundFeedbackAudioSource == null)
                 soundFeedbackAudioSource = GetComponent<AudioSource>();

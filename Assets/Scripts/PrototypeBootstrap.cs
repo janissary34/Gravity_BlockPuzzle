@@ -2833,6 +2833,7 @@ namespace GravityPuzzle
 
                     OnLevelCleared?.Invoke();
                     LevelCleared?.Invoke();
+                    BoosterEconomyRuntime.Current.ProcessFirstTimeLevelCompletion(GravityLevelRuntime.CurrentLevelNumber);
                     HapticFeedbackRuntime.LevelCompleted();
 
                     if (winPanel != null)
@@ -3052,7 +3053,13 @@ namespace GravityPuzzle
             for (int index = 0; index < boosterRewardConfigs.Length; index++)
             {
                 BoosterRewardConfig config = boosterRewardConfigs[index];
-                if (config == null || config.PresentationLevel != completedLevel + 1)
+                if (config == null)
+                    continue;
+
+                int unlockLevel = BoosterFirstUseTutorialCoordinator.Supports(config.BoosterType)
+                    ? BoosterEconomyRuntime.Current.GetUnlockLevel(config.BoosterType)
+                    : config.PresentationLevel;
+                if (unlockLevel != completedLevel + 1)
                     continue;
 
                 if (BoosterFirstUseTutorialCoordinator.Supports(config.BoosterType))
@@ -3078,6 +3085,7 @@ namespace GravityPuzzle
         public void ShowQueuedBoosterReward()
         {
             int currentLevel = ResolveCurrentLevelNumber();
+            BoosterEconomyRuntime.Current.EnsureInitialUnlockGrantsForLevel(currentLevel);
 
             if (newBoosterPanel != null && newBoosterPanel.ShowMilestoneFeatureForLevel(currentLevel, this))
             {
@@ -3149,13 +3157,21 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Steps the campaign for build verification without treating the
-        /// current board as completed or granting its completion rewards.
+        /// Steps the campaign for build verification without clearing the board.
+        /// Stepping forward processes first-clear booster economy rewards for the
+        /// skipped level so full-campaign booster progression can be verified
+        /// without double-granting replays.
         /// </summary>
         public bool TryStepLevelForDebug(GravityLevelRuntime.LevelStep step)
         {
             if (nextLevelTransitionPending || !GravityLevelRuntime.HasNextLevel)
                 return false;
+
+            if (step == GravityLevelRuntime.LevelStep.Next)
+            {
+                BoosterEconomyRuntime.Current.ProcessFirstTimeLevelCompletion(
+                    GravityLevelRuntime.CurrentLevelNumber);
+            }
 
             nextLevelTransitionPending = true;
             TryTransitionGameState(GameState.Result);

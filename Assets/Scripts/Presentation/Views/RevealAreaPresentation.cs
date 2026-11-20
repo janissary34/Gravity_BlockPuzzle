@@ -2,6 +2,7 @@ using System;
 using DG.Tweening;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Reveal;
+using GravityPuzzle.Infrastructure.Services;
 using TMPro;
 using UnityEngine;
 
@@ -32,6 +33,7 @@ namespace GravityPuzzle.Presentation.Views
         private Sequence openingSequence;
         private Action pendingCompletion;
         private bool completed;
+        private int lastReportedRemaining = -1;
 
         public string AreaId => areaId;
 
@@ -48,8 +50,14 @@ namespace GravityPuzzle.Presentation.Views
 
         public void SetBoxRemaining(int remaining, int target)
         {
+            int clampedRemaining = Mathf.Max(0, remaining);
             if (boxCounter != null)
-                boxCounter.SetText("{0}", Mathf.Max(0, remaining));
+                boxCounter.SetText("{0}", clampedRemaining);
+
+            bool didDecrement = lastReportedRemaining >= 0 && clampedRemaining < lastReportedRemaining;
+            lastReportedRemaining = clampedRemaining;
+            if (didDecrement)
+                SoundFeedbackRuntime.BoxCounterStep();
         }
 
         public void PlayOpening(RevealAreaKind kind, Action onCompleted)
@@ -61,6 +69,10 @@ namespace GravityPuzzle.Presentation.Views
             if (config == null)
             {
                 Debug.LogWarning("[Reveal] Presentation config is missing; opening immediately.", this);
+                if (kind == RevealAreaKind.Box)
+                    SoundFeedbackRuntime.BoxBreak();
+                else
+                    SoundFeedbackRuntime.ElevatorOpened();
                 CompleteOpening();
                 return;
             }
@@ -80,6 +92,7 @@ namespace GravityPuzzle.Presentation.Views
 
                 openingSequence.AppendCallback(() =>
                 {
+                    SoundFeedbackRuntime.BoxBreak();
                     if (boxBurst != null)
                         boxBurst.Play(true);
                     if (boxShutter != null)
@@ -88,6 +101,7 @@ namespace GravityPuzzle.Presentation.Views
             }
             else
             {
+                SoundFeedbackRuntime.ElevatorOpened();
                 bool hasDoorCollapse = false;
                 SpriteRenderer leftDoorRenderer = GetDoorRenderer(0);
                 if (elevatorLeftDoor != null && leftDoorRenderer != null)

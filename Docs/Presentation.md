@@ -153,7 +153,7 @@ A presentation refresh may rewrite sprites, materials, visibility, sorting, and 
 
 ## Build verification level advance
 
-`InGameUI` contains authored debug level buttons for device-build verification. `DebugLevelStepButton` is an input adapter only; its `step` field (Next/Previous) selects the direction. It delegates to `PrototypeBoard.TryStepLevelForDebug`, which steps the existing `GravityLevelRuntime` campaign sequence (wrapping at both ends) and reloads the active scene through `SplashSceneLoader`. It intentionally does not clear the board, grant completion rewards, queue booster unlocks, or persist tutorial progress.
+`InGameUI` contains authored debug level buttons for device-build verification. `DebugLevelStepButton` is an input adapter only; its `step` field (Next/Previous) selects the direction. It delegates to `PrototypeBoard.TryStepLevelForDebug`, which steps the existing `GravityLevelRuntime` campaign sequence (wrapping at both ends) and reloads the active scene through `SplashSceneLoader`. It intentionally does not clear the board, queue booster unlocks, or persist tutorial progress; stepping `Next` invokes `BoosterEconomyRuntime.Current.ProcessFirstTimeLevelCompletion` for the current level so campaign periodic booster rewards can be verified end-to-end without double-granting replays.
 
 ## Directional Board Frame
 

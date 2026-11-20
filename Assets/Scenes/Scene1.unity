@@ -11107,6 +11107,7 @@ MonoBehaviour:
   pieceVisualConfig: {fileID: 11400000, guid: 6ce7ef2d0321457a93c6ec7053eb6224, type: 2}
   hapticFeedbackConfig: {fileID: 11400000, guid: c1e49dc9cdd54cc895e661637e7d31a5, type: 2}
   soundFeedbackConfig: {fileID: 11400000, guid: 54d822fb5e5541aa9dd6eadaec3e8fca, type: 2}
+  boosterEconomyConfig: {fileID: 11400000, guid: e1f2a3b4c5d64e789a0b1c2d3e4f5a63, type: 2}
   soundFeedbackAudioSource: {fileID: 1938475616}
   clockTickingAudioSource: {fileID: 1938475617}
   iceCrackParticleSystem: {fileID: 201103893946865826, guid: 1d43b1e304cd647cd9efe8e2b5850a0a, type: 3}

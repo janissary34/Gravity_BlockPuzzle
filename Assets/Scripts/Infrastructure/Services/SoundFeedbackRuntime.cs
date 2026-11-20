@@ -19,12 +19,18 @@ namespace GravityPuzzle.Infrastructure.Services
         private static bool soundEnabled = true;
         private static bool clockTickingRequested;
         private static float nextBarFillSoundTime;
+        private static int lastElevatorOpenFrame = -1;
+        private static int lastBoxCounterStepFrame = -1;
+        private static int lastBoxBreakFrame = -1;
         private static readonly ShuffledClipSequence buttonClicks = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence pieceDrops = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence barFills = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence hammerBreaks = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence freezeTimerImpacts = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence rocketLaunches = new ShuffledClipSequence();
+        private static readonly ShuffledClipSequence elevatorOpens = new ShuffledClipSequence();
+        private static readonly ShuffledClipSequence boxCounterSteps = new ShuffledClipSequence();
+        private static readonly ShuffledClipSequence boxBreaks = new ShuffledClipSequence();
 
         public static event Action<bool> SoundEnabledChanged;
 
@@ -50,6 +56,9 @@ namespace GravityPuzzle.Infrastructure.Services
             clockTickingSource = clockTickSource;
             clockTickingRequested = false;
             nextBarFillSoundTime = 0f;
+            lastElevatorOpenFrame = -1;
+            lastBoxCounterStepFrame = -1;
+            lastBoxBreakFrame = -1;
 
             buttonClicks.Reset(config != null ? config.ButtonClickClips : null);
             pieceDrops.Reset(config != null ? config.PieceDropClips : null);
@@ -57,6 +66,9 @@ namespace GravityPuzzle.Infrastructure.Services
             hammerBreaks.Reset(config != null ? config.HammerBreakClips : null);
             freezeTimerImpacts.Reset(config != null ? config.FreezeTimerImpactClips : null);
             rocketLaunches.Reset(config != null ? config.RocketLaunchClips : null);
+            elevatorOpens.Reset(config != null ? config.ElevatorOpenClips : null);
+            boxCounterSteps.Reset(config != null ? config.BoxCounterStepClips : null);
+            boxBreaks.Reset(config != null ? config.BoxBreakClips : null);
 
             if (clockTickingSource != null)
             {
@@ -76,6 +88,8 @@ namespace GravityPuzzle.Infrastructure.Services
                 Debug.LogWarning("[Sound] SoundFeedbackConfig is not assigned on the bootstrap; sound cues are disabled.");
             else if (source == null)
                 Debug.LogWarning("[Sound] No AudioSource is assigned on the bootstrap; sound cues are disabled.");
+            else if (!soundEnabled)
+                Debug.Log("[Sound] Audio started muted because GravityPuzzle.SoundEnabled = 0 in PlayerPrefs. Open Settings (or Gravity Puzzle/Audio/Unmute All Audio) to re-enable sound.");
         }
 
         /// <summary>Applies a sound preference toggle immediately to all active audio playback.</summary>
@@ -106,7 +120,7 @@ namespace GravityPuzzle.Infrastructure.Services
             if (config != null) Play(buttonClicks.Next(), config.ButtonClickVolume);
         }
 
-        public static void PieceDropped()
+        public static void PieceSelected()
         {
             if (config != null) Play(pieceDrops.Next(), config.PieceDropVolume);
         }
@@ -137,6 +151,45 @@ namespace GravityPuzzle.Infrastructure.Services
         public static void RocketLaunch()
         {
             if (config != null) Play(rocketLaunches.Next(), config.RocketLaunchVolume);
+        }
+
+        public static void ElevatorOpened()
+        {
+            if (config == null)
+                return;
+
+            int frame = Time.frameCount;
+            if (frame == lastElevatorOpenFrame)
+                return;
+
+            lastElevatorOpenFrame = frame;
+            Play(elevatorOpens.Next(), config.ElevatorOpenVolume);
+        }
+
+        public static void BoxCounterStep()
+        {
+            if (config == null)
+                return;
+
+            int frame = Time.frameCount;
+            if (frame == lastBoxCounterStepFrame)
+                return;
+
+            lastBoxCounterStepFrame = frame;
+            Play(boxCounterSteps.Next(), config.BoxCounterStepVolume);
+        }
+
+        public static void BoxBreak()
+        {
+            if (config == null)
+                return;
+
+            int frame = Time.frameCount;
+            if (frame == lastBoxBreakFrame)
+                return;
+
+            lastBoxBreakFrame = frame;
+            Play(boxBreaks.Next(), config.BoxBreakVolume);
         }
 
         /// <summary>
@@ -171,6 +224,7 @@ namespace GravityPuzzle.Infrastructure.Services
 
         private static void ApplySoundState(bool enabled)
         {
+            AudioListener.pause = false;
             AudioListener.volume = enabled ? 1f : 0f;
             if (source != null)
             {
@@ -199,6 +253,7 @@ namespace GravityPuzzle.Infrastructure.Services
                 return;
             }
 
+            EnsureClipLoaded(config.ClockTickingClip);
             if (clockTickingSource.clip != config.ClockTickingClip)
                 clockTickingSource.clip = config.ClockTickingClip;
             clockTickingSource.volume = config.ClockTickingVolume;
@@ -213,7 +268,14 @@ namespace GravityPuzzle.Infrastructure.Services
             if (clip == null || source == null || !IsSoundEnabled)
                 return;
 
+            EnsureClipLoaded(clip);
             source.PlayOneShot(clip, volume);
+        }
+
+        private static void EnsureClipLoaded(AudioClip clip)
+        {
+            if (clip != null && clip.loadState == AudioDataLoadState.Unloaded)
+                clip.LoadAudioData();
         }
 
         /// <summary>

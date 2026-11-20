@@ -30,8 +30,15 @@ namespace GravityPuzzle.Editor
                 PlayerPrefs.DeleteKey(prefix + "Unlocked");
             }
 
+            GravityLevelSequence sequence = AssetDatabase.LoadAssetAtPath<GravityLevelSequence>(
+                "Assets/Resources/LevelSequence.asset");
+            int maxLevel = sequence != null && sequence.levels != null
+                ? Mathf.Max(128, sequence.levels.Count)
+                : 128;
+            PlayerPrefsBoosterEconomyPersistence.ClearAll(maxLevel);
+
             PlayerPrefs.Save();
-            Debug.Log("[BoosterTutorial] Cleared booster inventory and first-use tutorial progress for local testing.");
+            Debug.Log("[BoosterTutorial] Cleared booster inventory, economy claim flags, and first-use tutorial progress for local testing.");
         }
     }
 }
