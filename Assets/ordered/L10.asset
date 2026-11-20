@@ -56,6 +56,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -2, y: 2}
       type: 0
@@ -205,6 +206,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -6, y: -2}
       type: 0
@@ -258,6 +260,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 2, y: 14}
       type: 0
@@ -375,6 +378,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 2, y: -14}
       type: 0
@@ -492,6 +496,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -6, y: 14}
       type: 0
@@ -609,6 +614,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 6, y: -6}
       type: 0

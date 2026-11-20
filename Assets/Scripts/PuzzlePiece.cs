@@ -4005,6 +4005,8 @@ namespace GravityPuzzle
             // Centre the digit's glyph mesh, not its font line box, so the
             // number sits visually in the middle of the piece.
             iceCounterText.alignment = TextAlignmentOptions.MidlineGeoAligned;
+            iceCounterText.margin = Vector4.zero;
+            iceCounterText.rectTransform.pivot = new Vector2(.5f, .5f);
 
             if (iceCounterFont != null)
                 iceCounterText.font = iceCounterFont;
@@ -4777,8 +4779,9 @@ namespace GravityPuzzle
 
         /// <summary>
         /// Local-space anchor for the ice counter: the piece bounds centre when
-        /// a cell covers it, otherwise (concave shapes such as L) the occupied
-        /// cell closest to the area-weighted shape centre.
+        /// a full one-block footprint around it is covered by occupied cells,
+        /// otherwise (concave shapes such as L) the occupied cell closest to
+        /// the area-weighted shape centre.
         /// </summary>
         private Vector2 GetIceCounterLocalCenter()
         {
@@ -4786,7 +4789,6 @@ namespace GravityPuzzle
 
             Vector2 weightedSum = Vector2.zero;
             float totalArea = 0f;
-            bool boundsCenterCovered = false;
             for (int index = 0; index < collisionCellVisuals.Count; index++)
             {
                 SpriteRenderer visual = collisionCellVisuals[index];
@@ -4798,13 +4800,10 @@ namespace GravityPuzzle
                 float area = size.x * size.y;
                 weightedSum += position * area;
                 totalArea += area;
-                Vector2 half = size * .5f;
-                if (Mathf.Abs(boundsCenter.x - position.x) <= half.x &&
-                    Mathf.Abs(boundsCenter.y - position.y) <= half.y)
-                    boundsCenterCovered = true;
             }
 
-            if (boundsCenterCovered || totalArea <= 0f)
+            Vector2 targetFootprint = GetBombOverlayTargetSize();
+            if (totalArea <= 0f || DoesLocalFootprintFitPiece(boundsCenter, targetFootprint))
                 return boundsCenter;
 
             Vector2 shapeCenter = weightedSum / totalArea;
@@ -4826,6 +4825,38 @@ namespace GravityPuzzle
             }
 
             return closest;
+        }
+
+        private bool DoesLocalFootprintFitPiece(Vector2 localCenter, Vector2 footprintSize)
+        {
+            const float edgeInset = .001f;
+            Vector2 half = footprintSize * .5f;
+            float dx = Mathf.Max(0f, half.x - edgeInset);
+            float dy = Mathf.Max(0f, half.y - edgeInset);
+
+            return IsLocalPointInsidePieceCell(localCenter) &&
+                   IsLocalPointInsidePieceCell(localCenter + new Vector2(-dx, -dy)) &&
+                   IsLocalPointInsidePieceCell(localCenter + new Vector2(-dx, dy)) &&
+                   IsLocalPointInsidePieceCell(localCenter + new Vector2(dx, -dy)) &&
+                   IsLocalPointInsidePieceCell(localCenter + new Vector2(dx, dy));
+        }
+
+        private bool IsLocalPointInsidePieceCell(Vector2 localPoint)
+        {
+            for (int index = 0; index < collisionCellVisuals.Count; index++)
+            {
+                SpriteRenderer visual = collisionCellVisuals[index];
+                if (visual == null || index >= fullCollisionCellSizes.Count)
+                    continue;
+
+                Vector2 position = visual.transform.localPosition;
+                Vector2 half = fullCollisionCellSizes[index] * .5f;
+                if (localPoint.x >= position.x - half.x && localPoint.x <= position.x + half.x &&
+                    localPoint.y >= position.y - half.y && localPoint.y <= position.y + half.y)
+                    return true;
+            }
+
+            return false;
         }
 
         private void GetModularPresentationBounds(out Vector2 center, out Vector2 size)

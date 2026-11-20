@@ -603,10 +603,6 @@ namespace GravityPuzzle.Gameplay.Pieces
                 GetFallbackSpriteMaterial());
 
             float baseIceFontSize = pieceVisualConfig != null ? pieceVisualConfig.IceCounterFontSize : .55f;
-            float resolvedIceFontSize = definition.iceCounterFontSize <= 0f
-                ? baseIceFontSize
-                : baseIceFontSize * Mathf.Clamp(definition.iceCounterFontSize / 36f, 0.2f, 3.0f);
-
             float baseBombFontSize = pieceVisualConfig != null ? pieceVisualConfig.BombCounterFontSize : .65f;
 
             puzzlePiece.Configure(new PieceRuntimeSetup(
@@ -625,11 +621,11 @@ namespace GravityPuzzle.Gameplay.Pieces
                 pieceVisualConfig != null ? pieceVisualConfig.BombShredderVoxelSubdivisions : 4,
                 definition.frozenMoveCount,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterFont : null,
-                resolvedIceFontSize,
+                baseIceFontSize,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterTextColor : definition.iceCounterTextColor,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineColor : definition.iceCounterOutlineColor,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterOutlineWidth : definition.iceCounterOutlineWidth,
-                pieceVisualConfig != null && pieceVisualConfig.IceCounterOffset != Vector2.zero ? pieceVisualConfig.IceCounterOffset : definition.iceCounterOffset,
+                pieceVisualConfig != null ? pieceVisualConfig.IceCounterOffset : Vector2.zero,
                 pieceVisualConfig != null ? pieceVisualConfig.IceCounterSortingOrder : 50,
                 definition.specialBlockType,
                 definition.bombTimerSeconds,

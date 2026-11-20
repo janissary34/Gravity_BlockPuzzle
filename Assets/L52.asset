@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: L52
   m_EditorClassIdentifier: 
   levelName: New Level
+  difficulty: 0
   timeLimit: 300
   boardColumns: 9
   boardRows: 9
@@ -35,7 +36,8 @@ MonoBehaviour:
   shredderRadius: 0.42
   shredderRotationSpeed: 220
   pieces:
-  - name: Piece 1
+  - pieceId: 
+    name: Piece 1
     tutorialTargetId: 
     visualId: 
     paletteId: Red
@@ -50,13 +52,14 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
-  - name: Piece 2
+  - pieceId: 
+    name: Piece 2
     tutorialTargetId: 
     visualId: 
     paletteId: BlueDark
@@ -71,11 +74,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 4, y: 0}
       type: 0
@@ -141,26 +144,27 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 11, y: 3}
       type: 0
-  - name: Piece 3
+  - pieceId: 
+    name: Piece 3
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
     color: {r: 1, g: 0.2980392, b: 0.3123512, a: 1}
     origin: {x: 16, y: 12}
     quarterTurns: 0
-    specialBlockType: 0
+    specialBlockType: 2
     frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
-    bombTimerSeconds: 10
-    bombCounterFontSize: 36
+    bombTimerSeconds: 20
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -194,7 +198,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
-  - name: Piece 4
+  - pieceId: 
+    name: Piece 4
     tutorialTargetId: 
     visualId: 
     paletteId: BlueDark
@@ -209,11 +214,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -279,7 +284,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 5
+  - pieceId: 
+    name: Piece 5
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -294,11 +300,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -332,7 +338,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
-  - name: Piece 6
+  - pieceId: 
+    name: Piece 6
     tutorialTargetId: 
     visualId: 
     paletteId: BlueDark
@@ -347,11 +354,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -417,7 +424,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 7
+  - pieceId: 
+    name: Piece 7
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -432,11 +440,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -502,7 +510,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 8
+  - pieceId: 
+    name: Piece 8
     tutorialTargetId: 
     visualId: 
     paletteId: BlueDark
@@ -517,11 +526,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -587,7 +596,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 9
+  - pieceId: 
+    name: Piece 9
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -601,12 +611,12 @@ MonoBehaviour:
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
-    bombTimerSeconds: 10
-    bombCounterFontSize: 36
+    bombTimerSeconds: 30
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -672,7 +682,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 10
+  - pieceId: 
+    name: Piece 10
     tutorialTargetId: 
     visualId: 
     paletteId: BlueDark
@@ -687,11 +698,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -725,7 +736,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
-  - name: Piece 11
+  - pieceId: 
+    name: Piece 11
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -740,11 +752,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -810,26 +822,27 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 12
+  - pieceId: 
+    name: Piece 12
     tutorialTargetId: 
     visualId: 
     paletteId: BlueDark
     color: {r: 1, g: 1, b: 1, a: 1}
     origin: {x: 16, y: 24}
     quarterTurns: 0
-    specialBlockType: 0
+    specialBlockType: 2
     frozenMoveCount: 0
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
-    bombTimerSeconds: 10
-    bombCounterFontSize: 36
+    bombTimerSeconds: 30
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -863,7 +876,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
-  - name: Piece 13
+  - pieceId: 
+    name: Piece 13
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -878,11 +892,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -948,7 +962,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 14
+  - pieceId: 
+    name: Piece 14
     tutorialTargetId: 
     visualId: 
     paletteId: BlueDark
@@ -963,11 +978,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -1001,7 +1016,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
-  - name: Piece 15
+  - pieceId: 
+    name: Piece 15
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -1016,11 +1032,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -1086,7 +1102,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 16
+  - pieceId: 
+    name: Piece 16
     tutorialTargetId: 
     visualId: 
     paletteId: BlueDark
@@ -1101,11 +1118,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -1171,7 +1188,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 17
+  - pieceId: 
+    name: Piece 17
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -1186,11 +1204,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -1256,7 +1274,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 7, y: 3}
       type: 0
-  - name: Piece 18
+  - pieceId: 
+    name: Piece 18
     tutorialTargetId: 
     visualId: 
     paletteId: BlueDark
@@ -1271,11 +1290,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -1341,7 +1360,8 @@ MonoBehaviour:
       type: 0
     - localCell: {x: -1, y: 3}
       type: 0
-  - name: Piece 19
+  - pieceId: 
+    name: Piece 19
     tutorialTargetId: 
     visualId: 
     paletteId: Pink
@@ -1356,11 +1376,11 @@ MonoBehaviour:
     iceCounterOutlineWidth: 0.18
     iceCounterOffset: {x: 0, y: 0}
     bombTimerSeconds: 10
-    bombCounterFontSize: 36
     bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -1394,6 +1414,7 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 3}
       type: 0
+  joints: []
   boxes: []
   elevators: []
   pins: []

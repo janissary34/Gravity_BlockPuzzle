@@ -799,16 +799,15 @@ namespace GravityPuzzle.Editor
                 if (newSpecialBlockType == PieceSpecialBlockType.Ice)
                 {
                     GUILayout.Label("Ice Counter Text", EditorStyles.boldLabel);
-                    newCounterFontSize = EditorGUILayout.Slider(
-                        "Font Size", piece.iceCounterFontSize <= 0f ? 36f : piece.iceCounterFontSize, 8f, 96f);
+                    EditorGUILayout.HelpBox(
+                        "Font size and centering are global. Adjust Ice Counter Font Size in PieceVisualConfig.",
+                        MessageType.Info);
                     newCounterTextColor = EditorGUILayout.ColorField(
                         "Text Color", piece.iceCounterTextColor);
                     newCounterOutlineColor = EditorGUILayout.ColorField(
                         "Outline Color", piece.iceCounterOutlineColor);
                     newCounterOutlineWidth = EditorGUILayout.Slider(
                         "Outline Width", piece.iceCounterOutlineWidth, 0f, 1f);
-                    newCounterOffset = EditorGUILayout.Vector2Field(
-                        "Position Offset", piece.iceCounterOffset);
                 }
 
                 float newBombTimerSeconds = piece.bombTimerSeconds;
@@ -1796,10 +1795,6 @@ namespace GravityPuzzle.Editor
                 }
                 else if (piece.frozenMoveCount > 0 && hasVisibleCell)
                 {
-                    float worldToEditorPixels = cellSize * level.subdivisions;
-                    pieceBounds.position += new Vector2(
-                        piece.iceCounterOffset.x * worldToEditorPixels,
-                        -piece.iceCounterOffset.y * worldToEditorPixels);
                     DrawIceCounterPreview(pieceBounds, piece);
                 }
 
@@ -1857,8 +1852,7 @@ namespace GravityPuzzle.Editor
             // The Level Editor is the visual source of truth: this value is a
             // normal GUI point size. Runtime converts the same value to TMP's
             // much larger world-space typography scale.
-            int previewFontSize = Mathf.Clamp(
-                Mathf.RoundToInt(piece.iceCounterFontSize), 8, 96);
+            int previewFontSize = 20;
             GUIStyle textStyle = new GUIStyle(EditorStyles.boldLabel)
             {
                 alignment = TextAnchor.MiddleCenter,

@@ -29,6 +29,12 @@ namespace GravityPuzzle
         private CanvasGroup buttonCanvasGroup;
 
         [Header("Locked State UI")]
+        [SerializeField, Tooltip("Authored enabled visual variant (colored button + icon) shown once the booster is unlocked. Auto-found if null.")]
+        private GameObject enabledVisualRoot;
+
+        [SerializeField, Tooltip("Authored disabled visual variant (grey button + grey icon + lock) shown before the booster unlocks. Auto-found if null.")]
+        private GameObject disabledVisualRoot;
+
         [SerializeField, Tooltip("GameObject enabled when the booster is locked (e.g. lock icon, lock overlay). Auto-found if null.")]
         private GameObject lockRoot;
 
@@ -406,6 +412,24 @@ namespace GravityPuzzle
 
         private void FindLockReferences()
         {
+            if (enabledVisualRoot == null || disabledVisualRoot == null)
+            {
+                for (int i = 0; i < transform.childCount; i++)
+                {
+                    Transform candidate = transform.GetChild(i);
+                    if (enabledVisualRoot == null &&
+                        candidate.name.IndexOf("(Enable)", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        enabledVisualRoot = candidate.gameObject;
+                    }
+                    else if (disabledVisualRoot == null &&
+                             candidate.name.IndexOf("(Disable)", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        disabledVisualRoot = candidate.gameObject;
+                    }
+                }
+            }
+
             if (lockRoot == null)
             {
                 Transform child = transform.Find("Lock") ??
@@ -515,6 +539,11 @@ namespace GravityPuzzle
             {
                 SetSelectionGlowVisible(false);
 
+                if (enabledVisualRoot != null && enabledVisualRoot.activeSelf)
+                    enabledVisualRoot.SetActive(false);
+                if (disabledVisualRoot != null && !disabledVisualRoot.activeSelf)
+                    disabledVisualRoot.SetActive(true);
+
                 // Keep booster button visible on HUD from level 1.
                 // It remains non-interactable with locked visuals displayed.
                 if (buttonCanvasGroup != null)
@@ -561,7 +590,12 @@ namespace GravityPuzzle
                 return;
             }
 
-            // Unlocked state: hide lock visuals, show count visuals.
+            // Unlocked state: restore enabled visual variant, hide locked/disable visuals, show count visuals.
+            if (enabledVisualRoot != null && !enabledVisualRoot.activeSelf)
+                enabledVisualRoot.SetActive(true);
+            if (disabledVisualRoot != null && disabledVisualRoot.activeSelf)
+                disabledVisualRoot.SetActive(false);
+
             if (lockRoot != null)
                 lockRoot.SetActive(false);
             if (lockImage != null)
