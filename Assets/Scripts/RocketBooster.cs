@@ -495,6 +495,7 @@ namespace GravityPuzzle
                     carried.SetParent(rocket.transform, true);
             }
 
+            SoundFeedbackRuntime.RocketLaunch();
             Tween launchTween = rocket.transform.DOMoveY(targetY, tweenConfig.RocketLaunchDuration)
                 .SetEase(tweenConfig.RocketLaunchEase)
                 .SetLink(rocket, LinkBehaviour.KillOnDisable)
@@ -573,6 +574,7 @@ namespace GravityPuzzle
                 yield return new WaitForSeconds(tweenConfig.RocketEntranceDuration);
                 yield return new WaitForSeconds(tweenConfig.RocketTargetPauseDuration);
                 BreakTargetJointsForLaunch(piece);
+                SoundFeedbackRuntime.RocketLaunch();
                 yield return new WaitForSeconds(tweenConfig.RocketLaunchDuration);
                 CompleteRocketImpact(piece, piecePos, camY + camOrtho + 7f);
                 yield break;
@@ -632,7 +634,7 @@ namespace GravityPuzzle
 
             // 6. BLAST OFF! Launch rocket + piece into the sky
             float targetY = camY + camOrtho + 7f;
-
+            SoundFeedbackRuntime.RocketLaunch();
 
             Tween launchTween = rocket.transform.DOMoveY(targetY, tweenConfig.RocketLaunchDuration)
                 .SetEase(tweenConfig.RocketLaunchEase)

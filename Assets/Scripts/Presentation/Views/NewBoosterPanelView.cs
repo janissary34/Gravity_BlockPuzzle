@@ -1,5 +1,6 @@
 using System;
 using GravityPuzzle.Config;
+using GravityPuzzle.Gameplay.Tutorial;
 using GravityPuzzle.Infrastructure.Services;
 using TMPro;
 using UnityEngine;
@@ -43,13 +44,14 @@ namespace GravityPuzzle.Presentation.Views
             return levelNumber switch
             {
                 4 => "Freeze_Timer",
+                5 => "CombinedBlock",
                 6 => "Hammer",
                 8 => "Ice_block",
                 10 => "Rocket",
                 16 => "BombBlock",
-                24 => "Box",
-                33 => "Elevator",
-                54 => "KeyLock",
+                23 => "Box",
+                32 => "Elevator",
+                53 => "KeyLock",
                 _ => null
             };
         }
@@ -324,6 +326,8 @@ namespace GravityPuzzle.Presentation.Views
                 int grant = type.Value == BoosterRewardType.FreezeTimer ? 1 : 3;
                 BoosterInventoryRuntime.Current.Grant(type.Value, grant);
             }
+
+            BoosterFirstUseTutorialRuntime.RefreshButtons(type.Value);
         }
 
         private void ApplySelectedReward()

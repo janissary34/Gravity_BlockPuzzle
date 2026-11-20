@@ -388,6 +388,8 @@ namespace GravityPuzzle.Presentation.Views
                 targetingUi.SetActive(true);
             ConfigureTargetingHeader(boosterType);
 
+            BoosterFirstUseTutorialRuntime.RefreshButtons(boosterType);
+
             CanvasGroup activeGroup = boosterType == BoosterRewardType.Rocket
                 ? rocketBoosterButtonGroup
                 : boosterType == BoosterRewardType.Hammer

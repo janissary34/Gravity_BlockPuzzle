@@ -705,7 +705,7 @@ MonoBehaviour:
   centerPauseDuration: 1
   centerOffsetY: 0
   flyToTextDuration: 0.75
-  freezeDuration: 8
+  freezeDuration: 10
 --- !u!114 &6754513735071651958
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -720,7 +720,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boosterButton: {fileID: 2699350657416464777}
   boosterButtonRef: {fileID: 5506198620867977405}
-  freezeDuration: 5
+  freezeDuration: 10
 --- !u!225 &6512677557712557368
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1336,7 +1336,7 @@ MonoBehaviour:
   centerPauseDuration: 1
   centerOffsetY: 0
   flyToTextDuration: 0.75
-  freezeDuration: 8
+  freezeDuration: 10
 --- !u!114 &7733501489883852849
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1351,7 +1351,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boosterButton: {fileID: 1527691332873635503}
   boosterButtonRef: {fileID: 6309184675869875049}
-  freezeDuration: 5
+  freezeDuration: 10
 --- !u!225 &4572298823339766968
 CanvasGroup:
   m_ObjectHideFlags: 0

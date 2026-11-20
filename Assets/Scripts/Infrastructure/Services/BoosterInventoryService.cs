@@ -125,20 +125,54 @@ namespace GravityPuzzle.Infrastructure.Services
     /// <summary>
     /// Composition-root access point for the inventory contract. Runtime UI
     /// adapters use this contract rather than owning mirrored use counters.
+    /// The returned facade stays stable across scene reloads so listeners
+    /// attached before bootstrap Awake never become orphaned on a replaced
+    /// backing inventory.
     /// </summary>
     public static class BoosterInventoryRuntime
     {
-        private static IPlayerBoosterInventory current;
-
-        public static IPlayerBoosterInventory Current
+        private sealed class RuntimeInventoryProxy : IPlayerBoosterInventory
         {
-            get
+            private IPlayerBoosterInventory backing;
+
+            public event Action<BoosterRewardType, int> CountChanged;
+
+            public RuntimeInventoryProxy(IPlayerBoosterInventory initial)
             {
-                if (current == null)
-                    current = new PlayerPrefsBoosterInventory();
-                return current;
+                SetBacking(initial);
+            }
+
+            public IPlayerBoosterInventory Backing => backing;
+
+            public void SetBacking(IPlayerBoosterInventory next)
+            {
+                if (ReferenceEquals(backing, next))
+                    return;
+
+                if (backing != null)
+                    backing.CountChanged -= ForwardCountChanged;
+
+                backing = next;
+
+                if (backing != null)
+                    backing.CountChanged += ForwardCountChanged;
+            }
+
+            public int GetCount(BoosterRewardType boosterType) => backing.GetCount(boosterType);
+            public bool IsUnlocked(BoosterRewardType boosterType) => backing.IsUnlocked(boosterType);
+            public void Grant(BoosterRewardType boosterType, int amount) => backing.Grant(boosterType, amount);
+            public bool TryConsume(BoosterRewardType boosterType) => backing.TryConsume(boosterType);
+
+            private void ForwardCountChanged(BoosterRewardType boosterType, int count)
+            {
+                CountChanged?.Invoke(boosterType, count);
             }
         }
+
+        private static readonly RuntimeInventoryProxy proxy =
+            new RuntimeInventoryProxy(new PlayerPrefsBoosterInventory());
+
+        public static IPlayerBoosterInventory Current => proxy;
 
         public static void Configure(IPlayerBoosterInventory inventory)
         {
@@ -148,13 +182,16 @@ namespace GravityPuzzle.Infrastructure.Services
                 return;
             }
 
-            current = inventory;
+            if (ReferenceEquals(inventory, proxy))
+                return;
+
+            proxy.SetBacking(inventory);
         }
 
 #if UNITY_EDITOR
         public static void SetEditorPreviewCount(BoosterRewardType boosterType, int amount)
         {
-            if (Current is PlayerPrefsBoosterInventory inventory)
+            if (proxy.Backing is PlayerPrefsBoosterInventory inventory)
                 inventory.SetEditorPreviewCount(boosterType, amount);
         }
 #endif

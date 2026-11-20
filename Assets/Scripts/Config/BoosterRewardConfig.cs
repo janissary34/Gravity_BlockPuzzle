@@ -48,6 +48,7 @@ namespace GravityPuzzle.Config
         BombBlock,
         Elevator,
         Box,
-        KeyLock
+        KeyLock,
+        CombinedBlock
     }
 }

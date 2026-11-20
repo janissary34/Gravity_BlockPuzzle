@@ -21,6 +21,18 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 4281a29818897491bbd1f5f16476bcb5, type: 3}
   - {fileID: 8300000, guid: 0462b6c901aaa4e699354381d642f78c, type: 3}
   pieceDropVolume: 1
+  barFillClips:
+  - {fileID: 8300000, guid: 9a58604edbd544ab990b80f7691aa429, type: 3}
+  barFillVolume: 1
+  barFillMinInterval: 0.12
+  clockTickingClip: {fileID: 8300000, guid: c4d5d19a63be24d058ad8bbf7156100b, type: 3}
+  clockTickingVolume: 1
   hammerBreakClips:
   - {fileID: 8300000, guid: 004987eaeea064c77a8523b2e279b85c, type: 3}
   hammerBreakVolume: 1
+  freezeTimerImpactClips:
+  - {fileID: 8300000, guid: 03ecf1bb202984378aaac770c47f4d58, type: 3}
+  freezeTimerImpactVolume: 1
+  rocketLaunchClips:
+  - {fileID: 8300000, guid: 10c6088bb195941a59a1789a1ef2fa9a, type: 3}
+  rocketLaunchVolume: 1

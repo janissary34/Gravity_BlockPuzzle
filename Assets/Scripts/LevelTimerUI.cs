@@ -1,5 +1,6 @@
 using DG.Tweening;
 using GravityPuzzle.Config;
+using GravityPuzzle.Infrastructure.Services;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -158,6 +159,7 @@ namespace GravityPuzzle
 
         private void OnDisable()
         {
+            SoundFeedbackRuntime.SetClockTickingActive(false);
             ResumeTimerForRetryConfirmation();
             timerUrgencyFadeTween?.Kill();
             timerUrgencyFadeTween = null;
@@ -222,6 +224,13 @@ namespace GravityPuzzle
                 board.IsTimerStarted &&
                 board.TimeRemaining > 0f &&
                 board.TimeRemaining <= timerUrgencyThresholdSeconds);
+            SoundFeedbackRuntime.SetClockTickingActive(
+                hasTimeLimit &&
+                board.IsTimerStarted &&
+                board.IsTimerActive &&
+                !board.IsTimerPaused &&
+                board.TimeRemaining > 0f &&
+                board.TimeRemaining <= timerUrgencyThresholdSeconds);
             if (!hasTimeLimit)
                 return;
 
@@ -281,6 +290,7 @@ namespace GravityPuzzle
 
             if (timerPresentationLocked)
             {
+                SoundFeedbackRuntime.SetClockTickingActive(false);
                 SetTimerVisible(false);
                 SetTimerUrgencyFrameVisible(false);
                 SetTimerTextUrgencyPulseVisible(false);
@@ -442,6 +452,7 @@ namespace GravityPuzzle
             if (keepOnPlayingPanel != null)
                 keepOnPlayingPanel.SetActive(false);
 
+            SoundFeedbackRuntime.SetClockTickingActive(false);
             SetTimerUrgencyFrameVisible(false);
             SetTimerTextUrgencyPulseVisible(false);
             
@@ -453,6 +464,7 @@ namespace GravityPuzzle
         {
             IsGameOver = true;
             continueOfferIsActive = true;
+            SoundFeedbackRuntime.SetClockTickingActive(false);
             SetTimerUrgencyFrameVisible(false);
             SetTimerTextUrgencyPulseVisible(false);
 

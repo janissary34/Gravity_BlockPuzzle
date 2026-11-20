@@ -14,11 +14,17 @@ namespace GravityPuzzle.Infrastructure.Services
 
         private static SoundFeedbackConfig config;
         private static AudioSource source;
+        private static AudioSource clockTickingSource;
         private static bool preferenceLoaded;
         private static bool soundEnabled = true;
+        private static bool clockTickingRequested;
+        private static float nextBarFillSoundTime;
         private static readonly ShuffledClipSequence buttonClicks = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence pieceDrops = new ShuffledClipSequence();
+        private static readonly ShuffledClipSequence barFills = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence hammerBreaks = new ShuffledClipSequence();
+        private static readonly ShuffledClipSequence freezeTimerImpacts = new ShuffledClipSequence();
+        private static readonly ShuffledClipSequence rocketLaunches = new ShuffledClipSequence();
 
         public static event Action<bool> SoundEnabledChanged;
 
@@ -31,13 +37,36 @@ namespace GravityPuzzle.Infrastructure.Services
             }
         }
 
-        public static void Configure(SoundFeedbackConfig value, AudioSource audioSource)
+        public static void Configure(
+            SoundFeedbackConfig value,
+            AudioSource audioSource,
+            AudioSource clockTickSource = null)
         {
+            if (clockTickingSource != null && clockTickingSource != clockTickSource && clockTickingSource.isPlaying)
+                clockTickingSource.Stop();
+
             config = value;
             source = audioSource;
+            clockTickingSource = clockTickSource;
+            clockTickingRequested = false;
+            nextBarFillSoundTime = 0f;
+
             buttonClicks.Reset(config != null ? config.ButtonClickClips : null);
             pieceDrops.Reset(config != null ? config.PieceDropClips : null);
+            barFills.Reset(config != null ? config.BarFillClips : null);
             hammerBreaks.Reset(config != null ? config.HammerBreakClips : null);
+            freezeTimerImpacts.Reset(config != null ? config.FreezeTimerImpactClips : null);
+            rocketLaunches.Reset(config != null ? config.RocketLaunchClips : null);
+
+            if (clockTickingSource != null)
+            {
+                clockTickingSource.playOnAwake = false;
+                clockTickingSource.loop = true;
+                clockTickingSource.clip = config != null ? config.ClockTickingClip : null;
+                clockTickingSource.volume = config != null ? config.ClockTickingVolume : 1f;
+                if (clockTickingSource.isPlaying)
+                    clockTickingSource.Stop();
+            }
 
             soundEnabled = PlayerPrefs.GetInt(SoundPreferenceKey, 1) == 1;
             preferenceLoaded = true;
@@ -57,11 +86,19 @@ namespace GravityPuzzle.Infrastructure.Services
             ApplySoundState(enabled);
         }
 
-        /// <summary>Releases the source when its owning scene object is destroyed.</summary>
-        public static void Release(AudioSource audioSource)
+        /// <summary>Releases the sources when their owning scene object is destroyed.</summary>
+        public static void Release(AudioSource audioSource, AudioSource clockTickSource = null)
         {
             if (source == audioSource)
                 source = null;
+
+            if (clockTickSource != null && clockTickingSource == clockTickSource)
+            {
+                if (clockTickingSource.isPlaying)
+                    clockTickingSource.Stop();
+                clockTickingSource = null;
+                clockTickingRequested = false;
+            }
         }
 
         public static void ButtonClicked()
@@ -74,9 +111,52 @@ namespace GravityPuzzle.Infrastructure.Services
             if (config != null) Play(pieceDrops.Next(), config.PieceDropVolume);
         }
 
+        public static void ProgressBarFilled()
+        {
+            if (config == null)
+                return;
+
+            float now = Time.unscaledTime;
+            if (now < nextBarFillSoundTime)
+                return;
+
+            nextBarFillSoundTime = now + config.BarFillMinInterval;
+            Play(barFills.Next(), config.BarFillVolume);
+        }
+
         public static void HammerBreak()
         {
             if (config != null) Play(hammerBreaks.Next(), config.HammerBreakVolume);
+        }
+
+        public static void FreezeTimerImpact()
+        {
+            if (config != null) Play(freezeTimerImpacts.Next(), config.FreezeTimerImpactVolume);
+        }
+
+        public static void RocketLaunch()
+        {
+            if (config != null) Play(rocketLaunches.Next(), config.RocketLaunchVolume);
+        }
+
+        /// <summary>
+        /// Controls the looping countdown-urgency clock ticking track. Stops immediately
+        /// whenever the countdown pauses, freezes, exits the urgency window, or sound is muted.
+        /// </summary>
+        public static void SetClockTickingActive(bool active)
+        {
+            if (clockTickingRequested == active)
+            {
+                if (active && clockTickingSource != null && IsSoundEnabled &&
+                    clockTickingSource.clip != null && !clockTickingSource.isPlaying)
+                {
+                    clockTickingSource.Play();
+                }
+                return;
+            }
+
+            clockTickingRequested = active;
+            UpdateClockTickingPlayback();
         }
 
         private static void EnsurePreferenceLoaded()
@@ -99,7 +179,33 @@ namespace GravityPuzzle.Infrastructure.Services
                     source.Stop();
             }
 
+            UpdateClockTickingPlayback();
+
             SoundEnabledChanged?.Invoke(enabled);
+        }
+
+        private static void UpdateClockTickingPlayback()
+        {
+            if (clockTickingSource == null)
+                return;
+
+            bool enabled = IsSoundEnabled;
+            clockTickingSource.mute = !enabled;
+
+            if (!clockTickingRequested || !enabled || config == null || config.ClockTickingClip == null)
+            {
+                if (clockTickingSource.isPlaying)
+                    clockTickingSource.Stop();
+                return;
+            }
+
+            if (clockTickingSource.clip != config.ClockTickingClip)
+                clockTickingSource.clip = config.ClockTickingClip;
+            clockTickingSource.volume = config.ClockTickingVolume;
+            clockTickingSource.loop = true;
+
+            if (!clockTickingSource.isPlaying)
+                clockTickingSource.Play();
         }
 
         private static void Play(AudioClip clip, float volume)

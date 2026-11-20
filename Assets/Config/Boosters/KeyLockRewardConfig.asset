@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boosterType: 7
   visualPrefab: {fileID: 0}
-  presentationLevel: 54
+  presentationLevel: 53
   grantAmount: 1
   tutorialId: 
   tutorialTargetPieceId: 

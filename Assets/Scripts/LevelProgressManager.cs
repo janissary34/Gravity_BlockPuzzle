@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using DG.Tweening;
 using GravityPuzzle.Config;
 using GravityPuzzle.Infrastructure.Pooling;
+using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
 using GravityPuzzle.Presentation.VFX;
 
@@ -761,6 +762,8 @@ namespace GravityPuzzle
             }
 
             currentShreddedUnits += amount;
+            if (amount > 0f)
+                SoundFeedbackRuntime.ProgressBarFilled();
             if (totalBlockUnitsInLevel > 0)
             {
                 currentShreddedUnits = Mathf.Min(currentShreddedUnits, totalBlockUnitsInLevel);

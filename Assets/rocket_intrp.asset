@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelName: New Level
   difficulty: 0
-  timeLimit: 60
+  timeLimit: 210
   boardColumns: 6
   boardRows: 9
   subdivisions: 4
@@ -854,7 +854,7 @@ MonoBehaviour:
       type: 0
   - pieceId: 099f9b243b8945948f5136cc0302f3ef
     name: Piece 9
-    tutorialTargetId: 
+    tutorialTargetId: rocket_intro_target
     visualId: 
     paletteId: BlueLight
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}

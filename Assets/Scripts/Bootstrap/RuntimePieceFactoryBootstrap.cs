@@ -60,6 +60,9 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Text that displays the active campaign level number.")]
         [SerializeField] private TMP_Text levelDisplayText;
 
+        [Tooltip("Text that displays the active level difficulty (Normal, Hard, Very Hard).")]
+        [SerializeField] private TMP_Text difficultyDisplayText;
+
         [Tooltip("Text that displays the player's current coin total in the HUD.")]
         [SerializeField] private TMP_Text coinDisplayText;
 
@@ -83,6 +86,9 @@ namespace GravityPuzzle.Bootstrap
 
         [Tooltip("2D AudioSource that plays the sound cues. Uses the AudioSource on this object when empty.")]
         [SerializeField] private AudioSource soundFeedbackAudioSource;
+
+        [Tooltip("Dedicated looping 2D AudioSource for the final-10-second clock ticking urgency cue.")]
+        [SerializeField] private AudioSource clockTickingAudioSource;
 
         [Header("Ice Block Particles")]
         [Tooltip("Prefab template prewarmed once per possible ice block. A separate instance plays at every ice block.")]
@@ -109,7 +115,7 @@ namespace GravityPuzzle.Bootstrap
             HapticFeedbackRuntime.Configure(hapticFeedbackConfig);
             if (soundFeedbackAudioSource == null)
                 soundFeedbackAudioSource = GetComponent<AudioSource>();
-            SoundFeedbackRuntime.Configure(soundFeedbackConfig, soundFeedbackAudioSource);
+            SoundFeedbackRuntime.Configure(soundFeedbackConfig, soundFeedbackAudioSource, clockTickingAudioSource);
 
             if (gameplayCamera == null)
             {
@@ -155,8 +161,9 @@ namespace GravityPuzzle.Bootstrap
                     poolParent != null ? poolParent : transform);
             }
 
+            ResolveDifficultyDisplayText();
             ResolveCoinDisplayText();
-            UpdateLevelDisplays();
+            UpdateLevelDisplays(selectedLevel);
 
             string pieceValidationError = "BlockPiece prefab or PoolConfig is not assigned.";
             if (blockPiecePrefab == null || poolConfig == null ||
@@ -235,7 +242,31 @@ namespace GravityPuzzle.Bootstrap
         private void OnDestroy()
         {
             HapticFeedbackRuntime.StopAll();
-            SoundFeedbackRuntime.Release(soundFeedbackAudioSource);
+            SoundFeedbackRuntime.Release(soundFeedbackAudioSource, clockTickingAudioSource);
+        }
+
+        public static string FormatDifficultyLabel(LevelDifficulty difficulty)
+        {
+            return difficulty switch
+            {
+                LevelDifficulty.Hard => "Hard",
+                LevelDifficulty.VeryHard => "Very Hard",
+                _ => "Normal"
+            };
+        }
+
+        private void ResolveDifficultyDisplayText()
+        {
+            if (difficultyDisplayText != null || levelDisplayText == null)
+                return;
+
+            Transform levelRoot = levelDisplayText.transform.parent;
+            if (levelRoot == null)
+                return;
+
+            Transform difficultyTransform = levelRoot.Find("Level_Display_txt (1)");
+            if (difficultyTransform != null)
+                difficultyDisplayText = difficultyTransform.GetComponent<TMP_Text>();
         }
 
         private void ResolveCoinDisplayText()
@@ -254,12 +285,15 @@ namespace GravityPuzzle.Bootstrap
                 coinDisplayText = coinTextTransform.GetComponent<TMP_Text>();
         }
 
-        private void UpdateLevelDisplays()
+        private void UpdateLevelDisplays(GravityLevelDefinition selectedLevel)
         {
             int currentLevelNumber = GravityLevelRuntime.CurrentLevelNumber;
 
             if (levelDisplayText != null)
                 levelDisplayText.SetText("Level {0}", currentLevelNumber);
+
+            if (difficultyDisplayText != null && selectedLevel != null)
+                difficultyDisplayText.SetText(FormatDifficultyLabel(selectedLevel.difficulty));
 
             if (coinDisplayText != null)
                 coinDisplayText.SetText("{0}", GravityLevelRuntime.CurrentPlayerCoinAmount);

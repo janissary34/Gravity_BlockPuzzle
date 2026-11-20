@@ -6119,7 +6119,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Freeze Timer
+  m_text: COMBINED BLOCK
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e21d9fa883341484f8393b51730ca170, type: 2}
   m_sharedMaterial: {fileID: -4918373443893110478, guid: e21d9fa883341484f8393b51730ca170, type: 2}
@@ -7309,7 +7309,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd8a2e4bd7f484f4da73f315ec462461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rewardConfig: {fileID: 11400000, guid: b0d8f1e70966145a49123a9878dc7431, type: 2}
+  rewardConfig: {fileID: 11400000, guid: c4d8e2f6a1b94c739e5f1a2b3c4d5e6f, type: 2}
 --- !u!1 &696441303
 GameObject:
   m_ObjectHideFlags: 0
@@ -7754,11 +7754,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4524368692205569183, guid: c0ea24ebf7a4648319614f6060514ab3, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 8
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4524368692205569183, guid: c0ea24ebf7a4648319614f6060514ab3, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 158
+      value: 185
       objectReference: {fileID: 0}
     - target: {fileID: 4524368692205569183, guid: c0ea24ebf7a4648319614f6060514ab3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -7772,6 +7772,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4765223490843289187, guid: c0ea24ebf7a4648319614f6060514ab3, type: 3}
+      propertyPath: m_Type
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4765223490843289187, guid: c0ea24ebf7a4648319614f6060514ab3, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -2010444465, guid: ae286d28843744a49b02a896ba8ee505, type: 3}
     - target: {fileID: 4765223490843289187, guid: c0ea24ebf7a4648319614f6060514ab3, type: 3}
       propertyPath: m_PreserveAspect
       value: 1
@@ -10491,7 +10499,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Stops the timer for 10 seconds
+  m_text: Linked blocks move together!
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e21d9fa883341484f8393b51730ca170, type: 2}
   m_sharedMaterial: {fileID: -4918373443893110478, guid: e21d9fa883341484f8393b51730ca170, type: 2}
@@ -11045,6 +11053,7 @@ GameObject:
   - component: {fileID: 1938475613}
   - component: {fileID: 1938475615}
   - component: {fileID: 1938475616}
+  - component: {fileID: 1938475617}
   m_Layer: 0
   m_Name: Runtime Piece Factory Bootstrap
   m_TagString: Untagged
@@ -11091,6 +11100,7 @@ MonoBehaviour:
   boardPresentationConfig: {fileID: 11400000, guid: adbaa5034efef45b7b09a6f2133deaab, type: 2}
   levelRuntimeRoot: {fileID: 572866839}
   levelDisplayText: {fileID: 1749646611}
+  difficultyDisplayText: {fileID: 2085774164}
   coinDisplayText: {fileID: 0}
   retryLevelText: {fileID: 1749646596}
   failedLevelText: {fileID: 1749646597}
@@ -11098,6 +11108,7 @@ MonoBehaviour:
   hapticFeedbackConfig: {fileID: 11400000, guid: c1e49dc9cdd54cc895e661637e7d31a5, type: 2}
   soundFeedbackConfig: {fileID: 11400000, guid: 54d822fb5e5541aa9dd6eadaec3e8fca, type: 2}
   soundFeedbackAudioSource: {fileID: 1938475616}
+  clockTickingAudioSource: {fileID: 1938475617}
   iceCrackParticleSystem: {fileID: 201103893946865826, guid: 1d43b1e304cd647cd9efe8e2b5850a0a, type: 3}
   iceBreakParticleSystem: {fileID: 2705653447207242337, guid: 29661e01a9dad4bcc989a5f51be98bc7, type: 3}
   poolParent: {fileID: 1938475611}
@@ -11186,6 +11197,102 @@ AudioSource:
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!82 &1938475617
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1938475610}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0

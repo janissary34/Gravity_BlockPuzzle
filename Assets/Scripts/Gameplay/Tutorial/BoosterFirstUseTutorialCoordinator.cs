@@ -190,15 +190,24 @@ namespace GravityPuzzle.Gameplay.Tutorial
             if (button == null || !button.HasBoosterType)
                 return;
 
-            buttons[button.BoosterType] = button;
+            if (!buttons.TryGetValue(button.BoosterType, out BoosterButton existing) ||
+                existing == null ||
+                (button.OwnsLockedStateVisuals && !existing.OwnsLockedStateVisuals))
+            {
+                buttons[button.BoosterType] = button;
+            }
+
             if (IsFirstUseActive(button.BoosterType))
             {
+                button.UpdateCountUI();
+                button.RefreshButtonState();
                 button.SetSelectionGlowVisible(true);
             }
             if (state == BoosterFirstUseTutorialState.AwaitingBoosterTap &&
                 activeConfig != null && activeConfig.BoosterType == button.BoosterType)
             {
-                TutorialHandView.ShowForButton(button);
+                BoosterButton focusButton = buttons[button.BoosterType];
+                TutorialHandView.ShowForButton(focusButton);
             }
         }
 
@@ -417,6 +426,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
 
             if (button != null)
             {
+                BoosterFirstUseTutorialRuntime.RefreshButtons(config.BoosterType);
                 button.SetSelectionGlowVisible(true);
                 TutorialHandView.ShowForButton(button);
             }
@@ -650,7 +660,7 @@ namespace GravityPuzzle.Gameplay.Tutorial
             current?.RegisterButton(button);
         }
 
-        public static BoosterButton GetButton(BoosterRewardType boosterType)
+        public static void RefreshButtons(BoosterRewardType boosterType)
         {
             for (int i = registeredButtons.Count - 1; i >= 0; i--)
             {
@@ -662,8 +672,36 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 }
 
                 if (btn.HasBoosterType && btn.BoosterType == boosterType)
-                    return btn;
+                {
+                    btn.UpdateCountUI();
+                    btn.RefreshButtonState();
+                }
             }
+        }
+
+        public static BoosterButton GetButton(BoosterRewardType boosterType)
+        {
+            BoosterButton fallback = null;
+            for (int i = registeredButtons.Count - 1; i >= 0; i--)
+            {
+                BoosterButton btn = registeredButtons[i];
+                if (btn == null)
+                {
+                    registeredButtons.RemoveAt(i);
+                    continue;
+                }
+
+                if (btn.HasBoosterType && btn.BoosterType == boosterType)
+                {
+                    if (btn.OwnsLockedStateVisuals)
+                        return btn;
+                    if (fallback == null)
+                        fallback = btn;
+                }
+            }
+
+            if (fallback != null)
+                return fallback;
 
             BoosterButton[] allButtons = UnityEngine.Object.FindObjectsByType<BoosterButton>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             for (int i = 0; i < allButtons.Length; i++)
@@ -671,11 +709,14 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 if (allButtons[i] != null && allButtons[i].HasBoosterType && allButtons[i].BoosterType == boosterType)
                 {
                     RegisterButton(allButtons[i]);
-                    return allButtons[i];
+                    if (allButtons[i].OwnsLockedStateVisuals)
+                        return allButtons[i];
+                    if (fallback == null)
+                        fallback = allButtons[i];
                 }
             }
 
-            return null;
+            return fallback;
         }
     }
 }

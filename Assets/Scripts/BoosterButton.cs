@@ -111,6 +111,16 @@ namespace GravityPuzzle
             }
         }
 
+        public bool OwnsLockedStateVisuals
+        {
+            get
+            {
+                if (enabledVisualRoot == null && disabledVisualRoot == null && lockRoot == null)
+                    FindLockReferences();
+                return enabledVisualRoot != null || disabledVisualRoot != null || lockRoot != null;
+            }
+        }
+
         public GameObject SelectionGlow
         {
             get
@@ -532,6 +542,9 @@ namespace GravityPuzzle
                 SetSelectionGlowVisible(false);
                 return;
             }
+
+            if (enabledVisualRoot == null && disabledVisualRoot == null && lockRoot == null)
+                FindLockReferences();
 
             bool isIntroduced = IsIntroduced;
 

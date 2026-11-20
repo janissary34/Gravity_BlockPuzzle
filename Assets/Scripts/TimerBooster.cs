@@ -3,6 +3,7 @@ using DG.Tweening;
 using TMPro;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Tutorial;
+using GravityPuzzle.Infrastructure.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -782,6 +783,7 @@ namespace GravityPuzzle
                 // button press. This keeps the vignette synchronized with the
                 // clock reaching the timer display.
                 SetUrgencyPresentationVisible(true, false);
+                SoundFeedbackRuntime.FreezeTimerImpact();
                 PlayTimerImpactParticles();
                 StartFreezeAmbientPresentation();
                 BeginFreezePresentationLifetime();
