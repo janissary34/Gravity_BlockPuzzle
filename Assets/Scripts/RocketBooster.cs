@@ -461,7 +461,7 @@ namespace GravityPuzzle
 
             GameObject rocket = rocketView.gameObject;
             rocket.transform.position = new Vector3(boxCenter.x, camY - camOrtho - 6f, -3f);
-            rocket.transform.rotation = Quaternion.identity;
+            rocket.transform.rotation = rocketView.AuthoredRotation;
             SetSortingOrder(rocket, rocketSortingOrder);
 
             Tween entranceTween = rocket.transform.DOMove(centerPos, tweenConfig.RocketEntranceDuration)
@@ -579,7 +579,7 @@ namespace GravityPuzzle
             GameObject rocket = rocketView.gameObject;
             // 1. Rent Rocket Visual at off-screen bottom position
             rocket.transform.position = startPos;
-            rocket.transform.rotation = Quaternion.identity;
+            rocket.transform.rotation = rocketView.AuthoredRotation;
             SetSortingOrder(rocket, rocketSortingOrder);
 
             // 2. Animate rocket from screen bottom up to piece center.

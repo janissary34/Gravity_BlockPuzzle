@@ -26,6 +26,10 @@ namespace GravityPuzzle
         private static RevealPresentationConfig configuredRevealPresentationConfig;
         private static BoardPresentationConfig configuredBoardPresentationConfig;
         private static LevelRuntimeRoot configuredLevelRuntimeRoot;
+        private static ShredderConfig configuredShredderConfig;
+#if UNITY_EDITOR
+        private static float? editorCameraAspectOverride;
+#endif
         private static Sprite obstacleJoinSprite;
         private static Sprite obstacleJoinSpriteSource;
         private static Sprite obstacleSlicedSprite;
@@ -52,6 +56,10 @@ namespace GravityPuzzle
             configuredRevealPresentationConfig = null;
             configuredBoardPresentationConfig = null;
             configuredLevelRuntimeRoot = null;
+            configuredShredderConfig = null;
+#if UNITY_EDITOR
+            editorCameraAspectOverride = null;
+#endif
             obstacleJoinSprite = null;
             obstacleJoinSpriteSource = null;
             obstacleSlicedSprite = null;
@@ -134,15 +142,21 @@ namespace GravityPuzzle
         public static void BuildAuthoredGeometryPreview(
             GravityLevelDefinition level,
             BoardPresentationConfig presentationConfig,
-            LevelRuntimeRoot root)
+            LevelRuntimeRoot root,
+            ShredderConfig shredderConfig = null,
+            float? cameraAspectOverride = null)
         {
             if (level == null || root == null)
                 return;
 
             BoardPresentationConfig previousConfig = configuredBoardPresentationConfig;
             LevelRuntimeRoot previousRoot = configuredLevelRuntimeRoot;
+            ShredderConfig previousShredderConfig = configuredShredderConfig;
+            float? previousAspectOverride = editorCameraAspectOverride;
             configuredBoardPresentationConfig = presentationConfig;
             configuredLevelRuntimeRoot = root;
+            configuredShredderConfig = shredderConfig;
+            editorCameraAspectOverride = cameraAspectOverride;
             try
             {
                 float exitWidth = Mathf.Clamp(
@@ -158,6 +172,8 @@ namespace GravityPuzzle
             {
                 configuredBoardPresentationConfig = previousConfig;
                 configuredLevelRuntimeRoot = previousRoot;
+                configuredShredderConfig = previousShredderConfig;
+                editorCameraAspectOverride = previousAspectOverride;
             }
         }
 #endif
@@ -437,33 +453,90 @@ namespace GravityPuzzle
             boardState.ShowQueuedBoosterReward();
         }
 
+        private static ShredderConfig ResolveShredderConfig()
+        {
+            if (configuredShredderConfig != null)
+                return configuredShredderConfig;
+
+            return BlockShredder.Instance != null ? BlockShredder.Instance.Config : null;
+        }
+
+        private static float ResolveEffectiveShredderDropBelowBoard(
+            GravityLevelDefinition level,
+            ShredderConfig shredderConfig)
+        {
+            float handoffDistance = shredderConfig != null
+                ? shredderConfig.PhysicsHandoffDistanceBelowMap
+                : 0f;
+            float freefallDistance = shredderConfig != null
+                ? shredderConfig.PhysicsFreefallDistanceBelowHandoff
+                : 0f;
+            return GravityGridMetrics.EffectiveShredderDropBelowBoard(
+                level,
+                handoffDistance,
+                freefallDistance);
+        }
+
+        private static void ResolveFramedVerticalBounds(
+            GravityLevelDefinition level,
+            ShredderConfig shredderConfig,
+            out float framedTop,
+            out float framedBottom)
+        {
+            float halfHeight = level.boardRows * .5f;
+            float frameTopAllowance = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.FrameTopAllowance
+                : .55f;
+            float effectiveDrop = ResolveEffectiveShredderDropBelowBoard(level, shredderConfig);
+            int wheelCount = CalculateRequiredShredderWheelCount(level, shredderConfig);
+            float wheelRadius = level.boardColumns / (wheelCount * 2f);
+            framedTop = halfHeight + frameTopAllowance;
+            framedBottom = -halfHeight - effectiveDrop - wheelRadius * 2f;
+        }
+
         private static float ResolveCameraSize(GravityLevelDefinition level)
         {
-            float levelCameraSize;
+            float presentationMargin = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.CameraSizeMultiplier
+                : 1f;
             if (!level.useAutomaticCameraFit)
-                levelCameraSize = level.fixedCameraSize;
-            else
-            {
-                float safeWidthFraction = level.useRuntimeSafeAreaForCameraFit
-                    ? SafeAreaWidthFraction()
-                    : 1f;
-                float safeHeightFraction = level.useRuntimeSafeAreaForCameraFit
-                    ? SafeAreaHeightFraction()
-                    : 1f;
+                return level.fixedCameraSize * presentationMargin;
 
-                levelCameraSize = GravityGridMetrics.CameraSize(
+            float safeWidthFraction = level.useRuntimeSafeAreaForCameraFit
+                ? SafeAreaWidthFraction()
+                : 1f;
+            float safeHeightFraction = level.useRuntimeSafeAreaForCameraFit
+                ? SafeAreaHeightFraction()
+                : 1f;
+
+            if (configuredBoardPresentationConfig != null &&
+                configuredBoardPresentationConfig.CenterBoardAndShredderVertically)
+            {
+                ResolveFramedVerticalBounds(
+                    level,
+                    ResolveShredderConfig(),
+                    out float framedTop,
+                    out float framedBottom);
+                return GravityGridMetrics.FramedCameraSize(
                     level.boardColumns,
-                    level.boardRows,
+                    framedTop - framedBottom,
                     CameraAspect(),
                     safeWidthFraction,
                     safeHeightFraction,
                     level.cameraViewportWidth,
-                    level.cameraViewportHeight);
+                    presentationMargin,
+                    configuredBoardPresentationConfig.BoardTopViewportInset,
+                    configuredBoardPresentationConfig.BoardBottomViewportInset);
             }
 
-            float presentationMargin = configuredBoardPresentationConfig != null
-                ? configuredBoardPresentationConfig.CameraSizeMultiplier
-                : 1f;
+            float levelCameraSize = GravityGridMetrics.CameraSize(
+                level.boardColumns,
+                level.boardRows,
+                CameraAspect(),
+                safeWidthFraction,
+                safeHeightFraction,
+                level.cameraViewportWidth,
+                level.cameraViewportHeight);
             return levelCameraSize * presentationMargin;
         }
 
@@ -471,10 +544,26 @@ namespace GravityPuzzle
             GravityLevelDefinition level,
             float cameraSize)
         {
-            float boardTop = level.boardRows * .5f;
             float topInset = configuredBoardPresentationConfig != null
                 ? configuredBoardPresentationConfig.BoardTopViewportInset
-                : .24f;
+                : .23f;
+            if (configuredBoardPresentationConfig != null &&
+                configuredBoardPresentationConfig.CenterBoardAndShredderVertically)
+            {
+                ResolveFramedVerticalBounds(
+                    level,
+                    ResolveShredderConfig(),
+                    out float framedTop,
+                    out float framedBottom);
+                return GravityGridMetrics.CenteredCameraVerticalPosition(
+                    framedTop,
+                    framedBottom,
+                    cameraSize,
+                    topInset,
+                    configuredBoardPresentationConfig.BoardBottomViewportInset);
+            }
+
+            float boardTop = level.boardRows * .5f;
             return boardTop - (0.5f - topInset) * cameraSize * 2f;
         }
 
@@ -1920,13 +2009,11 @@ namespace GravityPuzzle
             float spacing = radius * 2f;
             float startX = -(count - 1) * spacing * .5f;
             
-            // Lower the shredders so their top edge (y + radius) is exactly at the bottom of the board (-halfHeight).
-            // This prevents blocks resting on the shredder from being pushed vertically out of the grid alignment.
-            float handoffDistance = shredderConfig != null
-                ? shredderConfig.PhysicsHandoffDistanceBelowMap : 0f;
-            float freefallDistance = shredderConfig != null
-                ? shredderConfig.PhysicsFreefallDistanceBelowHandoff : 0f;
-            float y = -halfHeight - handoffDistance - freefallDistance - radius;
+            // Place the shredder consistently below the level's lowest occupied row
+            // while always preserving at least PhysicsHandoffDistanceBelowMap
+            // clearance below the authoritative board bottom (-halfHeight).
+            float effectiveDrop = ResolveEffectiveShredderDropBelowBoard(level, shredderConfig);
+            float y = -halfHeight - effectiveDrop - radius;
 
             for (int i = 0; i < count; i++)
             {
@@ -2614,6 +2701,10 @@ namespace GravityPuzzle
 
         private static float CameraAspect()
         {
+#if UNITY_EDITOR
+            if (editorCameraAspectOverride.HasValue && editorCameraAspectOverride.Value > .01f)
+                return editorCameraAspectOverride.Value;
+#endif
             return Screen.height > 0 ? (float)Screen.width / Screen.height : 9f / 16f;
         }
 

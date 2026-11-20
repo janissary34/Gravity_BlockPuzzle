@@ -16,8 +16,8 @@ namespace GravityPuzzle.Editor
     /// </summary>
     public static class SceneTunaBoardFrameAuthoring
     {
-        private const string FramePrefabPath = "Assets/Prefabs/SceneTunaBoardFrame.prefab";
-        private const string RuntimeRootPrefabPath = "Assets/Prefabs/LevelRuntimeRoot.prefab";
+        private const string FramePrefabPath = "Assets/MainPrefabs/SceneTunaBoardFrame.prefab";
+        private const string RuntimeRootPrefabPath = "Assets/MainPrefabs/LevelRuntimeRoot.prefab";
         private const string FrameRootName = "Scene Tuna Board Frame";
         private const string LegacyFramePrefabRootName = "SceneTunaBoardFrame";
         private const string CompositeFrameRootName = "Composite Board Frame";

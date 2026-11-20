@@ -15,6 +15,7 @@ namespace GravityPuzzle.Presentation.Views
         [Tooltip("Optional authored impact point used by a booster presentation.")]
         [SerializeField] private Transform impactPoint;
         private Vector3 authoredScale;
+        private Quaternion authoredRotation;
         private Vector3 impactPointLocalPosition;
 
         private void Awake()
@@ -22,6 +23,8 @@ namespace GravityPuzzle.Presentation.Views
             authoredScale = transform.localScale.sqrMagnitude > 0.0001f
                 ? transform.localScale
                 : Vector3.one;
+
+            authoredRotation = transform.localRotation;
 
             if (impactPoint == null)
                 impactPoint = transform.Find(ImpactPointChildName);
@@ -31,6 +34,7 @@ namespace GravityPuzzle.Presentation.Views
         }
 
         public Vector3 AuthoredScale => authoredScale;
+        public Quaternion AuthoredRotation => authoredRotation;
         public bool HasImpactPoint => impactPoint != null;
         public Vector3 ImpactPointLocalPosition => impactPointLocalPosition;
 
@@ -38,14 +42,14 @@ namespace GravityPuzzle.Presentation.Views
         {
             transform.DOKill();
             transform.localScale = authoredScale;
-            transform.localRotation = Quaternion.identity;
+            transform.localRotation = authoredRotation;
         }
 
         public void OnDespawn()
         {
             transform.DOKill();
             transform.localScale = authoredScale;
-            transform.localRotation = Quaternion.identity;
+            transform.localRotation = authoredRotation;
         }
     }
 }

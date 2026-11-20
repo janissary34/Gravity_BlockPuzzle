@@ -105,6 +105,19 @@ namespace GravityPuzzle.Presentation.Views
                 return usedCount;
             }
         }
+        public int PeakFrameModuleRoleSlotCount
+        {
+            get
+            {
+                int peakCount = 0;
+                for (int index = 0; index < frameModulePools.Length; index++)
+                {
+                    if (frameModulePools[index] != null && frameModulePools[index].UsedCount > peakCount)
+                        peakCount = frameModulePools[index].UsedCount;
+                }
+                return peakCount;
+            }
+        }
         public int UsedObstacleCollisionSlotCount => obstacleCollisionSlotIndex;
         public int UsedMapCollisionSlotCount => mapCollisionSlotIndex;
 #endif

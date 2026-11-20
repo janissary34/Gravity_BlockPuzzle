@@ -68,6 +68,217 @@ namespace GravityPuzzle
                                    Mathf.Clamp(safeHeightFraction, .5f, 1f));
             return Mathf.Max(widthLimited, heightLimited);
         }
+
+        /// <summary>
+        /// Computes an orthographic camera size that fits both the board width
+        /// (with its presentation margin) and the full vertical board+shredder
+        /// span inside the viewport band between top HUD and bottom Booster UI.
+        /// </summary>
+        public static float FramedCameraSize(
+            float columns,
+            float framedHeight,
+            float aspect,
+            float safeWidthFraction,
+            float safeHeightFraction,
+            float viewportWidth,
+            float horizontalMarginMultiplier,
+            float topViewportInset,
+            float bottomViewportInset)
+        {
+            float clampedSafeWidth = Mathf.Clamp(safeWidthFraction, .5f, 1f);
+            float clampedSafeHeight = Mathf.Clamp(safeHeightFraction, .5f, 1f);
+            float widthLimited = columns * .5f /
+                                 (Mathf.Max(.25f, aspect) * Mathf.Clamp(viewportWidth, .1f, 1f) *
+                                  clampedSafeWidth) *
+                                 Mathf.Max(1f, horizontalMarginMultiplier);
+            float clampedTop = Mathf.Clamp(topViewportInset, .05f, .45f);
+            float clampedBottom = Mathf.Clamp(bottomViewportInset, .05f, .45f);
+            float usableVerticalBand = Mathf.Max(.1f, 1f - clampedTop - clampedBottom);
+            float heightLimited = Mathf.Max(.001f, framedHeight) * .5f /
+                                  (usableVerticalBand * clampedSafeHeight);
+            return Mathf.Max(widthLimited, heightLimited);
+        }
+
+        /// <summary>
+        /// Vertically centers the world-space interval [framedBottom, framedTop]
+        /// inside the normalized viewport safe band [bottomViewportInset, 1 - topViewportInset].
+        /// </summary>
+        public static float CenteredCameraVerticalPosition(
+            float framedTop,
+            float framedBottom,
+            float cameraSize,
+            float topViewportInset,
+            float bottomViewportInset)
+        {
+            float safeTop = 1f - Mathf.Clamp(topViewportInset, .05f, .45f);
+            float safeBottom = Mathf.Clamp(bottomViewportInset, .05f, .45f);
+            float safeMid = (safeTop + safeBottom) * .5f;
+            float framedMid = (framedTop + framedBottom) * .5f;
+            return framedMid - (safeMid - .5f) * cameraSize * 2f;
+        }
+
+        /// <summary>
+        /// Counts contiguous coarse rows at the bottom of the board (y = 0, 1, ...)
+        /// that contain no authored gameplay content or map cut-outs. Used only to
+        /// avoid stacking empty authored bottom rows on top of the shredder drop gap.
+        /// </summary>
+        public static int CountOpenEmptyBottomRows(GravityLevelDefinition level)
+        {
+            if (level == null || level.boardRows <= 0)
+                return 0;
+
+            int subdivisions = Mathf.Max(1, level.subdivisions);
+            int lowestOccupiedRow = level.boardRows;
+            bool hasAnyContent = false;
+
+            if (level.obstacles != null)
+            {
+                for (int index = 0; index < level.obstacles.Count; index++)
+                {
+                    ObstacleDefinition obstacle = level.obstacles[index];
+                    if (obstacle == null)
+                        continue;
+
+                    hasAnyContent = true;
+                    int minRow;
+                    if (obstacle.usesGridCells)
+                    {
+                        minRow = obstacle.gridCell.y;
+                    }
+                    else
+                    {
+                        int fineHeight = obstacle.quarterTurns % 2 == 0
+                            ? obstacle.sizeInFineCells.y
+                            : obstacle.sizeInFineCells.x;
+                        int bottomFineY = obstacle.centreCell.y - fineHeight / 2;
+                        minRow = Mathf.FloorToInt((float)bottomFineY / subdivisions);
+                    }
+
+                    if (minRow < lowestOccupiedRow)
+                        lowestOccupiedRow = minRow;
+                }
+            }
+
+            ConsiderPieceListBottomRow(level.pieces, subdivisions, ref lowestOccupiedRow, ref hasAnyContent);
+
+            if (level.boxes != null)
+            {
+                for (int index = 0; index < level.boxes.Count; index++)
+                {
+                    BoxRevealDefinition box = level.boxes[index];
+                    if (box == null)
+                        continue;
+
+                    hasAnyContent = true;
+                    int minRow = Mathf.FloorToInt((float)box.bounds.origin.y / subdivisions);
+                    if (minRow < lowestOccupiedRow)
+                        lowestOccupiedRow = minRow;
+                    ConsiderPieceListBottomRow(box.hiddenPieces, subdivisions, ref lowestOccupiedRow, ref hasAnyContent);
+                }
+            }
+
+            if (level.elevators != null)
+            {
+                for (int index = 0; index < level.elevators.Count; index++)
+                {
+                    ElevatorRevealDefinition elevator = level.elevators[index];
+                    if (elevator == null)
+                        continue;
+
+                    hasAnyContent = true;
+                    int minRow = Mathf.FloorToInt((float)elevator.bounds.origin.y / subdivisions);
+                    if (minRow < lowestOccupiedRow)
+                        lowestOccupiedRow = minRow;
+                    ConsiderPieceListBottomRow(elevator.hiddenPieces, subdivisions, ref lowestOccupiedRow, ref hasAnyContent);
+                }
+            }
+
+            if (level.pins != null)
+            {
+                for (int index = 0; index < level.pins.Count; index++)
+                {
+                    PinDefinition pin = level.pins[index];
+                    if (pin == null)
+                        continue;
+
+                    hasAnyContent = true;
+                    int minRow = Mathf.FloorToInt((float)pin.cell.y / subdivisions);
+                    if (minRow < lowestOccupiedRow)
+                        lowestOccupiedRow = minRow;
+                }
+            }
+
+            if (level.inactiveBoardCells != null)
+            {
+                for (int index = 0; index < level.inactiveBoardCells.Count; index++)
+                {
+                    int minRow = level.inactiveBoardCells[index].y;
+                    if (minRow < lowestOccupiedRow)
+                        lowestOccupiedRow = minRow;
+                }
+            }
+
+            if (level.inactiveFineCells != null)
+            {
+                for (int index = 0; index < level.inactiveFineCells.Count; index++)
+                {
+                    int minRow = Mathf.FloorToInt((float)level.inactiveFineCells[index].y / subdivisions);
+                    if (minRow < lowestOccupiedRow)
+                        lowestOccupiedRow = minRow;
+                }
+            }
+
+            if (!hasAnyContent)
+                return 0;
+
+            return Mathf.Clamp(lowestOccupiedRow, 0, level.boardRows);
+        }
+
+        /// <summary>
+        /// Computes the world-space distance between the board bottom (-halfHeight)
+        /// and the shredder top mouth. Compensates for trailing empty authored bottom
+        /// rows while always preserving at least <paramref name="handoffDistanceBelowMap"/>
+        /// clearance below the authoritative grid bottom.
+        /// </summary>
+        public static float EffectiveShredderDropBelowBoard(
+            GravityLevelDefinition level,
+            float handoffDistanceBelowMap,
+            float freefallDistanceBelowHandoff)
+        {
+            float minClearance = Mathf.Max(0f, handoffDistanceBelowMap);
+            float configuredTotalDrop = minClearance + Mathf.Max(0f, freefallDistanceBelowHandoff);
+            int openEmptyBottomRows = CountOpenEmptyBottomRows(level);
+            return Mathf.Max(minClearance, configuredTotalDrop - openEmptyBottomRows);
+        }
+
+        private static void ConsiderPieceListBottomRow(
+            List<PieceDefinition> pieces,
+            int subdivisions,
+            ref int lowestOccupiedRow,
+            ref bool hasAnyContent)
+        {
+            if (pieces == null)
+                return;
+
+            for (int pieceIndex = 0; pieceIndex < pieces.Count; pieceIndex++)
+            {
+                PieceDefinition piece = pieces[pieceIndex];
+                if (piece == null || piece.cells == null || piece.cells.Count == 0)
+                    continue;
+
+                hasAnyContent = true;
+                for (int cellIndex = 0; cellIndex < piece.cells.Count; cellIndex++)
+                {
+                    Vector2Int rotated = QuarterTurnUtility.Rotate(
+                        piece.cells[cellIndex].localCell,
+                        piece.quarterTurns);
+                    int worldFineY = piece.origin.y + rotated.y;
+                    int minRow = Mathf.FloorToInt((float)worldFineY / subdivisions);
+                    if (minRow < lowestOccupiedRow)
+                        lowestOccupiedRow = minRow;
+                }
+            }
+        }
     }
 
     [CreateAssetMenu(fileName = "GravityLevel", menuName = "Gravity Puzzle/Level")]

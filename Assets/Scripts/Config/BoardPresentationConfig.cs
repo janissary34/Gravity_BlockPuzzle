@@ -84,8 +84,14 @@ namespace GravityPuzzle.Config
         [Header("Camera Framing")]
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
         [SerializeField, Min(1f)] private float cameraSizeMultiplier = 1.2f;
-        [Tooltip("Shared empty-space fraction above the board, measured from the top of the gameplay viewport. Lower values move every board upward while preserving a consistent screen position across different board sizes.")]
-        [SerializeField, Range(.05f, .45f)] private float boardTopViewportInset = .24f;
+        [Tooltip("Shared empty-space fraction above the framed board+shredder block, measured from the top of the gameplay viewport.")]
+        [SerializeField, Range(.05f, .45f)] private float boardTopViewportInset = .23f;
+        [Tooltip("Shared empty-space fraction below the framed board+shredder block, measured from the bottom of the gameplay viewport to clear the Booster HUD bar.")]
+        [SerializeField, Range(.05f, .45f)] private float boardBottomViewportInset = .21f;
+        [Tooltip("World-space height above the top grid edge reserved for the decorative top frame rail when fitting the camera.")]
+        [SerializeField, Min(0f)] private float frameTopAllowance = .55f;
+        [Tooltip("When enabled, fits and vertically centers the complete board + shredder block inside the safe band between the top HUD and bottom Booster bar.")]
+        [SerializeField] private bool centerBoardAndShredderVertically = true;
 
         [Header("Scene Tuna Frame Atlas")]
         [SerializeField] private Sprite topEdge;
@@ -154,6 +160,9 @@ namespace GravityPuzzle.Config
         public Color EnvironmentTint => environmentTint;
         public float CameraSizeMultiplier => Mathf.Max(1f, cameraSizeMultiplier);
         public float BoardTopViewportInset => Mathf.Clamp(boardTopViewportInset, .05f, .45f);
+        public float BoardBottomViewportInset => Mathf.Clamp(boardBottomViewportInset, .05f, .45f);
+        public float FrameTopAllowance => Mathf.Max(0f, frameTopAllowance);
+        public bool CenterBoardAndShredderVertically => centerBoardAndShredderVertically;
         public Material EnvironmentBackdropMaterial => environmentBackdropMaterial;
         public Material ExteriorEdgeDarkeningMaterial => exteriorEdgeDarkeningMaterial;
         public float ExteriorEdgeDarkeningWidth => Mathf.Max(.1f, exteriorEdgeDarkeningWidth);

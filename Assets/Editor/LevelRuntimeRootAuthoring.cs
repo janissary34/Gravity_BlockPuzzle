@@ -14,14 +14,21 @@ namespace GravityPuzzle.Editor
 {
     public static class LevelRuntimeRootAuthoring
     {
-        private const string PrefabPath = "Assets/Prefabs/LevelRuntimeRoot.prefab";
-        private const string SceneTunaBoardFramePrefabPath = "Assets/Prefabs/SceneTunaBoardFrame.prefab";
+        private const string PrefabPath = "Assets/MainPrefabs/LevelRuntimeRoot.prefab";
+        private const string SceneTunaBoardFramePrefabPath = "Assets/MainPrefabs/SceneTunaBoardFrame.prefab";
+        private const string DefaultShredderConfigPath = "Assets/ShredderConfig.asset";
         private const string FallbackSpritePath = "Assets/Sprites/Generated/LevelRuntimeSquare.png";
         private const int MinimumVisualCapacity = 512;
         private const int MinimumMapCollisionCapacity = 256;
         private const int MinimumObstacleCollisionCapacity = 64;
-        private const int CapacitySafetyMargin = 32;
+        private const int MinimumFrameModuleRoleCapacity = 32;
+        private const int CapacitySafetyMargin = 64;
         private const int MaximumCapacityAttempts = 5;
+        // Validate across both ultra-tall portrait phones (21:9) and standard 16:9
+        // portrait devices so Edit Mode window aspect cannot under-size baked slots.
+        private const float WorstCaseMobilePortraitAspect = 9f / 21f;
+        private const float StandardMobilePortraitAspect = 9f / 16f;
+        private const float PreviewMobilePortraitAspect = 9f / 19.5f;
 
         [MenuItem("Gravity Puzzle/Level Authoring/Rebuild Level Runtime Root")]
         public static void RebuildLevelRuntimeRoot()
@@ -45,6 +52,7 @@ namespace GravityPuzzle.Editor
             }
 
             Sprite fallbackSprite = LoadOrCreateFallbackSprite();
+            ShredderConfig shredderConfig = FindShredderConfigInActiveScene();
             EstimateCapacities(
                 sequence.levels,
                 out int visualCapacity,
@@ -72,15 +80,24 @@ namespace GravityPuzzle.Editor
                     ValidateEveryLevel(
                         sequence.levels,
                         presentationConfig,
+                        shredderConfig,
                         root,
                         out int peakVisualCount,
                         out int peakObstacleCount,
                         out int peakMapCount,
                         out int peakFrameModuleCount);
-                    visualCapacity = peakVisualCount + CapacitySafetyMargin;
-                    obstacleCapacity = peakObstacleCount + CapacitySafetyMargin;
-                    mapCapacity = peakMapCount + CapacitySafetyMargin;
-                    frameModuleCapacity = peakFrameModuleCount + CapacitySafetyMargin;
+                    visualCapacity = Mathf.Max(
+                        MinimumVisualCapacity,
+                        peakVisualCount + CapacitySafetyMargin);
+                    obstacleCapacity = Mathf.Max(
+                        MinimumObstacleCollisionCapacity,
+                        peakObstacleCount + CapacitySafetyMargin);
+                    mapCapacity = Mathf.Max(
+                        MinimumMapCollisionCapacity,
+                        peakMapCount + CapacitySafetyMargin);
+                    frameModuleCapacity = Mathf.Max(
+                        MinimumFrameModuleRoleCapacity,
+                        peakFrameModuleCount + CapacitySafetyMargin);
 
                     Object.DestroyImmediate(template);
                     template = CreateTemplate(
@@ -93,6 +110,7 @@ namespace GravityPuzzle.Editor
                     ValidateEveryLevel(
                         sequence.levels,
                         presentationConfig,
+                        shredderConfig,
                         root,
                         out _,
                         out _,
@@ -118,7 +136,12 @@ namespace GravityPuzzle.Editor
             }
 
             GravityLevelDefinition previewLevel = FirstValidLevel(sequence.levels);
-            GravityLevelRuntime.BuildAuthoredGeometryPreview(previewLevel, presentationConfig, root);
+            GravityLevelRuntime.BuildAuthoredGeometryPreview(
+                previewLevel,
+                presentationConfig,
+                root,
+                shredderConfig,
+                PreviewMobilePortraitAspect);
             PrefabUtility.SaveAsPrefabAsset(template, PrefabPath);
             Object.DestroyImmediate(template);
 
@@ -129,7 +152,7 @@ namespace GravityPuzzle.Editor
 
             Debug.Log(
                 $"[LevelAuthoring] LevelRuntimeRoot authored with {visualCapacity} visual, " +
-                $"{frameModuleCapacity} Scene Tuna frame modules, {obstacleCapacity} obstacle-collision " +
+                $"{frameModuleCapacity} per-role Scene Tuna frame modules, {obstacleCapacity} obstacle-collision " +
                 $"and {mapCapacity} map-collision slots.",
                 bootstrap);
         }
@@ -232,11 +255,10 @@ namespace GravityPuzzle.Editor
             GameObject contents = PrefabUtility.LoadPrefabContents(SceneTunaBoardFramePrefabPath);
             try
             {
-                // Validation reports total modules across the four repeated-edge
-                // roles.  Keep the prefab compact by translating that total into
-                // a per-role capacity; validation retries if a particular edge
-                // needs more slots than the estimate.
-                int poolCapacity = Mathf.Max(8, Mathf.CeilToInt(requiredCapacity / 4f));
+                // Size every repeated-edge role directly from the measured
+                // per-role peak so tall side rails never exhaust while keeping
+                // corner pools compact.
+                int poolCapacity = Mathf.Max(MinimumFrameModuleRoleCapacity, requiredCapacity);
                 BoardFrameModuleRole[] roles =
                 {
                     BoardFrameModuleRole.TopLeftCorner,
@@ -379,6 +401,7 @@ namespace GravityPuzzle.Editor
         private static void ValidateEveryLevel(
             IReadOnlyList<GravityLevelDefinition> levels,
             BoardPresentationConfig presentationConfig,
+            ShredderConfig shredderConfig,
             LevelRuntimeRoot root,
             out int peakVisualCount,
             out int peakObstacleCount,
@@ -389,12 +412,26 @@ namespace GravityPuzzle.Editor
             peakObstacleCount = 0;
             peakMapCount = 0;
             peakFrameModuleCount = 0;
+            float[] validationAspects =
+            {
+                WorstCaseMobilePortraitAspect,
+                StandardMobilePortraitAspect
+            };
+
             for (int index = 0; index < levels.Count; index++)
             {
                 GravityLevelDefinition level = levels[index];
-                if (level != null)
+                if (level == null)
+                    continue;
+
+                for (int aspectIndex = 0; aspectIndex < validationAspects.Length; aspectIndex++)
                 {
-                    GravityLevelRuntime.BuildAuthoredGeometryPreview(level, presentationConfig, root);
+                    GravityLevelRuntime.BuildAuthoredGeometryPreview(
+                        level,
+                        presentationConfig,
+                        root,
+                        shredderConfig,
+                        validationAspects[aspectIndex]);
                     peakVisualCount = Mathf.Max(peakVisualCount, root.UsedVisualSlotCount);
                     peakObstacleCount = Mathf.Max(
                         peakObstacleCount,
@@ -402,9 +439,22 @@ namespace GravityPuzzle.Editor
                     peakMapCount = Mathf.Max(peakMapCount, root.UsedMapCollisionSlotCount);
                     peakFrameModuleCount = Mathf.Max(
                         peakFrameModuleCount,
-                        root.UsedFrameModuleSlotCount);
+                        root.PeakFrameModuleRoleSlotCount);
                 }
             }
+        }
+
+        private static ShredderConfig FindShredderConfigInActiveScene()
+        {
+            GameObject[] roots = SceneManager.GetActiveScene().GetRootGameObjects();
+            for (int index = 0; index < roots.Length; index++)
+            {
+                BlockShredder shredder = roots[index].GetComponentInChildren<BlockShredder>(true);
+                if (shredder != null && shredder.Config != null)
+                    return shredder.Config;
+            }
+
+            return AssetDatabase.LoadAssetAtPath<ShredderConfig>(DefaultShredderConfigPath);
         }
 
         private static void ReplaceSceneInstance(
@@ -501,7 +551,7 @@ namespace GravityPuzzle.Editor
             visualCapacity = MinimumVisualCapacity;
             obstacleCapacity = MinimumObstacleCollisionCapacity;
             mapCapacity = MinimumMapCollisionCapacity;
-            frameModuleCapacity = 0;
+            frameModuleCapacity = MinimumFrameModuleRoleCapacity;
 
             for (int index = 0; index < levels.Count; index++)
             {
@@ -510,14 +560,13 @@ namespace GravityPuzzle.Editor
                     continue;
 
                 int boardAndLowerGridUpperBound = CountBoardVisuals(level) + level.boardColumns * 24;
-                int frameUpperBound = (level.FineColumns + level.FineRows) * 2 + 24;
-                frameModuleCapacity = Mathf.Max(frameModuleCapacity, frameUpperBound + CapacitySafetyMargin);
+                int perEdgeUpperBound = Mathf.Max(level.boardColumns, level.boardRows + 24) * 2 + 8;
+                frameModuleCapacity = Mathf.Max(frameModuleCapacity, perEdgeUpperBound + CapacitySafetyMargin);
                 int obstacleCellCount = CountObstacleCells(level);
                 int obstacleVisualUpperBound = obstacleCellCount * 3 + level.obstacles.Count;
                 visualCapacity = Mathf.Max(
                     visualCapacity,
-                    boardAndLowerGridUpperBound + frameUpperBound +
-                    obstacleVisualUpperBound + CapacitySafetyMargin);
+                    boardAndLowerGridUpperBound + obstacleVisualUpperBound + CapacitySafetyMargin);
                 obstacleCapacity = Mathf.Max(
                     obstacleCapacity,
                     level.obstacles.Count + CapacitySafetyMargin);
