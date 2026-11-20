@@ -1,6 +1,7 @@
 using System;
 using GravityPuzzle.Config;
 using GravityPuzzle.Infrastructure.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -14,10 +15,14 @@ namespace GravityPuzzle.Presentation.Views
     [DisallowMultipleComponent]
     public sealed class NewBoosterPanelView : MonoBehaviour
     {
+        private const string NewBoosterHeaderText = "New Booster!";
+        private const string NewFeatureHeaderText = "New Feature!";
+
         [SerializeField] private Button closeButton;
         [SerializeField] private Button continueButton;
         [SerializeField] private GameObject overlayRoot;
         [SerializeField] private Transform boosterContentRoot;
+        [SerializeField] private TMP_Text headerTitleText;
         [SerializeField] private GameObject[] hudObjectsToHide;
         [SerializeField] private UnityEvent continueClicked;
         [SerializeField] private BoosterRewardConfig previewRewardConfig;
@@ -41,10 +46,17 @@ namespace GravityPuzzle.Presentation.Views
                 6 => "Hammer",
                 8 => "Ice_block",
                 10 => "Rocket",
-                15 => "BombBlock",
-                21 => "CombinedBlock",
+                16 => "BombBlock",
+                24 => "Box",
+                33 => "Elevator",
+                54 => "KeyLock",
                 _ => null
             };
+        }
+
+        public static bool IsBoosterMilestoneLevel(int levelNumber)
+        {
+            return levelNumber == 4 || levelNumber == 6 || levelNumber == 10;
         }
 
         private void Awake()
@@ -72,6 +84,7 @@ namespace GravityPuzzle.Presentation.Views
             if (continueButton != null)
                 continueButton.onClick.AddListener(Continue);
 
+            ResolveHeaderTitleText();
             ResolveBoosterContentRoot();
 
             // The overlay is authored inactive, so Awake can first run inside
@@ -171,6 +184,7 @@ namespace GravityPuzzle.Presentation.Views
             }
 
             GrantInitialBoosterIfApplicable(levelNumber);
+            UpdateHeaderTitle(IsBoosterMilestoneLevel(levelNumber));
             SetOverlayVisible(true);
             return true;
         }
@@ -189,6 +203,10 @@ namespace GravityPuzzle.Presentation.Views
             }
 
             selectedRewardConfig = rewardConfig;
+            bool isBooster = rewardConfig.BoosterType == BoosterRewardType.FreezeTimer ||
+                             rewardConfig.BoosterType == BoosterRewardType.Hammer ||
+                             rewardConfig.BoosterType == BoosterRewardType.Rocket;
+            UpdateHeaderTitle(isBooster);
             SetOverlayVisible(true);
             ApplySelectedReward();
         }
@@ -232,6 +250,25 @@ namespace GravityPuzzle.Presentation.Views
             {
                 contentRoot.GetChild(i).gameObject.SetActive(false);
             }
+        }
+
+        private void ResolveHeaderTitleText()
+        {
+            if (headerTitleText != null)
+                return;
+
+            Transform titleTransform = transform.Find("Header/Title");
+            if (titleTransform == null && overlayRoot != null)
+                titleTransform = overlayRoot.transform.Find("NewBooster_featurePanel/Header/Title");
+            if (titleTransform != null)
+                headerTitleText = titleTransform.GetComponent<TMP_Text>();
+        }
+
+        private void UpdateHeaderTitle(bool isBooster)
+        {
+            ResolveHeaderTitleText();
+            if (headerTitleText != null)
+                headerTitleText.text = isBooster ? NewBoosterHeaderText : NewFeatureHeaderText;
         }
 
         private Transform ResolveBoosterContentRoot()

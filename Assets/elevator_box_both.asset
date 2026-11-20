@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e117bb03f7a248209d8547268688391, type: 3}
-  m_Name: test2
+  m_Name: elevator_box_both
   m_EditorClassIdentifier: 
   levelName: New Level
   difficulty: 0
@@ -2045,7 +2045,7 @@ MonoBehaviour:
         type: 0
       - localCell: {x: 7, y: 3}
         type: 0
-    targetShredCount: 18
+    targetShredCount: 20
   elevators:
   - areaId: 9301a5fb-2937-40c2-a9fc-43cd5a069f49
     name: Elevator 1

@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using GravityPuzzle;
 using GravityPuzzle.Config;
 using GravityPuzzle.Gameplay.Tutorial;
+using GravityPuzzle.Infrastructure.Services;
 
 namespace GravityPuzzle.Presentation.Views
 {
@@ -304,7 +305,7 @@ namespace GravityPuzzle.Presentation.Views
                     .OnComplete(() => SetEffectsVisible(false));
             }
 
-            if (tapAudioSource != null && tapClip != null)
+            if (SoundFeedbackRuntime.IsSoundEnabled && tapAudioSource != null && tapClip != null)
                 tapAudioSource.PlayOneShot(tapClip);
         }
 

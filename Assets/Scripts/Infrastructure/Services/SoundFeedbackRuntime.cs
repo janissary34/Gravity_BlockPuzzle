@@ -1,21 +1,35 @@
+using System;
 using GravityPuzzle.Config;
 using UnityEngine;
 
 namespace GravityPuzzle.Infrastructure.Services
 {
     /// <summary>
-    /// Process-wide presentation adapter for one-shot sound cues, mirroring <see cref="HapticFeedbackRuntime"/>.
+    /// Process-wide presentation adapter for sound cues and global mute state, mirroring <see cref="HapticFeedbackRuntime"/>.
     /// It owns no gameplay state. The scene bootstrap supplies the config and the AudioSource that plays the cues.
     /// </summary>
     public static class SoundFeedbackRuntime
     {
-        private const string SoundPreferenceKey = "GravityPuzzle.SoundEnabled";
+        public const string SoundPreferenceKey = "GravityPuzzle.SoundEnabled";
 
         private static SoundFeedbackConfig config;
         private static AudioSource source;
+        private static bool preferenceLoaded;
+        private static bool soundEnabled = true;
         private static readonly ShuffledClipSequence buttonClicks = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence pieceDrops = new ShuffledClipSequence();
         private static readonly ShuffledClipSequence hammerBreaks = new ShuffledClipSequence();
+
+        public static event Action<bool> SoundEnabledChanged;
+
+        public static bool IsSoundEnabled
+        {
+            get
+            {
+                EnsurePreferenceLoaded();
+                return soundEnabled;
+            }
+        }
 
         public static void Configure(SoundFeedbackConfig value, AudioSource audioSource)
         {
@@ -25,10 +39,22 @@ namespace GravityPuzzle.Infrastructure.Services
             pieceDrops.Reset(config != null ? config.PieceDropClips : null);
             hammerBreaks.Reset(config != null ? config.HammerBreakClips : null);
 
+            soundEnabled = PlayerPrefs.GetInt(SoundPreferenceKey, 1) == 1;
+            preferenceLoaded = true;
+            ApplySoundState(soundEnabled);
+
             if (config == null)
                 Debug.LogWarning("[Sound] SoundFeedbackConfig is not assigned on the bootstrap; sound cues are disabled.");
             else if (source == null)
                 Debug.LogWarning("[Sound] No AudioSource is assigned on the bootstrap; sound cues are disabled.");
+        }
+
+        /// <summary>Applies a sound preference toggle immediately to all active audio playback.</summary>
+        public static void NotifyPreferenceChanged(bool enabled)
+        {
+            soundEnabled = enabled;
+            preferenceLoaded = true;
+            ApplySoundState(enabled);
         }
 
         /// <summary>Releases the source when its owning scene object is destroyed.</summary>
@@ -53,9 +79,32 @@ namespace GravityPuzzle.Infrastructure.Services
             if (config != null) Play(hammerBreaks.Next(), config.HammerBreakVolume);
         }
 
+        private static void EnsurePreferenceLoaded()
+        {
+            if (preferenceLoaded)
+                return;
+
+            soundEnabled = PlayerPrefs.GetInt(SoundPreferenceKey, 1) == 1;
+            preferenceLoaded = true;
+            AudioListener.volume = soundEnabled ? 1f : 0f;
+        }
+
+        private static void ApplySoundState(bool enabled)
+        {
+            AudioListener.volume = enabled ? 1f : 0f;
+            if (source != null)
+            {
+                source.mute = !enabled;
+                if (!enabled)
+                    source.Stop();
+            }
+
+            SoundEnabledChanged?.Invoke(enabled);
+        }
+
         private static void Play(AudioClip clip, float volume)
         {
-            if (clip == null || source == null || PlayerPrefs.GetInt(SoundPreferenceKey, 1) != 1)
+            if (clip == null || source == null || !IsSoundEnabled)
                 return;
 
             source.PlayOneShot(clip, volume);
@@ -101,7 +150,7 @@ namespace GravityPuzzle.Infrastructure.Services
 
                 for (int index = order.Length - 1; index > 0; index--)
                 {
-                    int swapIndex = Random.Range(0, index + 1);
+                    int swapIndex = UnityEngine.Random.Range(0, index + 1);
                     (order[index], order[swapIndex]) = (order[swapIndex], order[index]);
                 }
 

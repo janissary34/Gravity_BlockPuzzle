@@ -2995,7 +2995,7 @@ namespace GravityPuzzle
 
         private void PlayWinFanfare()
         {
-            if (winFanfareAudioClip == null)
+            if (!SoundFeedbackRuntime.IsSoundEnabled || winFanfareAudioClip == null)
                 return;
 
             if (winAudioSource == null)
@@ -3116,33 +3116,10 @@ namespace GravityPuzzle
 
         private int ResolveCurrentLevelNumber()
         {
-            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
-            if (level != null)
-            {
-                if (TryParseLevelNumber(level.name, out int parsedByName))
-                    return parsedByName;
-                if (TryParseLevelNumber(level.levelName, out int parsedByTitle))
-                    return parsedByTitle;
-            }
+            // Campaign milestones follow the authoritative 1-based LevelSequence
+            // order rather than digits parsed from level asset filenames (e.g.
+            // Level 16 uses L15, Level 11 uses L10, and Level 26 uses ide4).
             return GravityLevelRuntime.CurrentLevelNumber;
-        }
-
-        private static bool TryParseLevelNumber(string levelName, out int levelNumber)
-        {
-            levelNumber = 0;
-            if (string.IsNullOrEmpty(levelName))
-                return false;
-
-            string digits = string.Empty;
-            for (int i = 0; i < levelName.Length; i++)
-            {
-                if (char.IsDigit(levelName[i]))
-                    digits += levelName[i];
-                else if (digits.Length > 0)
-                    break;
-            }
-
-            return int.TryParse(digits, out levelNumber);
         }
 
         private void ClaimQueuedBoosterReward(BoosterRewardConfig claimedConfig)

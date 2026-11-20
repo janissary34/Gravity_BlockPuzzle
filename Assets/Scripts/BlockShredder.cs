@@ -436,8 +436,15 @@ namespace GravityPuzzle
             return true;
         }
 
+        private void OnEnable()
+        {
+            SoundFeedbackRuntime.SoundEnabledChanged += HandleSoundEnabledChanged;
+            HandleSoundEnabledChanged(SoundFeedbackRuntime.IsSoundEnabled);
+        }
+
         private void OnDisable()
         {
+            SoundFeedbackRuntime.SoundEnabledChanged -= HandleSoundEnabledChanged;
             if (particleShredAudioSource != null && particleShredAudioSource.isPlaying)
                 particleShredAudioSource.Stop();
             activeShredSoundCount = 0;
@@ -446,6 +453,7 @@ namespace GravityPuzzle
 
         private void OnDestroy()
         {
+            SoundFeedbackRuntime.SoundEnabledChanged -= HandleSoundEnabledChanged;
             if (particleShredAudioSource != null && particleShredAudioSource.isPlaying)
                 particleShredAudioSource.Stop();
             activeShredSoundCount = 0;
@@ -1451,11 +1459,34 @@ namespace GravityPuzzle
 
         private int activeShredSoundCount;
 
+        private void HandleSoundEnabledChanged(bool enabled)
+        {
+            if (particleShredAudioSource == null)
+                return;
+
+            particleShredAudioSource.mute = !enabled;
+            if (!enabled && particleShredAudioSource.isPlaying)
+            {
+                particleShredAudioSource.Stop();
+            }
+            else if (enabled && activeShredSoundCount > 0 && particleShredClip != null && !particleShredAudioSource.isPlaying)
+            {
+                particleShredAudioSource.clip = particleShredClip;
+                particleShredAudioSource.loop = true;
+                particleShredAudioSource.Play();
+            }
+        }
+
         private void StartContinuousShredSound()
         {
             activeShredSoundCount++;
             if (particleShredAudioSource != null && particleShredClip != null)
             {
+                bool soundEnabled = SoundFeedbackRuntime.IsSoundEnabled;
+                particleShredAudioSource.mute = !soundEnabled;
+                if (!soundEnabled)
+                    return;
+
                 particleShredAudioSource.clip = particleShredClip;
                 particleShredAudioSource.loop = true;
                 if (!particleShredAudioSource.isPlaying)

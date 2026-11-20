@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boosterType: 6
   visualPrefab: {fileID: 0}
-  presentationLevel: 40
+  presentationLevel: 24
   usesPerLevel: 3

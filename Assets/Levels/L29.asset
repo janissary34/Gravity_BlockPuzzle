@@ -56,6 +56,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 10, y: 10}
       type: 0
@@ -194,7 +195,7 @@ MonoBehaviour:
     origin: {x: 12, y: 18}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 9
+    frozenMoveCount: 16
     iceCounterFontSize: 20
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -205,6 +206,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 4, y: -6}
       type: 0
@@ -343,7 +345,7 @@ MonoBehaviour:
     origin: {x: 12, y: 18}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 11
+    frozenMoveCount: 13
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -354,6 +356,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 6}
       type: 0
@@ -428,7 +431,7 @@ MonoBehaviour:
     origin: {x: 12, y: 18}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 13
+    frozenMoveCount: 14
     iceCounterFontSize: 20
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -439,6 +442,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: -2}
       type: 0
@@ -492,6 +496,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -4, y: -2}
       type: 0
@@ -589,38 +594,6 @@ MonoBehaviour:
       type: 0
     - localCell: {x: 3, y: 5}
       type: 0
-    - localCell: {x: 4, y: 2}
-      type: 0
-    - localCell: {x: 5, y: 2}
-      type: 0
-    - localCell: {x: 6, y: 2}
-      type: 0
-    - localCell: {x: 7, y: 2}
-      type: 0
-    - localCell: {x: 4, y: 3}
-      type: 0
-    - localCell: {x: 5, y: 3}
-      type: 0
-    - localCell: {x: 6, y: 3}
-      type: 0
-    - localCell: {x: 7, y: 3}
-      type: 0
-    - localCell: {x: 4, y: 4}
-      type: 0
-    - localCell: {x: 5, y: 4}
-      type: 0
-    - localCell: {x: 6, y: 4}
-      type: 0
-    - localCell: {x: 7, y: 4}
-      type: 0
-    - localCell: {x: 4, y: 5}
-      type: 0
-    - localCell: {x: 5, y: 5}
-      type: 0
-    - localCell: {x: 6, y: 5}
-      type: 0
-    - localCell: {x: 7, y: 5}
-      type: 0
   - pieceId: piece-15b6cb737c904455680f5b0434a3853a-0005-00
     name: Piece 6
     tutorialTargetId: 
@@ -641,6 +614,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -8, y: 10}
       type: 0
@@ -726,6 +700,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 8, y: -6}
       type: 0
@@ -811,6 +786,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: piece-15b6cb737c904455680f5b0434a3853a-0008-00
     name: Piece 9
@@ -821,7 +797,7 @@ MonoBehaviour:
     origin: {x: 14, y: 20}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 8
+    frozenMoveCount: 10
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -832,6 +808,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -2, y: -12}
       type: 0
@@ -917,6 +894,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: piece-15b6cb737c904455680f5b0434a3853a-000a-00
     name: Single 11
@@ -938,6 +916,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells: []
   - pieceId: piece-15b6cb737c904455680f5b0434a3853a-000b-00
     name: Single 12
@@ -959,6 +938,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 4, y: 0}
       type: 0
@@ -1044,6 +1024,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 6, y: -12}
       type: 0
@@ -1097,6 +1078,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -10, y: -12}
       type: 0
@@ -1150,6 +1132,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -6, y: -12}
       type: 0
@@ -1224,7 +1207,7 @@ MonoBehaviour:
     origin: {x: 14, y: 16}
     quarterTurns: 0
     specialBlockType: 1
-    frozenMoveCount: 10
+    frozenMoveCount: 11
     iceCounterFontSize: 36
     iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
     iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1235,6 +1218,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -2, y: -12}
       type: 0
@@ -1320,6 +1304,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -1405,6 +1390,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: -4, y: 0}
       type: 0
@@ -1490,6 +1476,7 @@ MonoBehaviour:
     bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
     bombCounterOutlineWidth: 0.18
     bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
     cells:
     - localCell: {x: 0, y: 0}
       type: 0
@@ -1554,6 +1541,60 @@ MonoBehaviour:
     - localCell: {x: 2, y: 7}
       type: 0
     - localCell: {x: 3, y: 7}
+      type: 0
+  - pieceId: b8f5d5c2ddbb45158e3bbca317f91607
+    name: Single 20
+    tutorialTargetId: 
+    visualId: 
+    paletteId: BlueLight
+    color: {r: 0.3, g: 0.5380001, b: 1, a: 1}
+    origin: {x: 16, y: 20}
+    quarterTurns: 0
+    specialBlockType: 1
+    frozenMoveCount: 12
+    iceCounterFontSize: 36
+    iceCounterTextColor: {r: 0, g: 0, b: 0, a: 1}
+    iceCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    iceCounterOutlineWidth: 0.18
+    iceCounterOffset: {x: 0, y: 0}
+    bombTimerSeconds: 10
+    bombCounterTextColor: {r: 0.95, g: 0.18, b: 0.12, a: 1}
+    bombCounterOutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    bombCounterOutlineWidth: 0.18
+    bombCounterOffset: {x: 0, y: 0}
+    lockKeyPieceId: 
+    cells:
+    - localCell: {x: 0, y: 0}
+      type: 0
+    - localCell: {x: 1, y: 0}
+      type: 0
+    - localCell: {x: 2, y: 0}
+      type: 0
+    - localCell: {x: 3, y: 0}
+      type: 0
+    - localCell: {x: 0, y: 1}
+      type: 0
+    - localCell: {x: 1, y: 1}
+      type: 0
+    - localCell: {x: 2, y: 1}
+      type: 0
+    - localCell: {x: 3, y: 1}
+      type: 0
+    - localCell: {x: 0, y: 2}
+      type: 0
+    - localCell: {x: 1, y: 2}
+      type: 0
+    - localCell: {x: 2, y: 2}
+      type: 0
+    - localCell: {x: 3, y: 2}
+      type: 0
+    - localCell: {x: 0, y: 3}
+      type: 0
+    - localCell: {x: 1, y: 3}
+      type: 0
+    - localCell: {x: 2, y: 3}
+      type: 0
+    - localCell: {x: 3, y: 3}
       type: 0
   joints:
   - jointId: d61a866636cb4d11bd17249fca75ce83

@@ -43,7 +43,7 @@ namespace GravityPuzzle.Presentation.Views
 
         private void Awake()
         {
-            soundEnabled = PlayerPrefs.GetInt("GravityPuzzle.SoundEnabled", 1) == 1;
+            soundEnabled = PlayerPrefs.GetInt(SoundFeedbackRuntime.SoundPreferenceKey, 1) == 1;
             musicEnabled = PlayerPrefs.GetInt("GravityPuzzle.MusicEnabled", 1) == 1;
             vibrationEnabled = PlayerPrefs.GetInt(VibrationPreferenceKey, 1) == 1;
 
@@ -60,11 +60,15 @@ namespace GravityPuzzle.Presentation.Views
             if (vibrationToggleButton != null)
                 vibrationToggleButton.onClick.AddListener(ToggleVibration);
 
+            SoundFeedbackRuntime.NotifyPreferenceChanged(soundEnabled);
             RefreshToggleVisuals();
         }
 
         private void OnEnable()
         {
+            soundEnabled = SoundFeedbackRuntime.IsSoundEnabled;
+            RefreshToggleVisuals();
+
             // The popup can be opened through a parent overlay as well as the
             // Settings button. Its active state is therefore the authoritative
             // presentation signal for this pause owner.
@@ -108,8 +112,9 @@ namespace GravityPuzzle.Presentation.Views
         private void ToggleSoundVisual()
         {
             soundEnabled = !soundEnabled;
-            PlayerPrefs.SetInt("GravityPuzzle.SoundEnabled", soundEnabled ? 1 : 0);
+            PlayerPrefs.SetInt(SoundFeedbackRuntime.SoundPreferenceKey, soundEnabled ? 1 : 0);
             PlayerPrefs.Save();
+            SoundFeedbackRuntime.NotifyPreferenceChanged(soundEnabled);
             RefreshToggleVisuals();
             SoundChanged?.Invoke(soundEnabled);
         }

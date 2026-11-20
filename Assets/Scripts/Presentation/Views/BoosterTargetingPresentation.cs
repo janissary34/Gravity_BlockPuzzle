@@ -483,9 +483,15 @@ namespace GravityPuzzle.Presentation.Views
             {
                 tutorialTargetIndicator?.Hide();
                 IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
-                bool hammerFirstUse = gate != null && gate.IsFirstUseActive(BoosterRewardType.Hammer);
-                bool rocketFirstUse = gate != null && gate.IsFirstUseActive(BoosterRewardType.Rocket);
-                bool timerFirstUse = gate != null && gate.IsFirstUseActive(BoosterRewardType.FreezeTimer);
+                bool hammerFirstUse = gate != null &&
+                                      gate.IsFirstUseActive(BoosterRewardType.Hammer) &&
+                                      !gate.IsResolvingEffect(BoosterRewardType.Hammer);
+                bool rocketFirstUse = gate != null &&
+                                      gate.IsFirstUseActive(BoosterRewardType.Rocket) &&
+                                      !gate.IsResolvingEffect(BoosterRewardType.Rocket);
+                bool timerFirstUse = gate != null &&
+                                     gate.IsFirstUseActive(BoosterRewardType.FreezeTimer) &&
+                                     !gate.IsResolvingEffect(BoosterRewardType.FreezeTimer);
 
                 if (!hammerFirstUse && !rocketFirstUse && !timerFirstUse)
                     SetSelectionGlow((BoosterRewardType?)null);
@@ -915,13 +921,17 @@ namespace GravityPuzzle.Presentation.Views
         private void Update()
         {
             IBoosterFirstUseTutorialGate gate = BoosterFirstUseTutorialRuntime.Gate;
-            bool isTimer = gate != null && (gate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer) || gate.IsFirstUseActive(BoosterRewardType.FreezeTimer));
-            // The hammer strike plays on the undimmed board once its lesson
-            // target is committed.
+            bool isTimer = gate != null &&
+                           (gate.IsBoosterHighlighted(BoosterRewardType.FreezeTimer) || gate.IsFirstUseActive(BoosterRewardType.FreezeTimer)) &&
+                           !gate.IsResolvingEffect(BoosterRewardType.FreezeTimer);
+            // Committed Hammer and Rocket animations play on the undimmed board
+            // as soon as their lesson target is accepted.
             bool isHammer = gate != null &&
                             (gate.IsBoosterHighlighted(BoosterRewardType.Hammer) || gate.IsFirstUseActive(BoosterRewardType.Hammer)) &&
                             !gate.IsResolvingEffect(BoosterRewardType.Hammer);
-            bool isRocket = gate != null && (gate.IsBoosterHighlighted(BoosterRewardType.Rocket) || gate.IsFirstUseActive(BoosterRewardType.Rocket));
+            bool isRocket = gate != null &&
+                            (gate.IsBoosterHighlighted(BoosterRewardType.Rocket) || gate.IsFirstUseActive(BoosterRewardType.Rocket)) &&
+                            !gate.IsResolvingEffect(BoosterRewardType.Rocket);
             bool isAnyTutorialActive = isTimer || isHammer || isRocket;
 
             if (isAnyTutorialActive)

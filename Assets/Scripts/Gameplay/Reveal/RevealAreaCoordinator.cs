@@ -351,8 +351,6 @@ namespace GravityPuzzle.Gameplay.Reveal
             if (boxes.Count == 0 && elevators.Count == 0)
                 return true;
 
-            GridBounds current = GridBounds.From(model, model.Anchor);
-            GridBounds target = GridBounds.From(model, targetAnchor);
             bool isBoxContent = TryGetActivatedBoxContent(model.Id, out BoxRuntime ownerBox, out BoxContentRuntime ownerContent);
             for (int index = 0; index < boxes.Count; index++)
             {
@@ -360,12 +358,12 @@ namespace GravityPuzzle.Gameplay.Reveal
                 if (box.State == RevealAreaState.Unlocked)
                     continue;
 
-                GridBounds boxBounds = GridBounds.From(box.Definition.bounds);
+                RevealAreaBounds boxBounds = box.Definition.bounds;
                 if (isBoxContent && ReferenceEquals(box, ownerBox))
                 {
                     if (ownerContent.HasLeftBox)
                     {
-                        if (target.Intersects(boxBounds))
+                        if (IntersectsArea(model, targetAnchor, boxBounds))
                             return false;
                         continue;
                     }
@@ -379,7 +377,8 @@ namespace GravityPuzzle.Gameplay.Reveal
                 // a Box footprint. Treat that piece as covered until the Box
                 // opens as well; otherwise it could move out before its shred
                 // requirement is met.
-                if (current.Intersects(boxBounds) || target.Intersects(boxBounds))
+                if (IntersectsArea(model, model.Anchor, boxBounds) ||
+                    IntersectsArea(model, targetAnchor, boxBounds))
                     return false;
             }
 
@@ -389,8 +388,9 @@ namespace GravityPuzzle.Gameplay.Reveal
                 if (elevator.State == RevealAreaState.Locked)
                     continue;
 
-                if (target.Intersects(GridBounds.From(elevator.Definition.bounds)) &&
-                    !current.Intersects(GridBounds.From(elevator.Definition.bounds)))
+                RevealAreaBounds elevatorBounds = elevator.Definition.bounds;
+                if (IntersectsArea(model, targetAnchor, elevatorBounds) &&
+                    !IntersectsArea(model, model.Anchor, elevatorBounds))
                     return false;
             }
 
@@ -406,7 +406,6 @@ namespace GravityPuzzle.Gameplay.Reveal
             if (model == null)
                 return false;
 
-            GridBounds current = GridBounds.From(model, model.Anchor);
             if (TryGetActivatedBoxContent(model.Id, out BoxRuntime ownerBox, out BoxContentRuntime ownerContent))
             {
                 if (ownerBox.State == RevealAreaState.Unlocked || ownerContent.HasLeftBox)
@@ -419,7 +418,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             {
                 BoxRuntime box = boxes[index];
                 if (box.State != RevealAreaState.Unlocked &&
-                    current.Intersects(GridBounds.From(box.Definition.bounds)))
+                    IntersectsArea(model, model.Anchor, box.Definition.bounds))
                     return false;
             }
 
@@ -647,7 +646,7 @@ namespace GravityPuzzle.Gameplay.Reveal
                     if (piece == null || model.State == PieceState.Despawned)
                         continue;
 
-                    if (!GridBounds.From(model, model.Anchor).Intersects(GridBounds.From(box.Definition.bounds)))
+                    if (!IntersectsArea(model, model.Anchor, box.Definition.bounds))
                     {
                         content.HasLeftBox = true;
                         ReleaseContentPresentation(box, content, piece);
@@ -783,7 +782,7 @@ namespace GravityPuzzle.Gameplay.Reveal
 
         private bool RefreshElevatorOccupancy(ElevatorRuntime elevator)
         {
-            GridBounds bounds = GridBounds.From(elevator.Definition.bounds);
+            RevealAreaBounds bounds = elevator.Definition.bounds;
             elevator.NextOccupantIds.Clear();
             // Only live board pieces are top-layer occupants. Fixed interior
             // pieces are deliberately not instantiated before the unlock.
@@ -792,7 +791,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             {
                 PieceModel model = models[index];
                 if (model != null && model.State != PieceState.Despawned &&
-                    GridBounds.From(model, model.Anchor).Intersects(bounds))
+                    IntersectsArea(model, model.Anchor, bounds))
                     elevator.NextOccupantIds.Add(model.Id);
             }
 
@@ -813,7 +812,7 @@ namespace GravityPuzzle.Gameplay.Reveal
                 {
                     BoxContentRuntime content = box.Contents[pieceIndex];
                     if (!content.IsActivated && content.Definition != null &&
-                        GridBounds.From(content.Definition).Intersects(bounds))
+                        IntersectsArea(content.Definition, bounds))
                         return true;
                 }
             }
@@ -867,76 +866,54 @@ namespace GravityPuzzle.Gameplay.Reveal
             return true;
         }
 
-        private readonly struct GridBounds
+        // Concave pieces (such as L, T, and Z shapes) can wrap around a Box or
+        // Elevator corner without occupying any cell inside that area. Test the
+        // piece's actual occupied cells rather than its rectangular AABB.
+        private static bool IntersectsArea(
+            PieceModel model,
+            GridCoordinate anchor,
+            RevealAreaBounds bounds)
         {
-            private GridBounds(int minX, int minY, int maxXExclusive, int maxYExclusive)
+            int minX = bounds.XMin;
+            int minY = bounds.YMin;
+            int maxXExclusive = bounds.XMaxExclusive;
+            int maxYExclusive = bounds.YMaxExclusive;
+            for (int index = 0; index < model.LocalCells.Count; index++)
             {
-                MinX = minX;
-                MinY = minY;
-                MaxXExclusive = maxXExclusive;
-                MaxYExclusive = maxYExclusive;
+                GridCoordinate cell = anchor.Offset(model.LocalCells[index]);
+                if (cell.X >= minX && cell.X < maxXExclusive &&
+                    cell.Y >= minY && cell.Y < maxYExclusive)
+                    return true;
             }
 
-            private int MinX { get; }
-            private int MinY { get; }
-            private int MaxXExclusive { get; }
-            private int MaxYExclusive { get; }
+            return false;
+        }
 
-            public bool Intersects(GridBounds other)
+        private static bool IntersectsArea(
+            PieceDefinition definition,
+            RevealAreaBounds bounds)
+        {
+            if (definition == null || definition.cells == null)
+                return false;
+
+            int minX = bounds.XMin;
+            int minY = bounds.YMin;
+            int maxXExclusive = bounds.XMaxExclusive;
+            int maxYExclusive = bounds.YMaxExclusive;
+            for (int index = 0; index < definition.cells.Count; index++)
             {
-                return MinX < other.MaxXExclusive && MaxXExclusive > other.MinX &&
-                       MinY < other.MaxYExclusive && MaxYExclusive > other.MinY;
+                PieceCellDefinition cell = definition.cells[index];
+                if (cell.type != PieceCellType.Block)
+                    continue;
+
+                Vector2Int rotated = QuarterTurnUtility.Rotate(cell.localCell, definition.quarterTurns);
+                Vector2Int absolute = definition.origin + rotated;
+                if (absolute.x >= minX && absolute.x < maxXExclusive &&
+                    absolute.y >= minY && absolute.y < maxYExclusive)
+                    return true;
             }
 
-            public static GridBounds From(RevealAreaBounds bounds)
-            {
-                return new GridBounds(
-                    bounds.XMin,
-                    bounds.YMin,
-                    bounds.XMaxExclusive,
-                    bounds.YMaxExclusive);
-            }
-
-            public static GridBounds From(PieceModel model, GridCoordinate anchor)
-            {
-                int minX = int.MaxValue;
-                int minY = int.MaxValue;
-                int maxX = int.MinValue;
-                int maxY = int.MinValue;
-                for (int index = 0; index < model.LocalCells.Count; index++)
-                {
-                    GridCoordinate cell = anchor.Offset(model.LocalCells[index]);
-                    minX = Math.Min(minX, cell.X);
-                    minY = Math.Min(minY, cell.Y);
-                    maxX = Math.Max(maxX, cell.X + 1);
-                    maxY = Math.Max(maxY, cell.Y + 1);
-                }
-
-                return new GridBounds(minX, minY, maxX, maxY);
-            }
-
-            public static GridBounds From(PieceDefinition definition)
-            {
-                int minX = int.MaxValue;
-                int minY = int.MaxValue;
-                int maxX = int.MinValue;
-                int maxY = int.MinValue;
-                for (int index = 0; index < definition.cells.Count; index++)
-                {
-                    PieceCellDefinition cell = definition.cells[index];
-                    if (cell.type != PieceCellType.Block)
-                        continue;
-
-                    Vector2Int rotated = QuarterTurnUtility.Rotate(cell.localCell, definition.quarterTurns);
-                    Vector2Int absolute = definition.origin + rotated;
-                    minX = Math.Min(minX, absolute.x);
-                    minY = Math.Min(minY, absolute.y);
-                    maxX = Math.Max(maxX, absolute.x + 1);
-                    maxY = Math.Max(maxY, absolute.y + 1);
-                }
-
-                return new GridBounds(minX, minY, maxX, maxY);
-            }
+            return false;
         }
     }
 }

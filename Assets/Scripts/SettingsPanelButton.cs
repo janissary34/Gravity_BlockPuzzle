@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
 
 namespace GravityPuzzle
@@ -145,6 +146,7 @@ namespace GravityPuzzle
 
         private void ApplyAudioState()
         {
+            SoundFeedbackRuntime.NotifyPreferenceChanged(soundEnabled);
             ApplyMuteState(soundSources, !soundEnabled);
             ApplyMuteState(musicSources, !musicEnabled);
         }

@@ -364,11 +364,7 @@ namespace GravityPuzzle
                 if ((tutorialGate == null || tutorialGate.AllowsTarget(BoosterRewardType.Rocket, target)) &&
                     TryStartRocketImpact(target.Piece))
                 {
-                    boundBoard.StartTimer();
-                    activeBooster = null;
-                    BoosterTargetingPresentation.Hide();
-                    suppressGameplayThroughFrame = Time.frameCount;
-                    RefreshButtonState();
+                    CommitTargetSelection(tutorialGate);
                     return;
                 }
 
@@ -380,17 +376,23 @@ namespace GravityPuzzle
                      BoardTargetResolver.TryResolveBox(boundBoard, worldPosition, out BoardTargetResolver.BoxTarget boxTarget) &&
                      TryStartRocketBoxImpact(boxTarget))
             {
-                boundBoard.StartTimer();
-                activeBooster = null;
-                BoosterTargetingPresentation.Hide();
-                suppressGameplayThroughFrame = Time.frameCount;
-                RefreshButtonState();
+                CommitTargetSelection(tutorialGate);
                 return;
             }
 
             // Empty-space taps and rejected targets cancel targeting without
             // consuming the booster, so the player can resume normal play.
             CancelRocketSelection();
+        }
+
+        private void CommitTargetSelection(IBoosterFirstUseTutorialGate tutorialGate)
+        {
+            boundBoard.StartTimer();
+            activeBooster = null;
+            tutorialGate?.NotifyTargetCommitted(BoosterRewardType.Rocket);
+            BoosterTargetingPresentation.Hide();
+            suppressGameplayThroughFrame = Time.frameCount;
+            RefreshButtonState();
         }
 
         private bool TryStartRocketImpact(PuzzlePiece piece)
