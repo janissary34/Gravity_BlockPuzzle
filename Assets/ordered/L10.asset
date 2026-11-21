@@ -15,7 +15,7 @@ MonoBehaviour:
   levelName: New Level
   difficulty: 0
   timeLimit: 225
-  boardColumns: 7
+  boardColumns: 6
   boardRows: 9
   subdivisions: 4
   backgroundColor: {r: 0.06, g: 0.07, b: 0.14, a: 1}
@@ -42,7 +42,7 @@ MonoBehaviour:
     visualId: 
     paletteId: Yellow
     color: {r: 0.902, g: 1, b: 0.3, a: 1}
-    origin: {x: 18, y: 22}
+    origin: {x: 14, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 4
@@ -192,7 +192,7 @@ MonoBehaviour:
     visualId: 
     paletteId: Purple
     color: {r: 0.04672802, g: 0, b: 0.9716981, a: 1}
-    origin: {x: 14, y: 22}
+    origin: {x: 10, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -246,7 +246,7 @@ MonoBehaviour:
     visualId: 
     paletteId: Pink
     color: {r: 1, g: 0.3, b: 0.51000017, a: 1}
-    origin: {x: 14, y: 2}
+    origin: {x: 10, y: 2}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -364,7 +364,7 @@ MonoBehaviour:
     visualId: 
     paletteId: Orange
     color: {r: 1, g: 0.88799995, b: 0.3, a: 1}
-    origin: {x: 14, y: 22}
+    origin: {x: 10, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 1
@@ -482,7 +482,7 @@ MonoBehaviour:
     visualId: 
     paletteId: GreenLight
     color: {r: 0.31400007, g: 1, b: 0.3, a: 1}
-    origin: {x: 10, y: 10}
+    origin: {x: 6, y: 10}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -600,7 +600,7 @@ MonoBehaviour:
     visualId: 
     paletteId: BlueLight
     color: {r: 0.3, g: 0.91600007, b: 1, a: 1}
-    origin: {x: 14, y: 22}
+    origin: {x: 10, y: 22}
     quarterTurns: 0
     specialBlockType: 0
     frozenMoveCount: 0
@@ -741,7 +741,7 @@ MonoBehaviour:
     sizeInFineCells: {x: 0, y: 0}
     quarterTurns: 0
     color: {r: 0, g: 0, b: 0, a: 0}
-  - name: Obstacle 7
+  - name: Obstacle 8
     usesGridCells: 1
     gridCell: {x: 0, y: 4}
     sizeInGridCells: {x: 1, y: 1}
@@ -749,7 +749,7 @@ MonoBehaviour:
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 8
+  - name: Obstacle 9
     usesGridCells: 1
     gridCell: {x: 1, y: 4}
     sizeInGridCells: {x: 1, y: 1}
@@ -757,7 +757,7 @@ MonoBehaviour:
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 9
+  - name: Obstacle 10
     usesGridCells: 1
     gridCell: {x: 2, y: 4}
     sizeInGridCells: {x: 1, y: 1}
@@ -765,17 +765,9 @@ MonoBehaviour:
     sizeInFineCells: {x: 1, y: 1}
     quarterTurns: 0
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
-  - name: Obstacle 10
-    usesGridCells: 1
-    gridCell: {x: 3, y: 4}
-    sizeInGridCells: {x: 1, y: 1}
-    centreCell: {x: 0, y: 0}
-    sizeInFineCells: {x: 1, y: 1}
-    quarterTurns: 0
-    color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 8
     usesGridCells: 1
-    gridCell: {x: 3, y: 1}
+    gridCell: {x: 2, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -783,7 +775,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 9
     usesGridCells: 1
-    gridCell: {x: 4, y: 1}
+    gridCell: {x: 3, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
@@ -791,7 +783,7 @@ MonoBehaviour:
     color: {r: 0.38, g: 0.42, b: 0.55, a: 1}
   - name: Obstacle 10
     usesGridCells: 1
-    gridCell: {x: 5, y: 1}
+    gridCell: {x: 4, y: 1}
     sizeInGridCells: {x: 1, y: 1}
     centreCell: {x: 0, y: 0}
     sizeInFineCells: {x: 1, y: 1}
