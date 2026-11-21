@@ -165,10 +165,10 @@ Run `Gravity Puzzle/Level Authoring/Rebuild Level Runtime Root` after changing m
 
 ## Board and Shredder Camera Framing
 
-`BoardPresentationConfig` owns the gameplay viewport safe band (`BoardTopViewportInset`, `BoardBottomViewportInset`, `FrameTopAllowance`, `CameraSizeMultiplier`, and `CenterBoardAndShredderVertically`). `ShredderConfig` retains ownership of the shredder clearance values (`PhysicsHandoffDistanceBelowMap` and `PhysicsFreefallDistanceBelowHandoff`).
+`BoardPresentationConfig` owns the gameplay viewport safe band (`BoardTopViewportInset`, `BoardBottomViewportInset`, `FrameTopAllowance`, `FrameSideAllowance`, `TopHudGapInGridCells`, `ShredderToBoosterGapInGridCells`, `CameraSizeMultiplier`, and `CenterBoardAndShredderVertically`). `ShredderConfig` retains ownership of the shredder clearance values (`PhysicsHandoffDistanceBelowMap` and `PhysicsFreefallDistanceBelowHandoff`).
 
 * `GravityGridMetrics.EffectiveShredderDropBelowBoard` trims excess open empty rows at the bottom of an authored board from the below-map freefall offset while always preserving at least `PhysicsHandoffDistanceBelowMap` clearance below `-halfHeight`. Board topology, bottom-row sliding, exit handoff, and freefall rules remain unchanged.
-* When `CenterBoardAndShredderVertically` is enabled, `GravityLevelRuntime` fits the full vertical span from the top decorative frame rail (`+halfHeight + FrameTopAllowance`) to the bottom of the shredder wheels (`-halfHeight - effectiveDrop - 2 * wheelRadius`) inside `[BoardBottomViewportInset, 1 - BoardTopViewportInset]` and centers that span vertically between the top HUD and bottom Booster bar.
+* When `CenterBoardAndShredderVertically` is enabled, `GravityLevelRuntime` fits the full vertical span from the top decorative frame rail plus `TopHudGapInGridCells` (`+halfHeight + FrameTopAllowance + TopHudGapInGridCells`, default `0.5` grid) down to the bottom of the shredder wheels minus `ShredderToBoosterGapInGridCells` (`-halfHeight - effectiveDrop - 2 * wheelRadius - ShredderToBoosterGapInGridCells`, default `1.5` grids) inside `[BoardBottomViewportInset, 1 - BoardTopViewportInset]`, fits horizontal width using world-space `FrameSideAllowance` (`columns + 2 * FrameSideAllowance`, default `0.42` grids per side), and centers the vertical span between the top HUD and bottom Booster bar. Smaller boards zoom in naturally without an artificial minimum camera floor.
 
 ## Counters and Piece Overlays
 

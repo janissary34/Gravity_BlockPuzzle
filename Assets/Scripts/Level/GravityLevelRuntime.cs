@@ -487,11 +487,17 @@ namespace GravityPuzzle
             float frameTopAllowance = configuredBoardPresentationConfig != null
                 ? configuredBoardPresentationConfig.FrameTopAllowance
                 : .55f;
+            float topHudGap = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.TopHudGapInGridCells
+                : .5f;
+            float shredderToBoosterGap = configuredBoardPresentationConfig != null
+                ? configuredBoardPresentationConfig.ShredderToBoosterGapInGridCells
+                : 1.5f;
             float effectiveDrop = ResolveEffectiveShredderDropBelowBoard(level, shredderConfig);
             int wheelCount = CalculateRequiredShredderWheelCount(level, shredderConfig);
             float wheelRadius = level.boardColumns / (wheelCount * 2f);
-            framedTop = halfHeight + frameTopAllowance;
-            framedBottom = -halfHeight - effectiveDrop - wheelRadius * 2f;
+            framedTop = halfHeight + frameTopAllowance + topHudGap;
+            framedBottom = -halfHeight - effectiveDrop - wheelRadius * 2f - shredderToBoosterGap;
         }
 
         private static float ResolveCameraSize(GravityLevelDefinition level)
@@ -526,7 +532,8 @@ namespace GravityPuzzle
                     level.cameraViewportWidth,
                     presentationMargin,
                     configuredBoardPresentationConfig.BoardTopViewportInset,
-                    configuredBoardPresentationConfig.BoardBottomViewportInset);
+                    configuredBoardPresentationConfig.BoardBottomViewportInset,
+                    configuredBoardPresentationConfig.FrameSideAllowance);
             }
 
             float levelCameraSize = GravityGridMetrics.CameraSize(

@@ -83,14 +83,21 @@ namespace GravityPuzzle
             float viewportWidth,
             float horizontalMarginMultiplier,
             float topViewportInset,
-            float bottomViewportInset)
+            float bottomViewportInset,
+            float frameSideAllowance = 0f)
         {
             float clampedSafeWidth = Mathf.Clamp(safeWidthFraction, .5f, 1f);
             float clampedSafeHeight = Mathf.Clamp(safeHeightFraction, .5f, 1f);
-            float widthLimited = columns * .5f /
-                                 (Mathf.Max(.25f, aspect) * Mathf.Clamp(viewportWidth, .1f, 1f) *
-                                  clampedSafeWidth) *
-                                 Mathf.Max(1f, horizontalMarginMultiplier);
+            float clampedAspect = Mathf.Max(.25f, aspect);
+            float marginMultiplier = Mathf.Max(1f, horizontalMarginMultiplier);
+            float widthLimited = frameSideAllowance > 0f
+                ? (columns + frameSideAllowance * 2f) * .5f /
+                  (clampedAspect * clampedSafeWidth) *
+                  marginMultiplier
+                : columns * .5f /
+                  (clampedAspect * Mathf.Clamp(viewportWidth, .1f, 1f) *
+                   clampedSafeWidth) *
+                  marginMultiplier;
             float clampedTop = Mathf.Clamp(topViewportInset, .05f, .45f);
             float clampedBottom = Mathf.Clamp(bottomViewportInset, .05f, .45f);
             float usableVerticalBand = Mathf.Max(.1f, 1f - clampedTop - clampedBottom);
