@@ -127,6 +127,7 @@ namespace GravityPuzzle
         /// </summary>
         public bool IsMovementLocked => IsFrozen || IsKeyLocked;
         public float BombTimerSeconds { get; private set; }
+        public float FrozenBombElapsedSeconds { get; private set; }
         public int SourcePieceId { get; private set; } = -1;
         /// <summary>Authored board-block units represented by this draggable piece.</summary>
         public int ProgressUnits { get; private set; } = 1;
@@ -568,6 +569,7 @@ namespace GravityPuzzle
             RestoreTargetingForegroundSorting();
             IsFrozen = false;
             IsBombDefused = false;
+            FrozenBombElapsedSeconds = 0f;
             ResetKeyLockState();
             SourcePieceId = -1;
             SetOutlineRenderersEnabled(true);
@@ -1750,12 +1752,12 @@ namespace GravityPuzzle
         }
 
         /// <summary>
-        /// Legacy Normal pieces with a positive frozen count are ice; every
-        /// other special type ignores the ice countdown.
+        /// Any piece type may carry an initial ice countdown when authored
+        /// with a positive <see cref="PieceDefinition.frozenMoveCount"/>.
         /// </summary>
         public static bool UsesIceCountdown(PieceSpecialBlockType type)
         {
-            return type == PieceSpecialBlockType.Normal || type == PieceSpecialBlockType.Ice;
+            return true;
         }
 
         public void ConfigureIceParticleVfx(IIceBlockParticleVfx particleVfx)
@@ -1793,6 +1795,7 @@ namespace GravityPuzzle
             IsBomb = false;
             IsBombDefused = false;
             BombTimerSeconds = 0f;
+            FrozenBombElapsedSeconds = 0f;
             previousBombRemaining = -1;
             InvalidateVoxelCache();
         }
@@ -2587,6 +2590,7 @@ namespace GravityPuzzle
             IsBomb = isBomb;
             IsBombDefused = false;
             BombTimerSeconds = isBomb ? Mathf.Max(1f, timerSeconds) : 0f;
+            FrozenBombElapsedSeconds = 0f;
             bombCounterFontSize = counterFontSize > 5f
                 ? Mathf.Clamp((counterFontSize / 36f) * .65f, .1f, 3f)
                 : Mathf.Clamp(counterFontSize, .1f, 3f);
@@ -2604,13 +2608,33 @@ namespace GravityPuzzle
             }
         }
 
+        public void SyncFrozenBombElapsed(float boardBombElapsedSeconds)
+        {
+            if (IsBomb && !IsBombDefused)
+                FrozenBombElapsedSeconds = Mathf.Max(0f, boardBombElapsedSeconds);
+        }
+
         public void RefreshBombState()
         {
             if (!IsBomb || IsShredderInteractionLocked || IsBombDefused)
                 return;
 
+            if (IsFrozen)
+            {
+                if (bombOverlayRenderer != null)
+                    bombOverlayRenderer.enabled = false;
+                if (bombCounterText != null && bombCounterText != iceCounterText)
+                {
+                    bombCounterText.enabled = false;
+                    bombCounterText.gameObject.SetActive(false);
+                }
+                return;
+            }
+
             if (bombOverlayRenderer == null && bombOverlaySprite != null)
                 BuildBombVisuals();
+            else if (bombOverlayRenderer != null)
+                bombOverlayRenderer.enabled = true;
 
             previousBombRemaining = -1;
             UpdateBombCounter(Mathf.CeilToInt(BombTimerSeconds));
@@ -2618,7 +2642,7 @@ namespace GravityPuzzle
 
         public void RefreshBombTimer(float secondsRemaining)
         {
-            if (!IsBomb || IsShredderInteractionLocked || IsBombDefused)
+            if (!IsBomb || IsFrozen || IsShredderInteractionLocked || IsBombDefused)
                 return;
 
             int remainingSeconds = Mathf.CeilToInt(Mathf.Max(0f, secondsRemaining));
@@ -2697,6 +2721,12 @@ namespace GravityPuzzle
         /// </summary>
         public void RefreshKeyLockBadge()
         {
+            if (IsFrozen)
+            {
+                keyLockBadge?.ClearBadge();
+                return;
+            }
+
             if (keyLockBadge == null || keyLockBadge.HasBadge)
                 return;
 
@@ -2867,12 +2897,21 @@ namespace GravityPuzzle
 
             bool wasFrozen = IsFrozen;
             if (wasFrozen && !shouldBeFrozen)
+            {
                 CaptureWholePieceIceReleaseLayer();
+                PrototypeBoard activeBoard = PrototypeBoard.Active;
+                if (activeBoard != null)
+                    SyncFrozenBombElapsed(activeBoard.BombElapsedSeconds);
+            }
 
             IsFrozen = shouldBeFrozen;
             RefreshWholePiecePresentation();
             if (shouldBeFrozen)
             {
+                if (bombOverlayRenderer != null)
+                    bombOverlayRenderer.enabled = false;
+                keyLockBadge?.ClearBadge();
+
                 if (iceRenderers.Count == 0 &&
                     (wholePieceIceSprite == null || preferModularIcePresentation))
                     BuildIceVisuals();
@@ -2888,10 +2927,22 @@ namespace GravityPuzzle
             else
             {
                 previousFrozenRemaining = -1;
+                if (iceCounterText != null &&
+                    (iceCounterText != bombCounterText || !IsBomb || IsBombDefused))
+                {
+                    iceCounterText.enabled = false;
+                    iceCounterText.gameObject.SetActive(false);
+                }
+
                 if ((wasFrozen || iceRenderers.Count > 0) && !iceReleaseAnimating)
                     PlayIceReleaseAnimation();
                 else if (!iceReleaseAnimating)
                     ClearIceVisuals();
+
+                if (IsBomb && !IsBombDefused)
+                    RefreshBombState();
+                if (IsKey || IsKeyLocked)
+                    RefreshKeyLockBadge();
 
                 if (Body != null)
                     Body.WakeUp();
@@ -4391,6 +4442,14 @@ namespace GravityPuzzle
             {
                 iceCounterText.enabled = false;
                 iceCounterText.gameObject.SetActive(false);
+            }
+
+            if (!IsFrozen)
+            {
+                if (IsBomb && !IsBombDefused)
+                    RefreshBombState();
+                if (IsKey || IsKeyLocked)
+                    RefreshKeyLockBadge();
             }
         }
 

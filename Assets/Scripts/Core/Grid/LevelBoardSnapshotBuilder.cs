@@ -8,6 +8,7 @@ namespace GravityPuzzle.Core.Grid
     {
         public static LevelBoardSnapshot Build(GravityLevelDefinition level)
         {
+            level.LockUnlockedBoxes();
             int fineColumns = level.FineColumns;
             int fineRows = level.FineRows;
             GravityBoardGrid grid = new GravityBoardGrid(fineColumns, fineRows);

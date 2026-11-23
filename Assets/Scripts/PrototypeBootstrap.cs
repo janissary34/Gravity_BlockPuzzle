@@ -696,6 +696,7 @@ namespace GravityPuzzle
         private bool hasNextLevelButtonDefaultAnchoredPos;
         private bool boardFailed;
         private float bombElapsedSeconds;
+        public float BombElapsedSeconds => bombElapsedSeconds;
         private bool sequentialLevelsEnabled = true;
         private bool awaitingBoosterRewardDismissal;
         private BoosterRewardConfig pendingBoosterRewardConfig;
@@ -2921,7 +2922,13 @@ namespace GravityPuzzle
                     piece.IsShredderInteractionLocked)
                     continue;
 
-                float remainingSeconds = piece.BombTimerSeconds - bombElapsedSeconds;
+                if (piece.IsFrozen)
+                {
+                    piece.SyncFrozenBombElapsed(bombElapsedSeconds);
+                    continue;
+                }
+
+                float remainingSeconds = piece.BombTimerSeconds - Mathf.Max(0f, bombElapsedSeconds - piece.FrozenBombElapsedSeconds);
                 piece.RefreshBombTimer(remainingSeconds);
                 if (remainingSeconds > 0f)
                     continue;

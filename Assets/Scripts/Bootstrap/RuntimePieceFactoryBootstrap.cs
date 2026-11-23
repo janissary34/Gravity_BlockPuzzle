@@ -63,6 +63,9 @@ namespace GravityPuzzle.Bootstrap
         [Tooltip("Text that displays the active level difficulty (Normal, Hard, Very Hard).")]
         [SerializeField] private TMP_Text difficultyDisplayText;
 
+        [Tooltip("Badge/root object for the level difficulty tag, hidden on Normal levels.")]
+        [SerializeField] private GameObject difficultyTagRoot;
+
         [Tooltip("Text that displays the player's current coin total in the HUD.")]
         [SerializeField] private TMP_Text coinDisplayText;
 
@@ -259,6 +262,11 @@ namespace GravityPuzzle.Bootstrap
             SoundFeedbackRuntime.Release(soundFeedbackAudioSource, clockTickingAudioSource);
         }
 
+        public static bool ShouldShowDifficultyTag(LevelDifficulty difficulty)
+        {
+            return difficulty == LevelDifficulty.Hard || difficulty == LevelDifficulty.VeryHard;
+        }
+
         public static string FormatDifficultyLabel(LevelDifficulty difficulty)
         {
             return difficulty switch
@@ -271,16 +279,25 @@ namespace GravityPuzzle.Bootstrap
 
         private void ResolveDifficultyDisplayText()
         {
-            if (difficultyDisplayText != null || levelDisplayText == null)
-                return;
-
-            Transform levelRoot = levelDisplayText.transform.parent;
+            Transform levelRoot = levelDisplayText != null
+                ? levelDisplayText.transform.parent
+                : (difficultyDisplayText != null ? difficultyDisplayText.transform.parent : null);
             if (levelRoot == null)
                 return;
 
-            Transform difficultyTransform = levelRoot.Find("Level_Display_txt (1)");
-            if (difficultyTransform != null)
-                difficultyDisplayText = difficultyTransform.GetComponent<TMP_Text>();
+            if (difficultyDisplayText == null)
+            {
+                Transform difficultyTransform = levelRoot.Find("Level_Display_txt (1)");
+                if (difficultyTransform != null)
+                    difficultyDisplayText = difficultyTransform.GetComponent<TMP_Text>();
+            }
+
+            if (difficultyTagRoot == null)
+            {
+                Transform tagTransform = levelRoot.Find("Difficulty_tag");
+                if (tagTransform != null)
+                    difficultyTagRoot = tagTransform.gameObject;
+            }
         }
 
         private void ResolveCoinDisplayText()
@@ -306,8 +323,16 @@ namespace GravityPuzzle.Bootstrap
             if (levelDisplayText != null)
                 levelDisplayText.SetText("Level {0}", currentLevelNumber);
 
-            if (difficultyDisplayText != null && selectedLevel != null)
-                difficultyDisplayText.SetText(FormatDifficultyLabel(selectedLevel.difficulty));
+            bool showDifficultyTag = selectedLevel != null && ShouldShowDifficultyTag(selectedLevel.difficulty);
+            if (difficultyTagRoot != null)
+                difficultyTagRoot.SetActive(showDifficultyTag);
+
+            if (difficultyDisplayText != null)
+            {
+                difficultyDisplayText.gameObject.SetActive(showDifficultyTag);
+                if (showDifficultyTag)
+                    difficultyDisplayText.SetText(FormatDifficultyLabel(selectedLevel.difficulty));
+            }
 
             if (coinDisplayText != null)
                 coinDisplayText.SetText("{0}", GravityLevelRuntime.CurrentPlayerCoinAmount);

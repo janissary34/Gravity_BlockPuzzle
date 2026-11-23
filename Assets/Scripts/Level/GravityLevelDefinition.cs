@@ -420,6 +420,84 @@ namespace GravityPuzzle
                 }
             }
         }
+
+        /// <summary>
+        /// Captures any board pieces in <see cref="pieces"/> that lie completely
+        /// inside an unlocked Box reveal area's bounds into that Box's
+        /// <see cref="RevealAreaDefinition.hiddenPieces"/> and marks the Box locked.
+        /// Ensures boxes left unlocked in the Level Editor still behave as locked boxes at runtime.
+        /// </summary>
+        public int LockUnlockedBoxes()
+        {
+            if (boxes == null || boxes.Count == 0)
+                return 0;
+
+            int totalCaptured = 0;
+            for (int boxIndex = 0; boxIndex < boxes.Count; boxIndex++)
+            {
+                BoxRevealDefinition box = boxes[boxIndex];
+                if (box == null || box.bounds.size.x <= 0 || box.bounds.size.y <= 0)
+                    continue;
+
+                if (!box.editorLocked)
+                {
+                    totalCaptured += CapturePiecesInsideBox(box);
+                    box.editorLocked = true;
+                }
+            }
+
+            return totalCaptured;
+        }
+
+        private int CapturePiecesInsideBox(BoxRevealDefinition box)
+        {
+            if (pieces == null || pieces.Count == 0)
+                return 0;
+
+            if (box.hiddenPieces == null)
+                box.hiddenPieces = new List<PieceDefinition>();
+
+            int insertIndex = box.hiddenPieces.Count;
+            int capturedCount = 0;
+            for (int index = pieces.Count - 1; index >= 0; index--)
+            {
+                PieceDefinition piece = pieces[index];
+                if (!IsPieceFullyInsideRevealArea(piece, box.bounds))
+                    continue;
+
+                box.hiddenPieces.Insert(insertIndex, piece);
+                pieces.RemoveAt(index);
+                capturedCount++;
+            }
+
+            return capturedCount;
+        }
+
+        public static bool IsPieceFullyInsideRevealArea(
+            PieceDefinition piece,
+            RevealAreaBounds bounds)
+        {
+            if (piece == null || piece.cells == null || piece.cells.Count == 0)
+                return false;
+
+            bool hasBlockCell = false;
+            for (int index = 0; index < piece.cells.Count; index++)
+            {
+                if (piece.cells[index].type == PieceCellType.Block)
+                    hasBlockCell = true;
+
+                Vector2Int absoluteCell = piece.origin + QuarterTurnUtility.Rotate(
+                    piece.cells[index].localCell,
+                    piece.quarterTurns);
+                if (absoluteCell.x < bounds.XMin || absoluteCell.x >= bounds.XMaxExclusive ||
+                    absoluteCell.y < bounds.YMin || absoluteCell.y >= bounds.YMaxExclusive)
+                {
+                    return false;
+                }
+            }
+
+            return hasBlockCell;
+        }
     }
 
     public enum PieceCellType

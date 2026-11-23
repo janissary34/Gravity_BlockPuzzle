@@ -228,15 +228,7 @@ namespace GravityPuzzle.Editor
                 if (selectedPieceIndices.Contains(i))
                     GUI.backgroundColor = new Color(.55f, .8f, 1f);
                 PieceDefinition listPiece = level.pieces[i];
-                string pieceLabel = listPiece.specialBlockType == PieceSpecialBlockType.Bomb
-                    ? $"{listPiece.name} [Bomb {listPiece.bombTimerSeconds:0.#}s]"
-                    : listPiece.specialBlockType == PieceSpecialBlockType.Key
-                        ? $"{listPiece.name} [Key {GetKeyPairLabel(listPiece.pieceId)}]"
-                        : listPiece.specialBlockType == PieceSpecialBlockType.Lock
-                            ? $"{listPiece.name} [Lock {GetKeyPairLabel(listPiece.lockKeyPieceId)}]"
-                            : listPiece.frozenMoveCount > 0
-                                ? $"{listPiece.name} [Ice {listPiece.frozenMoveCount}]"
-                                : listPiece.name;
+                string pieceLabel = FormatPieceListLabel(listPiece);
                 if (GUILayout.Button(pieceLabel))
                     SelectPiece(i, Event.current.command);
                 GUI.backgroundColor = previous;
@@ -774,29 +766,39 @@ namespace GravityPuzzle.Editor
                     RotatePieceCells(piece, rotationSteps);
                     return;
                 }
-                PieceSpecialBlockType resolvedSpecialType = piece.specialBlockType == PieceSpecialBlockType.Normal &&
-                                                            piece.frozenMoveCount > 0
+                bool isIceSelected = piece.specialBlockType == PieceSpecialBlockType.Ice || piece.frozenMoveCount > 0;
+                PieceSpecialBlockType displayedPrimaryType = isIceSelected
                     ? PieceSpecialBlockType.Ice
                     : piece.specialBlockType;
-                PieceSpecialBlockType newSpecialBlockType = (PieceSpecialBlockType)EditorGUILayout.EnumPopup(
-                    new GUIContent("Block Type", "Ice, Bomb, Key and Lock are mutually exclusive."), resolvedSpecialType);
+                PieceSpecialBlockType selectedPrimaryType = (PieceSpecialBlockType)EditorGUILayout.EnumPopup(
+                    new GUIContent("Block Type", "Primary block type. Selecting Ice allows choosing an optional inner Bomb, Key, or Lock block."),
+                    displayedPrimaryType);
+
                 int newFrozenMoveCount = piece.frozenMoveCount;
-                if (newSpecialBlockType == PieceSpecialBlockType.Ice)
+                PieceSpecialBlockType newSpecialBlockType = selectedPrimaryType;
+                if (selectedPrimaryType == PieceSpecialBlockType.Ice)
                 {
+                    IceInnerBlockType currentInnerType = ResolveIceInnerBlockType(piece.specialBlockType);
+                    IceInnerBlockType selectedInnerType = (IceInnerBlockType)EditorGUILayout.EnumPopup(
+                        new GUIContent("Under Ice Type", "Block type revealed after the ice thaws (None, Bomb, Key, Lock)."),
+                        currentInnerType);
+                    newSpecialBlockType = MapIceInnerBlockType(selectedInnerType);
+                    int defaultFrozenCount = piece.frozenMoveCount > 0 ? piece.frozenMoveCount : 1;
                     newFrozenMoveCount = Mathf.Max(1, EditorGUILayout.IntField(
                         new GUIContent("Frozen Move Count", "The piece unlocks after this many other pieces have been destroyed."),
-                        piece.frozenMoveCount));
+                        defaultFrozenCount));
                 }
                 else
                 {
                     newFrozenMoveCount = 0;
                 }
+
                 float newCounterFontSize = piece.iceCounterFontSize;
                 Color newCounterTextColor = piece.iceCounterTextColor;
                 Color newCounterOutlineColor = piece.iceCounterOutlineColor;
                 float newCounterOutlineWidth = piece.iceCounterOutlineWidth;
                 Vector2 newCounterOffset = piece.iceCounterOffset;
-                if (newSpecialBlockType == PieceSpecialBlockType.Ice)
+                if (selectedPrimaryType == PieceSpecialBlockType.Ice)
                 {
                     GUILayout.Label("Ice Counter Text", EditorStyles.boldLabel);
                     EditorGUILayout.HelpBox(
@@ -837,7 +839,7 @@ namespace GravityPuzzle.Editor
                 if (newName != piece.name || newColor != piece.color ||
                     newVisualId != piece.visualId || newPaletteId != piece.paletteId ||
                     newOrigin != piece.origin ||
-                    newSpecialBlockType != resolvedSpecialType ||
+                    newSpecialBlockType != piece.specialBlockType ||
                     newFrozenMoveCount != piece.frozenMoveCount ||
                     !Mathf.Approximately(newCounterFontSize, piece.iceCounterFontSize) ||
                     newCounterTextColor != piece.iceCounterTextColor ||
@@ -2017,7 +2019,8 @@ namespace GravityPuzzle.Editor
             {
                 PieceDefinition candidate = level.pieces[index];
                 if (candidate == null || candidate == lockPiece ||
-                    candidate.specialBlockType != PieceSpecialBlockType.Normal || candidate.frozenMoveCount > 0)
+                    (candidate.specialBlockType != PieceSpecialBlockType.Normal &&
+                     candidate.specialBlockType != PieceSpecialBlockType.Ice))
                     continue;
 
                 if (!hasNormal)
@@ -2045,11 +2048,63 @@ namespace GravityPuzzle.Editor
             if (keyPiece != null && keyPiece.specialBlockType != PieceSpecialBlockType.Key)
             {
                 keyPiece.specialBlockType = PieceSpecialBlockType.Key;
-                keyPiece.frozenMoveCount = 0;
             }
 
             lockPiece.lockKeyPieceId = keyPiece != null ? keyPiece.pieceId : string.Empty;
             MarkDirty();
+        }
+
+        private enum IceInnerBlockType
+        {
+            None = 0,
+            Bomb = 1,
+            Key = 2,
+            Lock = 3
+        }
+
+        private static IceInnerBlockType ResolveIceInnerBlockType(PieceSpecialBlockType specialBlockType)
+        {
+            return specialBlockType switch
+            {
+                PieceSpecialBlockType.Bomb => IceInnerBlockType.Bomb,
+                PieceSpecialBlockType.Key => IceInnerBlockType.Key,
+                PieceSpecialBlockType.Lock => IceInnerBlockType.Lock,
+                _ => IceInnerBlockType.None
+            };
+        }
+
+        private static PieceSpecialBlockType MapIceInnerBlockType(IceInnerBlockType innerType)
+        {
+            return innerType switch
+            {
+                IceInnerBlockType.Bomb => PieceSpecialBlockType.Bomb,
+                IceInnerBlockType.Key => PieceSpecialBlockType.Key,
+                IceInnerBlockType.Lock => PieceSpecialBlockType.Lock,
+                _ => PieceSpecialBlockType.Ice
+            };
+        }
+
+        private string FormatPieceListLabel(PieceDefinition listPiece)
+        {
+            if (listPiece == null)
+                return string.Empty;
+
+            bool hasIce = listPiece.frozenMoveCount > 0 || listPiece.specialBlockType == PieceSpecialBlockType.Ice;
+            string innerTag = listPiece.specialBlockType switch
+            {
+                PieceSpecialBlockType.Bomb => $"Bomb {listPiece.bombTimerSeconds:0.#}s",
+                PieceSpecialBlockType.Key => $"Key {GetKeyPairLabel(listPiece.pieceId)}",
+                PieceSpecialBlockType.Lock => $"Lock {GetKeyPairLabel(listPiece.lockKeyPieceId)}",
+                _ => null
+            };
+
+            if (hasIce && !string.IsNullOrEmpty(innerTag))
+                return $"{listPiece.name} [Ice {Mathf.Max(1, listPiece.frozenMoveCount)} -> {innerTag}]";
+            if (hasIce)
+                return $"{listPiece.name} [Ice {Mathf.Max(1, listPiece.frozenMoveCount)}]";
+            if (!string.IsNullOrEmpty(innerTag))
+                return $"{listPiece.name} [{innerTag}]";
+            return listPiece.name;
         }
 
         private PieceDefinition FindPieceById(string pieceId)

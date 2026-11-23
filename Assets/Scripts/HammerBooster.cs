@@ -672,9 +672,9 @@ namespace GravityPuzzle
         /// </summary>
         private void ApplyHammerWholePieceHit(PuzzlePiece piece, PrototypeBoard board)
         {
-            bool hit = piece.IsKeyLocked
-                ? piece.TryReleaseKeyLock()
-                : piece.TryChipIceWithHammer(board != null ? board.DestroyedPieceCount : 0);
+            bool hit = piece.IsFrozen
+                ? piece.TryChipIceWithHammer(board != null ? board.DestroyedPieceCount : 0)
+                : piece.TryReleaseKeyLock();
             if (!hit)
                 return;
 

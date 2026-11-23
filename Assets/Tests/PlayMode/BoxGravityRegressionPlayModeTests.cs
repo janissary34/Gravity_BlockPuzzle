@@ -315,6 +315,28 @@ namespace GravityPuzzle.Tests.PlayMode
                 Assert.That((bool)tryGetFallTarget.Invoke(grid, fallParameters), Is.True,
                     "Removing the support must let normal gravity plan the Tunnel exit.");
 
+                Type snapshotType = Type.GetType("GravityPuzzle.Core.Grid.LevelBoardSnapshot, Assembly-CSharp");
+                Type issueListType = typeof(List<>).MakeGenericType(
+                    Type.GetType("GravityPuzzle.Core.Grid.LevelBoardSnapshotIssue, Assembly-CSharp"));
+                Type pieceListType = typeof(List<>).MakeGenericType(PieceModelType);
+                IList snapshotPieces = (IList)Activator.CreateInstance(pieceListType);
+                snapshotPieces.Add(model);
+                object snapshot = Activator.CreateInstance(
+                    snapshotType,
+                    grid,
+                    snapshotPieces,
+                    Activator.CreateInstance(issueListType));
+                BoardType.GetMethod("InitializeBoardSnapshot").Invoke(board, new[] { snapshot });
+
+                Assert.That((bool)CoordinatorType.GetMethod("CanBeginInteraction").Invoke(coordinator, new[] { model }), Is.False,
+                    "An exposed Tunnel piece with empty space below must fall by gravity rather than becoming manually draggable.");
+
+                GridType.GetMethod("SetBlocked").Invoke(grid, new[] { CreateCoordinate(2, 1) });
+                Assert.That((bool)CoordinatorType.GetMethod("CanBeginInteraction").Invoke(coordinator, new[] { model }), Is.True,
+                    "An exposed Tunnel piece resting directly on a board obstacle must become interactable.");
+                Assert.That((bool)CoordinatorType.GetMethod("CanBeginInteraction").Invoke(coordinator, new[] { concealedModel }), Is.False,
+                    "A partially shutter-covered piece must remain non-interactable even above an obstacle.");
+
                 contentType.GetField("HasLeftBox").SetValue(content, true);
                 Assert.That((bool)CoordinatorType.GetMethod("CanParticipateInGravity").Invoke(coordinator, new[] { model }), Is.True);
                 Assert.That((bool)CoordinatorType.GetMethod("CanBeginInteraction").Invoke(coordinator, new[] { model }), Is.True,

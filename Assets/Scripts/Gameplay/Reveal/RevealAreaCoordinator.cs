@@ -94,6 +94,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             public PieceDefinition Definition;
             public bool IsActivated;
             public bool HasLeftBox;
+            public bool IsPresentationReleased;
             public int RuntimePieceId = -1;
         }
 
@@ -151,6 +152,8 @@ namespace GravityPuzzle.Gameplay.Reveal
 
             if (level == null)
                 return;
+
+            level.LockUnlockedBoxes();
 
             int boxCount = level.boxes != null ? level.boxes.Count : 0;
             for (int index = 0; index < boxCount; index++)
@@ -399,7 +402,8 @@ namespace GravityPuzzle.Gameplay.Reveal
 
         /// <summary>
         /// Tunnel content cannot be selected until it has left its partially
-        /// opened Tunnel. Exposure releases it to gravity, never to dragging.
+        /// opened Tunnel, unless it is fully exposed and blocked from falling
+        /// by a board obstacle directly beneath it.
         /// </summary>
         public bool CanBeginInteraction(PieceModel model)
         {
@@ -410,6 +414,13 @@ namespace GravityPuzzle.Gameplay.Reveal
             {
                 if (ownerBox.State == RevealAreaState.Unlocked || ownerContent.HasLeftBox)
                     return true;
+
+                if (ownerContent.IsActivated &&
+                    IsModelFullyWithinExposedBoxRows(model, model.Anchor, ownerBox) &&
+                    IsRestingOnObstacle(model))
+                {
+                    return true;
+                }
 
                 return false;
             }
@@ -614,7 +625,16 @@ namespace GravityPuzzle.Gameplay.Reveal
                 content.RuntimePieceId = piece.SourcePieceId;
                 activatedBoxContentByPieceId[content.RuntimePieceId] = content;
                 activatedBoxByPieceId[content.RuntimePieceId] = box;
-                RestoreInsideBoxPresentation(box, content, piece);
+                if (board.BoardSnapshot != null &&
+                    board.BoardSnapshot.TryGetPiece(content.RuntimePieceId, out PieceModel activatedModel) &&
+                    IsRestingOnObstacle(activatedModel))
+                {
+                    ReleaseContentPresentation(box, content, piece);
+                }
+                else
+                {
+                    RestoreInsideBoxPresentation(box, content, piece);
+                }
                 activatedAnyContent = true;
             }
 
@@ -657,6 +677,13 @@ namespace GravityPuzzle.Gameplay.Reveal
                     {
                         ReleaseContentPresentation(box, content, piece);
                     }
+                    else if (content.IsPresentationReleased ||
+                             model.State == PieceState.Dragging ||
+                             model.State == PieceState.Falling ||
+                             (IsModelFullyWithinExposedBoxRows(model, model.Anchor, box) && IsRestingOnObstacle(model)))
+                    {
+                        ReleaseContentPresentation(box, content, piece);
+                    }
                     else if (!content.HasLeftBox && model.State != PieceState.Dragging)
                         RestoreInsideBoxPresentation(box, content, piece);
                 }
@@ -684,6 +711,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             BoxContentRuntime content,
             PuzzlePiece piece)
         {
+            content.IsPresentationReleased = true;
             if (presentations.TryGetValue(box.Definition.areaId, out IRevealAreaPresentation presentation) &&
                 presentation is IBoxRevealExposurePresentation exposurePresentation)
             {
@@ -778,6 +806,23 @@ namespace GravityPuzzle.Gameplay.Reveal
             }
 
             return true;
+        }
+
+        private bool IsRestingOnObstacle(PieceModel model)
+        {
+            if (model == null || board == null || board.BoardSnapshot == null || board.BoardSnapshot.Grid == null)
+                return false;
+
+            GravityBoardGrid grid = board.BoardSnapshot.Grid;
+            for (int index = 0; index < model.LocalCells.Count; index++)
+            {
+                GridCoordinate cell = model.Anchor.Offset(model.LocalCells[index]);
+                GridCoordinate below = new GridCoordinate(cell.X, cell.Y - 1);
+                if (grid.IsInside(below) && grid.GetCellState(below) == GridCellState.Blocked)
+                    return true;
+            }
+
+            return false;
         }
 
         private bool RefreshElevatorOccupancy(ElevatorRuntime elevator)

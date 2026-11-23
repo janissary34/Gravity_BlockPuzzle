@@ -160,7 +160,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 out Sprite modularSprite,
                 out Material presentationMaterial);
 
-            bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
+            bool isFrozenIce = PuzzlePiece.UsesIceCountdown(definition.specialBlockType) &&
                                definition.frozenMoveCount > 0;
             List<PiecePartGeometry> parts = BuildPartGeometry(
                 level,
@@ -696,7 +696,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             List<SpriteRenderer> collisionCellVisuals = new List<SpriteRenderer>(parts.Count);
             List<VoxelShard> voxelShards = new List<VoxelShard>(
                 parts.Count * VoxelBlockBuilder.Subdivisions * VoxelBlockBuilder.Subdivisions);
-            bool usesModularIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
+            bool usesModularIce = PuzzlePiece.UsesIceCountdown(definition.specialBlockType) &&
                                   definition.frozenMoveCount > 0;
             float presentationScaleMultiplier = usesModularIce && pieceVisualConfig != null
                 ? pieceVisualConfig.ModularIceCellScale
@@ -1446,7 +1446,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             out Sprite voxelSprite,
             out Material presentationMaterial)
         {
-            bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
+            bool isFrozenIce = PuzzlePiece.UsesIceCountdown(definition.specialBlockType) &&
                                definition.frozenMoveCount > 0;
             color = definition.color;
             presentationMaterial = ResolvePaletteMaterial(definition.paletteId);
@@ -1669,7 +1669,7 @@ namespace GravityPuzzle.Gameplay.Pieces
                 return;
             }
 
-            bool isFrozenIce = definition.specialBlockType == PieceSpecialBlockType.Ice &&
+            bool isFrozenIce = PuzzlePiece.UsesIceCountdown(definition.specialBlockType) &&
                                definition.frozenMoveCount > 0;
             bool useModularIce = isFrozenIce &&
                                  (pieceVisualConfig.UseUnifiedModularIce ||

@@ -8928,7 +8928,7 @@ GameObject:
   - component: {fileID: 1519510533}
   - component: {fileID: 1519510532}
   m_Layer: 5
-  m_Name: level_txt_bg (1)
+  m_Name: Difficulty_tag
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11253,6 +11253,7 @@ MonoBehaviour:
   levelRuntimeRoot: {fileID: 572866839}
   levelDisplayText: {fileID: 1749646611}
   difficultyDisplayText: {fileID: 2085774164}
+  difficultyTagRoot: {fileID: 1519510530}
   coinDisplayText: {fileID: 0}
   retryLevelText: {fileID: 1749646596}
   failedLevelText: {fileID: 1749646597}

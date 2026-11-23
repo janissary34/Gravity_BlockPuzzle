@@ -128,6 +128,18 @@ namespace GravityPuzzle.Tests.Editor
                 Is.EqualTo(expected));
         }
 
+        [TestCase(LevelDifficulty.Normal, false)]
+        [TestCase(LevelDifficulty.Hard, true)]
+        [TestCase(LevelDifficulty.VeryHard, true)]
+        public void ShouldShowDifficultyTag_IsTrueOnlyForHardAndVeryHard(
+            LevelDifficulty difficulty,
+            bool expectedVisible)
+        {
+            Assert.That(
+                RuntimePieceFactoryBootstrap.ShouldShowDifficultyTag(difficulty),
+                Is.EqualTo(expectedVisible));
+        }
+
         [Test]
         public void ResolveFirstHardLevelNumber_FindsFirstHardOrVeryHardLevelInSequence()
         {
@@ -223,6 +235,71 @@ namespace GravityPuzzle.Tests.Editor
             RectTransform unlockRect = unlockText.rectTransform;
             Assert.That(unlockRect.anchorMin, Is.EqualTo(new Vector2(0.5f, 0f)));
             Assert.That(unlockRect.anchorMax, Is.EqualTo(new Vector2(0.5f, 0f)));
+        }
+
+        [Test]
+        public void LockUnlockedBoxes_CapturesInteriorPiecesAndMarksBoxLocked()
+        {
+            GravityLevelDefinition level = ScriptableObject.CreateInstance<GravityLevelDefinition>();
+            try
+            {
+                PieceDefinition insidePiece = new PieceDefinition
+                {
+                    pieceId = "inside",
+                    origin = new Vector2Int(4, 4),
+                    cells = new System.Collections.Generic.List<PieceCellDefinition>
+                    {
+                        new PieceCellDefinition(Vector2Int.zero, PieceCellType.Block),
+                        new PieceCellDefinition(Vector2Int.right, PieceCellType.Block)
+                    }
+                };
+                PieceDefinition outsidePiece = new PieceDefinition
+                {
+                    pieceId = "outside",
+                    origin = new Vector2Int(0, 0),
+                    cells = new System.Collections.Generic.List<PieceCellDefinition>
+                    {
+                        new PieceCellDefinition(Vector2Int.zero, PieceCellType.Block)
+                    }
+                };
+
+                level.pieces.Add(insidePiece);
+                level.pieces.Add(outsidePiece);
+
+                BoxRevealDefinition unlockedBox = new BoxRevealDefinition
+                {
+                    areaId = "box-1",
+                    editorLocked = false,
+                    bounds = new RevealAreaBounds
+                    {
+                        origin = new Vector2Int(4, 4),
+                        size = new Vector2Int(4, 4)
+                    }
+                };
+                level.boxes.Add(unlockedBox);
+
+                int captured = level.LockUnlockedBoxes();
+                Assert.That(captured, Is.EqualTo(1));
+                Assert.That(unlockedBox.editorLocked, Is.True);
+                Assert.That(unlockedBox.hiddenPieces.Count, Is.EqualTo(1));
+                Assert.That(unlockedBox.hiddenPieces[0], Is.SameAs(insidePiece));
+                Assert.That(level.pieces.Count, Is.EqualTo(1));
+                Assert.That(level.pieces[0], Is.SameAs(outsidePiece));
+            }
+            finally
+            {
+                Object.DestroyImmediate(level);
+            }
+        }
+
+        [TestCase(PieceSpecialBlockType.Normal)]
+        [TestCase(PieceSpecialBlockType.Ice)]
+        [TestCase(PieceSpecialBlockType.Bomb)]
+        [TestCase(PieceSpecialBlockType.Key)]
+        [TestCase(PieceSpecialBlockType.Lock)]
+        public void UsesIceCountdown_AllowsIceLayerOnAllBlockTypes(PieceSpecialBlockType blockType)
+        {
+            Assert.That(PuzzlePiece.UsesIceCountdown(blockType), Is.True);
         }
 
         private sealed class StubBoosterInventory : IPlayerBoosterInventory

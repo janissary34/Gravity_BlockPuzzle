@@ -181,7 +181,10 @@ namespace GravityPuzzle
         public static GravityLevelDefinition FindLevelToPlay()
         {
             if (levelSequenceInitialized)
+            {
+                CurrentLevel?.LockUnlockedBoxes();
                 return CurrentLevel;
+            }
 
             levelSequenceInitialized = true;
             levels = FindAllLevels();
@@ -213,6 +216,7 @@ namespace GravityPuzzle
             }
 #endif
 
+            CurrentLevel?.LockUnlockedBoxes();
             return CurrentLevel;
         }
 
@@ -409,6 +413,8 @@ namespace GravityPuzzle
                 Debug.LogError("[LevelRuntime] Cannot build a null level.");
                 return;
             }
+
+            level.LockUnlockedBoxes();
 
             if (configuredBoard == null || configuredDragController == null)
             {
