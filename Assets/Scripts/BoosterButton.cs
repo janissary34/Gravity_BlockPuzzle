@@ -445,26 +445,12 @@ namespace GravityPuzzle
 
             if (lockRoot == null)
             {
-                Transform child = transform.Find("Lock") ??
-                                  transform.Find("lock") ??
-                                  transform.Find("LockRoot") ??
-                                  transform.Find("lockRoot") ??
-                                  transform.Find("Lock_img") ??
-                                  transform.Find("lock_img") ??
-                                  transform.Find("LockedOverlay") ??
-                                  transform.Find("lockedOverlay");
-                if (child == null)
+                Transform child = FindLockTransform(transform);
+                if (child == null && disabledVisualRoot != null)
                 {
-                    for (int i = 0; i < transform.childCount; i++)
-                    {
-                        Transform candidate = transform.GetChild(i);
-                        if (candidate.name.IndexOf("lock", System.StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            child = candidate;
-                            break;
-                        }
-                    }
+                    child = FindLockTransform(disabledVisualRoot.transform);
                 }
+
                 if (child != null)
                     lockRoot = child.gameObject;
             }
@@ -515,6 +501,32 @@ namespace GravityPuzzle
             }
         }
 
+        private static Transform FindLockTransform(Transform parent)
+        {
+            if (parent == null)
+                return null;
+
+            Transform child = parent.Find("Lock") ??
+                              parent.Find("lock") ??
+                              parent.Find("LockRoot") ??
+                              parent.Find("lockRoot") ??
+                              parent.Find("Lock_img") ??
+                              parent.Find("lock_img") ??
+                              parent.Find("LockedOverlay") ??
+                              parent.Find("lockedOverlay");
+            if (child != null)
+                return child;
+
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform candidate = parent.GetChild(i);
+                if (candidate.name.IndexOf("lock", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    return candidate;
+            }
+
+            return null;
+        }
+
         public void UpdateCountUI()
         {
             string str = RemainingCount.ToString();
@@ -546,7 +558,7 @@ namespace GravityPuzzle
                 return;
             }
 
-            if (enabledVisualRoot == null && disabledVisualRoot == null && lockRoot == null)
+            if (enabledVisualRoot == null || disabledVisualRoot == null || lockRoot == null || unlockLevelTmpText == null)
                 FindLockReferences();
 
             bool isIntroduced = IsIntroduced;

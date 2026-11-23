@@ -691,6 +691,9 @@ namespace GravityPuzzle
         private bool boardCleared;
         private bool winPanelRevealPending;
         private float winPanelRevealDeadline;
+        private RectTransform nextLevelButtonRect;
+        private Vector2 nextLevelButtonDefaultAnchoredPos;
+        private bool hasNextLevelButtonDefaultAnchoredPos;
         private bool boardFailed;
         private float bombElapsedSeconds;
         private bool sequentialLevelsEnabled = true;
@@ -734,6 +737,9 @@ namespace GravityPuzzle
 
         [Tooltip("Win Panel içindeki, sonraki leveli yükleyecek buton.")]
         [SerializeField] private UnityEngine.UI.Button nextLevelButton;
+
+        [Tooltip("Win Panel içindeki x2 reklam ödül butonu. Boş bırakılırsa winPanel altında 'x2_add_btn' olarak bulunur.")]
+        [SerializeField] private GameObject winPanelX2Button;
 
         [Tooltip("Next Level Button içindeki, sıradaki level numarasını gösteren TMP metni.")]
         [SerializeField] private TMP_Text nextLevelButtonLabel;
@@ -920,6 +926,7 @@ namespace GravityPuzzle
 
         private void Awake()
         {
+            CacheWinPanelLayoutReferences();
             if (winPanel != null)
                 winPanel.SetActive(false);
 
@@ -2989,9 +2996,48 @@ namespace GravityPuzzle
             if (completedLevelText != null)
                 completedLevelText.SetText("Level {0} Completed!", GravityLevelRuntime.CurrentLevelNumber);
 
+            RefreshWinPanelActionButtonsLayout();
             winPanel.SetActive(true);
             RestartWinParticleEffects();
             PlayWinFanfare();
+        }
+
+        private void CacheWinPanelLayoutReferences()
+        {
+            if (winPanelX2Button == null && winPanel != null)
+            {
+                Transform x2Transform = winPanel.transform.Find("x2_add_btn");
+                if (x2Transform != null)
+                    winPanelX2Button = x2Transform.gameObject;
+            }
+
+            if (nextLevelButton != null && !hasNextLevelButtonDefaultAnchoredPos)
+            {
+                nextLevelButtonRect = nextLevelButton.transform as RectTransform;
+                if (nextLevelButtonRect != null)
+                {
+                    nextLevelButtonDefaultAnchoredPos = nextLevelButtonRect.anchoredPosition;
+                    hasNextLevelButtonDefaultAnchoredPos = true;
+                }
+            }
+        }
+
+        private void RefreshWinPanelActionButtonsLayout()
+        {
+            if (winPanelX2Button == null || !hasNextLevelButtonDefaultAnchoredPos)
+                CacheWinPanelLayoutReferences();
+
+            bool showX2Button = GravityLevelRuntime.IsX2RewardActiveForCurrentLevel;
+            if (winPanelX2Button != null && winPanelX2Button.activeSelf != showX2Button)
+                winPanelX2Button.SetActive(showX2Button);
+
+            if (nextLevelButtonRect != null && hasNextLevelButtonDefaultAnchoredPos)
+            {
+                float targetX = showX2Button ? nextLevelButtonDefaultAnchoredPos.x : 0f;
+                nextLevelButtonRect.anchoredPosition = new Vector2(
+                    targetX,
+                    nextLevelButtonDefaultAnchoredPos.y);
+            }
         }
 
         private void PlayWinFanfare()

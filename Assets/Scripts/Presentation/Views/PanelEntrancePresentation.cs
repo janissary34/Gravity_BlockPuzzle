@@ -305,7 +305,7 @@ namespace GravityPuzzle.Presentation.Views
             for (int index = 0; index < pulseComponentsAfterEntrance.Length; index++)
             {
                 MonoBehaviour pulseComponent = pulseComponentsAfterEntrance[index];
-                if (pulseComponent != null)
+                if (pulseComponent != null && pulseComponent.gameObject.activeInHierarchy)
                     pulseComponent.enabled = true;
             }
         }

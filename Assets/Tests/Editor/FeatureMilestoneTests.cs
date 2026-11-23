@@ -129,6 +129,37 @@ namespace GravityPuzzle.Tests.Editor
         }
 
         [Test]
+        public void ResolveFirstHardLevelNumber_FindsFirstHardOrVeryHardLevelInSequence()
+        {
+            GravityLevelDefinition l1 = ScriptableObject.CreateInstance<GravityLevelDefinition>();
+            GravityLevelDefinition l2 = ScriptableObject.CreateInstance<GravityLevelDefinition>();
+            GravityLevelDefinition l3 = ScriptableObject.CreateInstance<GravityLevelDefinition>();
+            GravityLevelDefinition l4 = ScriptableObject.CreateInstance<GravityLevelDefinition>();
+            try
+            {
+                l1.difficulty = LevelDifficulty.Normal;
+                l2.difficulty = LevelDifficulty.Normal;
+                l3.difficulty = LevelDifficulty.Hard;
+                l4.difficulty = LevelDifficulty.Normal;
+
+                int firstHard = GravityLevelRuntime.ResolveFirstHardLevelNumber(
+                    new[] { l1, l2, l3, l4 });
+                Assert.That(firstHard, Is.EqualTo(3));
+
+                int noneHard = GravityLevelRuntime.ResolveFirstHardLevelNumber(
+                    new[] { l1, l2 });
+                Assert.That(noneHard, Is.EqualTo(int.MaxValue));
+            }
+            finally
+            {
+                Object.DestroyImmediate(l1);
+                Object.DestroyImmediate(l2);
+                Object.DestroyImmediate(l3);
+                Object.DestroyImmediate(l4);
+            }
+        }
+
+        [Test]
         public void TimeBoosterButtonPrefab_UsesTenSecondFreezeDuration()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -160,6 +191,38 @@ namespace GravityPuzzle.Tests.Editor
             Assert.That(config.BoxCounterStepClips[0], Is.Not.Null);
             Assert.That(config.BoxBreakClips, Is.Not.Null.And.Not.Empty);
             Assert.That(config.BoxBreakClips[0], Is.Not.Null);
+        }
+
+        [TestCase("Assets/MainPrefabs/UI_Booster/Time_Booster_Button.prefab", "Level 4")]
+        [TestCase("Assets/MainPrefabs/UI_Booster/Hammer_Booster_Button.prefab", "Level 6")]
+        [TestCase("Assets/MainPrefabs/UI_Booster/Rocket_Booster_Button.prefab", "Level 10")]
+        public void BoosterButtonPrefabs_HaveBottomRightLockAndBottomCenterUnlockLevelText(
+            string prefabPath,
+            string expectedUnlockText)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null);
+
+            TMPro.TextMeshProUGUI unlockText = null;
+            RectTransform lockRect = null;
+            RectTransform[] rects = prefab.GetComponentsInChildren<RectTransform>(true);
+            for (int i = 0; i < rects.Length; i++)
+            {
+                if (rects[i].name == "Lock_img")
+                    lockRect = rects[i];
+                else if (rects[i].name == "UnlockLevel_txt")
+                    unlockText = rects[i].GetComponent<TMPro.TextMeshProUGUI>();
+            }
+
+            Assert.That(lockRect, Is.Not.Null);
+            Assert.That(lockRect.anchorMin, Is.EqualTo(new Vector2(1f, 0f)));
+            Assert.That(lockRect.anchorMax, Is.EqualTo(new Vector2(1f, 0f)));
+
+            Assert.That(unlockText, Is.Not.Null);
+            Assert.That(unlockText.text, Is.EqualTo(expectedUnlockText));
+            RectTransform unlockRect = unlockText.rectTransform;
+            Assert.That(unlockRect.anchorMin, Is.EqualTo(new Vector2(0.5f, 0f)));
+            Assert.That(unlockRect.anchorMax, Is.EqualTo(new Vector2(0.5f, 0f)));
         }
 
         private sealed class StubBoosterInventory : IPlayerBoosterInventory

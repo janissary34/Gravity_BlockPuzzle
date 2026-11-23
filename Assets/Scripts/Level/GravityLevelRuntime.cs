@@ -233,6 +233,52 @@ namespace GravityPuzzle
 
         public static int CurrentLevelNumber => Mathf.Max(1, currentLevelIndex + 1);
 
+        /// <summary>
+        /// Returns the 1-based campaign level number of the first level in the
+        /// active sequence whose difficulty is Hard or VeryHard, or int.MaxValue
+        /// when no non-normal level exists in the sequence.
+        /// </summary>
+        public static int FirstHardLevelNumber => ResolveFirstHardLevelNumber(
+            levels != null && levels.Length > 0
+                ? levels
+                : (configuredSequence != null ? configuredSequence.levels : null));
+
+        /// <summary>
+        /// True once the campaign has reached or passed its first Hard/VeryHard
+        /// level (or when previewing a Hard/VeryHard level directly).
+        /// </summary>
+        public static bool IsX2RewardActiveForCurrentLevel
+        {
+            get
+            {
+                GravityLevelDefinition current = CurrentLevel;
+                if (current != null && current.difficulty != LevelDifficulty.Normal)
+                    return true;
+
+                return CurrentLevelNumber >= FirstHardLevelNumber;
+            }
+        }
+
+        public static int ResolveFirstHardLevelNumber(IReadOnlyList<GravityLevelDefinition> sequenceLevels)
+        {
+            if (sequenceLevels == null)
+                return int.MaxValue;
+
+            int validLevelNumber = 0;
+            for (int index = 0; index < sequenceLevels.Count; index++)
+            {
+                GravityLevelDefinition candidate = sequenceLevels[index];
+                if (candidate == null)
+                    continue;
+
+                validLevelNumber++;
+                if (candidate.difficulty != LevelDifficulty.Normal)
+                    return validLevelNumber;
+            }
+
+            return int.MaxValue;
+        }
+
         /// <summary>Configured coin reward for the level currently being played.</summary>
         public static int CurrentLevelCoinAmount => CurrentLevel != null
             ? Mathf.Max(0, CurrentLevel.coinAmount)
