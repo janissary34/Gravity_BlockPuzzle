@@ -5,6 +5,7 @@ using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Gravity;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Gameplay.Reveal;
+using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
 using UnityEngine;
 
@@ -69,6 +70,15 @@ namespace GravityPuzzle
             levelSequenceInitialized = false;
             previewLaunchRequested = false;
             isEditorLevelPreview = false;
+        }
+
+        /// <summary>
+        /// Resets runtime campaign selection state so the next FindLevelToPlay
+        /// call reloads the level sequence and persisted progress from scratch.
+        /// </summary>
+        public static void ResetCampaignState()
+        {
+            ResetLevelSequence();
         }
 
         /// <summary>
@@ -216,6 +226,12 @@ namespace GravityPuzzle
             }
 #endif
 
+            if (!isEditorLevelPreview && levels.Length > 0 &&
+                CampaignProgressRuntime.Current.TryLoadLevelIndex(out int savedLevelIndex))
+            {
+                currentLevelIndex = Mathf.Clamp(savedLevelIndex, 0, levels.Length - 1);
+            }
+
             CurrentLevel?.LockUnlockedBoxes();
             return CurrentLevel;
         }
@@ -301,6 +317,8 @@ namespace GravityPuzzle
         public static void RequestRestart()
         {
             previewLaunchRequested = true;
+            if (!isEditorLevelPreview && levels != null && levels.Length > 0 && currentLevelIndex >= 0)
+                CampaignProgressRuntime.Current.SaveLevelIndex(currentLevelIndex);
         }
 
         internal static bool ConsumePreviewLaunchRequest()
@@ -308,6 +326,23 @@ namespace GravityPuzzle
             bool requested = previewLaunchRequested;
             previewLaunchRequested = false;
             return requested;
+        }
+
+        /// <summary>
+        /// Persists the next campaign level when the active level is cleared so
+        /// closing the app on the win screen resumes at the newly unlocked level
+        /// without altering the in-memory CurrentLevelNumber shown on the win UI.
+        /// </summary>
+        public static void SaveCompletedLevelProgression()
+        {
+            if (isEditorLevelPreview || levels == null || levels.Length == 0 || currentLevelIndex < 0)
+                return;
+
+            int nextLevelIndex = currentLevelIndex + 1;
+            if (nextLevelIndex >= levels.Length)
+                nextLevelIndex = 0;
+
+            CampaignProgressRuntime.Current.SaveLevelIndex(nextLevelIndex);
         }
 
         /// <summary>Campaign step direction used by level transitions.</summary>
@@ -328,6 +363,9 @@ namespace GravityPuzzle
         /// </summary>
         public static bool TryStepLevel(LevelStep step)
         {
+            if (!levelSequenceInitialized)
+                FindLevelToPlay();
+
             // If levels is empty or needs population, attempt to load from sequence
             if (levels == null || levels.Length == 0)
             {
@@ -363,6 +401,8 @@ namespace GravityPuzzle
             }
 
             levelSequenceInitialized = true;
+            if (!isEditorLevelPreview)
+                CampaignProgressRuntime.Current.SaveLevelIndex(currentLevelIndex);
             return true;
         }
 
@@ -583,7 +623,7 @@ namespace GravityPuzzle
                     safeHeightFraction,
                     level.cameraViewportWidth,
                     presentationMargin,
-                    configuredBoardPresentationConfig.BoardTopViewportInset,
+                    ResolveEffectiveTopViewportInset(level),
                     configuredBoardPresentationConfig.BoardBottomViewportInset,
                     configuredBoardPresentationConfig.FrameSideAllowance);
             }
@@ -599,13 +639,20 @@ namespace GravityPuzzle
             return levelCameraSize * presentationMargin;
         }
 
+        private static float ResolveEffectiveTopViewportInset(GravityLevelDefinition level)
+        {
+            if (configuredBoardPresentationConfig == null)
+                return .23f;
+
+            bool showsTag = level != null && level.difficulty.ShowsDifficultyTag();
+            return configuredBoardPresentationConfig.ResolveTopViewportInset(showsTag);
+        }
+
         private static float ResolveCameraVerticalPosition(
             GravityLevelDefinition level,
             float cameraSize)
         {
-            float topInset = configuredBoardPresentationConfig != null
-                ? configuredBoardPresentationConfig.BoardTopViewportInset
-                : .23f;
+            float topInset = ResolveEffectiveTopViewportInset(level);
             if (configuredBoardPresentationConfig != null &&
                 configuredBoardPresentationConfig.CenterBoardAndShredderVertically)
             {

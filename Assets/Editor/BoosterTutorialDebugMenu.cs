@@ -40,5 +40,21 @@ namespace GravityPuzzle.Editor
             PlayerPrefs.Save();
             Debug.Log("[BoosterTutorial] Cleared booster inventory, economy claim flags, and first-use tutorial progress for local testing.");
         }
+
+        [MenuItem("Gravity Puzzle/Debug/Reset Saved Level Progress")]
+        private static void ResetSavedLevelProgress()
+        {
+            PlayerPrefsCampaignProgressPersistence.ClearSavedProgress();
+            CampaignProgressRuntime.Current.Clear();
+            GravityLevelRuntime.ResetCampaignState();
+            Debug.Log("[CampaignProgress] Cleared saved campaign level progress; next launch will start from Level 1.");
+        }
+
+        [MenuItem("Gravity Puzzle/Debug/Reset All Save Data")]
+        private static void ResetAllSaveData()
+        {
+            ResetBoosterTutorialTestData();
+            ResetSavedLevelProgress();
+        }
     }
 }

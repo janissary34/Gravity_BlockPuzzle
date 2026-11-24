@@ -84,6 +84,7 @@ namespace GravityPuzzle
         private RectTransform progressTargetRect;
         private RectTransform progressFillRect;
         private Image progressFillImage;
+        private ProgressSegmentedFillView progressSegmentedFillView;
         private readonly Vector3[] progressFillCorners = new Vector3[4];
         private int cachedFillTipFrame = -1;
         private Vector2 cachedFillTipCanvasPoint;
@@ -336,6 +337,7 @@ namespace GravityPuzzle
                     : progressSlider.GetComponent<RectTransform>();
             progressFillRect = progressSlider.fillRect;
             progressFillImage = progressFillRect != null ? progressFillRect.GetComponent<Image>() : null;
+            progressSegmentedFillView = progressFillRect != null ? progressFillRect.GetComponent<ProgressSegmentedFillView>() : null;
             cachedFillTipFrame = -1;
 
             if (progressCanvas == null || progressCanvasRect == null || progressTargetRect == null)
@@ -377,6 +379,7 @@ namespace GravityPuzzle
             boardClearCompletionRequested = false;
             activeFlyingVoxelCount = 0;
             pendingVfxProgressArrivalCount = 0;
+            progressSegmentedFillView?.ResetSegments();
 
             if (progressSlider != null)
             {
@@ -406,7 +409,7 @@ namespace GravityPuzzle
 
             if (!hasTweenConfig)
             {
-                AddProgress(progressAmount);
+                AddProgress(progressAmount, voxelColor);
                 onArrival?.Invoke();
                 return;
             }
@@ -416,7 +419,7 @@ namespace GravityPuzzle
                 // There is no authored presenter available. Preserve the
                 // authoritative level state instead of allowing a cosmetic
                 // failure to make the level impossible to complete.
-                AddProgress(progressAmount);
+                AddProgress(progressAmount, voxelColor);
                 onArrival?.Invoke();
                 return;
             }
@@ -431,7 +434,7 @@ namespace GravityPuzzle
                     Mathf.Max(1, particleCount));
                 if (progressVoxelVfx.IsFlightGroupActive(flightGroupId))
                 {
-                    StartCoroutine(ApplyProgressWhenVfxArrives(progressAmount, onArrival, flightGroupId));
+                    StartCoroutine(ApplyProgressWhenVfxArrives(progressAmount, Opaque(voxelColor), onArrival, flightGroupId));
                     return;
                 }
             }
@@ -448,7 +451,7 @@ namespace GravityPuzzle
             if (progressCanvas == null || progressCanvasRect == null || progressTargetRect == null || mainCamera == null)
             {
                 Debug.LogWarning("[LevelProgress] UI flight references are unavailable; applying progress without a flight.", this);
-                AddProgress(progressAmount);
+                AddProgress(progressAmount, voxelColor);
                 onArrival?.Invoke();
                 return;
             }
@@ -463,7 +466,7 @@ namespace GravityPuzzle
             if (flyingProgressVoxelPool == null || !flyingProgressVoxelPool.TryRent(out FlyingProgressVoxelView flyingVoxel))
             {
                 Debug.LogWarning("[LevelProgress] Progress voxel pool is unavailable or exhausted; applying progress without a flight.", this);
-                AddProgress(progressAmount);
+                AddProgress(progressAmount, voxelColor);
                 onArrival?.Invoke();
                 return;
             }
@@ -548,7 +551,7 @@ namespace GravityPuzzle
                 }
 
                 activeFlyingVoxelCount = Mathf.Max(0, activeFlyingVoxelCount - 1);
-                AddProgress(progressAmount);
+                AddProgress(progressAmount, voxelColor);
                 onArrival?.Invoke();
                 TryCommitBoardClearProgress();
             }
@@ -602,7 +605,7 @@ namespace GravityPuzzle
             }
         }
 
-        private IEnumerator ApplyProgressWhenVfxArrives(float progressAmount, Action onArrival, int flightGroupId)
+        private IEnumerator ApplyProgressWhenVfxArrives(float progressAmount, Color voxelColor, Action onArrival, int flightGroupId)
         {
             pendingVfxProgressArrivalCount++;
             float elapsed = 0f;
@@ -626,7 +629,7 @@ namespace GravityPuzzle
             // only after the frame is complete, never from a duration estimate.
             yield return new WaitForEndOfFrame();
             pendingVfxProgressArrivalCount = Mathf.Max(0, pendingVfxProgressArrivalCount - 1);
-            AddProgress(progressAmount);
+            AddProgress(progressAmount, voxelColor);
             onArrival?.Invoke();
             TryCommitBoardClearProgress();
         }
@@ -751,6 +754,20 @@ namespace GravityPuzzle
         /// <param name="amount">Number of block units shredded (default 1).</param>
         public void AddProgress(float amount)
         {
+            AddProgressInternal(amount, null);
+        }
+
+        /// <summary>
+        /// Increments the shredded count and paints the newly gained fill span
+        /// with the arriving voxel's colour on the segmented progress bar view.
+        /// </summary>
+        public void AddProgress(float amount, Color segmentColor)
+        {
+            AddProgressInternal(amount, segmentColor);
+        }
+
+        private void AddProgressInternal(float amount, Color? segmentColor)
+        {
             if (levelCompletedTriggered) return;
 
             EnsureSliderReference();
@@ -761,6 +778,7 @@ namespace GravityPuzzle
                 totalBlockUnitsInLevel = CountActiveBlockUnitsInScene();
             }
 
+            float previousUnits = currentShreddedUnits;
             currentShreddedUnits += amount;
             if (amount > 0f)
                 SoundFeedbackRuntime.ProgressBarFilled();
@@ -771,13 +789,22 @@ namespace GravityPuzzle
                     currentShreddedUnits = totalBlockUnitsInLevel;
             }
 
+            float maxUnits = Mathf.Max(1, hasAuthoredLevelTotal
+                ? authoredBlockUnits
+                : totalBlockUnitsInLevel);
+
+            if (progressSegmentedFillView != null && segmentColor.HasValue && currentShreddedUnits > previousUnits)
+            {
+                float startNormalized = Mathf.Clamp01(previousUnits / maxUnits);
+                float endNormalized = Mathf.Clamp01(currentShreddedUnits / maxUnits);
+                progressSegmentedFillView.RecordSegment(startNormalized, endNormalized, Opaque(segmentColor.Value));
+            }
+
             if (progressSlider != null && hasTweenConfig)
             {
                 progressSlider.minValue = 0f;
                 // Keep the authored denominator locked. No scene object can change this at runtime.
-                progressSlider.maxValue = Mathf.Max(1, hasAuthoredLevelTotal
-                    ? authoredBlockUnits
-                    : totalBlockUnitsInLevel);
+                progressSlider.maxValue = maxUnits;
 
                 if (sliderFillTween != null && sliderFillTween.IsActive())
                 {

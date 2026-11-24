@@ -143,8 +143,10 @@ namespace GravityPuzzle.Tests.Editor
             BoardPresentationConfig config = AssetDatabase.LoadAssetAtPath<BoardPresentationConfig>(
                 "Assets/Config/Presentation/BoardPresentation_Navy.asset");
             Assert.That(config, Is.Not.Null);
-            Assert.That(config.TopHudGapInGridCells, Is.EqualTo(0.5f).Within(1e-4f));
-            Assert.That(config.ShredderToBoosterGapInGridCells, Is.InRange(1.5f, 2.0f));
+            Assert.That(config.TopHudGapInGridCells, Is.EqualTo(0.45f).Within(1e-4f));
+            Assert.That(config.ShredderToBoosterGapInGridCells, Is.InRange(0.45f, 1.5f));
+            Assert.That(config.FrameSideAllowance, Is.GreaterThanOrEqualTo(0.85f));
+            Assert.That(config.DifficultyTagTopViewportInset, Is.GreaterThan(config.BoardTopViewportInset));
 
             float[] aspects = { 9f / 21f, 1125f / 2436f, 9f / 16f };
             (int cols, int rows)[] boards = { (4, 4), (5, 5), (7, 9), (9, 12), (12, 9) };
@@ -153,49 +155,53 @@ namespace GravityPuzzle.Tests.Editor
 
             foreach (float aspect in aspects)
             {
-                float previousSmallSize = 0f;
-                foreach ((int cols, int rows) board in boards)
+                foreach (bool showsDifficultyTag in new[] { false, true })
                 {
-                    float halfHeight = board.rows * .5f;
-                    float boardFrameTop = halfHeight + config.FrameTopAllowance;
-                    float shredderBottom = -halfHeight - drop - wheelRadius * 2f;
-                    float framedTop = boardFrameTop + config.TopHudGapInGridCells;
-                    float framedBottom = shredderBottom - config.ShredderToBoosterGapInGridCells;
+                    float topInset = config.ResolveTopViewportInset(showsDifficultyTag);
+                    float previousSmallSize = 0f;
+                    foreach ((int cols, int rows) board in boards)
+                    {
+                        float halfHeight = board.rows * .5f;
+                        float boardFrameTop = halfHeight + config.FrameTopAllowance;
+                        float shredderBottom = -halfHeight - drop - wheelRadius * 2f;
+                        float framedTop = boardFrameTop + config.TopHudGapInGridCells;
+                        float framedBottom = shredderBottom - config.ShredderToBoosterGapInGridCells;
 
-                    float cameraSize = GravityGridMetrics.FramedCameraSize(
-                        board.cols,
-                        framedTop - framedBottom,
-                        aspect,
-                        1f,
-                        1f,
-                        GravityGridMetrics.BoardViewportWidth,
-                        config.CameraSizeMultiplier,
-                        config.BoardTopViewportInset,
-                        config.BoardBottomViewportInset,
-                        config.FrameSideAllowance);
-                    float cameraY = GravityGridMetrics.CenteredCameraVerticalPosition(
-                        framedTop,
-                        framedBottom,
-                        cameraSize,
-                        config.BoardTopViewportInset,
-                        config.BoardBottomViewportInset);
+                        float cameraSize = GravityGridMetrics.FramedCameraSize(
+                            board.cols,
+                            framedTop - framedBottom,
+                            aspect,
+                            1f,
+                            1f,
+                            GravityGridMetrics.BoardViewportWidth,
+                            config.CameraSizeMultiplier,
+                            topInset,
+                            config.BoardBottomViewportInset,
+                            config.FrameSideAllowance);
+                        float cameraY = GravityGridMetrics.CenteredCameraVerticalPosition(
+                            framedTop,
+                            framedBottom,
+                            cameraSize,
+                            topInset,
+                            config.BoardBottomViewportInset);
 
-                    float viewHeight = cameraSize * 2f;
-                    float topHudBottomY = cameraY + cameraSize - config.BoardTopViewportInset * viewHeight;
-                    float bottomHudTopY = cameraY - cameraSize + config.BoardBottomViewportInset * viewHeight;
-                    float actualTopGap = topHudBottomY - boardFrameTop;
-                    float actualBottomGap = shredderBottom - bottomHudTopY;
+                        float viewHeight = cameraSize * 2f;
+                        float topHudBottomY = cameraY + cameraSize - topInset * viewHeight;
+                        float bottomHudTopY = cameraY - cameraSize + config.BoardBottomViewportInset * viewHeight;
+                        float actualTopGap = topHudBottomY - boardFrameTop;
+                        float actualBottomGap = shredderBottom - bottomHudTopY;
 
-                    Assert.That(actualTopGap, Is.GreaterThanOrEqualTo(config.TopHudGapInGridCells - 1e-3f),
-                        $"Top Timer-to-map gap fell below {config.TopHudGapInGridCells} for {board.cols}x{board.rows} at aspect {aspect:F3}");
-                    Assert.That(actualBottomGap, Is.GreaterThanOrEqualTo(config.ShredderToBoosterGapInGridCells - 1e-3f),
-                        $"Shredder-to-booster gap fell below {config.ShredderToBoosterGapInGridCells} for {board.cols}x{board.rows} at aspect {aspect:F3}");
+                        Assert.That(actualTopGap, Is.GreaterThanOrEqualTo(config.TopHudGapInGridCells - 1e-3f),
+                            $"Top Timer-to-map gap fell below {config.TopHudGapInGridCells} for {board.cols}x{board.rows} at aspect {aspect:F3}");
+                        Assert.That(actualBottomGap, Is.GreaterThanOrEqualTo(config.ShredderToBoosterGapInGridCells - 1e-3f),
+                            $"Shredder-to-booster gap fell below {config.ShredderToBoosterGapInGridCells} for {board.cols}x{board.rows} at aspect {aspect:F3}");
 
-                    if (board.cols == 4 && board.rows == 4)
-                        previousSmallSize = cameraSize;
-                    else if (board.cols == 9 && board.rows == 12)
-                        Assert.That(previousSmallSize, Is.LessThan(cameraSize),
-                            "Smaller boards must zoom in closer than larger boards.");
+                        if (board.cols == 4 && board.rows == 4)
+                            previousSmallSize = cameraSize;
+                        else if (board.cols == 9 && board.rows == 12)
+                            Assert.That(previousSmallSize, Is.LessThan(cameraSize),
+                                "Smaller boards must zoom in closer than larger boards.");
+                    }
                 }
             }
         }

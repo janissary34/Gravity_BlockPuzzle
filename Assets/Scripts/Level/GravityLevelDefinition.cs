@@ -15,6 +15,14 @@ namespace GravityPuzzle
         VeryHard
     }
 
+    public static class LevelDifficultyExtensions
+    {
+        public static bool ShowsDifficultyTag(this LevelDifficulty difficulty)
+        {
+            return difficulty == LevelDifficulty.Hard || difficulty == LevelDifficulty.VeryHard;
+        }
+    }
+
     public static class GravityGridMetrics
     {
         public const int FineCellsPerGridCell = 4;

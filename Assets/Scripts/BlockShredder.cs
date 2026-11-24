@@ -825,9 +825,11 @@ namespace GravityPuzzle
             piece.BeginShredderPresentation(pieceRenderers, clippingSeamY, shredderConfig);
             piece.ApplyShredderPresentationClipping();
             piece.SetShredderPresentationDepth(0);
-            // Always use the authored PuzzlePiece colour for debris and UI voxels.
-            // Renderer colours can be temporarily changed by selection or masking.
-            Color tileColor = Opaque(piece.VisualColor);
+            // Always use the authored PuzzlePiece colour (or its palette material _Color)
+            // for debris and UI voxels; renderer colours can be temporarily white/masked.
+            Color tileColor = Opaque(RuntimePieceFactory.ResolvePresentationMaterialColor(
+                piece.PresentationMaterial,
+                piece.VisualColor));
 
             // The factory records all pooled shards while it configures this
             // piece. Copy only the references needed by this concurrent feed;
@@ -1176,7 +1178,7 @@ namespace GravityPuzzle
                             }
                             else if (remainingProgressToEmit > 0.0001f)
                             {
-                                progressManager.AddProgress(remainingProgressToEmit);
+                                progressManager.AddProgress(remainingProgressToEmit, tileColor);
                             }
                         }
 
@@ -1253,7 +1255,7 @@ namespace GravityPuzzle
                         }
                         else
                         {
-                            progressManager.AddProgress(remainingProgressToEmit);
+                            progressManager.AddProgress(remainingProgressToEmit, tileColor);
                         }
                     }
 

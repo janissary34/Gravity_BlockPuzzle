@@ -86,6 +86,8 @@ namespace GravityPuzzle.Gameplay.Pieces
         private const string GridBlockName = "Grid Block";
         private const string BlockCellName = "Block Cell";
         private const string HookCellName = "Hook Cell";
+        private static readonly int ShaderColorId = Shader.PropertyToID("_Color");
+        private static readonly int ShaderShineColorId = Shader.PropertyToID("_ShineColor");
 
         private static Material sharedOutlineMaterial;
         private static IRuntimePieceRootProvider rootProvider;
@@ -1452,7 +1454,7 @@ namespace GravityPuzzle.Gameplay.Pieces
             presentationMaterial = ResolvePaletteMaterial(definition.paletteId);
             if (presentationMaterial != null && IsSupportedSpriteMaterial(presentationMaterial))
             {
-                color = presentationMaterial.color;
+                color = ResolvePresentationMaterialColor(presentationMaterial, definition.color);
             }
             else if (presentationMaterial != null)
             {
@@ -1503,6 +1505,46 @@ namespace GravityPuzzle.Gameplay.Pieces
             }
 
             return null;
+        }
+
+        public static Color ResolvePresentationMaterialColor(Material material, Color fallbackColor)
+        {
+            if (material == null)
+                return new Color(fallbackColor.r, fallbackColor.g, fallbackColor.b, 1f);
+
+            // URP Sprite ShaderGraph palettes store the brick tint in _Color while leaving
+            // _BaseColor white, so Material.color can read white instead of the brick colour.
+            bool hasCustomColor = material.HasProperty(ShaderColorId);
+            Color resolved = hasCustomColor
+                ? material.GetColor(ShaderColorId)
+                : material.color;
+
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear && hasCustomColor)
+                resolved = resolved.gamma;
+
+            resolved.a = 1f;
+            if (!IsNearWhite(resolved))
+                return resolved;
+
+            if (!IsNearWhite(fallbackColor))
+                return new Color(fallbackColor.r, fallbackColor.g, fallbackColor.b, 1f);
+
+            if (material.HasProperty(ShaderShineColorId))
+            {
+                Color shine = material.GetColor(ShaderShineColorId);
+                if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+                    shine = shine.gamma;
+                shine.a = 1f;
+                if (!IsNearWhite(shine))
+                    return shine;
+            }
+
+            return resolved;
+        }
+
+        private static bool IsNearWhite(Color color)
+        {
+            return color.r > .95f && color.g > .95f && color.b > .95f;
         }
 
         private static bool IsSupportedSpriteMaterial(Material material)

@@ -85,9 +85,11 @@ namespace GravityPuzzle.Config
         [Tooltip("Shared safety margin applied after a level has calculated its camera fit. Keeps the complete board frame visible on every level.")]
         [SerializeField, Min(1f)] private float cameraSizeMultiplier = 1f;
         [Tooltip("Normalized viewport height occupied by the top Timer/Progress HUD, measured from the top of the gameplay viewport.")]
-        [SerializeField, Range(.05f, .45f)] private float boardTopViewportInset = .165f;
+        [SerializeField, Range(.05f, .45f)] private float boardTopViewportInset = .12f;
+        [Tooltip("Normalized viewport height occupied by the top HUD when Hard/Very Hard shows the Difficulty tag below the Timer.")]
+        [SerializeField, Range(.05f, .45f)] private float difficultyTagTopViewportInset = .145f;
         [Tooltip("Normalized viewport height occupied by the bottom Booster HUD bar, measured from the bottom of the gameplay viewport.")]
-        [SerializeField, Range(.05f, .45f)] private float boardBottomViewportInset = .175f;
+        [SerializeField, Range(.05f, .45f)] private float boardBottomViewportInset = .13f;
         [Tooltip("World-space height above the top grid edge reserved for the decorative top frame rail when fitting the camera.")]
         [SerializeField, Min(0f)] private float frameTopAllowance = .55f;
         [Tooltip("World-space width outside each left/right grid edge reserved for the decorative side frame rails when fitting the camera horizontally.")]
@@ -166,6 +168,9 @@ namespace GravityPuzzle.Config
         public Color EnvironmentTint => environmentTint;
         public float CameraSizeMultiplier => Mathf.Max(1f, cameraSizeMultiplier);
         public float BoardTopViewportInset => Mathf.Clamp(boardTopViewportInset, .05f, .45f);
+        public float DifficultyTagTopViewportInset => Mathf.Clamp(difficultyTagTopViewportInset, BoardTopViewportInset, .45f);
+        public float ResolveTopViewportInset(bool hasVisibleDifficultyTag) =>
+            hasVisibleDifficultyTag ? DifficultyTagTopViewportInset : BoardTopViewportInset;
         public float BoardBottomViewportInset => Mathf.Clamp(boardBottomViewportInset, .05f, .45f);
         public float FrameTopAllowance => Mathf.Max(0f, frameTopAllowance);
         public float FrameSideAllowance => Mathf.Max(0f, frameSideAllowance);

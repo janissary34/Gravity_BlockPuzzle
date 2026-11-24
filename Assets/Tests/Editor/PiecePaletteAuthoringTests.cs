@@ -1,5 +1,8 @@
+using GravityPuzzle.Config;
 using GravityPuzzle.Editor;
+using GravityPuzzle.Gameplay.Pieces;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace GravityPuzzle.Tests.Editor
@@ -16,6 +19,27 @@ namespace GravityPuzzle.Tests.Editor
         public void LegacyColoursSelectSceneTunaPalette(float r, float g, float b, string expected)
         {
             Assert.That(PiecePaletteMigration.ResolvePaletteId(new Color(r, g, b)), Is.EqualTo(expected));
+        }
+
+        [TestCase("Red")]
+        [TestCase("Yellow")]
+        [TestCase("Orange")]
+        [TestCase("GreenLight")]
+        [TestCase("GreenDark")]
+        [TestCase("BlueLight")]
+        [TestCase("BlueDark")]
+        [TestCase("Purple")]
+        [TestCase("Pink")]
+        public void PaletteMaterialsResolveNonWhiteVoxelColors(string paletteId)
+        {
+            PieceVisualConfig config = AssetDatabase.LoadAssetAtPath<PieceVisualConfig>("Assets/PieceVisualConfig.asset");
+            Assert.That(config, Is.Not.Null);
+            Assert.That(config.TryGetPaletteMaterial(paletteId, out Material material), Is.True);
+
+            Color resolved = RuntimePieceFactory.ResolvePresentationMaterialColor(material, Color.white);
+            bool isNearWhite = resolved.r > .95f && resolved.g > .95f && resolved.b > .95f;
+            Assert.That(isNearWhite, Is.False, $"Palette '{paletteId}' resolved to near-white {resolved}.");
+            Assert.That(resolved.a, Is.EqualTo(1f).Within(1e-4f));
         }
     }
 }

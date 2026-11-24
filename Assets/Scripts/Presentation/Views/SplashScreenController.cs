@@ -36,6 +36,7 @@ namespace GravityPuzzle.Presentation.Views
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            PrototypeBootstrap.EnforcePortraitOrientation();
 
             if (rootCanvas == null)
                 rootCanvas = GetComponent<Canvas>();

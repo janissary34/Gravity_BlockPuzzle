@@ -208,14 +208,17 @@ namespace GravityPuzzle.Presentation.Views
             handRoot.anchorMax = anchor;
             handRoot.pivot = new Vector2(0.5f, 0.5f);
 
-            // Buttons are in the bottom HUD: the gauntlet should stay above the button and point down
-            handRoot.localRotation = Quaternion.identity;
+            // New hand sprite points up-left (~(-54, +48) fingertip from sprite center).
+            // Rotating +102 deg tilts the finger ~30 deg toward -X (pointing down-left) above the button.
+            handRoot.localRotation = Quaternion.Euler(0f, 0f, 102f);
             if (rippleRoot != null)
-                rippleRoot.anchoredPosition = new Vector2(0f, -60f);
+                rippleRoot.anchoredPosition = new Vector2(-54f, 48f);
 
-            // Hand center offset +60f puts the bottom fingertip directly over the button center
-            Vector2 handCenter = localTarget + new Vector2(0f, 60f);
-            PlayLoop(handCenter, new Vector2(0f, 50f), Vector2.down * 14f);
+            // Offset aligns the rotated fingertip (~(-36, -63) in parent space) over the button center.
+            Vector2 buttonHandCenter = localTarget + new Vector2(36f, 63f);
+            Vector2 buttonTapDirection = new Vector2(-36f, -63f).normalized;
+            float approachDistance = Mathf.Max(20f, approachOffset.magnitude * 0.65f);
+            PlayLoop(buttonHandCenter, -buttonTapDirection * approachDistance, buttonTapDirection * pressDistance);
         }
 
         private void ShowAtScreenPosition(Vector2 screenPosition)
@@ -247,13 +250,15 @@ namespace GravityPuzzle.Presentation.Views
             handRoot.anchorMax = anchor;
             handRoot.pivot = new Vector2(0.5f, 0.5f);
 
-            // Board targets are above: the gauntlet points up from below
-            handRoot.localRotation = Quaternion.Euler(0f, 0f, 180f);
+            // Board targets use the sprite's natural up-left pointing pose.
+            handRoot.localRotation = Quaternion.identity;
             if (rippleRoot != null)
-                rippleRoot.anchoredPosition = new Vector2(0f, 60f);
+                rippleRoot.anchoredPosition = new Vector2(-54f, 48f);
 
-            Vector2 handCenter = localTarget + new Vector2(0f, -60f);
-            PlayLoop(handCenter, new Vector2(0f, -50f), Vector2.up * 14f);
+            Vector2 boardHandCenter = localTarget + new Vector2(54f, -48f);
+            Vector2 boardTapDirection = new Vector2(-54f, 48f).normalized;
+            float approachDistance = Mathf.Max(20f, approachOffset.magnitude * 0.7f);
+            PlayLoop(boardHandCenter, -boardTapDirection * approachDistance, boardTapDirection * pressDistance);
         }
 
         private void PlayLoop(Vector2 targetPosition, Vector2 offset, Vector2 pressDelta)

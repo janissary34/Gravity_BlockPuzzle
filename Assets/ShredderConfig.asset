@@ -47,8 +47,8 @@ MonoBehaviour:
   feedPhysicsMaterial: {fileID: 6200000, guid: 9eb6102580d2f4baa88e6b9e2ee5187f, type: 2}
   contactGlowPrefab: {fileID: 5501872390192847104, guid: e3d2c1b0a987654321fedcba09876543, type: 3}
   contactGlowPoolCapacity: 4
-  physicsHandoffDistanceBelowMap: 1.5
-  physicsFreefallDistanceBelowHandoff: 1
+  physicsHandoffDistanceBelowMap: 1
+  physicsFreefallDistanceBelowHandoff: 0.5
   physicsFreefallGravityScale: 0
   physicsFreefallEntrySpeed: 12.5
   physicsFreefallAcceleration: 60

@@ -65,8 +65,18 @@ namespace GravityPuzzle
             SplashScreenController.Instance?.NotifyLevelReady();
         }
 
+        public static void EnforcePortraitOrientation()
+        {
+            Screen.autorotateToPortrait = true;
+            Screen.autorotateToPortraitUpsideDown = false;
+            Screen.autorotateToLandscapeLeft = false;
+            Screen.autorotateToLandscapeRight = false;
+            Screen.orientation = ScreenOrientation.Portrait;
+        }
+
         internal static void ConfigureSceneCamera(Camera camera)
         {
+            EnforcePortraitOrientation();
             sceneCamera = camera;
             sceneStartupHandled = false;
             authoredObstacleColliders.Clear();
@@ -2842,6 +2852,7 @@ namespace GravityPuzzle
                     OnLevelCleared?.Invoke();
                     LevelCleared?.Invoke();
                     BoosterEconomyRuntime.Current.ProcessFirstTimeLevelCompletion(GravityLevelRuntime.CurrentLevelNumber);
+                    GravityLevelRuntime.SaveCompletedLevelProgression();
                     HapticFeedbackRuntime.LevelCompleted();
 
                     if (winPanel != null)

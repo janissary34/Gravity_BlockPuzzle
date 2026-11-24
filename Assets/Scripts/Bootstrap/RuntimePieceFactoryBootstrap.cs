@@ -129,6 +129,7 @@ namespace GravityPuzzle.Bootstrap
                 boosterEconomyConfig,
                 BoosterInventoryRuntime.Current,
                 new PlayerPrefsBoosterEconomyPersistence()));
+            CampaignProgressRuntime.Configure(new PlayerPrefsCampaignProgressPersistence());
             HapticFeedbackRuntime.Configure(hapticFeedbackConfig);
             if (soundFeedbackAudioSource == null)
                 soundFeedbackAudioSource = GetComponent<AudioSource>();
@@ -264,7 +265,7 @@ namespace GravityPuzzle.Bootstrap
 
         public static bool ShouldShowDifficultyTag(LevelDifficulty difficulty)
         {
-            return difficulty == LevelDifficulty.Hard || difficulty == LevelDifficulty.VeryHard;
+            return difficulty.ShowsDifficultyTag();
         }
 
         public static string FormatDifficultyLabel(LevelDifficulty difficulty)
