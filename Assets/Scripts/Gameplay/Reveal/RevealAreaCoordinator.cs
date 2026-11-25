@@ -119,6 +119,7 @@ namespace GravityPuzzle.Gameplay.Reveal
         private readonly List<PieceDefinition> remainingBoxContent = new List<PieceDefinition>();
         private PrototypeBoard board;
         private GravityLevelDefinition level;
+        private int alignmentSubdivisions = 1;
 
         public event Action<RevealAreaEvent> AreaUnlockStarted;
         public event Action<RevealAreaEvent> AreaUnlocked;
@@ -144,6 +145,7 @@ namespace GravityPuzzle.Gameplay.Reveal
         public void Initialize(PrototypeBoard owner, GravityLevelDefinition level)
         {
             this.level = level;
+            alignmentSubdivisions = level != null ? Mathf.Max(1, level.subdivisions) : 1;
             board = owner ?? throw new ArgumentNullException(nameof(owner));
             boxes.Clear();
             elevators.Clear();
@@ -782,7 +784,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             return hasBlock;
         }
 
-        private static bool CanContentTraversePartialBox(
+        private bool CanContentTraversePartialBox(
             PieceModel model,
             GridCoordinate targetAnchor,
             BoxRuntime box)
@@ -790,14 +792,13 @@ namespace GravityPuzzle.Gameplay.Reveal
             return IsModelFullyWithinExposedBoxRows(model, targetAnchor, box);
         }
 
-        private static bool IsModelFullyWithinExposedBoxRows(
+        private bool IsModelFullyWithinExposedBoxRows(
             PieceModel model,
             GridCoordinate anchor,
             BoxRuntime box)
         {
             RevealAreaBounds bounds = box.Definition.bounds;
-            int exposedYExclusive = bounds.YMin + Mathf.FloorToInt(
-                Mathf.Clamp01(box.Exposure) * Mathf.Max(1, bounds.size.y) + .0001f);
+            int exposedYExclusive = ResolveExposedYExclusive(box, alignmentSubdivisions);
             for (int index = 0; index < model.LocalCells.Count; index++)
             {
                 GridCoordinate cell = anchor.Offset(model.LocalCells[index]);
@@ -808,6 +809,23 @@ namespace GravityPuzzle.Gameplay.Reveal
             }
 
             return true;
+        }
+
+        private static int ResolveExposedYExclusive(BoxRuntime box, int subdivisions)
+        {
+            RevealAreaBounds bounds = box.Definition.bounds;
+            int boxHeight = Mathf.Max(1, bounds.size.y);
+            float clampedExposure = Mathf.Clamp01(box.Exposure);
+            int exposedRows = Mathf.FloorToInt(clampedExposure * boxHeight + .001f);
+            if (subdivisions > 1 &&
+                GridReleaseSnapPlanner.IsCanonicalCoordinate(bounds.YMin, subdivisions) &&
+                boxHeight >= subdivisions &&
+                clampedExposure < 1f - .001f)
+            {
+                exposedRows = (exposedRows / subdivisions) * subdivisions;
+            }
+
+            return bounds.YMin + exposedRows;
         }
 
         private bool IsRestingOnObstacle(PieceModel model)

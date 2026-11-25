@@ -77,8 +77,15 @@ straight drop; any drift is restored and logged once). No grid reservation,
 queue, drag, or targeting logic owns it after that release.
 
 Grid drag, gravity presentation, and release snap are transform-owned by
-`PieceGridFallView`; they do not tween the non-simulated grid Rigidbody2D. Gravity
-falls accelerate from a start speed to a terminal speed (`TweenConfig` grid-fall
+`PieceGridFallView`; they do not tween the non-simulated grid Rigidbody2D. Dragging
+steps at 1-fine-cell precision (`FineGridDragStepper`), while every drag end/interruption
+gates through `PuzzleDragController` + `GridReleaseSnapPlanner` so resting `Placed`
+pieces stay aligned to canonical coarse-block coordinates (`Anchor % subdivisions == 0`)
+without falling back to unsnapped half-block commits. Gravity preserves 1-fine-cell
+tracking when a piece is transitively supported by an active shredder `Reserved`
+reservation, and otherwise trims non-shredder falls to canonical coarse rows; coarse
+Box partial-exposure row gates (`RevealAreaCoordinator`) likewise quantize to whole
+`subdivisions` rows. Gravity falls accelerate from a start speed to a terminal speed (`TweenConfig` grid-fall
 values); a retarget keeps the current speed. A piece captured in the same frame its
 fall arrives enters `OpenFreefall` with that arrival speed (never below
 `ShredderConfig.PhysicsFreefallEntrySpeed`) and keeps accelerating to

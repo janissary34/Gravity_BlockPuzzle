@@ -223,6 +223,118 @@ namespace GravityPuzzle.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator RealController_HalfBlockReleaseAgainstBlockerAndBox_SnapsToCanonicalAnchor()
+        {
+            DragRuntimeFixture fixture = new DragRuntimeFixture();
+            try
+            {
+                fixture.Create();
+                yield return null;
+
+                // Stop +6 fine cells from InitialAnchorX (24 -> 30) against a blocker at +7.
+                // Rounding +6 forward (+8 -> 32) is blocked; B+ must retract cleanly to canonical +4 (28)
+                // instead of abandoning snap at 30.
+                fixture.BlockNormalPieceAtHorizontalOffset(7);
+                fixture.DragByFineCells(8, 0, false);
+                Assert.That(fixture.AnchorX(false), Is.EqualTo(fixture.InitialAnchorX(false) + 6));
+                fixture.ReleaseCurrentDrag();
+                Assert.That(fixture.AnchorX(false), Is.EqualTo(fixture.InitialAnchorX(false) + 4));
+                Assert.That(fixture.IsCanonicalAnchor(false), Is.True);
+
+                fixture.Dispose();
+                fixture = new DragRuntimeFixture();
+                fixture.Create();
+                yield return null;
+
+                // Drag +2 fine cells and also push into an adjacent closed Box / Unlocking Elevator.
+                fixture.ConfigureElevatorNextToCombinedGroup();
+                fixture.BeginDrag(true);
+                fixture.MoveSelectedByWorld(.5f, 0f);
+                fixture.MoveSelectedByWorld(0f, .5f);
+                fixture.ReleaseCurrentDrag();
+                Assert.That(fixture.IsCanonicalAnchor(true), Is.True);
+                Assert.That(fixture.CombinedDeltaIsPreserved(), Is.True);
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RealController_OffGridStartedPiece_SelfHealsAndDragEndCommitsOnInterrupt()
+        {
+            DragRuntimeFixture fixture = new DragRuntimeFixture();
+            try
+            {
+                // Start normal piece at an off-grid half-block anchor (22, 22).
+                fixture.Create(normalAnchorOverride: new Vector2Int(22, 22));
+                yield return null;
+
+                fixture.BeginDrag(false);
+                fixture.MoveSelectedByWorld(.25f, 0f);
+                fixture.ReleaseCurrentDrag();
+                Assert.That(fixture.IsCanonicalAnchor(false), Is.True,
+                    "Canonical snap must self-heal a previously off-grid piece instead of locking its phase.");
+
+                fixture.Dispose();
+                fixture = new DragRuntimeFixture();
+                fixture.Create();
+                yield return null;
+
+                // Drag +2 fine cells then interrupt drag cleanly (simulating lock / tutorial interruption).
+                fixture.DragByFineCells(2, 2, false);
+                fixture.InterruptCurrentDragQuietly();
+                Assert.That(fixture.IsCanonicalAnchor(false), Is.True);
+                Assert.That(fixture.IsPiecePlaced(false), Is.True,
+                    "Interrupting an active drag must still commit canonical snap and restore Placed state.");
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RealController_RandomizedBoxAndElevatorFuzz_AlwaysMaintainsCanonicalRestingInvariant()
+        {
+            DragRuntimeFixture fixture = new DragRuntimeFixture();
+            try
+            {
+                fixture.Create();
+                fixture.ConfigureBoxAdjacentToDraggedPiece(false, false, false);
+                fixture.ConfigureElevatorNextToCombinedGroup();
+                yield return null;
+
+                System.Random rng = new System.Random(42069);
+                for (int iteration = 0; iteration < 40; iteration++)
+                {
+                    bool combined = (iteration % 2) == 1;
+                    fixture.BeginDrag(combined);
+                    int stepCount = 1 + rng.Next(4);
+                    for (int step = 0; step < stepCount; step++)
+                    {
+                        float dx = (rng.Next(9) - 4) * .25f + (rng.Next(3) - 1) * .1f;
+                        float dy = (rng.Next(9) - 4) * .25f + (rng.Next(3) - 1) * .1f;
+                        fixture.MoveSelectedByWorld(dx, dy);
+                    }
+
+                    fixture.ReleaseCurrentDrag();
+                    Assert.That(fixture.IsCanonicalAnchor(combined), Is.True,
+                        $"Fuzz iteration {iteration} left piece off canonical mod-4 grid.");
+                    Assert.That(fixture.IsPiecePlaced(combined), Is.True,
+                        $"Fuzz iteration {iteration} did not return piece to Placed.");
+                    if (combined)
+                        Assert.That(fixture.CombinedDeltaIsPreserved(), Is.True);
+                }
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
         public IEnumerator PointerWithOneFineCellCrossOffset_SlidesAlongNarrowChannel()
         {
             // A one-cell-high corridor: the pointer is one fine cell above
@@ -343,6 +455,10 @@ namespace GravityPuzzle.Tests.PlayMode
                 "GravityPuzzle.RevealAreaBounds, Assembly-CSharp");
             private static readonly Type RevealAreaStateType = Type.GetType(
                 "GravityPuzzle.RevealAreaState, Assembly-CSharp");
+            private static readonly Type ElevatorDefinitionType = Type.GetType(
+                "GravityPuzzle.ElevatorRevealDefinition, Assembly-CSharp");
+            private static readonly Type PieceStateType = Type.GetType(
+                "GravityPuzzle.Gameplay.Pieces.PieceState, Assembly-CSharp");
 
             private readonly List<GameObject> objects = new List<GameObject>();
             private object level;
@@ -355,7 +471,7 @@ namespace GravityPuzzle.Tests.PlayMode
             private readonly Dictionary<int, Vector2Int> initialAnchors = new Dictionary<int, Vector2Int>();
             private Vector2 dragPointer;
 
-            public void Create()
+            public void Create(Vector2Int? normalAnchorOverride = null)
             {
                 Assert.That(BoardType, Is.Not.Null);
                 Assert.That(ControllerType, Is.Not.Null);
@@ -377,7 +493,7 @@ namespace GravityPuzzle.Tests.PlayMode
                 IList runtimeModels = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(PieceModelType));
                 AddModel(runtimeModels, authoredSnapshot, 5, new Vector2Int(4, 4));
                 AddModel(runtimeModels, authoredSnapshot, 6, new Vector2Int(4, 8));
-                AddModel(runtimeModels, authoredSnapshot, 8, new Vector2Int(24, 24));
+                AddModel(runtimeModels, authoredSnapshot, 8, normalAnchorOverride ?? new Vector2Int(24, 24));
                 object issues = Activator.CreateInstance(typeof(List<>).MakeGenericType(
                     Type.GetType("GravityPuzzle.Core.Grid.LevelBoardSnapshotIssue, Assembly-CSharp")));
                 object snapshot = Activator.CreateInstance(SnapshotType, grid, runtimeModels, issues);
@@ -480,6 +596,60 @@ namespace GravityPuzzle.Tests.PlayMode
             public void ReleaseCurrentDrag()
             {
                 Invoke(controller, "ReleasePiece");
+            }
+
+            public void InterruptCurrentDragQuietly()
+            {
+                Invoke(controller, "CommitDragEnd", false, false);
+            }
+
+            public bool IsCanonicalAnchor(bool combined)
+            {
+                Vector2Int anchor = Anchor(combined ? 5 : 8);
+                bool primaryCanonical = ((anchor.x % 4) + 4) % 4 == 0 && ((anchor.y % 4) + 4) % 4 == 0;
+                if (!combined)
+                    return primaryCanonical;
+
+                Vector2Int second = Anchor(6);
+                return primaryCanonical && ((second.x % 4) + 4) % 4 == 0 && ((second.y % 4) + 4) % 4 == 0;
+            }
+
+            public bool IsPiecePlaced(bool combined)
+            {
+                object placed = Enum.Parse(PieceStateType, "Placed");
+                bool primaryPlaced = Equals(PieceModelType.GetProperty("State").GetValue(models[combined ? 5 : 8]), placed);
+                if (!combined)
+                    return primaryPlaced;
+
+                return primaryPlaced && Equals(PieceModelType.GetProperty("State").GetValue(models[6]), placed);
+            }
+
+            public void ConfigureElevatorNextToCombinedGroup()
+            {
+                Assert.That(CoordinatorType, Is.Not.Null);
+                Assert.That(ElevatorDefinitionType, Is.Not.Null);
+                Assert.That(BoundsType, Is.Not.Null);
+                Assert.That(RevealAreaStateType, Is.Not.Null);
+
+                Vector2Int anchor5 = Anchor(5);
+                object elevator = Activator.CreateInstance(ElevatorDefinitionType);
+                ElevatorDefinitionType.GetField("areaId").SetValue(elevator, Guid.NewGuid().ToString());
+                object bounds = ElevatorDefinitionType.GetField("bounds").GetValue(elevator);
+                BoundsType.GetField("origin").SetValue(bounds, new Vector2Int(anchor5.x + 8, anchor5.y));
+                BoundsType.GetField("size").SetValue(bounds, new Vector2Int(4, 8));
+                ElevatorDefinitionType.GetField("bounds").SetValue(elevator, bounds);
+                ((IList)level.GetType().GetField("elevators").GetValue(level)).Add(elevator);
+
+                object coordinator = Activator.CreateInstance(CoordinatorType);
+                Invoke(coordinator, "Initialize", board, level);
+                Invoke(board, "ConfigureRevealAreas", coordinator);
+
+                IList runtimes = (IList)CoordinatorType.GetField("elevators", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .GetValue(coordinator);
+                object runtimeElevator = runtimes[runtimes.Count - 1];
+                runtimeElevator.GetType().GetField("State").SetValue(
+                    runtimeElevator,
+                    Enum.Parse(RevealAreaStateType, "Unlocking"));
             }
 
             public int AnchorX(bool combined) => Anchor(combined ? 5 : 8).x;

@@ -1,5 +1,6 @@
 using GravityPuzzle.Bootstrap;
 using GravityPuzzle.Config;
+using GravityPuzzle.Gameplay.Tutorial;
 using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.Views;
 using NUnit.Framework;
@@ -138,6 +139,51 @@ namespace GravityPuzzle.Tests.Editor
             Assert.That(
                 RuntimePieceFactoryBootstrap.ShouldShowDifficultyTag(difficulty),
                 Is.EqualTo(expectedVisible));
+        }
+
+        [Test]
+        public void TryResolveDifficultyTagPresentation_UsesAuthoredSpritesAndHidesFallbackTextForHardAndVeryHard()
+        {
+            string sheetPath = AssetDatabase.GUIDToAssetPath("b4f282748a47c44718bbf15d213dcb1c");
+            Assert.That(string.IsNullOrEmpty(sheetPath), Is.False, "Difficulty sprite sheet must exist by GUID.");
+
+            Object[] subAssets = AssetDatabase.LoadAllAssetsAtPath(sheetPath);
+            Sprite hardSprite = null;
+            Sprite veryHardSprite = null;
+            for (int i = 0; i < subAssets.Length; i++)
+            {
+                if (subAssets[i] is Sprite sprite)
+                {
+                    if (sprite.name == "Hard")
+                        hardSprite = sprite;
+                    else if (sprite.name == "VeryHard")
+                        veryHardSprite = sprite;
+                }
+            }
+
+            Assert.That(hardSprite, Is.Not.Null, "Sliced Hard sprite must exist.");
+            Assert.That(veryHardSprite, Is.Not.Null, "Sliced VeryHard sprite must exist.");
+
+            Assert.That(
+                RuntimePieceFactoryBootstrap.TryResolveDifficultyTagPresentation(
+                    LevelDifficulty.Normal, hardSprite, veryHardSprite, out Sprite normalResolved, out bool normalBaked),
+                Is.False);
+            Assert.That(normalResolved, Is.Null);
+            Assert.That(normalBaked, Is.False);
+
+            Assert.That(
+                RuntimePieceFactoryBootstrap.TryResolveDifficultyTagPresentation(
+                    LevelDifficulty.Hard, hardSprite, veryHardSprite, out Sprite hardResolved, out bool hardBaked),
+                Is.True);
+            Assert.That(hardResolved, Is.SameAs(hardSprite));
+            Assert.That(hardBaked, Is.True);
+
+            Assert.That(
+                RuntimePieceFactoryBootstrap.TryResolveDifficultyTagPresentation(
+                    LevelDifficulty.VeryHard, hardSprite, veryHardSprite, out Sprite veryHardResolved, out bool veryHardBaked),
+                Is.True);
+            Assert.That(veryHardResolved, Is.SameAs(veryHardSprite));
+            Assert.That(veryHardBaked, Is.True);
         }
 
         [Test]
@@ -292,6 +338,80 @@ namespace GravityPuzzle.Tests.Editor
             }
         }
 
+        [Test]
+        public void BoosterFirstUseTutorial_ActivatesOnUnlockLevelEvenAfterPriorCompletion()
+        {
+            GravityLevelSequence sequence = AssetDatabase.LoadAssetAtPath<GravityLevelSequence>(
+                "Assets/Resources/LevelSequence.asset");
+            BoosterRewardConfig freezeConfig = AssetDatabase.LoadAssetAtPath<BoosterRewardConfig>(
+                "Assets/Config/Boosters/FreezeTimerBoosterRewardConfig.asset");
+            BoosterEconomyConfig economyConfig = AssetDatabase.LoadAssetAtPath<BoosterEconomyConfig>(
+                "Assets/Config/Boosters/BoosterEconomyConfig.asset");
+
+            Assert.That(sequence, Is.Not.Null);
+            Assert.That(freezeConfig, Is.Not.Null);
+            Assert.That(economyConfig, Is.Not.Null);
+
+            var stubInventory = new StubBoosterInventory();
+            var stubPersistence = new StubEconomyPersistence();
+            var stubCampaign = new StubCampaignPersistence();
+            BoosterFirstUseTutorialState originalTutorialState = BoosterFirstUseTutorialProgress.GetState(freezeConfig);
+
+            try
+            {
+                CampaignProgressRuntime.Configure(stubCampaign);
+                BoosterInventoryRuntime.Configure(stubInventory);
+                BoosterEconomyRuntime.Configure(new BoosterEconomyService(economyConfig, stubInventory, stubPersistence));
+                GravityLevelRuntime.ResetCampaignState();
+                GravityLevelRuntime.ConfigureLevelSequence(sequence);
+                GravityLevelRuntime.FindLevelToPlay();
+
+                // Advance from Level 1 to Level 4 (FreezeTimer unlock level).
+                Assert.That(GravityLevelRuntime.TryStepLevel(GravityLevelRuntime.LevelStep.Next), Is.True);
+                Assert.That(GravityLevelRuntime.TryStepLevel(GravityLevelRuntime.LevelStep.Next), Is.True);
+                Assert.That(GravityLevelRuntime.TryStepLevel(GravityLevelRuntime.LevelStep.Next), Is.True);
+                Assert.That(GravityLevelRuntime.CurrentLevelNumber, Is.EqualTo(4));
+
+                // Simulate a prior completion saved in PlayerPrefs (e.g., from Editor or previous install).
+                BoosterFirstUseTutorialProgress.SetState(freezeConfig, BoosterFirstUseTutorialState.Completed);
+
+                var claimCoordinator = new BoosterFirstUseTutorialCoordinator(null);
+                claimCoordinator.BeginClaim(freezeConfig);
+                Assert.That(claimCoordinator.IsFirstUseActive(BoosterRewardType.FreezeTimer), Is.True);
+
+                BoosterFirstUseTutorialProgress.SetState(freezeConfig, BoosterFirstUseTutorialState.Completed);
+                var resumeCoordinator = new BoosterFirstUseTutorialCoordinator(null);
+                resumeCoordinator.ResumePending(new[] { freezeConfig });
+
+                Assert.That(resumeCoordinator.IsFirstUseActive(BoosterRewardType.FreezeTimer), Is.True);
+                Assert.That(resumeCoordinator.IsBoosterHighlighted(BoosterRewardType.FreezeTimer), Is.True);
+                Assert.That(stubInventory.GetCount(BoosterRewardType.FreezeTimer), Is.GreaterThanOrEqualTo(2));
+
+                // Stepping to an unrelated level must not activate FreezeTimer's first-use tutorial.
+                Assert.That(GravityLevelRuntime.TryStepLevel(GravityLevelRuntime.LevelStep.Next), Is.True);
+                Assert.That(GravityLevelRuntime.CurrentLevelNumber, Is.EqualTo(5));
+
+                var nextLevelCoordinator = new BoosterFirstUseTutorialCoordinator(null);
+                nextLevelCoordinator.ResumePending(new[] { freezeConfig });
+                Assert.That(nextLevelCoordinator.IsFirstUseActive(BoosterRewardType.FreezeTimer), Is.False);
+            }
+            finally
+            {
+                if (originalTutorialState == BoosterFirstUseTutorialState.NotStarted)
+                    BoosterFirstUseTutorialProgress.ClearState(freezeConfig);
+                else
+                    BoosterFirstUseTutorialProgress.SetState(freezeConfig, originalTutorialState);
+
+                BoosterInventoryRuntime.Configure(new PlayerPrefsBoosterInventory());
+                BoosterEconomyRuntime.Configure(new BoosterEconomyService(
+                    economyConfig,
+                    BoosterInventoryRuntime.Current,
+                    new PlayerPrefsBoosterEconomyPersistence()));
+                CampaignProgressRuntime.ResetToDefault();
+                GravityLevelRuntime.ResetCampaignState();
+            }
+        }
+
         [TestCase(PieceSpecialBlockType.Normal)]
         [TestCase(PieceSpecialBlockType.Ice)]
         [TestCase(PieceSpecialBlockType.Bomb)]
@@ -320,6 +440,43 @@ namespace GravityPuzzle.Tests.Editor
             }
 
             public bool TryConsume(BoosterRewardType boosterType) => false;
+        }
+
+        private sealed class StubEconomyPersistence : IBoosterEconomyPersistence
+        {
+            private readonly System.Collections.Generic.HashSet<BoosterRewardType> initialClaims =
+                new System.Collections.Generic.HashSet<BoosterRewardType>();
+            private readonly System.Collections.Generic.HashSet<int> levelClaims =
+                new System.Collections.Generic.HashSet<int>();
+
+            public bool HasClaimedInitialUnlock(BoosterRewardType boosterType) => initialClaims.Contains(boosterType);
+            public void MarkInitialUnlockClaimed(BoosterRewardType boosterType) => initialClaims.Add(boosterType);
+            public bool HasClaimedLevelCompletion(int levelNumber) => levelClaims.Contains(levelNumber);
+            public void MarkLevelCompletionClaimed(int levelNumber) => levelClaims.Add(levelNumber);
+        }
+
+        private sealed class StubCampaignPersistence : ICampaignProgressPersistence
+        {
+            private bool hasSaved;
+            private int savedIndex;
+
+            public bool TryLoadLevelIndex(out int levelIndex)
+            {
+                levelIndex = savedIndex;
+                return hasSaved;
+            }
+
+            public void SaveLevelIndex(int levelIndex)
+            {
+                savedIndex = levelIndex;
+                hasSaved = true;
+            }
+
+            public void Clear()
+            {
+                hasSaved = false;
+                savedIndex = 0;
+            }
         }
     }
 }

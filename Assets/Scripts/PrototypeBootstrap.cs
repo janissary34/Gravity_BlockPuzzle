@@ -725,6 +725,8 @@ namespace GravityPuzzle
         private readonly List<GridCoordinate> jointGroupTargetAnchors = new List<GridCoordinate>();
         private readonly List<PuzzlePiece> jointGroupPieceBuffer = new List<PuzzlePiece>();
         private readonly List<PieceJointGraph.Joint> jointBuffer = new List<PieceJointGraph.Joint>();
+        private readonly List<int> shredderSupportVisitIds = new List<int>(32);
+        private readonly List<GridCoordinate> trimmedGravityTargetAnchors = new List<GridCoordinate>();
         private int jointBlockSize = GravityGridMetrics.FineCellsPerGridCell;
         private RevealAreaCoordinator revealAreaCoordinator;
         private readonly StateMachine<GameState> gameStateMachine = new StateMachine<GameState>(
@@ -2077,6 +2079,68 @@ namespace GravityPuzzle
             return pieceJointGraph.RemoveJointsById(jointIds);
         }
 
+        private readonly List<PieceModel> shredderCheckModels = new List<PieceModel>(1);
+        private readonly List<GridCoordinate> shredderCheckAnchors = new List<GridCoordinate>(1);
+
+        public bool AreAllJointGroupMembersCanonical(PuzzlePiece piece, int alignmentStride)
+        {
+            if (alignmentStride <= 1)
+                return true;
+
+            if (!TryGetPieceModel(piece, out PieceModel source) ||
+                !TryCollectJointGroupModels(source.Id, jointGroupModels))
+            {
+                return false;
+            }
+
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                if (!GridReleaseSnapPlanner.IsCanonicalAnchor(jointGroupModels[index].Anchor, alignmentStride))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public bool WouldJointGroupRemainCanonical(
+            PuzzlePiece piece,
+            GridCoordinate targetAnchor,
+            int alignmentStride)
+        {
+            if (alignmentStride <= 1)
+                return true;
+
+            if (!TryGetPieceModel(piece, out PieceModel source) ||
+                !TryCollectJointGroupModels(source.Id, jointGroupModels))
+            {
+                return false;
+            }
+
+            GridCoordinate delta = new GridCoordinate(
+                targetAnchor.X - source.Anchor.X,
+                targetAnchor.Y - source.Anchor.Y);
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                GridCoordinate memberTarget = jointGroupModels[index].Anchor.Offset(delta);
+                if (!GridReleaseSnapPlanner.IsCanonicalAnchor(memberTarget, alignmentStride))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public bool IsLandingSupportedByShredderReservation(PieceModel model, GridCoordinate candidateAnchor)
+        {
+            if (BoardSnapshot == null || model == null)
+                return false;
+
+            shredderCheckModels.Clear();
+            shredderCheckAnchors.Clear();
+            shredderCheckModels.Add(model);
+            shredderCheckAnchors.Add(candidateAnchor);
+            return HasTransitiveShredderSupportBelow(shredderCheckModels, shredderCheckAnchors);
+        }
+
         public bool TryPlanJointGroupGravityMove(
             int sourcePieceId,
             List<GridGravityMove> moves)
@@ -2094,6 +2158,11 @@ namespace GravityPuzzle
             if (!BoardSnapshot.Grid.TryGetGroupFallTarget(jointGroupModels, jointGroupTargetAnchors, CanMovePieceDelegate))
                 return false;
 
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            int alignmentStride = level != null ? Mathf.Max(1, level.subdivisions) : 1;
+            if (!TryTrimGroupFallTargetsToCanonicalY(jointGroupModels, jointGroupTargetAnchors, alignmentStride))
+                return false;
+
             for (int index = 0; index < jointGroupModels.Count; index++)
             {
                 PieceModel member = jointGroupModels[index];
@@ -2101,6 +2170,176 @@ namespace GravityPuzzle
             }
 
             return moves.Count > 0;
+        }
+
+        private bool TryTrimGroupFallTargetsToCanonicalY(
+            IReadOnlyList<PieceModel> models,
+            List<GridCoordinate> targets,
+            int alignmentStride)
+        {
+            if (alignmentStride <= 1 || models == null || targets == null ||
+                models.Count == 0 || models.Count != targets.Count)
+            {
+                return true;
+            }
+
+            if (AreAllTargetsCanonicalY(targets, alignmentStride))
+                return true;
+
+            if (HasTransitiveShredderSupportBelow(models, targets))
+                return true;
+
+            int rawFallDistance = models[0].Anchor.Y - targets[0].Y;
+            for (int lift = 1; lift < rawFallDistance; lift++)
+            {
+                trimmedGravityTargetAnchors.Clear();
+                bool allCanonicalY = true;
+                for (int index = 0; index < models.Count; index++)
+                {
+                    GridCoordinate trimmed = targets[index].Offset(new GridCoordinate(0, lift));
+                    if (!GridReleaseSnapPlanner.IsCanonicalCoordinate(trimmed.Y, alignmentStride))
+                    {
+                        allCanonicalY = false;
+                        break;
+                    }
+
+                    trimmedGravityTargetAnchors.Add(trimmed);
+                }
+
+                if (!allCanonicalY)
+                    continue;
+
+                if (!BoardSnapshot.Grid.CheckGroupPlacementIgnoringMembers(models, trimmedGravityTargetAnchors).IsSuccess)
+                    continue;
+
+                bool allRevealLegal = true;
+                for (int index = 0; index < models.Count; index++)
+                {
+                    if (!CanMovePiece(models[index], trimmedGravityTargetAnchors[index]))
+                    {
+                        allRevealLegal = false;
+                        break;
+                    }
+                }
+
+                if (!allRevealLegal)
+                    continue;
+
+                for (int index = 0; index < models.Count; index++)
+                    targets[index] = trimmedGravityTargetAnchors[index];
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool AreAllTargetsCanonicalY(IReadOnlyList<GridCoordinate> targets, int alignmentStride)
+        {
+            for (int index = 0; index < targets.Count; index++)
+            {
+                if (!GridReleaseSnapPlanner.IsCanonicalCoordinate(targets[index].Y, alignmentStride))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool HasTransitiveShredderSupportBelow(
+            IReadOnlyList<PieceModel> models,
+            IReadOnlyList<GridCoordinate> candidateAnchors)
+        {
+            if (BoardSnapshot == null || models == null || candidateAnchors == null ||
+                models.Count == 0 || models.Count != candidateAnchors.Count)
+            {
+                return false;
+            }
+
+            shredderSupportVisitIds.Clear();
+            GravityBoardGrid grid = BoardSnapshot.Grid;
+            for (int index = 0; index < models.Count; index++)
+            {
+                PieceModel member = models[index];
+                if (member == null)
+                    continue;
+
+                if (CollectShredderOrOccupiedBelow(grid, member, candidateAnchors[index], models))
+                    return true;
+            }
+
+            for (int cursor = 0; cursor < shredderSupportVisitIds.Count; cursor++)
+            {
+                int pieceId = shredderSupportVisitIds[cursor];
+                if (!BoardSnapshot.TryGetPiece(pieceId, out PieceModel current) || !current.IsOnBoard)
+                    continue;
+
+                if (CollectShredderOrOccupiedBelow(grid, current, current.Anchor, models))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool CollectShredderOrOccupiedBelow(
+            GravityBoardGrid grid,
+            PieceModel model,
+            GridCoordinate anchor,
+            IReadOnlyList<PieceModel> ignoredModels)
+        {
+            for (int cellIndex = 0; cellIndex < model.LocalCells.Count; cellIndex++)
+            {
+                GridCoordinate below = anchor.Offset(model.LocalCells[cellIndex]).Offset(new GridCoordinate(0, -1));
+                if (!grid.IsInside(below))
+                    continue;
+
+                GridCellState state = grid.GetCellState(below);
+                if (state != GridCellState.Reserved && state != GridCellState.Occupied)
+                    continue;
+
+                if (!grid.TryGetOccupantId(below, out int occupantId) ||
+                    ContainsModelId(ignoredModels, occupantId))
+                {
+                    continue;
+                }
+
+                if (!BoardSnapshot.TryGetPiece(occupantId, out PieceModel occupant))
+                    continue;
+
+                if (state == GridCellState.Reserved)
+                {
+                    if (occupant.State == PieceState.HandoffToPhysics || occupant.State == PieceState.Shredding)
+                        return true;
+
+                    continue;
+                }
+
+                // A piece held by the player (Dragging) is temporary input geometry, never shredder follow support.
+                if (occupant.State == PieceState.Placed || occupant.State == PieceState.Falling)
+                    AddUniqueVisitId(occupantId);
+            }
+
+            return false;
+        }
+
+        private static bool ContainsModelId(IReadOnlyList<PieceModel> models, int pieceId)
+        {
+            for (int index = 0; index < models.Count; index++)
+            {
+                if (models[index] != null && models[index].Id == pieceId)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void AddUniqueVisitId(int pieceId)
+        {
+            for (int index = 0; index < shredderSupportVisitIds.Count; index++)
+            {
+                if (shredderSupportVisitIds[index] == pieceId)
+                    return;
+            }
+
+            shredderSupportVisitIds.Add(pieceId);
         }
 
         public bool TryCommitJointGroupGravityMove(
@@ -3126,14 +3365,8 @@ namespace GravityPuzzle
                 if (unlockLevel != completedLevel + 1)
                     continue;
 
-                if (BoosterFirstUseTutorialCoordinator.Supports(config.BoosterType))
-                {
-                    if (!Application.isEditor && !Debug.isDebugBuild &&
-                        BoosterFirstUseTutorialProgress.GetState(config) !=
-                        BoosterFirstUseTutorialState.NotStarted)
-                        continue;
-                }
-                else if (BoosterRewardUnlockState.HasBeenPresented(config))
+                if (!BoosterFirstUseTutorialCoordinator.Supports(config.BoosterType) &&
+                    BoosterRewardUnlockState.HasBeenPresented(config))
                 {
                     continue;
                 }

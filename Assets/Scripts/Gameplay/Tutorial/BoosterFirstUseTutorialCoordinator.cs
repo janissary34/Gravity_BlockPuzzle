@@ -227,19 +227,12 @@ namespace GravityPuzzle.Gameplay.Tutorial
             if (unlockLevel != GravityLevelRuntime.CurrentLevelNumber)
                 return;
 
-            BoosterFirstUseTutorialState persisted = BoosterFirstUseTutorialProgress.GetState(config);
-            bool isEditorOrDebugMatch = (Application.isEditor || Debug.isDebugBuild) && unlockLevel == GravityLevelRuntime.CurrentLevelNumber;
-            if (persisted == BoosterFirstUseTutorialState.Completed && !isEditorOrDebugMatch)
-            {
-                BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
-                return;
-            }
-
-            if (persisted == BoosterFirstUseTutorialState.NotStarted || isEditorOrDebugMatch)
-            {
-                BoosterEconomyRuntime.Current.EnsureInitialUnlockGrantsForLevel(unlockLevel);
-                BoosterFirstUseTutorialProgress.SetState(config, BoosterFirstUseTutorialState.PendingRequiredUse);
-            }
+            // Keep Editor, Development, and Release builds identical on the
+            // authored unlock level so persisted test/prior-install states do
+            // not suppress first-use tutorials in builds.
+            BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
+            BoosterEconomyRuntime.Current.EnsureInitialUnlockGrantsForLevel(unlockLevel);
+            BoosterFirstUseTutorialProgress.SetState(config, BoosterFirstUseTutorialState.PendingRequiredUse);
 
             StartPending(config);
         }
@@ -261,33 +254,15 @@ namespace GravityPuzzle.Gameplay.Tutorial
                 if (unlockLevel != GravityLevelRuntime.CurrentLevelNumber)
                     continue;
 
-                BoosterFirstUseTutorialState persistedState = BoosterFirstUseTutorialProgress.GetState(config);
-                bool isPending = persistedState != BoosterFirstUseTutorialState.NotStarted &&
-                    persistedState != BoosterFirstUseTutorialState.Completed;
-
-                // In editor or debug playtesting, always trigger the lesson on its authored introduction level
-                bool isEditorOrDebugMatch = Application.isEditor || Debug.isDebugBuild;
-
-                // A first-use lesson only begins on its exact authored introduction level
-                bool isInitialLevelNotStarted = persistedState == BoosterFirstUseTutorialState.NotStarted || isEditorOrDebugMatch;
-
-                if (!isPending && !isInitialLevelNotStarted)
-                    continue;
-
-                // A pending targeted lesson may survive a level restart or a
-                // later debug jump. Resume it only on a board that actually
-                // contains its authored target; otherwise it would block an
-                // unrelated level and surface a false missing-target error.
+                // Keep target validation for board-targeted boosters (Hammer/Rocket)
+                // so a mismatched level never surfaces a false missing-target gate.
                 if (config.BoosterType != BoosterRewardType.FreezeTimer &&
                     !HasResolvableTarget(config))
                     continue;
 
                 BoosterFirstUseTutorialProgress.RepairMissingInitialInventory(config);
-                if (isInitialLevelNotStarted)
-                {
-                    BoosterEconomyRuntime.Current.EnsureInitialUnlockGrantsForLevel(unlockLevel);
-                    BoosterFirstUseTutorialProgress.SetState(config, BoosterFirstUseTutorialState.PendingRequiredUse);
-                }
+                BoosterEconomyRuntime.Current.EnsureInitialUnlockGrantsForLevel(unlockLevel);
+                BoosterFirstUseTutorialProgress.SetState(config, BoosterFirstUseTutorialState.PendingRequiredUse);
                 StartPending(config);
                 return;
             }

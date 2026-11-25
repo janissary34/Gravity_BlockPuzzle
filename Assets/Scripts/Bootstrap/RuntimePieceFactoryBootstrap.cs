@@ -9,6 +9,7 @@ using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -65,6 +66,15 @@ namespace GravityPuzzle.Bootstrap
 
         [Tooltip("Badge/root object for the level difficulty tag, hidden on Normal levels.")]
         [SerializeField] private GameObject difficultyTagRoot;
+
+        [Tooltip("Image component on Difficulty_tag updated with Hard / Very Hard sprites.")]
+        [SerializeField] private Image difficultyTagImage;
+
+        [Tooltip("Sprite displayed on Difficulty_tag for Hard levels.")]
+        [SerializeField] private Sprite hardDifficultySprite;
+
+        [Tooltip("Sprite displayed on Difficulty_tag for Very Hard levels.")]
+        [SerializeField] private Sprite veryHardDifficultySprite;
 
         [Tooltip("Text that displays the player's current coin total in the HUD.")]
         [SerializeField] private TMP_Text coinDisplayText;
@@ -278,27 +288,58 @@ namespace GravityPuzzle.Bootstrap
             };
         }
 
+        /// <summary>
+        /// Resolves whether the difficulty tag should appear and whether an
+        /// authored difficulty sprite replaces the fallback TMP label.
+        /// </summary>
+        public static bool TryResolveDifficultyTagPresentation(
+            LevelDifficulty difficulty,
+            Sprite hardSprite,
+            Sprite veryHardSprite,
+            out Sprite resolvedSprite,
+            out bool usesBakedSpriteLabel)
+        {
+            if (!ShouldShowDifficultyTag(difficulty))
+            {
+                resolvedSprite = null;
+                usesBakedSpriteLabel = false;
+                return false;
+            }
+
+            resolvedSprite = difficulty switch
+            {
+                LevelDifficulty.Hard => hardSprite,
+                LevelDifficulty.VeryHard => veryHardSprite,
+                _ => null
+            };
+            usesBakedSpriteLabel = resolvedSprite != null;
+            return true;
+        }
+
         private void ResolveDifficultyDisplayText()
         {
             Transform levelRoot = levelDisplayText != null
                 ? levelDisplayText.transform.parent
                 : (difficultyDisplayText != null ? difficultyDisplayText.transform.parent : null);
-            if (levelRoot == null)
-                return;
-
-            if (difficultyDisplayText == null)
+            if (levelRoot != null)
             {
-                Transform difficultyTransform = levelRoot.Find("Level_Display_txt (1)");
-                if (difficultyTransform != null)
-                    difficultyDisplayText = difficultyTransform.GetComponent<TMP_Text>();
+                if (difficultyDisplayText == null)
+                {
+                    Transform difficultyTransform = levelRoot.Find("Level_Display_txt (1)");
+                    if (difficultyTransform != null)
+                        difficultyDisplayText = difficultyTransform.GetComponent<TMP_Text>();
+                }
+
+                if (difficultyTagRoot == null)
+                {
+                    Transform tagTransform = levelRoot.Find("Difficulty_tag");
+                    if (tagTransform != null)
+                        difficultyTagRoot = tagTransform.gameObject;
+                }
             }
 
-            if (difficultyTagRoot == null)
-            {
-                Transform tagTransform = levelRoot.Find("Difficulty_tag");
-                if (tagTransform != null)
-                    difficultyTagRoot = tagTransform.gameObject;
-            }
+            if (difficultyTagImage == null && difficultyTagRoot != null)
+                difficultyTagImage = difficultyTagRoot.GetComponent<Image>();
         }
 
         private void ResolveCoinDisplayText()
@@ -324,15 +365,33 @@ namespace GravityPuzzle.Bootstrap
             if (levelDisplayText != null)
                 levelDisplayText.SetText("Level {0}", currentLevelNumber);
 
-            bool showDifficultyTag = selectedLevel != null && ShouldShowDifficultyTag(selectedLevel.difficulty);
+            LevelDifficulty difficulty = selectedLevel != null
+                ? selectedLevel.difficulty
+                : LevelDifficulty.Normal;
+            bool showDifficultyTag = TryResolveDifficultyTagPresentation(
+                difficulty,
+                hardDifficultySprite,
+                veryHardDifficultySprite,
+                out Sprite difficultySprite,
+                out bool usesBakedSpriteLabel);
+
             if (difficultyTagRoot != null)
                 difficultyTagRoot.SetActive(showDifficultyTag);
 
+            if (showDifficultyTag && difficultyTagImage != null && difficultySprite != null)
+            {
+                difficultyTagImage.sprite = difficultySprite;
+                difficultyTagImage.type = Image.Type.Simple;
+                difficultyTagImage.preserveAspect = true;
+                difficultyTagImage.color = Color.white;
+            }
+
             if (difficultyDisplayText != null)
             {
-                difficultyDisplayText.gameObject.SetActive(showDifficultyTag);
-                if (showDifficultyTag)
-                    difficultyDisplayText.SetText(FormatDifficultyLabel(selectedLevel.difficulty));
+                bool showText = showDifficultyTag && !usesBakedSpriteLabel;
+                difficultyDisplayText.gameObject.SetActive(showText);
+                if (showText)
+                    difficultyDisplayText.SetText(FormatDifficultyLabel(difficulty));
             }
 
             if (coinDisplayText != null)

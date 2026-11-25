@@ -47,6 +47,7 @@ namespace GravityPuzzle.Gameplay.Gravity
             }
 
             ValidatePieceAnchors(level, snapshot, runtimePieces, context);
+            ValidateCanonicalBoardAlignment(level, snapshot, context);
 
             if (snapshotIssueCount > 0)
             {
@@ -127,6 +128,68 @@ namespace GravityPuzzle.Gameplay.Gravity
             }
 
             return mismatchCount;
+        }
+
+        private static void ValidateCanonicalBoardAlignment(
+            GravityLevelDefinition level,
+            LevelBoardSnapshot snapshot,
+            Object context)
+        {
+            int alignmentStride = level.subdivisions;
+            if (alignmentStride <= 1)
+                return;
+
+            for (int index = 0; index < snapshot.Pieces.Count; index++)
+            {
+                PieceModel model = snapshot.Pieces[index];
+                if (model == null || !model.IsOnBoard ||
+                    GridReleaseSnapPlanner.IsCanonicalAnchor(model.Anchor, alignmentStride))
+                {
+                    continue;
+                }
+
+                string pieceName = model.Id >= 0 && model.Id < level.pieces.Count
+                    ? level.pieces[model.Id].name
+                    : $"id={model.Id}";
+                Debug.LogWarning(
+                    $"[LevelSnapshot] Off-grid piece anchor detected. Level='{level.levelName}', " +
+                    $"piece='{pieceName}', anchor={Format(model.Anchor)}, subdivisions={alignmentStride}.",
+                    context);
+            }
+
+            ValidateRevealAreaBoundsAlignment(level.levelName, "Box", level.boxes, alignmentStride, context);
+            ValidateRevealAreaBoundsAlignment(level.levelName, "Elevator", level.elevators, alignmentStride, context);
+        }
+
+        private static void ValidateRevealAreaBoundsAlignment<T>(
+            string levelName,
+            string kindLabel,
+            IReadOnlyList<T> definitions,
+            int alignmentStride,
+            Object context) where T : RevealAreaDefinition
+        {
+            if (definitions == null)
+                return;
+
+            for (int index = 0; index < definitions.Count; index++)
+            {
+                RevealAreaDefinition definition = definitions[index];
+                if (definition == null || definition.bounds.size.x <= 0 || definition.bounds.size.y <= 0)
+                    continue;
+
+                GridCoordinate origin = new GridCoordinate(definition.bounds.origin.x, definition.bounds.origin.y);
+                GridCoordinate size = new GridCoordinate(definition.bounds.size.x, definition.bounds.size.y);
+                if (GridReleaseSnapPlanner.IsCanonicalAnchor(origin, alignmentStride) &&
+                    GridReleaseSnapPlanner.IsCanonicalAnchor(size, alignmentStride))
+                {
+                    continue;
+                }
+
+                Debug.LogWarning(
+                    $"[LevelSnapshot] Off-grid {kindLabel} reveal bounds detected. Level='{levelName}', " +
+                    $"area='{definition.name}', origin={Format(origin)}, size={Format(size)}, subdivisions={alignmentStride}.",
+                    context);
+            }
         }
 
         private static int CountAuthoredProgressUnits(GravityLevelDefinition level)

@@ -44,12 +44,10 @@ namespace GravityPuzzle
         private readonly List<PuzzlePiece> gravityGroupPieces = new List<PuzzlePiece>();
         private GridCoordinate selectedPieceStartAnchor;
         private bool hasSelectedPieceStartAnchor;
-        // Every combined drag has one stable, deterministic reference pivot.
-        // The selected member can vary, but all members keep this offset from
-        // the reference for the entire input transaction.
-        private GridCoordinate selectedGroupReferencePivot;
-        private GridCoordinate selectedPivotOffsetFromGroup;
-        private bool hasSelectedGroupReference;
+        private GridCoordinate lastCanonicalDragAnchor;
+        private bool hasLastCanonicalDragAnchor;
+        private readonly List<GridCoordinate> snapCandidateBuffer = new List<GridCoordinate>(36);
+        private readonly List<PuzzlePiece> selectionResetGroupBuffer = new List<PuzzlePiece>();
         private Vector2 grabOffset;
         // Pointer motion is consumed once per input frame. Keeping it as a
         // delta prevents a rejected move from turning into a later path seek.
@@ -201,14 +199,30 @@ namespace GravityPuzzle
 
             if (inputLockedByGameState)
             {
-                ClearInputSelection();
+                if (selectedPiece != null)
+                {
+                    CommitDragEnd(allowDropFeedback: false, allowGravityAdvance: false);
+                    activeFingerId = -1;
+                }
+                else
+                {
+                    ClearInputSelection();
+                }
                 return;
             }
 
             if (BoosterFirstUseTutorialRuntime.Gate != null &&
                 BoosterFirstUseTutorialRuntime.Gate.BlocksBoardDrag)
             {
-                ClearInputSelection();
+                if (selectedPiece != null)
+                {
+                    CommitDragEnd(allowDropFeedback: false, allowGravityAdvance: true);
+                    activeFingerId = -1;
+                }
+                else
+                {
+                    ClearInputSelection();
+                }
                 return;
             }
 
@@ -217,15 +231,14 @@ namespace GravityPuzzle
             // piece again or queue a release snap during the shred animation.
             if (selectedPiece != null && selectedPiece.IsShredderInteractionLocked)
             {
-                selectedPiece = null;
-                activeFingerId = -1;
+                ClearInputSelection();
             }
 
             if (HammerBooster.IsTargeting || RocketBooster.IsTargeting)
             {
                 if (selectedPiece != null)
                 {
-                    ReleasePiece();
+                    CommitDragEnd(allowDropFeedback: false, allowGravityAdvance: true);
                     activeFingerId = -1;
                 }
                 return;
@@ -235,7 +248,7 @@ namespace GravityPuzzle
             {
                 if (selectedPiece != null)
                 {
-                    ReleasePiece();
+                    CommitDragEnd(allowDropFeedback: false, allowGravityAdvance: false);
                     activeFingerId = -1;
                 }
                 return;
@@ -289,6 +302,12 @@ namespace GravityPuzzle
         // a terminal state.
         private void StopGameplayPresentation()
         {
+            if (selectedPiece != null)
+            {
+                CommitDragEnd(allowDropFeedback: false, allowGravityAdvance: false);
+                activeFingerId = -1;
+            }
+
             ClearInputSelection();
             HammerBooster.CancelActiveSelection();
             RocketBooster.CancelActiveSelection();
@@ -306,16 +325,25 @@ namespace GravityPuzzle
         private void ClearInputSelection()
         {
             PrototypeBoard board = PrototypeBoard.Active;
-            board?.CollectJointGroupPieces(selectedPiece, selectedJointGroupPieces);
-            for (int index = 0; index < selectedJointGroupPieces.Count; index++)
-                selectedJointGroupPieces[index]?.SetSelected(false);
+            if (selectedPiece != null)
+            {
+                board?.CollectJointGroupPieces(selectedPiece, selectionResetGroupBuffer);
+                for (int index = 0; index < selectionResetGroupBuffer.Count; index++)
+                    selectionResetGroupBuffer[index]?.SetSelected(false);
+                selectionResetGroupBuffer.Clear();
+            }
 
-            selectedPiece = null;
             ClearFrozenGroupFeedback();
+            ResetDragSelectionState();
             activeFingerId = -1;
+        }
+
+        private void ResetDragSelectionState()
+        {
+            selectedPiece = null;
             hasLastResolvedDragPosition = false;
             hasSelectedPieceStartAnchor = false;
-            hasSelectedGroupReference = false;
+            hasLastCanonicalDragAnchor = false;
             pendingDragIntent = Vector2.zero;
             fineDragRemainder = Vector2.zero;
         }
@@ -437,6 +465,7 @@ namespace GravityPuzzle
                     !snapshot.TryGetPiece(piece.SourcePieceId, out PieceModel model) ||
                     model.State != PieceState.Falling ||
                     !snapshot.Grid.TryGetFallTarget(model, out GridCoordinate targetAnchor, activeBoard.CanMovePieceDelegate) ||
+                    !TryTrimSingleFallTargetToCanonicalY(activeBoard, snapshot, level, model, ref targetAnchor) ||
                     targetAnchor.Equals(model.Anchor))
                     continue;
 
@@ -851,6 +880,7 @@ namespace GravityPuzzle
             coordinatedFallReleaseMode.Remove(piece.SourcePieceId);
             SnapPieceToCommittedGridPosition(piece);
             PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Placed);
+            AssertCanonicalRestingAnchorIfApplicable(piece, "gravity settle");
 
             // Immediately check if this piece reached the shredder mouth so it
             // transitions into freefall without a multi-frame dead stop.
@@ -908,11 +938,13 @@ namespace GravityPuzzle
             if (level == null || board == null)
                 return false;
 
+            int alignmentStride = AlignmentStride(level);
             fineDragRemainder += dragIntent * level.subdivisions;
             while (TryGetNextFineDragStep(out GridCoordinate step))
             {
                 if (board.TryMoveDraggingPieceOnGrid(piece, model.Anchor.Offset(step), out _))
                 {
+                    TryRecordCanonicalDragAnchor(board, piece, model.Anchor, alignmentStride);
                     if (step.X != 0)
                         fineDragRemainder.x -= step.X;
                     else
@@ -1265,10 +1297,12 @@ namespace GravityPuzzle
             dragTarget = body.position;
             pendingDragIntent = Vector2.zero;
             fineDragRemainder = Vector2.zero;
-            hasSelectedGroupReference = PrototypeBoard.Active.TryGetJointGroupDragReference(
+            hasLastCanonicalDragAnchor = false;
+            TryRecordCanonicalDragAnchor(
+                PrototypeBoard.Active,
                 piece,
-                out selectedGroupReferencePivot,
-                out selectedPivotOffsetFromGroup);
+                selectedPieceStartAnchor,
+                AlignmentStride(GravityLevelRuntime.FindLevelToPlay()));
             lastResolvedDragPosition = body.position;
             hasLastResolvedDragPosition = true;
         }
@@ -1324,10 +1358,20 @@ namespace GravityPuzzle
 
         private void ReleasePiece()
         {
+            CommitDragEnd(allowDropFeedback: true, allowGravityAdvance: true);
+        }
+
+        private void CommitDragEnd(bool allowDropFeedback, bool allowGravityAdvance)
+        {
             if (selectedPiece == null)
                 return;
 
-            Rigidbody2D body = selectedPiece.Body;
+            if (selectedPiece.IsShredderInteractionLocked)
+            {
+                ClearInputSelection();
+                return;
+            }
+
             TryMoveSelectedPieceOnGrid(selectedPiece);
 
             PrototypeBoard activeBoard = PrototypeBoard.Active;
@@ -1345,67 +1389,46 @@ namespace GravityPuzzle
             Physics2D.SyncTransforms();
             selectedPiece.PrepareGridPresentationProfile();
 
-            if (isCombined)
+            if (!TryGetSnapshotPiece(selectedPiece, out _, out PieceModel currentModel) ||
+                !currentModel.IsOnBoard ||
+                currentModel.State != PieceState.Dragging)
             {
-                if (TryCommitSafeSnapRelease(selectedPiece, out _))
-                {
+                ClearInputSelection();
+                return;
+            }
+
+            if (TryCommitCanonicalSnapRelease(selectedPiece, isCombined, out Vector2 releasePosition))
+            {
+                if (allowDropFeedback)
                     HapticFeedbackRuntime.ValidDrop();
-                    StartGridReleasePresentation(selectedPiece, selectedJointGroupPieces);
-                }
 
-                selectedPiece = null;
-                hasSelectedPieceStartAnchor = false;
-                hasLastResolvedDragPosition = false;
-                hasSelectedGroupReference = false;
-                pendingDragIntent = Vector2.zero;
-                fineDragRemainder = Vector2.zero;
-                AdvanceGridGravityPresentation();
-                return;
-            }
-
-            if (TryCommitSafeSnapRelease(selectedPiece, out Vector2 releasePosition))
-            {
-                HapticFeedbackRuntime.ValidDrop();
                 PuzzlePiece releasePiece = selectedPiece;
-                StartGridReleasePresentation(releasePiece, releasePosition);
-                selectedPiece = null;
-                hasSelectedPieceStartAnchor = false;
-                hasLastResolvedDragPosition = false;
-                hasSelectedGroupReference = false;
-                pendingDragIntent = Vector2.zero;
-                fineDragRemainder = Vector2.zero;
-                AdvanceGridGravityPresentation();
+                if (isCombined)
+                    StartGridReleasePresentation(releasePiece, selectedJointGroupPieces);
+                else
+                    StartGridReleasePresentation(releasePiece, releasePosition);
+
+                AssertCanonicalRestingGroupInvariant(releasePiece, selectedJointGroupPieces, "drag release");
+                ResetDragSelectionState();
+                if (allowGravityAdvance)
+                    AdvanceGridGravityPresentation();
                 return;
             }
 
-            GridCoordinate restoreAnchor = selectedPieceStartAnchor;
-            if (TryGetSnapshotPiece(selectedPiece, out _, out PieceModel currentModel))
-                restoreAnchor = currentModel.Anchor;
-
-            if (hasSelectedPieceStartAnchor &&
-                TryRestoreGridRelease(selectedPiece, restoreAnchor, out Vector2 restorePosition))
-            {
+            bool restored = TryRestoreDragEndFallback(selectedPiece, selectedJointGroupPieces, isCombined, currentModel.Anchor);
+            if (allowDropFeedback)
                 HapticFeedbackRuntime.InvalidDrop();
-                selectedPiece.SetGridPresentationPosition(restorePosition);
-                selectedPiece = null;
-                hasSelectedPieceStartAnchor = false;
-                hasLastResolvedDragPosition = false;
-                hasSelectedGroupReference = false;
-                pendingDragIntent = Vector2.zero;
-                fineDragRemainder = Vector2.zero;
-                return;
+
+            if (!restored)
+            {
+                Debug.LogWarning(
+                    $"[GridRelease] Failed to restore '{selectedPiece.name}' cleanly to a Placed state.",
+                    selectedPiece);
             }
 
-            Debug.LogWarning(
-                $"[GridRelease] Failed to restore '{selectedPiece.name}' to its committed grid anchor.",
-                selectedPiece);
-
-            selectedPiece = null;
-            hasSelectedPieceStartAnchor = false;
-            hasLastResolvedDragPosition = false;
-            hasSelectedGroupReference = false;
-            pendingDragIntent = Vector2.zero;
-            fineDragRemainder = Vector2.zero;
+            ResetDragSelectionState();
+            if (allowGravityAdvance)
+                AdvanceGridGravityPresentation();
         }
 
         private void StartGridReleasePresentation(PuzzlePiece releasePiece, Vector2 releasePosition)
@@ -1538,117 +1561,263 @@ namespace GravityPuzzle
             return true;
         }
 
-        private bool TryCommitSafeSnapRelease(
+        private bool TryCommitCanonicalSnapRelease(
             PuzzlePiece piece,
-            out Vector2 releasePosition)
-        {
-            releasePosition = default;
-            if (piece == null || !hasSelectedPieceStartAnchor ||
-                !TryGetSnapshotPiece(piece, out _, out PieceModel model))
-            {
-                return TryCommitCurrentGridRelease(piece, out releasePosition);
-            }
-
-            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
-            PrototypeBoard board = PrototypeBoard.Active;
-            if (level == null || board == null)
-                return TryCommitCurrentGridRelease(piece, out releasePosition);
-
-            Vector2 currentPosition = hasLastResolvedDragPosition
-                ? lastResolvedDragPosition
-                : piece.Body.position;
-            GridCoordinate snappedPivot;
-            if (hasSelectedGroupReference)
-            {
-                GridCoordinate currentSelectedPivot = WorldToNearestFineCell(level, currentPosition);
-                GridCoordinate currentGroupPivot = new GridCoordinate(
-                    currentSelectedPivot.X - selectedPivotOffsetFromGroup.X,
-                    currentSelectedPivot.Y - selectedPivotOffsetFromGroup.Y);
-                GridCoordinate snappedGroupPivot = SnapToBackgroundAlignedPivot(
-                    level,
-                    GravityLevelGridCoordinates.FineCellToWorld(level, currentGroupPivot),
-                    selectedGroupReferencePivot);
-                snappedPivot = snappedGroupPivot.Offset(selectedPivotOffsetFromGroup);
-            }
-            else
-            {
-                GridCoordinate referencePivot = new GridCoordinate(
-                    selectedPieceStartAnchor.X - model.PivotOffset.X,
-                    selectedPieceStartAnchor.Y - model.PivotOffset.Y);
-                snappedPivot = SnapToBackgroundAlignedPivot(
-                    level,
-                    currentPosition,
-                    referencePivot);
-            }
-            Vector2 snappedPosition = GravityLevelGridCoordinates.FineCellToWorld(level, snappedPivot);
-
-            // Snapping is only presentation alignment after the player has
-            // traversed a valid path. It may not complete a blocked path or
-            // move through a corner that the active drag could not cross.
-            GridCoordinate snappedAnchor = snappedPivot.Offset(model.PivotOffset);
-            if (!board.CanTraversePieceGroupTo(piece, snappedAnchor))
-            {
-                return TryCommitCurrentGridRelease(piece, out releasePosition);
-            }
-
-            if (!board.TryMovePieceOnGrid(piece, snappedAnchor, out _))
-                return TryCommitCurrentGridRelease(piece, out releasePosition);
-
-            lastResolvedDragPosition = snappedPosition;
-            releasePosition = snappedPosition;
-            return true;
-        }
-
-        private static bool TryCommitCurrentGridRelease(
-            PuzzlePiece piece,
+            bool isCombined,
             out Vector2 releasePosition)
         {
             releasePosition = default;
             if (piece == null || piece.Body == null ||
-                !TryGetSnapshotPiece(piece, out LevelBoardSnapshot snapshot, out PieceModel model))
+                !TryGetSnapshotPiece(piece, out _, out PieceModel model))
                 return false;
 
-            GravityLevelDefinition activeLevel = GravityLevelRuntime.FindLevelToPlay();
-            PrototypeBoard activeBoard = PrototypeBoard.Active;
-            if (activeLevel == null || activeBoard == null)
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (level == null || board == null)
                 return false;
 
-            GridPlacementResult placementResult = GridPlacementResult.Failure(
-                GridPlacementFailureReason.OutOfBounds,
+            int alignmentStride = AlignmentStride(level);
+            Vector2 currentPosition = hasLastResolvedDragPosition
+                ? lastResolvedDragPosition
+                : piece.Body.position;
+            GridCoordinate visualAnchor = WorldToNearestFineCell(level, currentPosition).Offset(model.PivotOffset);
+
+            GridReleaseSnapPlanner.CollectCanonicalCandidates(
+                visualAnchor,
                 model.Anchor,
-                GridCellState.Blocked,
-                default);
-            if (!snapshot.Grid.IsInside(model.Anchor) ||
-                !activeBoard.TryMovePieceOnGrid(piece, model.Anchor, out placementResult))
+                hasLastCanonicalDragAnchor,
+                lastCanonicalDragAnchor,
+                hasSelectedPieceStartAnchor,
+                selectedPieceStartAnchor,
+                alignmentStride,
+                snapCandidateBuffer);
+
+            if (TryCommitFirstTraversableCandidate(
+                    piece,
+                    board,
+                    model,
+                    level,
+                    alignmentStride,
+                    requireAllMembersCanonical: isCombined,
+                    out releasePosition))
             {
-                Debug.LogWarning(
-                    $"[GridRelease] Rejected '{piece.name}' id={model.Id}, " +
-                    $"modelOnBoard={model.IsOnBoard}, targetAnchor=({model.Anchor.X},{model.Anchor.Y}), " +
-                    $"reason={placementResult.Reason}, cell=({placementResult.Coordinate.X},{placementResult.Coordinate.Y}), " +
-                    $"cellState={placementResult.CellState}, occupant={placementResult.OccupantId}.",
-                    piece);
-                return false;
+                return true;
             }
 
-            GridCoordinate pivot = new GridCoordinate(
-                model.Anchor.X - model.PivotOffset.X,
-                model.Anchor.Y - model.PivotOffset.Y);
-            releasePosition = GravityLevelGridCoordinates.FineCellToWorld(activeLevel, pivot);
+            // If an unrelated group member started off-grid, still align the primary
+            // member to a canonical coordinate rather than stranding at a half-block.
+            if (isCombined &&
+                TryCommitFirstTraversableCandidate(
+                    piece,
+                    board,
+                    model,
+                    level,
+                    alignmentStride,
+                    requireAllMembersCanonical: false,
+                    out releasePosition))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryCommitFirstTraversableCandidate(
+            PuzzlePiece piece,
+            PrototypeBoard board,
+            PieceModel model,
+            GravityLevelDefinition level,
+            int alignmentStride,
+            bool requireAllMembersCanonical,
+            out Vector2 releasePosition)
+        {
+            releasePosition = default;
+            for (int index = 0; index < snapCandidateBuffer.Count; index++)
+            {
+                GridCoordinate candidateAnchor = snapCandidateBuffer[index];
+                if (requireAllMembersCanonical &&
+                    !board.WouldJointGroupRemainCanonical(piece, candidateAnchor, alignmentStride))
+                {
+                    continue;
+                }
+
+                // Snapping is only presentation alignment after the player has
+                // traversed a valid path. It may not complete a blocked path or
+                // move through a corner that the active drag could not cross.
+                if (!board.CanTraversePieceGroupTo(piece, candidateAnchor))
+                    continue;
+
+                if (!board.TryMovePieceOnGrid(piece, candidateAnchor, out _))
+                    continue;
+
+                GridCoordinate snappedPivot = new GridCoordinate(
+                    candidateAnchor.X - model.PivotOffset.X,
+                    candidateAnchor.Y - model.PivotOffset.Y);
+                Vector2 snappedPosition = GravityLevelGridCoordinates.FineCellToWorld(level, snappedPivot);
+                lastResolvedDragPosition = snappedPosition;
+                releasePosition = snappedPosition;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryRestoreDragEndFallback(
+            PuzzlePiece piece,
+            IReadOnlyList<PuzzlePiece> groupPieces,
+            bool isCombined,
+            GridCoordinate currentAnchor)
+        {
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            PrototypeBoard board = PrototypeBoard.Active;
+            if (level == null || board == null)
+                return false;
+
+            int alignmentStride = AlignmentStride(level);
+            bool committed = false;
+            if (hasLastCanonicalDragAnchor &&
+                GridReleaseSnapPlanner.IsCanonicalAnchor(lastCanonicalDragAnchor, alignmentStride) &&
+                board.CanTraversePieceGroupTo(piece, lastCanonicalDragAnchor) &&
+                TryRestoreGridRelease(piece, lastCanonicalDragAnchor, out _))
+            {
+                committed = true;
+            }
+            else if (hasSelectedPieceStartAnchor &&
+                     GridReleaseSnapPlanner.IsCanonicalAnchor(selectedPieceStartAnchor, alignmentStride) &&
+                     board.CanTraversePieceGroupTo(piece, selectedPieceStartAnchor) &&
+                     TryRestoreGridRelease(piece, selectedPieceStartAnchor, out _))
+            {
+                committed = true;
+            }
+            else if (TryRestoreGridRelease(piece, currentAnchor, out _))
+            {
+                committed = true;
+                if (alignmentStride > 1 &&
+                    !GridReleaseSnapPlanner.IsCanonicalAnchor(currentAnchor, alignmentStride))
+                {
+                    Debug.LogError(
+                        $"[GridAlignment] All canonical snap candidates failed for '{piece.name}'; " +
+                        $"fell back to ({currentAnchor.X},{currentAnchor.Y}) (subdivisions={alignmentStride}).",
+                        piece);
+                }
+            }
+
+            if (!committed)
+                return false;
+
+            if (isCombined)
+            {
+                for (int index = 0; index < groupPieces.Count; index++)
+                {
+                    PuzzlePiece member = groupPieces[index];
+                    if (member != null && TryGetCommittedGridPresentationPosition(member, out Vector2 target))
+                        member.SetGridPresentationPosition(target, synchronizeTransforms: false);
+                }
+                Physics2D.SyncTransforms();
+            }
+            else if (TryGetCommittedGridPresentationPosition(piece, out Vector2 singleTarget))
+            {
+                piece.SetGridPresentationPosition(singleTarget);
+            }
+
             return true;
         }
 
-        private static GridCoordinate SnapToBackgroundAlignedPivot(
+        private static bool TryTrimSingleFallTargetToCanonicalY(
+            PrototypeBoard board,
+            LevelBoardSnapshot snapshot,
             GravityLevelDefinition level,
-            Vector2 currentPosition,
-            GridCoordinate referencePivot)
+            PieceModel model,
+            ref GridCoordinate targetAnchor)
         {
-            GridCoordinate nearestPivot = WorldToNearestFineCell(level, currentPosition);
-            int subdivisions = Mathf.Max(1, level.subdivisions);
-            return new GridCoordinate(
-                referencePivot.X +
-                Mathf.RoundToInt((nearestPivot.X - referencePivot.X) / (float)subdivisions) * subdivisions,
-                referencePivot.Y +
-                Mathf.RoundToInt((nearestPivot.Y - referencePivot.Y) / (float)subdivisions) * subdivisions);
+            int alignmentStride = AlignmentStride(level);
+            if (alignmentStride <= 1 ||
+                GridReleaseSnapPlanner.IsCanonicalCoordinate(targetAnchor.Y, alignmentStride) ||
+                board.IsLandingSupportedByShredderReservation(model, targetAnchor))
+            {
+                return true;
+            }
+
+            for (int candidateY = targetAnchor.Y + 1; candidateY < model.Anchor.Y; candidateY++)
+            {
+                if (!GridReleaseSnapPlanner.IsCanonicalCoordinate(candidateY, alignmentStride))
+                    continue;
+
+                GridCoordinate candidate = new GridCoordinate(targetAnchor.X, candidateY);
+                if (snapshot.Grid.CheckPlacementIgnoringPiece(model, candidate, model.Id).IsSuccess &&
+                    board.CanMovePiece(model, candidate))
+                {
+                    targetAnchor = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void TryRecordCanonicalDragAnchor(
+            PrototypeBoard board,
+            PuzzlePiece piece,
+            GridCoordinate candidateAnchor,
+            int alignmentStride)
+        {
+            if (board == null || piece == null)
+                return;
+
+            if (GridReleaseSnapPlanner.IsCanonicalAnchor(candidateAnchor, alignmentStride) &&
+                board.AreAllJointGroupMembersCanonical(piece, alignmentStride))
+            {
+                lastCanonicalDragAnchor = candidateAnchor;
+                hasLastCanonicalDragAnchor = true;
+            }
+        }
+
+        private static int AlignmentStride(GravityLevelDefinition level)
+        {
+            return level != null ? Mathf.Max(1, level.subdivisions) : 1;
+        }
+
+        private static void AssertCanonicalRestingGroupInvariant(
+            PuzzlePiece primaryPiece,
+            IReadOnlyList<PuzzlePiece> groupPieces,
+            string phase)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            AssertCanonicalRestingAnchorIfApplicable(primaryPiece, phase);
+            if (groupPieces == null)
+                return;
+
+            for (int index = 0; index < groupPieces.Count; index++)
+                AssertCanonicalRestingAnchorIfApplicable(groupPieces[index], phase);
+#endif
+        }
+
+        private static void AssertCanonicalRestingAnchorIfApplicable(PuzzlePiece piece, string phase)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (piece == null || piece.IsShredderInteractionLocked)
+                return;
+
+            PrototypeBoard board = PrototypeBoard.Active;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (board == null || level == null || !board.TryGetPieceModel(piece, out PieceModel model))
+                return;
+
+            int stride = AlignmentStride(level);
+            if (stride <= 1 || !model.IsOnBoard || model.State != PieceState.Placed)
+                return;
+
+            if (GridReleaseSnapPlanner.IsCanonicalAnchor(model.Anchor, stride))
+                return;
+
+            if (board.IsLandingSupportedByShredderReservation(model, model.Anchor))
+                return;
+
+            Debug.LogError(
+                $"[GridAlignment] Piece '{piece.name}' (id={model.Id}) rested off canonical grid " +
+                $"at ({model.Anchor.X},{model.Anchor.Y}) after {phase} (subdivisions={stride}).",
+                piece);
+#endif
         }
 
         private static bool TryRestoreGridRelease(
