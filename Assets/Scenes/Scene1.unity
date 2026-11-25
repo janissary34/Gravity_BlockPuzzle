@@ -6491,12 +6491,12 @@ MonoBehaviour:
   targetingUi: {fileID: 1749646606}
   titleText: {fileID: 0}
   instructionText: {fileID: 0}
-  rocketIcon: {fileID: 1749646603}
-  hammerIcon: {fileID: 1749646602}
+  rocketIcon: {fileID: 0}
+  hammerIcon: {fileID: 0}
   rocketButtonSparkles: {fileID: 0}
   hammerButtonSparkles: {fileID: 0}
-  rocketIconSparkles: {fileID: 1709210338}
-  hammerIconSparkles: {fileID: 2034452261}
+  rocketIconSparkles: {fileID: 0}
+  hammerIconSparkles: {fileID: 0}
   rocketButtonGlow: {fileID: 1044895664}
   hammerButtonGlow: {fileID: 0}
   timerButtonGlow: {fileID: 0}
@@ -9533,11 +9533,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 4524368692205569183, guid: c0ea24ebf7a4648319614f6060514ab3, type: 3}
   m_PrefabInstance: {fileID: 1701635893}
   m_PrefabAsset: {fileID: 0}
---- !u!198 &1709210338 stripped
-ParticleSystem:
-  m_CorrespondingSourceObject: {fileID: 81927280709503359, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-  m_PrefabInstance: {fileID: 1749646595}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1749646595
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9788,7 +9783,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2305426653993942447, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2641848191979812727, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       propertyPath: m_IsActive
@@ -10421,6 +10416,8 @@ PrefabInstance:
     - {fileID: 5943966202660378789, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
     - {fileID: 1045180343987360812, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
     - {fileID: 2877203459203992670, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+    - {fileID: 2641848191979812727, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
+    - {fileID: 8415721363587598079, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 6016220375648943809, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
       insertIndex: 25
@@ -10501,28 +10498,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 6016220375648943809, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
   m_PrefabInstance: {fileID: 1749646595}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1749646602 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3128882906529715425, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-  m_PrefabInstance: {fileID: 1749646595}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &1749646603 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 729650354575503343, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-  m_PrefabInstance: {fileID: 1749646595}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1749646606 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2865506912553904521, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
@@ -11956,11 +11931,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2009552946}
   m_CullTransparentMesh: 1
---- !u!198 &2034452261 stripped
-ParticleSystem:
-  m_CorrespondingSourceObject: {fileID: 8962977119885478190, guid: 7d0beefb670a04569a8daae20c4c0bec, type: 3}
-  m_PrefabInstance: {fileID: 1749646595}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2085774162
 GameObject:
   m_ObjectHideFlags: 0
@@ -12045,7 +12015,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 34
+  m_fontSize: 36
   m_fontSizeBase: 34
   m_fontWeight: 400
   m_enableAutoSizing: 1

@@ -343,8 +343,10 @@ namespace GravityPuzzle.Gameplay.Reveal
         }
 
         /// <summary>
-        /// Applies closed-box and permanently-opened-elevator re-entry rules
-        /// before the board commits a candidate grid movement.
+        /// Applies closed-box and currently-opening-elevator re-entry rules
+        /// before the board commits a candidate grid movement. Once an elevator
+        /// finishes opening (Unlocked) and despawns, its footprint becomes
+        /// normal traversable board space.
         /// </summary>
         public bool CanMovePiece(PieceModel model, GridCoordinate targetAnchor)
         {
@@ -388,7 +390,7 @@ namespace GravityPuzzle.Gameplay.Reveal
             for (int index = 0; index < elevators.Count; index++)
             {
                 ElevatorRuntime elevator = elevators[index];
-                if (elevator.State == RevealAreaState.Locked)
+                if (elevator.State != RevealAreaState.Unlocking)
                     continue;
 
                 RevealAreaBounds elevatorBounds = elevator.Definition.bounds;

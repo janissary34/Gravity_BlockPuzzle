@@ -664,7 +664,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   segmentedFillShader: {fileID: 4800000, guid: a4b8c2d1e5f649078123456789abcdef, type: 3}
   defaultFillColor: {r: 1, g: 0.72, b: 0.15, a: 1}
-  useUniformColor: 0
+  useUniformColor: 1
   uniformFillColor: {r: 0.47392172, g: 0.21960782, b: 0.8392157, a: 1}
 --- !u!1 &7362235363571972639
 GameObject:

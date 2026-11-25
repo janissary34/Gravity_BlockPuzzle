@@ -211,27 +211,29 @@ namespace GravityPuzzle
                     HandleLevelFailed();
             }
 
-            bool hasTimeLimit = board != null && board.TimeLimit > 0f && !timerPresentationLocked;
-            SetTimerVisible(hasTimeLimit);
+            bool timerVisible = IsTimerVisibleForState();
+            SetTimerVisible(timerVisible);
+
+            bool activeCountdown = timerVisible && !timerPresentationLocked;
             SetTimerUrgencyFrameVisible(
-                hasTimeLimit &&
+                activeCountdown &&
                 board.IsTimerStarted &&
                 board.TimeRemaining > 0f &&
                 board.TimeRemaining <= timerUrgencyThresholdSeconds &&
                 GravityLevelRuntime.CurrentLevelNumber >= redVignetteFirstLevel);
             SetTimerTextUrgencyPulseVisible(
-                hasTimeLimit &&
+                activeCountdown &&
                 board.IsTimerStarted &&
                 board.TimeRemaining > 0f &&
                 board.TimeRemaining <= timerUrgencyThresholdSeconds);
             SoundFeedbackRuntime.SetClockTickingActive(
-                hasTimeLimit &&
+                activeCountdown &&
                 board.IsTimerStarted &&
                 board.IsTimerActive &&
                 !board.IsTimerPaused &&
                 board.TimeRemaining > 0f &&
                 board.TimeRemaining <= timerUrgencyThresholdSeconds);
-            if (!hasTimeLimit)
+            if (!timerVisible)
                 return;
 
             UpdateTimerDisplay(board.TimeRemaining);
@@ -291,10 +293,29 @@ namespace GravityPuzzle
             if (timerPresentationLocked)
             {
                 SoundFeedbackRuntime.SetClockTickingActive(false);
-                SetTimerVisible(false);
+                bool keepVisible = IsTimerVisibleForState();
+                SetTimerVisible(keepVisible);
+                if (keepVisible && board != null)
+                {
+                    UpdateTimerDisplay(board.TimeRemaining);
+                    UpdateTimerSlider(board.TimeRemaining);
+                }
                 SetTimerUrgencyFrameVisible(false);
                 SetTimerTextUrgencyPulseVisible(false);
             }
+        }
+
+        private bool IsTimerVisibleForState()
+        {
+            if (board == null || board.TimeLimit <= 0f)
+                return false;
+
+            if (!timerPresentationLocked)
+                return true;
+
+            return !board.HasFailed &&
+                   (board.GameState == GravityPuzzle.Core.StateMachine.GameState.LevelComplete ||
+                    board.GameState == GravityPuzzle.Core.StateMachine.GameState.Result);
         }
 
         private void SetTimerVisible(bool visible)
