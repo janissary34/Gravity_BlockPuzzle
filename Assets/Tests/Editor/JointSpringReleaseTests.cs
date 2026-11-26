@@ -12,7 +12,7 @@ public sealed class JointSpringReleaseTests
     [TestCase(1, true, 1f)]
     public void Release_DetachesFlicksFadesAndResetsForReuse(int key, bool vertical, float direction)
     {
-        var prefab = AssetDatabase.LoadAssetAtPath<JointSpringView>("Assets/Prefabs/JointSpringView.prefab");
+        var prefab = AssetDatabase.LoadAssetAtPath<JointSpringView>("Assets/MainPrefabs/JointSpringView.prefab");
         Assert.That(prefab, Is.Not.Null);
         var poolRoot = new GameObject("Spring test pool");
         var piece = new GameObject("Spring test piece");

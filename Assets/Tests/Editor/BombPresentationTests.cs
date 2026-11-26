@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using GravityPuzzle;
 using GravityPuzzle.Presentation.Views;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 public sealed class BombPresentationTests
 {
@@ -42,6 +44,7 @@ public sealed class BombPresentationTests
             visualObject.transform.SetParent(contentObject.transform, false);
             visualObject.AddComponent<BoosterVisualView>();
             BoosterRewardContentView content = contentObject.AddComponent<BoosterRewardContentView>();
+            InvokeAwake(content);
 
             visualObject.SetActive(false);
             content.SetVisible(true);
@@ -97,14 +100,16 @@ public sealed class BombPresentationTests
         var root = new GameObject("Hammer bomb defuse test");
         var texture = new Texture2D(16, 16);
         Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
+        MeshRenderer counterRenderer = null;
+        Material initialCounterMaterial = null;
 
         try
         {
             var piece = root.AddComponent<PuzzlePiece>();
+            InvokeAwake(piece);
             SpriteRenderer overlay = ConfigureBombPresentation(piece, root.transform, sprite, new[] { Vector2.zero });
-            var counter = new GameObject("Bomb Counter Presentation").AddComponent<TextMeshPro>();
-            counter.transform.SetParent(root.transform);
-            SetField(piece, "bombCounterText", counter);
+            TextMeshPro counter = AttachBombCounter(piece, root.transform, out counterRenderer, out initialCounterMaterial);
+            ExpectEditModeCounterMaterialError();
             piece.RefreshBombState();
 
             BoxCollider2D blockCollider = GetField<List<BoxCollider2D>>(piece, "collisionCells")[0];
@@ -119,7 +124,7 @@ public sealed class BombPresentationTests
         }
         finally
         {
-            Object.DestroyImmediate(root);
+            DestroyRootAndInstantiatedMaterial(root, counterRenderer, initialCounterMaterial);
             Object.DestroyImmediate(sprite);
             Object.DestroyImmediate(texture);
         }
@@ -163,13 +168,19 @@ public sealed class BombPresentationTests
         try
         {
             var piece = root.AddComponent<PuzzlePiece>();
-            SpriteRenderer overlay = ConfigureBombPresentation(piece, root.transform, sprite, new[] { Vector2.zero });
+            InvokeAwake(piece);
+            int visualSubdivisions = GetField<int>(piece, "bombShredderVoxelSubdivisions");
+            SpriteRenderer overlay = ConfigureBombPresentation(
+                piece,
+                root.transform,
+                sprite,
+                new[] { Vector2.zero },
+                visualSubdivisions * visualSubdivisions);
             SetField(piece, "bombDefuseSplitMaterial", fragmentMaterial);
             piece.RefreshBombState();
             piece.PrepareModularShredderSurface();
 
             CollectionAssert.DoesNotContain(piece.ConfiguredShredderRenderers, overlay);
-            int visualSubdivisions = GetField<int>(piece, "bombShredderVoxelSubdivisions");
             Assert.That(
                 piece.ConfiguredShredderRenderers.Length,
                 Is.EqualTo(1 + visualSubdivisions * visualSubdivisions));
@@ -279,11 +290,96 @@ public sealed class BombPresentationTests
         }
     }
 
+    [Test]
+    public void BombCounter_UpdatesTextAcrossCachedAndFallbackRange()
+    {
+        var root = new GameObject("Bomb counter format test");
+        var texture = new Texture2D(16, 16);
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
+        Material initialCounterMaterial = null;
+        MeshRenderer counterRenderer = null;
+
+        try
+        {
+            var piece = root.AddComponent<PuzzlePiece>();
+            ConfigureBombPresentation(piece, root.transform, sprite, new[] { Vector2.zero });
+            TextMeshPro counter = AttachBombCounter(piece, root.transform, out counterRenderer, out initialCounterMaterial);
+            ExpectEditModeCounterMaterialError();
+
+            piece.RefreshBombTimer(19.2f);
+            Assert.That(counter.text, Is.EqualTo("20"));
+
+            piece.RefreshBombTimer(0f);
+            Assert.That(counter.text, Is.EqualTo("0"));
+
+            piece.RefreshBombTimer(99f);
+            Assert.That(counter.text, Is.EqualTo("99"));
+
+            piece.RefreshBombTimer(125f);
+            Assert.That(counter.text, Is.EqualTo("125"));
+        }
+        finally
+        {
+            DestroyRootAndInstantiatedMaterial(root, counterRenderer, initialCounterMaterial);
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(texture);
+        }
+    }
+
+    [Test]
+    public void ShredderPresentation_RestoreRestoresStateAndReusesSnapshotArrays()
+    {
+        var root = new GameObject("Shredder snapshot reuse test");
+        var texture = new Texture2D(16, 16);
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
+
+        try
+        {
+            var piece = root.AddComponent<PuzzlePiece>();
+            var renderer = new GameObject("CellVisual").AddComponent<SpriteRenderer>();
+            renderer.transform.SetParent(root.transform);
+            renderer.sprite = sprite;
+            renderer.enabled = true;
+            renderer.maskInteraction = SpriteMaskInteraction.None;
+            renderer.sortingOrder = 7;
+
+            var surface = new[] { renderer };
+            piece.BeginShredderPresentation(surface, 0f, null);
+            bool[] firstEnabledCache = GetField<bool[]>(piece, "shredderPresentationEnabledStates");
+            Assert.That(firstEnabledCache, Is.Not.Null);
+
+            renderer.enabled = false;
+            renderer.maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
+            renderer.sortingOrder = 19;
+
+            MethodInfo restore = typeof(PuzzlePiece).GetMethod(
+                "RestoreShredderPresentation",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(restore, Is.Not.Null);
+            restore.Invoke(piece, null);
+
+            Assert.That(renderer.enabled, Is.True);
+            Assert.That(renderer.maskInteraction, Is.EqualTo(SpriteMaskInteraction.None));
+            Assert.That(renderer.sortingOrder, Is.EqualTo(7));
+            Assert.That(GetField<bool[]>(piece, "shredderPresentationEnabledStates"), Is.SameAs(firstEnabledCache));
+
+            piece.BeginShredderPresentation(surface, 0f, null);
+            Assert.That(GetField<bool[]>(piece, "shredderPresentationEnabledStates"), Is.SameAs(firstEnabledCache));
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(texture);
+        }
+    }
+
     private static SpriteRenderer ConfigureBombPresentation(
         PuzzlePiece piece,
         Transform root,
         Sprite sprite,
-        IReadOnlyList<Vector2> centers)
+        IReadOnlyList<Vector2> centers,
+        int extraIceSlotCount = 0)
     {
         var slots = new GameObject("Ice Presentation Slots").transform;
         slots.SetParent(root);
@@ -291,7 +387,16 @@ public sealed class BombPresentationTests
         overlay.transform.SetParent(slots);
 
         SetField(piece, "iceSlotsRoot", slots);
-        GetField<List<SpriteRenderer>>(piece, "iceSlots").Add(overlay);
+        List<SpriteRenderer> iceSlots = GetField<List<SpriteRenderer>>(piece, "iceSlots");
+        iceSlots.Add(overlay);
+        for (int index = 0; index < extraIceSlotCount; index++)
+        {
+            var extraSlot = new GameObject($"Bomb Pool Slot {index}").AddComponent<SpriteRenderer>();
+            extraSlot.transform.SetParent(slots);
+            extraSlot.enabled = false;
+            iceSlots.Add(extraSlot);
+        }
+
         SetField(piece, "bombOverlaySprite", sprite);
         SetField(piece, "bombOverlayFill", .936f);
         SetField(piece, "<IsBomb>k__BackingField", true);
@@ -314,6 +419,49 @@ public sealed class BombPresentationTests
         }
 
         return overlay;
+    }
+
+    private static TextMeshPro AttachBombCounter(
+        PuzzlePiece piece,
+        Transform root,
+        out MeshRenderer counterRenderer,
+        out Material initialCounterMaterial)
+    {
+        var counter = new GameObject("Bomb Counter Presentation").AddComponent<TextMeshPro>();
+        counter.transform.SetParent(root);
+        counterRenderer = counter.GetComponent<MeshRenderer>();
+        initialCounterMaterial = counterRenderer != null ? counterRenderer.sharedMaterial : null;
+        SetField(piece, "bombCounterText", counter);
+        return counter;
+    }
+
+    private static void ExpectEditModeCounterMaterialError()
+    {
+        // TMPro.SetOutlineColor touches renderer.material on first outline setup,
+        // which Unity flags as an Error in EditMode.
+        LogAssert.Expect(
+            LogType.Error,
+            new Regex("Instantiating material due to calling renderer\\.material during edit mode"));
+    }
+
+    private static void DestroyRootAndInstantiatedMaterial(
+        GameObject root,
+        MeshRenderer renderer,
+        Material initialSharedMaterial)
+    {
+        Material runtimeMaterial = renderer != null ? renderer.sharedMaterial : null;
+        Object.DestroyImmediate(root);
+        if (runtimeMaterial != null && runtimeMaterial != initialSharedMaterial)
+            Object.DestroyImmediate(runtimeMaterial);
+    }
+
+    private static void InvokeAwake(Component target)
+    {
+        MethodInfo awake = target.GetType().GetMethod(
+            "Awake",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(awake, Is.Not.Null);
+        awake.Invoke(target, null);
     }
 
     private static void SetField<T>(PuzzlePiece piece, string name, T value)

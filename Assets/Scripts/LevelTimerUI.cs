@@ -452,7 +452,7 @@ namespace GravityPuzzle
             lastDisplayedSecond = totalSeconds;
             int minutes = totalSeconds / 60;
             int seconds = totalSeconds % 60;
-            timerText.text = $"{minutes:00}:{seconds:00}";
+            timerText.SetText("{0:00}:{1:00}", minutes, seconds);
             
             if (totalSeconds <= Mathf.CeilToInt(timerUrgencyThresholdSeconds) && totalSeconds > 0)
             {

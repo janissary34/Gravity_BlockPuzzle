@@ -66,6 +66,7 @@ namespace GravityPuzzle
         private HammerBooster hammerBooster;
         private TimerBooster timerBooster;
         private bool selectionGlowSearched;
+        private bool lockReferencesSearched;
         private FreezeTimerBooster freezeTimerBooster;
         private BoosterRewardType boosterType;
         private bool hasBoosterType;
@@ -425,6 +426,7 @@ namespace GravityPuzzle
 
         private void FindLockReferences()
         {
+            lockReferencesSearched = true;
             if (enabledVisualRoot == null || disabledVisualRoot == null)
             {
                 for (int i = 0; i < transform.childCount; i++)
@@ -558,7 +560,8 @@ namespace GravityPuzzle
                 return;
             }
 
-            if (enabledVisualRoot == null || disabledVisualRoot == null || lockRoot == null || unlockLevelTmpText == null)
+            if (!lockReferencesSearched &&
+                (enabledVisualRoot == null || disabledVisualRoot == null || lockRoot == null || unlockLevelTmpText == null))
                 FindLockReferences();
 
             bool isIntroduced = IsIntroduced;

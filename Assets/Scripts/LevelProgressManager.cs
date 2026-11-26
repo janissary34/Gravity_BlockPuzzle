@@ -85,11 +85,35 @@ namespace GravityPuzzle
         private RectTransform progressFillRect;
         private Image progressFillImage;
         private ProgressSegmentedFillView progressSegmentedFillView;
+        private static readonly WaitForEndOfFrame EndOfFrameWait = new WaitForEndOfFrame();
+
+        private struct ActiveUiVoxelFlight
+        {
+            public FlyingProgressVoxelView View;
+            public RectTransform Rect;
+            public Camera UiCamera;
+            public Vector2 Start;
+            public Vector2 SpillEnd;
+            public Vector2 RiseControl;
+            public Vector2 TargetJitter;
+            public float StartDelay;
+            public float SpillDuration;
+            public float RiseDuration;
+            public float TargetRotationZ;
+            public float Elapsed;
+            public float ProgressAmount;
+            public Color VoxelColor;
+            public Action OnArrival;
+        }
+
         private readonly Vector3[] progressFillCorners = new Vector3[4];
+        private readonly List<ActiveUiVoxelFlight> activeUiFlights = new List<ActiveUiVoxelFlight>(256);
         private int cachedFillTipFrame = -1;
         private Vector2 cachedFillTipCanvasPoint;
         private Tweener sliderFillTween;
         private Tween sliderPunchTween;
+        private TweenCallback cachedUpdateTargetCallback;
+        private TweenCallback cachedTriggerCompletedCallback;
         private bool levelCompletedTriggered;
         private int activeFlyingVoxelCount;
         private bool hasAuthoredLevelTotal;
@@ -172,6 +196,8 @@ namespace GravityPuzzle
             }
 
             Instance = this;
+            cachedUpdateTargetCallback = UpdateProgressVoxelTarget;
+            cachedTriggerCompletedCallback = TriggerLevelCompleted;
             hasTweenConfig = tweenConfig != null;
             if (!hasTweenConfig)
                 Debug.LogWarning("[LevelProgress] TweenConfig is missing; progress will update without tween presentation.", this);
@@ -373,13 +399,20 @@ namespace GravityPuzzle
 
         private void ResetProgress()
         {
+            StopAllCoroutines();
+            pendingVfxProgressArrivalCount = 0;
+            ReturnActiveUiFlightsToPool();
             currentShreddedUnits = 0f;
             levelCompletedTriggered = false;
             completionPresentationFinished = false;
             boardClearCompletionRequested = false;
             activeFlyingVoxelCount = 0;
-            pendingVfxProgressArrivalCount = 0;
             progressSegmentedFillView?.ResetSegments();
+
+            sliderFillTween?.Kill(false);
+            sliderFillTween = null;
+            sliderPunchTween?.Kill(false);
+            sliderPunchTween = null;
 
             if (progressSlider != null)
             {
@@ -498,69 +531,143 @@ namespace GravityPuzzle
                 spillEnd.x + riseArchOffsetX,
                 Mathf.Lerp(spillEnd.y, target.y, riseArchT));
 
-            float flightDuration = VoxelFlightDuration * UnityEngine.Random.Range(0.92f, 1.12f);
+            float flightDuration = Mathf.Max(0.0002f, VoxelFlightDuration * UnityEngine.Random.Range(0.92f, 1.12f));
             float spillFraction = UnityEngine.Random.Range(0.28f, 0.36f);
-            float spillDuration = flightDuration * spillFraction;
-            float riseDuration = Mathf.Max(.01f, flightDuration - spillDuration);
+            float spillDuration = Mathf.Max(0.0001f, flightDuration * spillFraction);
+            float riseDuration = Mathf.Max(0.0001f, flightDuration - spillDuration);
             float startDelay = UnityEngine.Random.Range(0f, 0.05f);
 
-            Sequence flightSequence = DOTween.Sequence()
-                .SetLink(flyingVoxel.gameObject, LinkBehaviour.KillOnDisable)
-                .SetAutoKill(true);
-
-            if (startDelay > 0.001f)
+            activeUiFlights.Add(new ActiveUiVoxelFlight
             {
-                flightSequence.AppendInterval(startDelay);
-            }
+                View = flyingVoxel,
+                Rect = voxelRect,
+                UiCamera = uiCamera,
+                Start = start,
+                SpillEnd = spillEnd,
+                RiseControl = riseControl,
+                TargetJitter = targetJitter,
+                StartDelay = startDelay,
+                SpillDuration = spillDuration,
+                RiseDuration = riseDuration,
+                TargetRotationZ = UnityEngine.Random.Range(-VoxelRotationRange, VoxelRotationRange),
+                Elapsed = 0f,
+                ProgressAmount = progressAmount,
+                VoxelColor = voxelColor,
+                OnArrival = onArrival
+            });
+        }
 
-            flightSequence.Append(DOVirtual.Float(0f, 1f, spillDuration, progress =>
-                voxelRect.anchoredPosition = Vector2.LerpUnclamped(start, spillEnd, progress * progress)));
-            // The fill keeps advancing while grains are airborne, so the end
-            // point is re-read every frame instead of frozen at spawn.
-            flightSequence.Append(DOVirtual.Float(0f, 1f, riseDuration, progress =>
-                voxelRect.anchoredPosition = QuadraticBezier(
-                    spillEnd,
-                    riseControl,
-                    GetFillTipCanvasPoint(uiCamera) + targetJitter,
-                    progress)).SetEase(VoxelFlightEase));
-            flightSequence.Insert(startDelay, voxelRect.DORotate(new Vector3(0f, 0f, UnityEngine.Random.Range(-VoxelRotationRange, VoxelRotationRange)), flightDuration, RotateMode.FastBeyond360));
-            bool flightResolved = false;
-            void ResolveFlight()
+        private void Update()
+        {
+            if (activeUiFlights.Count == 0)
+                return;
+
+            float deltaTime = Time.deltaTime;
+            for (int index = activeUiFlights.Count - 1; index >= 0; index--)
             {
-                if (flightResolved)
-                    return;
+                if (index >= activeUiFlights.Count)
+                    continue;
 
-                flightResolved = true;
-                // Trigger UI Slider Punch Scale feedback on each voxel arrival.
-                if (progressSlider != null && Time.unscaledTime >= nextSliderPulseTime)
+                ActiveUiVoxelFlight flight = activeUiFlights[index];
+                if (flight.View == null || !flight.View.gameObject.activeInHierarchy)
                 {
-                    if (sliderPunchTween != null && sliderPunchTween.IsActive())
-                        sliderPunchTween.Kill(true);
-
-                    sliderPunchTween = progressSlider.transform.DOPunchScale(SliderPunchScale, SliderPunchDuration, SliderPunchVibrato, SliderPunchElasticity)
-                        .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
-                        .SetAutoKill(true);
-                    nextSliderPulseTime = Time.unscaledTime + SliderPulseCooldown;
+                    SwapRemoveActiveUiFlightAt(index);
+                    ResolveCompletedUiFlight(in flight);
+                    continue;
                 }
 
-                // The flight voxel is recycled only after reaching the bar.
-                if (flyingVoxel != null)
+                flight.Elapsed += deltaTime;
+                if (flight.Elapsed <= flight.StartDelay)
                 {
-                    voxelRect.DOKill();
-                    flyingProgressVoxelPool.Return(flyingVoxel);
+                    activeUiFlights[index] = flight;
+                    continue;
                 }
 
-                activeFlyingVoxelCount = Mathf.Max(0, activeFlyingVoxelCount - 1);
-                AddProgress(progressAmount, voxelColor);
-                onArrival?.Invoke();
-                TryCommitBoardClearProgress();
+                float motionElapsed = flight.Elapsed - flight.StartDelay;
+                float totalDuration = flight.SpillDuration + flight.RiseDuration;
+                if (motionElapsed >= totalDuration)
+                {
+                    flight.Rect.anchoredPosition = GetFillTipCanvasPoint(flight.UiCamera) + flight.TargetJitter;
+                    flight.Rect.localRotation = Quaternion.Euler(0f, 0f, flight.TargetRotationZ);
+                    SwapRemoveActiveUiFlightAt(index);
+                    ResolveCompletedUiFlight(in flight);
+                    continue;
+                }
+
+                if (motionElapsed < flight.SpillDuration)
+                {
+                    float spillProgress = motionElapsed / flight.SpillDuration;
+                    flight.Rect.anchoredPosition = Vector2.LerpUnclamped(
+                        flight.Start,
+                        flight.SpillEnd,
+                        spillProgress * spillProgress);
+                }
+                else
+                {
+                    float riseProgress = Mathf.Clamp01((motionElapsed - flight.SpillDuration) / flight.RiseDuration);
+                    float easedProgress = DOVirtual.EasedValue(0f, 1f, riseProgress, VoxelFlightEase);
+                    Vector2 targetPosition = GetFillTipCanvasPoint(flight.UiCamera) + flight.TargetJitter;
+                    flight.Rect.anchoredPosition = QuadraticBezier(
+                        flight.SpillEnd,
+                        flight.RiseControl,
+                        targetPosition,
+                        easedProgress);
+                }
+
+                float rotationProgress = Mathf.Clamp01(motionElapsed / totalDuration);
+                float easedRotation = DOVirtual.EasedValue(0f, 1f, rotationProgress, Ease.OutQuad);
+                flight.Rect.localRotation = Quaternion.Euler(0f, 0f, flight.TargetRotationZ * easedRotation);
+                activeUiFlights[index] = flight;
+            }
+        }
+
+        private void SwapRemoveActiveUiFlightAt(int index)
+        {
+            int lastIndex = activeUiFlights.Count - 1;
+            if (index < lastIndex)
+                activeUiFlights[index] = activeUiFlights[lastIndex];
+            activeUiFlights.RemoveAt(lastIndex);
+        }
+
+        private void ResolveCompletedUiFlight(in ActiveUiVoxelFlight flight)
+        {
+            activeFlyingVoxelCount = Mathf.Max(0, activeFlyingVoxelCount - 1);
+
+            // Return the pooled UI view before progress/board-clear callbacks
+            // so a synchronous reset cannot observe a stale rented view.
+            if (flight.View != null && flyingProgressVoxelPool != null)
+            {
+                flyingProgressVoxelPool.Return(flight.View);
             }
 
-            // A linked tween can be killed when an authored UI object is
-            // disabled. That is a presentation interruption, never a reason
-            // to leave board completion waiting for a cosmetic arrival.
-            flightSequence.OnComplete(ResolveFlight);
-            flightSequence.OnKill(ResolveFlight);
+            // Trigger UI Slider Punch Scale feedback on each voxel arrival.
+            if (!levelCompletedTriggered && progressSlider != null && Time.unscaledTime >= nextSliderPulseTime)
+            {
+                if (sliderPunchTween != null && sliderPunchTween.IsActive())
+                    sliderPunchTween.Kill(true);
+
+                sliderPunchTween = progressSlider.transform.DOPunchScale(SliderPunchScale, SliderPunchDuration, SliderPunchVibrato, SliderPunchElasticity)
+                    .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
+                    .SetAutoKill(true);
+                nextSliderPulseTime = Time.unscaledTime + SliderPulseCooldown;
+            }
+
+            AddProgress(flight.ProgressAmount, flight.VoxelColor);
+            flight.OnArrival?.Invoke();
+            TryCommitBoardClearProgress();
+        }
+
+        private void ReturnActiveUiFlightsToPool()
+        {
+            for (int index = activeUiFlights.Count - 1; index >= 0; index--)
+            {
+                FlyingProgressVoxelView view = activeUiFlights[index].View;
+                if (view != null && flyingProgressVoxelPool != null)
+                    flyingProgressVoxelPool.Return(view);
+            }
+
+            activeUiFlights.Clear();
+            activeFlyingVoxelCount = 0;
         }
 
         /// <summary>
@@ -627,7 +734,7 @@ namespace GravityPuzzle
 
             // The group has rendered its last target frame. Advance the pin
             // only after the frame is complete, never from a duration estimate.
-            yield return new WaitForEndOfFrame();
+            yield return EndOfFrameWait;
             pendingVfxProgressArrivalCount = Mathf.Max(0, pendingVfxProgressArrivalCount - 1);
             AddProgress(progressAmount, voxelColor);
             onArrival?.Invoke();
@@ -809,15 +916,15 @@ namespace GravityPuzzle
                 if (sliderFillTween != null && sliderFillTween.IsActive())
                 {
                     sliderFillTween.ChangeEndValue(currentShreddedUnits, true);
-                    sliderFillTween.OnUpdate(UpdateProgressVoxelTarget);
                 }
                 else
                 {
+                    cachedUpdateTargetCallback ??= UpdateProgressVoxelTarget;
                     sliderFillTween = progressSlider.DOValue(currentShreddedUnits, SliderFillDuration)
                         .SetEase(SliderFillEase)
                         .SetLink(progressSlider.gameObject, LinkBehaviour.KillOnDisable)
                         .SetAutoKill(true)
-                        .OnUpdate(UpdateProgressVoxelTarget);
+                        .OnUpdate(cachedUpdateTargetCallback);
                 }
 
             }
@@ -836,7 +943,8 @@ namespace GravityPuzzle
                 // Complete remaining DOValue animation then trigger OnLevelCompleted
                 if (sliderFillTween != null && sliderFillTween.IsActive())
                 {
-                    sliderFillTween.OnComplete(TriggerLevelCompleted);
+                    cachedTriggerCompletedCallback ??= TriggerLevelCompleted;
+                    sliderFillTween.OnComplete(cachedTriggerCompletedCallback);
                 }
                 else
                 {
@@ -910,6 +1018,15 @@ namespace GravityPuzzle
         }
 
         private static Color Opaque(Color color) => new Color(color.r, color.g, color.b, 1f);
+
+        private void OnDisable()
+        {
+            sliderFillTween?.Kill(false);
+            sliderFillTween = null;
+            sliderPunchTween?.Kill(false);
+            sliderPunchTween = null;
+            ReturnActiveUiFlightsToPool();
+        }
 
         private void OnDestroy()
         {

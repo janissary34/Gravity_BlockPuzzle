@@ -267,7 +267,10 @@ namespace GravityPuzzle
         private bool[] shredderPresentationEnabledStates;
         private SpriteMaskInteraction[] shredderPresentationMaskStates;
         private int[] shredderPresentationSortingOrders;
+        private int shredderPresentationCount;
+        private bool hasShredderPresentationSnapshot;
         private int shredderPresentationOutlineSortingOrder;
+        private static readonly string[] CachedSmallCounters = BuildSmallCounterStrings(100);
         private Vector2 currentVisualJitterOffset;
         private enum ShredderHandoffMode
         {
@@ -1003,9 +1006,16 @@ namespace GravityPuzzle
             if (wholePieceRenderer != null && wholePieceRenderer.enabled)
             {
                 SetModularCellPresentationVisible(false);
-                configuredShredderRenderers = joinedPieceRenderers.Count > 0
-                    ? joinedPieceRenderers.ToArray()
-                    : new[] { wholePieceRenderer };
+                if (joinedPieceRenderers.Count > 0)
+                {
+                    configuredShredderRenderers = joinedPieceRenderers.ToArray();
+                }
+                else
+                {
+                    if (configuredShredderRenderers == null || configuredShredderRenderers.Length != 1)
+                        configuredShredderRenderers = new SpriteRenderer[1];
+                    configuredShredderRenderers[0] = wholePieceRenderer;
+                }
                 AppendBombOverlayToShredderPresentation();
                 return;
             }
@@ -2284,9 +2294,9 @@ namespace GravityPuzzle
                 return;
 
             shredderPresentationRenderers = renderers;
-            shredderPresentationEnabledStates = new bool[renderers.Length];
-            shredderPresentationMaskStates = new SpriteMaskInteraction[renderers.Length];
-            shredderPresentationSortingOrders = new int[renderers.Length];
+            EnsureShredderPresentationCapacity(renderers.Length);
+            shredderPresentationCount = renderers.Length;
+            hasShredderPresentationSnapshot = true;
             shredderPresentationOutlineSortingOrder = rootOutline != null
                 ? rootOutline.sortingOrder
                 : 0;
@@ -2447,14 +2457,30 @@ namespace GravityPuzzle
             }
         }
 
+        private void EnsureShredderPresentationCapacity(int requiredCount)
+        {
+            if (shredderPresentationEnabledStates == null || shredderPresentationEnabledStates.Length < requiredCount)
+                shredderPresentationEnabledStates = new bool[requiredCount];
+            if (shredderPresentationMaskStates == null || shredderPresentationMaskStates.Length < requiredCount)
+                shredderPresentationMaskStates = new SpriteMaskInteraction[requiredCount];
+            if (shredderPresentationSortingOrders == null || shredderPresentationSortingOrders.Length < requiredCount)
+                shredderPresentationSortingOrders = new int[requiredCount];
+        }
+
         private void RestoreShredderPresentation()
         {
             ResetShredderVisualJitter();
             shredderDissolvePresentation?.Restore();
-            if (shredderPresentationRenderers == null)
+            if (!hasShredderPresentationSnapshot || shredderPresentationRenderers == null)
+            {
+                hasShredderPresentationSnapshot = false;
+                shredderPresentationCount = 0;
+                shredderPresentationRenderers = null;
                 return;
+            }
 
-            for (int index = 0; index < shredderPresentationRenderers.Length; index++)
+            int count = Mathf.Min(shredderPresentationCount, shredderPresentationRenderers.Length);
+            for (int index = 0; index < count; index++)
             {
                 SpriteRenderer renderer = shredderPresentationRenderers[index];
                 if (renderer == null || !renderer.transform.IsChildOf(transform))
@@ -2466,10 +2492,9 @@ namespace GravityPuzzle
                 renderer.SetPropertyBlock(null);
             }
 
+            hasShredderPresentationSnapshot = false;
+            shredderPresentationCount = 0;
             shredderPresentationRenderers = null;
-            shredderPresentationEnabledStates = null;
-            shredderPresentationMaskStates = null;
-            shredderPresentationSortingOrders = null;
             SetOutlineRenderersSortingOrder(shredderPresentationOutlineSortingOrder);
         }
 
@@ -4078,7 +4103,7 @@ namespace GravityPuzzle
             iceCounterText.renderer.sortingLayerID = targetSortingLayer;
             iceCounterText.renderer.sortingOrder = Mathf.Max(iceCounterSortingOrder, 50);
 
-            iceCounterText.text = Mathf.Max(0, remainingCount).ToString();
+            iceCounterText.text = FormatCounterText(Mathf.Max(0, remainingCount));
 
             iceCounterText.transform.SetParent(transform, false);
             iceCounterText.transform.localPosition = new Vector3(
@@ -4141,7 +4166,7 @@ namespace GravityPuzzle
             counterText.renderer.sortingLayerID = targetSortingLayer;
             counterText.renderer.sortingOrder = Mathf.Max(bombCounterSortingOrder, 50);
 
-            counterText.text = Mathf.Max(0, remainingCount).ToString();
+            counterText.text = FormatCounterText(Mathf.Max(0, remainingCount));
 
             counterText.transform.SetParent(transform, false);
             counterText.transform.localPosition = targetLocalPos;
@@ -4150,6 +4175,21 @@ namespace GravityPuzzle
 
             counterText.rectTransform.sizeDelta = new Vector2(20f, 5f);
             counterText.ForceMeshUpdate();
+        }
+
+        private static string[] BuildSmallCounterStrings(int count)
+        {
+            string[] cache = new string[count];
+            for (int i = 0; i < count; i++)
+                cache[i] = i.ToString();
+            return cache;
+        }
+
+        private static string FormatCounterText(int value)
+        {
+            return value >= 0 && value < CachedSmallCounters.Length
+                ? CachedSmallCounters[value]
+                : value.ToString();
         }
 
         private void CreateIceLayer(

@@ -62,8 +62,62 @@ namespace GravityPuzzle
             public float EntryX;
             public bool LateralDriftReported;
         }
+        private sealed class FeedScratchBuffers
+        {
+            public readonly List<VoxelShard> ShardList = new List<VoxelShard>(32);
+            public readonly HashSet<Transform> ShardTransforms = new HashSet<Transform>();
+            public readonly HashSet<VoxelShard> ProcessedShards = new HashSet<VoxelShard>();
+
+            public void Clear()
+            {
+                ShardList.Clear();
+                ShardTransforms.Clear();
+                ProcessedShards.Clear();
+            }
+        }
+
+        private sealed class VoxelShardYComparer : IComparer<VoxelShard>
+        {
+            public int Compare(VoxelShard a, VoxelShard b)
+            {
+                if (ReferenceEquals(a, b))
+                    return 0;
+                if (a == null)
+                    return 1;
+                if (b == null)
+                    return -1;
+                return a.transform.position.y.CompareTo(b.transform.position.y);
+            }
+        }
+
+        private sealed class ExitHandoffYComparer : IComparer<ExitHandoff>
+        {
+            public int Compare(ExitHandoff a, ExitHandoff b)
+            {
+                if (ReferenceEquals(a, b))
+                    return 0;
+                if (a == null)
+                    return 1;
+                if (b == null)
+                    return -1;
+                if (ReferenceEquals(a.Piece, b.Piece))
+                    return 0;
+                if (a.Piece == null)
+                    return 1;
+                if (b.Piece == null)
+                    return -1;
+                int cmp = a.CachedLowestY.CompareTo(b.CachedLowestY);
+                return cmp != 0 ? cmp : a.Piece.SourcePieceId.CompareTo(b.Piece.SourcePieceId);
+            }
+        }
+
+        private static readonly VoxelShardYComparer ShardYComparer = new VoxelShardYComparer();
+        private static readonly ExitHandoffYComparer FreefallYComparer = new ExitHandoffYComparer();
+
         private readonly List<PuzzlePiece> physicsIslandMemberBuffer =
             new List<PuzzlePiece>(8);
+        private readonly Stack<FeedScratchBuffers> feedScratchPool =
+            new Stack<FeedScratchBuffers>(8);
         // One pooled mouth is owned by each authored catch zone while its
         // support island or its final feed is still alive. A mouth must never
         // be silently reused at a different world-space cutter.
@@ -143,6 +197,31 @@ namespace GravityPuzzle
                     shredderConfig.ContactGlowPrefab,
                     transform,
                     shredderConfig.ContactGlowPoolCapacity);
+            PrewarmFeedScratchPool(4);
+        }
+
+        private void PrewarmFeedScratchPool(int count)
+        {
+            while (feedScratchPool.Count < count)
+                feedScratchPool.Push(new FeedScratchBuffers());
+        }
+
+        private FeedScratchBuffers AcquireFeedScratchBuffers()
+        {
+            FeedScratchBuffers scratch = feedScratchPool.Count > 0
+                ? feedScratchPool.Pop()
+                : new FeedScratchBuffers();
+            scratch.Clear();
+            return scratch;
+        }
+
+        private void ReleaseFeedScratchBuffers(FeedScratchBuffers scratch)
+        {
+            if (scratch == null)
+                return;
+
+            scratch.Clear();
+            feedScratchPool.Push(scratch);
         }
 
         private void FixedUpdate()
@@ -192,23 +271,7 @@ namespace GravityPuzzle
             // Sort ascending by lowest world-space cell Y.
             // Lower pieces in the shaft are processed first, allowing pieces
             // above them to cleanly align their velocity and contact position.
-            activeFreefallPieces.Sort((a, b) =>
-            {
-                if (ReferenceEquals(a, b))
-                    return 0;
-                if (a == null)
-                    return 1;
-                if (b == null)
-                    return -1;
-                if (ReferenceEquals(a.Piece, b.Piece))
-                    return 0;
-                if (a.Piece == null)
-                    return 1;
-                if (b.Piece == null)
-                    return -1;
-                int cmp = a.CachedLowestY.CompareTo(b.CachedLowestY);
-                return cmp != 0 ? cmp : a.Piece.SourcePieceId.CompareTo(b.Piece.SourcePieceId);
-            });
+            activeFreefallPieces.Sort(FreefallYComparer);
 
             for (int index = 0; index < activeFreefallPieces.Count; index++)
             {
@@ -834,9 +897,10 @@ namespace GravityPuzzle
             // The factory records all pooled shards while it configures this
             // piece. Copy only the references needed by this concurrent feed;
             // hierarchy traversal is not valid in a gameplay handoff.
+            FeedScratchBuffers scratch = AcquireFeedScratchBuffers();
             IReadOnlyList<VoxelShard> configuredShards = piece.ConfiguredVoxelShards;
-            List<VoxelShard> shardList = new List<VoxelShard>(configuredShards.Count);
-            HashSet<Transform> shardTransforms = new HashSet<Transform>();
+            List<VoxelShard> shardList = scratch.ShardList;
+            HashSet<Transform> shardTransforms = scratch.ShardTransforms;
             for (int i = 0; i < configuredShards.Count; i++)
             {
                 VoxelShard shard = configuredShards[i];
@@ -846,9 +910,9 @@ namespace GravityPuzzle
                 shardList.Add(shard);
                 shardTransforms.Add(shard.transform);
             }
-            shardList.Sort((a, b) => a.transform.position.y.CompareTo(b.transform.position.y));
+            shardList.Sort(ShardYComparer);
 
-            HashSet<VoxelShard> processedShards = new HashSet<VoxelShard>();
+            HashSet<VoxelShard> processedShards = scratch.ProcessedShards;
             float totalProgress = Mathf.Max(0f, piece.RemainingProgressUnits);
             piece.GetActiveCellBounds(cachedCellBoundsBuffer);
             int blockCount = Mathf.Max(1, piece.ProgressUnits);
@@ -1228,6 +1292,8 @@ namespace GravityPuzzle
 
                 if (hapticSessionActive)
                     HapticFeedbackRuntime.EndShredder(hapticPieceId, feedCompletedNormally);
+
+                ReleaseFeedScratchBuffers(scratch);
             }
 
             if (piece != null)
