@@ -77,11 +77,15 @@ straight drop; any drift is restored and logged once). No grid reservation,
 queue, drag, or targeting logic owns it after that release.
 
 Grid drag, gravity presentation, and release snap are transform-owned by
-`PieceGridFallView`; they do not tween the non-simulated grid Rigidbody2D. Dragging
-steps at 1-fine-cell precision (`FineGridDragStepper`), while every drag end/interruption
-gates through `PuzzleDragController` + `GridReleaseSnapPlanner` so resting `Placed`
-pieces stay aligned to canonical coarse-block coordinates (`Anchor % subdivisions == 0`)
-without falling back to unsnapped half-block commits. Gravity preserves 1-fine-cell
+`PieceGridFallView`; they do not tween the non-simulated grid Rigidbody2D. Active
+dragging tracks sub-cell offset within `(-1, 1)` fine cells so a piece steps onto a
+fine cell at `±1` without visual snaps, applies bounded `1:1` corner beveling around
+blocked diagonals and adjacent `±1` fine-cell corridor openings (so 1-block pieces glide
+smoothly into exact 1-block gaps without snapping or catching), and preserves re-grab
+positions mid-release so a piece never snaps while drag is active, while every drag
+end/interruption gates through `PuzzleDragController` + `GridReleaseSnapPlanner` so
+resting `Placed` pieces stay aligned to canonical coarse-block coordinates
+(`Anchor % subdivisions == 0`) without falling back to unsnapped half-block commits. Gravity preserves 1-fine-cell
 tracking when a piece is transitively supported by an active shredder `Reserved`
 reservation or an off-board `OpenFreefall`/`Shredding` cell protruding above the board
 bottom (traversing across both grid support links and `PieceJointGraph` edges for

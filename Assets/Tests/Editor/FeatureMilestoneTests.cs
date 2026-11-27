@@ -56,25 +56,48 @@ namespace GravityPuzzle.Tests.Editor
             Assert.That(sequence.levels, Is.Not.Null);
             Assert.That(sequence.levels.Count, Is.GreaterThanOrEqualTo(53));
 
-            Assert.That(sequence.levels[4]?.name, Is.EqualTo("L5"));
-            Assert.That(sequence.levels[9]?.name, Is.EqualTo("rocket_intrp"));
-            Assert.That(sequence.levels[15]?.name, Is.EqualTo("L16"));
-            Assert.That(sequence.levels[22]?.name, Is.EqualTo("box_level"));
-            Assert.That(sequence.levels[31]?.name, Is.EqualTo("elevator_level"));
-            Assert.That(sequence.levels[52]?.name, Is.EqualTo("anahtar_kilit"));
+            Assert.That(sequence.levels[4], Is.Not.Null, "Level 5 (CombinedBlock milestone) must be assigned.");
+            Assert.That(sequence.levels[9], Is.Not.Null, "Level 10 (Rocket milestone) must be assigned.");
+
+            GravityLevelDefinition bombLevel = sequence.levels[15];
+            Assert.That(bombLevel, Is.Not.Null, "Level 16 (BombBlock milestone) must be assigned.");
+            Assert.That(HasSpecialBlockType(bombLevel, PieceSpecialBlockType.Bomb), Is.True,
+                "Level 16 must contain at least one Bomb block.");
+
+            GravityLevelDefinition boxLevel = sequence.levels[22];
+            Assert.That(boxLevel, Is.Not.Null, "Level 23 (Box milestone) must be assigned.");
+            Assert.That(boxLevel.boxes != null && boxLevel.boxes.Count > 0, Is.True,
+                "Level 23 must contain at least one Box reveal area.");
+
+            GravityLevelDefinition elevatorLevel = sequence.levels[31];
+            Assert.That(elevatorLevel, Is.Not.Null, "Level 32 (Elevator milestone) must be assigned.");
+            Assert.That(elevatorLevel.elevators != null && elevatorLevel.elevators.Count > 0, Is.True,
+                "Level 32 must contain at least one Elevator reveal area.");
+
+            GravityLevelDefinition keyLockLevel = sequence.levels[52];
+            Assert.That(keyLockLevel, Is.Not.Null, "Level 53 (KeyLock milestone) must be assigned.");
+            Assert.That(
+                HasSpecialBlockType(keyLockLevel, PieceSpecialBlockType.Key) &&
+                HasSpecialBlockType(keyLockLevel, PieceSpecialBlockType.Lock),
+                Is.True,
+                "Level 53 must contain both Key and Lock blocks.");
         }
 
         [Test]
         public void RocketIntroLevel_HasAuthoredRocketTutorialTargetPiece()
         {
-            GravityLevelDefinition level = AssetDatabase.LoadAssetAtPath<GravityLevelDefinition>(
-                "Assets/rocket_intrp.asset");
+            GravityLevelSequence sequence = AssetDatabase.LoadAssetAtPath<GravityLevelSequence>(
+                "Assets/Resources/LevelSequence.asset");
             BoosterRewardConfig rocketConfig = AssetDatabase.LoadAssetAtPath<BoosterRewardConfig>(
                 "Assets/Config/Boosters/RocketBoosterRewardConfig.asset");
 
-            Assert.That(level, Is.Not.Null);
+            Assert.That(sequence, Is.Not.Null);
             Assert.That(rocketConfig, Is.Not.Null);
             Assert.That(rocketConfig.PresentationLevel, Is.EqualTo(10));
+            Assert.That(sequence.levels.Count, Is.GreaterThanOrEqualTo(rocketConfig.PresentationLevel));
+
+            GravityLevelDefinition level = sequence.levels[rocketConfig.PresentationLevel - 1];
+            Assert.That(level, Is.Not.Null);
             Assert.That(string.IsNullOrWhiteSpace(rocketConfig.TutorialTargetPieceId), Is.False);
 
             bool foundTarget = false;
@@ -88,7 +111,22 @@ namespace GravityPuzzle.Tests.Editor
                 }
             }
 
-            Assert.That(foundTarget, Is.True, "Level 10 (rocket_intrp) must tag a piece with rocket_intro_target.");
+            Assert.That(foundTarget, Is.True,
+                $"Level {rocketConfig.PresentationLevel} ({level.name}) must tag a piece with {rocketConfig.TutorialTargetPieceId}.");
+        }
+
+        private static bool HasSpecialBlockType(GravityLevelDefinition level, PieceSpecialBlockType targetType)
+        {
+            if (level == null || level.pieces == null)
+                return false;
+
+            for (int i = 0; i < level.pieces.Count; i++)
+            {
+                if (level.pieces[i] != null && level.pieces[i].specialBlockType == targetType)
+                    return true;
+            }
+
+            return false;
         }
 
         [Test]

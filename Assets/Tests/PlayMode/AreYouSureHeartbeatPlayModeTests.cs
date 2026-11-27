@@ -128,6 +128,89 @@ namespace GravityPuzzle.Tests.PlayMode
             Assert.That(Mathf.Abs(reopenHeartNorm - reopenReviveNorm), Is.LessThan(0.04f));
         }
 
+        [UnityTest]
+        public IEnumerator RewardChestJuice_StartsAtZeroPhaseWithoutJumpingAndRestoresRestStateOnDisable()
+        {
+            Assert.That(JuiceType, Is.Not.Null);
+            Assert.That(ImageType, Is.Not.Null);
+
+            FieldInfo pulseField = JuiceType.GetField("_pulseTween", BindingFlags.Instance | BindingFlags.NonPublic);
+            FieldInfo alphaField = JuiceType.GetField("_alphaTween", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(pulseField, Is.Not.Null);
+            Assert.That(alphaField, Is.Not.Null);
+
+            Type tweenType = pulseField.FieldType;
+            Type tweenExtensionsType = tweenType.Assembly.GetType("DG.Tweening.TweenExtensions");
+            Assert.That(tweenExtensionsType, Is.Not.Null);
+
+            MethodInfo isActiveMethod = tweenExtensionsType.GetMethod("IsActive", BindingFlags.Public | BindingFlags.Static, null, new[] { tweenType }, null);
+            MethodInfo elapsedMethod = tweenExtensionsType.GetMethod("Elapsed", BindingFlags.Public | BindingFlags.Static, null, new[] { tweenType, typeof(bool) }, null);
+            Assert.That(isActiveMethod, Is.Not.Null);
+            Assert.That(elapsedMethod, Is.Not.Null);
+
+            GameObject host = new GameObject("JuiceTest", typeof(RectTransform), ImageType);
+            try
+            {
+                Component image = host.GetComponent(ImageType);
+                PropertyInfo colorProp = ImageType.GetProperty("color", BindingFlags.Instance | BindingFlags.Public);
+                Assert.That(colorProp, Is.Not.Null);
+                colorProp.SetValue(image, new Color(1f, 0.25f, 0.3f, 0.6f));
+
+                host.SetActive(false);
+                Component juice = host.AddComponent(JuiceType);
+                SetField(juice, "_pulseScale", 1.12f);
+                SetField(juice, "_duration", 0.75f);
+                SetField(juice, "_pulseAlpha", true);
+                SetField(juice, "_alphaTarget", image);
+                SetField(juice, "_peakAlpha", 0.95f);
+
+                host.SetActive(true);
+                Assert.That(host.transform.localScale, Is.EqualTo(Vector3.one));
+                Assert.That(((Color)colorProp.GetValue(image)).a, Is.EqualTo(0.6f).Within(0.0001f));
+
+                object scaleTween = pulseField.GetValue(juice);
+                object alphaTween = alphaField.GetValue(juice);
+                Assert.That(scaleTween, Is.Not.Null);
+                Assert.That((bool)isActiveMethod.Invoke(null, new[] { scaleTween }), Is.True);
+                Assert.That((float)elapsedMethod.Invoke(null, new[] { scaleTween, true }), Is.EqualTo(0f).Within(0.0001f));
+                Assert.That(alphaTween, Is.Not.Null);
+                Assert.That((bool)isActiveMethod.Invoke(null, new[] { alphaTween }), Is.True);
+                Assert.That((float)elapsedMethod.Invoke(null, new[] { alphaTween, true }), Is.EqualTo(0f).Within(0.0001f));
+                yield return null;
+
+                host.transform.localScale = new Vector3(1.07f, 1.07f, 1.07f);
+                colorProp.SetValue(image, new Color(1f, 0.25f, 0.3f, 0.9f));
+
+                host.SetActive(false);
+                yield return null;
+                Assert.That(host.transform.localScale, Is.EqualTo(Vector3.one));
+                Assert.That(((Color)colorProp.GetValue(image)).a, Is.EqualTo(0.6f).Within(0.0001f));
+                Assert.That(pulseField.GetValue(juice), Is.Null);
+                Assert.That(alphaField.GetValue(juice), Is.Null);
+
+                host.SetActive(true);
+                Assert.That(host.transform.localScale, Is.EqualTo(Vector3.one));
+                Assert.That(((Color)colorProp.GetValue(image)).a, Is.EqualTo(0.6f).Within(0.0001f));
+                object restartedScaleTween = pulseField.GetValue(juice);
+                object restartedAlphaTween = alphaField.GetValue(juice);
+                Assert.That(restartedScaleTween, Is.Not.Null);
+                Assert.That((float)elapsedMethod.Invoke(null, new[] { restartedScaleTween, true }), Is.EqualTo(0f).Within(0.0001f));
+                Assert.That(restartedAlphaTween, Is.Not.Null);
+                Assert.That((float)elapsedMethod.Invoke(null, new[] { restartedAlphaTween, true }), Is.EqualTo(0f).Within(0.0001f));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        private static void SetField<T>(object target, string fieldName, T value)
+        {
+            FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, $"Missing field '{fieldName}' on {target.GetType().Name}.");
+            field.SetValue(target, value);
+        }
+
         private static float NormalizedPulse(float scale, float pulseScale)
         {
             return (scale - 1f) / (pulseScale - 1f);

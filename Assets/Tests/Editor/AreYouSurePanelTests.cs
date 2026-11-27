@@ -1,5 +1,4 @@
 using System.Reflection;
-using DG.Tweening;
 using GravityPuzzle.Presentation.Views;
 using NUnit.Framework;
 using ThreadFever.UI;
@@ -102,52 +101,6 @@ namespace GravityPuzzle.Tests.Editor
             Assert.That(glowJuice.enabled, Is.True);
             Assert.That(GetField<bool>(glowJuice, "_pulseAlpha"), Is.True);
             Assert.That(GetField<Graphic>(glowJuice, "_alphaTarget"), Is.SameAs(glowImage));
-        }
-
-        [Test]
-        public void RewardChestJuice_StartsAtZeroPhaseWithoutJumpingAndRestoresRestStateOnDisable()
-        {
-            GameObject host = new GameObject("JuiceTest", typeof(RectTransform), typeof(Image));
-            try
-            {
-                Image image = host.GetComponent<Image>();
-                image.color = new Color(1f, 0.25f, 0.3f, 0.6f);
-
-                host.SetActive(false);
-                RewardChestJuice juice = host.AddComponent<RewardChestJuice>();
-                SetField(juice, "_pulseScale", 1.12f);
-                SetField(juice, "_duration", 0.75f);
-                SetField(juice, "_pulseAlpha", true);
-                SetField(juice, "_alphaTarget", image);
-                SetField(juice, "_peakAlpha", 0.95f);
-
-                host.SetActive(true);
-
-                Assert.That(host.transform.localScale, Is.EqualTo(Vector3.one));
-                Assert.That(image.color.a, Is.EqualTo(0.6f).Within(0.0001f));
-
-                Tween scaleTween = GetField<Tween>(juice, "_pulseTween");
-                Tween alphaTween = GetField<Tween>(juice, "_alphaTween");
-                Assert.That(scaleTween, Is.Not.Null);
-                Assert.That(scaleTween.IsActive(), Is.True);
-                Assert.That(scaleTween.Elapsed(), Is.EqualTo(0f).Within(0.0001f));
-                Assert.That(alphaTween, Is.Not.Null);
-                Assert.That(alphaTween.IsActive(), Is.True);
-                Assert.That(alphaTween.Elapsed(), Is.EqualTo(0f).Within(0.0001f));
-
-                host.transform.localScale = new Vector3(1.07f, 1.07f, 1.07f);
-                image.color = new Color(1f, 0.25f, 0.3f, 0.9f);
-
-                host.SetActive(false);
-                Assert.That(host.transform.localScale, Is.EqualTo(Vector3.one));
-                Assert.That(image.color.a, Is.EqualTo(0.6f).Within(0.0001f));
-                Assert.That(GetField<Tween>(juice, "_pulseTween"), Is.Null);
-                Assert.That(GetField<Tween>(juice, "_alphaTween"), Is.Null);
-            }
-            finally
-            {
-                Object.DestroyImmediate(host);
-            }
         }
 
         private static T GetField<T>(object target, string fieldName)

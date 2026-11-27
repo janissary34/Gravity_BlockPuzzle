@@ -335,6 +335,198 @@ namespace GravityPuzzle.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator RealController_CornerDragAndSubCellOverhang_NeverSnapWhileDragIsActive()
+        {
+            DragRuntimeFixture fixture = new DragRuntimeFixture();
+            try
+            {
+                fixture.Create();
+                yield return null;
+
+                // Block only the diagonal corner (x = 32, y = 28) relative to normal piece 8 (x=24..31, y=24..27).
+                fixture.SetBlockedCell(32, 28);
+                fixture.BeginDrag(false);
+
+                // Move +0.10u (+0.40 fine) right into open X, then drag right with smaller upward wobble.
+                // Must glide cleanly right along X without stalling, flipping diagonally, or wrapping at -0.5.
+                fixture.MoveSelectedByWorld(.10f, 0f);
+                Assert.That(fixture.BodyDelta(8).x, Is.EqualTo(.10f).Within(.0001f));
+                Assert.That(fixture.BodyDelta(8).y, Is.EqualTo(0f).Within(.0001f));
+
+                fixture.MoveSelectedByWorld(.05f, .01f);
+                Assert.That(fixture.AnchorX(false), Is.EqualTo(fixture.InitialAnchorX(false)));
+                Assert.That(fixture.BodyDelta(8).x, Is.EqualTo(.15f).Within(.0001f));
+                Assert.That(fixture.BodyDelta(8).y, Is.EqualTo(0f).Within(.0001f));
+
+                // Pushing up in small realistic frames smoothly bevels back around the corner with zero 1-frame snap.
+                Vector2 previous = fixture.BodyWorldPosition(8);
+                for (int step = 0; step < 10; step++)
+                {
+                    fixture.MoveSelectedByWorld(0f, .02f);
+                    Vector2 current = fixture.BodyWorldPosition(8);
+                    Assert.That(Vector2.Distance(previous, current), Is.LessThanOrEqualTo(.0201f),
+                        "Corner bevel step must stay bounded by pointer delta without snapping.");
+                    previous = current;
+                }
+
+                Assert.That(fixture.BodyDelta(8).x, Is.EqualTo(0f).Within(.0001f));
+                Assert.That(fixture.BodyDelta(8).y, Is.EqualTo(.05f).Within(.0001f));
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RealController_CombinedCornerDrag_NeverFlipsAxesWhileDragIsActive()
+        {
+            DragRuntimeFixture fixture = new DragRuntimeFixture();
+            try
+            {
+                fixture.Create();
+                yield return null;
+
+                // Diagonal corner right-above combined upper L-piece 6's lower arm (x=4..11, y=8..11; upper arm x=4..7, y=12..15).
+                fixture.SetBlockedCell(12, 12);
+                fixture.BeginDrag(true);
+
+                fixture.MoveSelectedByWorld(.10f, 0f);
+                Assert.That(fixture.BodyDelta(5).x, Is.EqualTo(.10f).Within(.0001f));
+                Assert.That(fixture.BodyDelta(6).x, Is.EqualTo(.10f).Within(.0001f));
+
+                // Outward motion with smaller orthogonal wobble must stay smoothly on the active X axis.
+                fixture.MoveSelectedByWorld(.02f, .01f);
+                Assert.That(fixture.BodyDelta(5).x, Is.EqualTo(.12f).Within(.0001f));
+                Assert.That(fixture.BodyDelta(5).y, Is.EqualTo(0f).Within(.0001f));
+
+                // Incremental vertical push smoothly bevels the combined group around (12, 12) without jumps.
+                Vector2 previous = fixture.BodyWorldPosition(5);
+                for (int step = 0; step < 8; step++)
+                {
+                    fixture.MoveSelectedByWorld(0f, .02f);
+                    Vector2 current = fixture.BodyWorldPosition(5);
+                    Assert.That(Vector2.Distance(previous, current), Is.LessThanOrEqualTo(.0201f));
+                    Assert.That(
+                        Vector2.Distance(fixture.BodyDelta(5), fixture.BodyDelta(6)),
+                        Is.LessThan(.0001f));
+                    previous = current;
+                }
+
+                Assert.That(fixture.BodyDelta(5).x, Is.EqualTo(0f).Within(.0001f));
+                Assert.That(fixture.BodyDelta(5).y, Is.EqualTo(.04f).Within(.0001f));
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RealController_OneByOnePiece_EntersExactOneBlockGapSmoothlyWithoutSnagOrSnap()
+        {
+            // Cover both Case B (within Anchor=24: +0.08u / -0.20u) and Case C (adjacent Anchor=23 at 23.20 / Anchor=25 at 24.80).
+            (int startAnchorX, float setupMoveWorldX, string label)[] gapEntryCases =
+            {
+                (24, .08f, "CaseB-right-overhang"),
+                (24, -.20f, "CaseB-left-overhang"),
+                (20, .80f, "CaseC-approach-from-left-lip"),
+                (28, -.80f, "CaseC-approach-from-right-lip")
+            };
+
+            for (int caseIndex = 0; caseIndex < gapEntryCases.Length; caseIndex++)
+            {
+                var testCase = gapEntryCases[caseIndex];
+                DragRuntimeFixture fixture = new DragRuntimeFixture();
+                try
+                {
+                    fixture.Create(
+                        normalAnchorOverride: new Vector2Int(testCase.startAnchorX, 24),
+                        singleBlockNormalPiece: true);
+                    yield return null;
+
+                    // Exact 4-fine-cell vertical gap at x=24..27, y=16..23 between left (20..23) and right (28..31) walls.
+                    fixture.BlockVerticalGapWalls(gapMinX: 24, wallBottomY: 16, wallTopY: 23);
+                    fixture.BeginDrag(false);
+                    fixture.MoveSelectedByWorld(testCase.setupMoveWorldX, 0f);
+
+                    Vector2 previous = fixture.BodyWorldPosition(8);
+                    for (int step = 0; step < 32; step++)
+                    {
+                        fixture.MoveSelectedByWorld(0f, -.025f);
+                        Vector2 current = fixture.BodyWorldPosition(8);
+                        Assert.That(
+                            Vector2.Distance(previous, current),
+                            Is.LessThanOrEqualTo(.0251f),
+                            $"{testCase.label} snapped visually during downward gap entry.");
+                        previous = current;
+                    }
+
+                    Assert.That(
+                        fixture.AnchorX(false),
+                        Is.EqualTo(24),
+                        $"{testCase.label} failed to center 1x1 block in exact 4-fine-cell gap.");
+                    Assert.That(
+                        fixture.AnchorY(false),
+                        Is.LessThanOrEqualTo(22),
+                        $"{testCase.label} snagged on gap lip instead of entering.");
+                }
+                finally
+                {
+                    fixture.Dispose();
+                }
+            }
+
+            // Sweeping horizontally across the top of the gap with slight downward wobble must not snag or drop in.
+            DragRuntimeFixture sweepFixture = new DragRuntimeFixture();
+            try
+            {
+                sweepFixture.Create(singleBlockNormalPiece: true);
+                yield return null;
+
+                sweepFixture.BlockVerticalGapWalls(gapMinX: 24, wallBottomY: 16, wallTopY: 23);
+                sweepFixture.BeginDrag(false);
+                sweepFixture.MoveSelectedByWorld(.08f, 0f);
+                sweepFixture.MoveSelectedByWorld(.05f, -.01f);
+                Assert.That(sweepFixture.BodyDelta(8).x, Is.EqualTo(.13f).Within(.0001f));
+                Assert.That(sweepFixture.BodyDelta(8).y, Is.EqualTo(0f).Within(.0001f));
+            }
+            finally
+            {
+                sweepFixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RealController_RegrabbingMidReleaseTween_PreservesVisualPositionWithoutSnap()
+        {
+            DragRuntimeFixture fixture = new DragRuntimeFixture();
+            try
+            {
+                fixture.Create(withFallView: true);
+                yield return null;
+
+                // Drag +0.40u (+1.6 fine cells: commits +1 step, leaves +0.15u visual lead), then release to start snap tween.
+                fixture.DragByWorld(.40f, 0f, false);
+                Vector2 releasedStartPosition = fixture.BodyWorldPosition(8);
+                fixture.ReleaseCurrentDrag();
+
+                // Re-grab immediately while the release presentation tween is active back toward canonical x=24.
+                Vector2 preGrabPosition = fixture.BodyWorldPosition(8);
+                Assert.That(Vector2.Distance(preGrabPosition, releasedStartPosition), Is.LessThan(.05f));
+                fixture.BeginDrag(false);
+                Assert.That(
+                    Vector2.Distance(fixture.BodyWorldPosition(8), preGrabPosition),
+                    Is.LessThan(.001f),
+                    "Re-grabbing a piece mid-release must not snap it to its release target.");
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
         public IEnumerator PointerWithOneFineCellCrossOffset_SlidesAlongNarrowChannel()
         {
             // A one-cell-high corridor: the pointer is one fine cell above
@@ -438,8 +630,13 @@ namespace GravityPuzzle.Tests.PlayMode
         /// </summary>
         private sealed class DragRuntimeFixture : IDisposable
         {
-            private const string CombinedLevelPath = "Assets/combineblock.asset";
             private static readonly Type BootstrapType = Type.GetType("GravityPuzzle.PrototypeBootstrap, Assembly-CSharp");
+            private static readonly Type LevelType = Type.GetType("GravityPuzzle.GravityLevelDefinition, Assembly-CSharp");
+            private static readonly Type PieceDefinitionType = Type.GetType("GravityPuzzle.PieceDefinition, Assembly-CSharp");
+            private static readonly Type PieceCellDefinitionType = Type.GetType("GravityPuzzle.PieceCellDefinition, Assembly-CSharp");
+            private static readonly Type PieceCellType = Type.GetType("GravityPuzzle.PieceCellType, Assembly-CSharp");
+            private static readonly Type JointDefinitionType = Type.GetType("GravityPuzzle.JointDefinition, Assembly-CSharp");
+            private static readonly Type JointEndpointType = Type.GetType("GravityPuzzle.JointEndpointDefinition, Assembly-CSharp");
             private static readonly Type BoardType = Type.GetType("GravityPuzzle.PrototypeBoard, Assembly-CSharp");
             private static readonly Type ControllerType = Type.GetType("GravityPuzzle.PuzzleDragController, Assembly-CSharp");
             private static readonly Type PieceType = Type.GetType("GravityPuzzle.PuzzlePiece, Assembly-CSharp");
@@ -460,6 +657,8 @@ namespace GravityPuzzle.Tests.PlayMode
                 "GravityPuzzle.ElevatorRevealDefinition, Assembly-CSharp");
             private static readonly Type PieceStateType = Type.GetType(
                 "GravityPuzzle.Gameplay.Pieces.PieceState, Assembly-CSharp");
+            private static readonly Type FallViewType = Type.GetType(
+                "GravityPuzzle.Presentation.Views.PieceGridFallView, Assembly-CSharp");
 
             private readonly List<GameObject> objects = new List<GameObject>();
             private object level;
@@ -471,8 +670,12 @@ namespace GravityPuzzle.Tests.PlayMode
             private readonly Dictionary<int, Vector2> initialPositions = new Dictionary<int, Vector2>();
             private readonly Dictionary<int, Vector2Int> initialAnchors = new Dictionary<int, Vector2Int>();
             private Vector2 dragPointer;
+            private ScriptableObject cachedTweenConfig;
 
-            public void Create(Vector2Int? normalAnchorOverride = null)
+            public void Create(
+                Vector2Int? normalAnchorOverride = null,
+                bool withFallView = false,
+                bool singleBlockNormalPiece = false)
             {
                 Assert.That(BoardType, Is.Not.Null);
                 Assert.That(ControllerType, Is.Not.Null);
@@ -481,10 +684,15 @@ namespace GravityPuzzle.Tests.PlayMode
                 Assert.That(SnapshotType, Is.Not.Null);
                 Assert.That(PieceModelType, Is.Not.Null);
 
-                ScriptableObject sourceLevel = AssetDatabase.LoadAssetAtPath<ScriptableObject>(CombinedLevelPath);
-                Assert.That(sourceLevel, Is.Not.Null, "The regression fixture must use the authored combined-block level.");
-                level = UnityEngine.Object.Instantiate(sourceLevel);
-                ConfigureRuntimeLevel(level);
+                Assert.That(LevelType, Is.Not.Null);
+                Assert.That(PieceDefinitionType, Is.Not.Null);
+                Assert.That(PieceCellDefinitionType, Is.Not.Null);
+                Assert.That(PieceCellType, Is.Not.Null);
+                Assert.That(JointDefinitionType, Is.Not.Null);
+                Assert.That(JointEndpointType, Is.Not.Null);
+
+                level = CreateSyntheticCombinedDragLevel(singleBlockNormalPiece);
+                ConfigureRuntimeLevel((UnityEngine.Object)level);
 
                 int fineColumns = (int)level.GetType().GetProperty("FineColumns").GetValue(level);
                 int fineRows = (int)level.GetType().GetProperty("FineRows").GetValue(level);
@@ -516,9 +724,9 @@ namespace GravityPuzzle.Tests.PlayMode
                 objects.Add(controllerObject);
                 controller = controllerObject.AddComponent(ControllerType);
 
-                CreatePiece(5);
-                CreatePiece(6);
-                CreatePiece(8);
+                CreatePiece(5, withFallView);
+                CreatePiece(6, withFallView);
+                CreatePiece(8, withFallView);
                 Physics2D.SyncTransforms();
             }
 
@@ -683,6 +891,27 @@ namespace GravityPuzzle.Tests.PlayMode
                 return pieces[id].GetComponent<Rigidbody2D>().position - initialPositions[id];
             }
 
+            public Vector2 BodyWorldPosition(int id)
+            {
+                return pieces[id].GetComponent<Rigidbody2D>().position;
+            }
+
+            public void SetBlockedCell(int x, int y)
+            {
+                Invoke(grid, "SetBlocked", Coordinate(x, y));
+            }
+
+            public void BlockVerticalGapWalls(int gapMinX, int wallBottomY, int wallTopY)
+            {
+                for (int y = wallBottomY; y <= wallTopY; y++)
+                {
+                    for (int x = gapMinX - 4; x < gapMinX; x++)
+                        SetBlockedCell(x, y);
+                    for (int x = gapMinX + 4; x < gapMinX + 8; x++)
+                        SetBlockedCell(x, y);
+                }
+            }
+
             public void BlockNormalPieceAtHorizontalOffset(int offset)
             {
                 Vector2Int anchor = initialAnchors[8];
@@ -749,11 +978,19 @@ namespace GravityPuzzle.Tests.PlayMode
                 initialAnchors[id] = anchor;
             }
 
-            private void CreatePiece(int id)
+            private void CreatePiece(int id, bool withFallView = false)
             {
                 GameObject root = new GameObject($"Drag Test Piece {id}");
                 objects.Add(root);
                 root.AddComponent<BoxCollider2D>().size = Vector2.one;
+                if (withFallView && FallViewType != null)
+                {
+                    if (cachedTweenConfig == null)
+                        cachedTweenConfig = AssetDatabase.LoadAssetAtPath<ScriptableObject>("Assets/TweenConfig.asset");
+                    Component fallView = root.AddComponent(FallViewType);
+                    FieldInfo configField = FallViewType.GetField("tweenConfig", BindingFlags.Instance | BindingFlags.NonPublic);
+                    configField?.SetValue(fallView, cachedTweenConfig);
+                }
                 Component piece = root.AddComponent(PieceType);
                 Invoke(piece, "ConfigureSourcePieceId", id);
                 Rigidbody2D body = root.GetComponent<Rigidbody2D>();
@@ -859,6 +1096,76 @@ namespace GravityPuzzle.Tests.PlayMode
             {
                 RuntimeType.GetMethod("ResetLevelSequence", BindingFlags.Static | BindingFlags.NonPublic)
                     .Invoke(null, null);
+            }
+
+            private static ScriptableObject CreateSyntheticCombinedDragLevel(bool singleBlockNormalPiece)
+            {
+                ScriptableObject level = ScriptableObject.CreateInstance(LevelType);
+                LevelType.GetField("boardColumns").SetValue(level, 10);
+                LevelType.GetField("boardRows").SetValue(level, 10);
+                LevelType.GetField("subdivisions").SetValue(level, 4);
+
+                IList pieceDefs = (IList)LevelType.GetField("pieces").GetValue(level);
+                for (int i = 0; i <= 8; i++)
+                {
+                    object def = Activator.CreateInstance(PieceDefinitionType);
+                    PieceDefinitionType.GetField("pieceId").SetValue(def, $"synthetic-piece-{i}");
+                    PieceDefinitionType.GetField("name").SetValue(def, $"Piece {i}");
+                    pieceDefs.Add(def);
+                }
+
+                // Index 5: horizontal 8x4 block; index 6: L-shaped 3-module combined partner; index 8: normal block (4x4 or 8x4).
+                PopulatePieceRect(pieceDefs[5], "combined-lower", new Vector2Int(32, 20), (0, 0, 8, 4));
+                PopulatePieceRect(pieceDefs[6], "combined-upper", new Vector2Int(32, 24), (0, 0, 8, 4), (0, 4, 4, 4));
+                PopulatePieceRect(
+                    pieceDefs[8],
+                    singleBlockNormalPiece ? "normal-single" : "normal-double",
+                    new Vector2Int(32, 32),
+                    singleBlockNormalPiece ? (0, 0, 4, 4) : (0, 0, 8, 4));
+
+                IList jointDefs = (IList)LevelType.GetField("joints").GetValue(level);
+                jointDefs.Add(CreateJoint("joint-0", "combined-lower", Vector2Int.zero, "combined-upper", Vector2Int.zero));
+                jointDefs.Add(CreateJoint("joint-1", "combined-lower", new Vector2Int(4, 0), "combined-upper", new Vector2Int(4, 0)));
+                return level;
+            }
+
+            private static void PopulatePieceRect(
+                object pieceDefinition,
+                string pieceId,
+                Vector2Int origin,
+                params (int x, int y, int w, int h)[] rects)
+            {
+                PieceDefinitionType.GetField("pieceId").SetValue(pieceDefinition, pieceId);
+                PieceDefinitionType.GetField("origin").SetValue(pieceDefinition, origin);
+                IList cells = (IList)PieceDefinitionType.GetField("cells").GetValue(pieceDefinition);
+                object blockType = Enum.Parse(PieceCellType, "Block");
+                for (int r = 0; r < rects.Length; r++)
+                {
+                    var rect = rects[r];
+                    for (int y = rect.y; y < rect.y + rect.h; y++)
+                    for (int x = rect.x; x < rect.x + rect.w; x++)
+                        cells.Add(Activator.CreateInstance(PieceCellDefinitionType, new Vector2Int(x, y), blockType));
+                }
+            }
+
+            private static object CreateJoint(
+                string jointId,
+                string pieceA,
+                Vector2Int blockA,
+                string pieceB,
+                Vector2Int blockB)
+            {
+                object joint = Activator.CreateInstance(JointDefinitionType);
+                JointDefinitionType.GetField("jointId").SetValue(joint, jointId);
+                object endpointA = Activator.CreateInstance(JointEndpointType);
+                JointEndpointType.GetField("pieceId").SetValue(endpointA, pieceA);
+                JointEndpointType.GetField("localBlockOrigin").SetValue(endpointA, blockA);
+                object endpointB = Activator.CreateInstance(JointEndpointType);
+                JointEndpointType.GetField("pieceId").SetValue(endpointB, pieceB);
+                JointEndpointType.GetField("localBlockOrigin").SetValue(endpointB, blockB);
+                JointDefinitionType.GetField("endpointA").SetValue(joint, endpointA);
+                JointDefinitionType.GetField("endpointB").SetValue(joint, endpointB);
+                return joint;
             }
         }
     }

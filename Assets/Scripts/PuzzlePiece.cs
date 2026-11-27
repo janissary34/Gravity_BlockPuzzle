@@ -272,6 +272,7 @@ namespace GravityPuzzle
         private int shredderPresentationOutlineSortingOrder;
         private static readonly string[] CachedSmallCounters = BuildSmallCounterStrings(100);
         private Vector2 currentVisualJitterOffset;
+        private bool hasAppliedPhysicsProfile;
         private enum ShredderHandoffMode
         {
             None,
@@ -434,6 +435,8 @@ namespace GravityPuzzle
 
             keyLockBadge = new KeyLockBadgePresentation(iceSlotsRoot);
             keyArrivedCallback = HandleKeyArrived;
+            if (Body != null && !hasAppliedPhysicsProfile)
+                ApplyLifecyclePhysicsProfile(PieceState.Spawned);
         }
 
         public int PartSlotCount => partSlots.Count;
@@ -2051,6 +2054,7 @@ namespace GravityPuzzle
             ApplyCollisionProfile();
             SetPiecePhysicsCollidersEnabled(false, false);
             PhysicsProfile = PiecePhysicsProfile.Grid;
+            hasAppliedPhysicsProfile = true;
 
             if (Body == null)
                 return;
@@ -2083,7 +2087,9 @@ namespace GravityPuzzle
             // geometry again stalled the release frame on large pieces, which
             // delayed the selection outline from clearing. Grid-profile collider
             // edits regenerate their own geometry, so only the pose needs sync.
-            if (PhysicsProfile == PiecePhysicsProfile.Grid)
+            if (hasAppliedPhysicsProfile &&
+                PhysicsProfile == PiecePhysicsProfile.Grid &&
+                (Body == null || (!Body.simulated && Body.bodyType == RigidbodyType2D.Kinematic)))
             {
                 if (Body != null)
                 {
@@ -2139,6 +2145,7 @@ namespace GravityPuzzle
                     compositeCollider.GenerateGeometry();
             }
             PhysicsProfile = PiecePhysicsProfile.OpenFreefall;
+            hasAppliedPhysicsProfile = true;
             if (Body == null)
                 return;
 
@@ -2179,6 +2186,7 @@ namespace GravityPuzzle
             ApplyCollisionProfile();
             SetPiecePhysicsCollidersEnabled(false, false);
             PhysicsProfile = PiecePhysicsProfile.Shredding;
+            hasAppliedPhysicsProfile = true;
             if (Body == null)
                 return;
 

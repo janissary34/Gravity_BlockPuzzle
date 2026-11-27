@@ -26,6 +26,7 @@ namespace GravityPuzzle.Tests.PlayMode
         private static readonly Type CatchZoneType = Type.GetType("GravityPuzzle.ShredderCatchZone, Assembly-CSharp");
         private static readonly Type PuzzlePieceType = Type.GetType("GravityPuzzle.PuzzlePiece, Assembly-CSharp");
         private static readonly Type PieceModelType = Type.GetType("GravityPuzzle.Gameplay.Pieces.PieceModel, Assembly-CSharp");
+        private static readonly Type PieceStateType = Type.GetType("GravityPuzzle.Gameplay.Pieces.PieceState, Assembly-CSharp");
         private static readonly Type GridType = Type.GetType("GravityPuzzle.Core.Grid.GravityBoardGrid, Assembly-CSharp");
         private static readonly Type SnapshotType = Type.GetType("GravityPuzzle.Core.Grid.LevelBoardSnapshot, Assembly-CSharp");
         private static readonly Type SnapshotIssueType = Type.GetType("GravityPuzzle.Core.Grid.LevelBoardSnapshotIssue, Assembly-CSharp");
@@ -106,6 +107,40 @@ namespace GravityPuzzle.Tests.PlayMode
             minY = (float)args[0];
             maxY = (float)args[1];
             return ok;
+        }
+
+        private static string FormatStepSnapshot(
+            float t,
+            float lowerMaxY,
+            float upperMinY,
+            object lowerModel,
+            object lowerPiece,
+            object upperModel,
+            object upperPiece,
+            object shredder)
+        {
+            object lowerAnchor = GetProp(lowerModel, "Anchor");
+            int lowerAnchorY = (int)CoordinateType.GetField("Y").GetValue(lowerAnchor);
+            object lowerState = GetProp(lowerModel, "State");
+            object lowerProfile = GetProp(lowerPiece, "PhysicsProfile");
+            float lowerTfY = ((Component)lowerPiece).transform.position.y;
+            object upperAnchor = GetProp(upperModel, "Anchor");
+            int upperAnchorY = (int)CoordinateType.GetField("Y").GetValue(upperAnchor);
+            object upperState = GetProp(upperModel, "State");
+            object upperProfile = GetProp(upperPiece, "PhysicsProfile");
+            float upperTfY = ((Component)upperPiece).transform.position.y;
+            bool upperAnim = (bool)FallViewType.GetProperty("IsAnimating").GetValue(GetProp(upperPiece, "GridFallView"));
+            IList feedList = (IList)BlockShredderType.GetField("activeFeedPieces", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(shredder);
+            IList freeList = (IList)BlockShredderType.GetField("activeFreefallPieces", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(shredder);
+            float maxTopY = (float)BlockShredderType.GetField("maxActiveOffBoardTopY", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(shredder);
+            return $"t={t:F2} lo[max={lowerMaxY:F3},ay={lowerAnchorY},{lowerState},{lowerProfile},y={lowerTfY:F3}] up[min={upperMinY:F3},ay={upperAnchorY},{upperState},{upperProfile},y={upperTfY:F3},anim={upperAnim}] feed={feedList.Count} free={freeList.Count} maxTop={maxTopY:F3}";
+        }
+
+        private static void RecordTrace(Queue<string> history, string entry)
+        {
+            if (history.Count >= 12)
+                history.Dequeue();
+            history.Enqueue(entry);
         }
 
         private (object board, object shredder, object zone, object level, ScriptableObject shredderConfig, ScriptableObject tweenConfig)
@@ -244,11 +279,13 @@ namespace GravityPuzzle.Tests.PlayMode
 
             Vector2 startPos = (Vector2)CoordsType.GetMethod("FineCellToWorld").Invoke(null, new[] { level, Coord(anchorX, anchorY) });
             go.transform.position = startPos;
-            Rigidbody2D body = (Rigidbody2D)GetProp(piece, "Body");
-            if (body != null)
-                body.position = startPos;
-
             go.SetActive(true);
+            PuzzlePieceType.GetMethod("ApplyLifecyclePhysicsProfile").Invoke(
+                piece,
+                new object[] { Enum.Parse(PieceStateType, "Placed"), null, 0f });
+            PuzzlePieceType.GetMethod("SetGridPresentationPosition").Invoke(
+                piece,
+                new object[] { startPos, true });
             return (model, piece);
         }
 
@@ -284,6 +321,7 @@ namespace GravityPuzzle.Tests.PlayMode
                                 Mathf.Clamp((float)ShredderConfigType.GetProperty("GearClippingRatio").GetValue(sim.shredderConfig), 0.1f, 0.9f);
 
             float elapsed = 0f;
+            Queue<string> trace = new Queue<string>(8);
             while (elapsed < 1.8f)
             {
                 yield return new WaitForFixedUpdate();
@@ -302,10 +340,11 @@ namespace GravityPuzzle.Tests.PlayMode
 
                 if (hasBottom && hasMiddle)
                 {
+                    RecordTrace(trace, FormatStepSnapshot(elapsed, bottomMaxY, middleMinY, bottom.model, bottom.piece, middle.model, middle.piece, sim.shredder));
                     Assert.That(
                         middleMinY,
                         Is.GreaterThanOrEqualTo(bottomMaxY - 0.04f),
-                        $"Middle block penetrated or swapped below Bottom block at t={elapsed:F2}s (middleMinY={middleMinY:F3}, bottomMaxY={bottomMaxY:F3}).");
+                        () => $"Middle block penetrated or swapped below Bottom block at t={elapsed:F2}s (middleMinY={middleMinY:F3}, bottomMaxY={bottomMaxY:F3}). Trace:\n{string.Join("\n", trace)}");
                 }
 
                 if (hasMiddle && hasTop)
@@ -354,6 +393,7 @@ namespace GravityPuzzle.Tests.PlayMode
 
             bool upperEnteredFreefall = false;
             float elapsed = 0f;
+            Queue<string> trace = new Queue<string>(8);
             while (elapsed < 2.0f)
             {
                 yield return new WaitForFixedUpdate();
@@ -371,10 +411,11 @@ namespace GravityPuzzle.Tests.PlayMode
 
                 if (hasLower && hasUpper)
                 {
+                    RecordTrace(trace, FormatStepSnapshot(elapsed, lowerMaxY, upperMinY, lower.model, lower.piece, upper.model, upper.piece, sim.shredder));
                     Assert.That(
                         upperMinY,
                         Is.GreaterThanOrEqualTo(lowerMaxY - 0.04f),
-                        $"Combined partner overlapped lower member at t={elapsed:F2}s (upperMinY={upperMinY:F3}, lowerMaxY={lowerMaxY:F3}).");
+                        () => $"Combined partner overlapped lower member at t={elapsed:F2}s (upperMinY={upperMinY:F3}, lowerMaxY={lowerMaxY:F3}). Trace:\n{string.Join("\n", trace)}");
                 }
             }
 

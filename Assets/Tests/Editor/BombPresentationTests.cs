@@ -98,12 +98,22 @@ public sealed class BombPresentationTests
     public void FreezeRefreshWhileBoxRevealHidden_SynchronizesThawedStateWithoutLeakingVisuals()
     {
         var root = new GameObject("Box Reveal Hidden Freeze Test");
+        var texture = new Texture2D(16, 16);
+        Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 16f, 16f), new Vector2(.5f, .5f), 16f);
+        MeshRenderer iceCounterRenderer = null;
+        Material initialIceCounterMaterial = null;
+        MeshRenderer counterRenderer = null;
+        Material initialCounterMaterial = null;
         try
         {
             var piece = root.AddComponent<PuzzlePiece>();
             var whole = new GameObject("Whole Piece Presentation").AddComponent<SpriteRenderer>();
             whole.transform.SetParent(root.transform, false);
             whole.enabled = true;
+
+            var cellVisual = new GameObject("Cell 0").AddComponent<SpriteRenderer>();
+            cellVisual.transform.SetParent(root.transform, false);
+            cellVisual.sprite = sprite;
 
             var slots = new GameObject("Ice Presentation Slots").transform;
             slots.SetParent(root.transform, false);
@@ -117,16 +127,20 @@ public sealed class BombPresentationTests
             var iceCounter = new GameObject("Ice Counter Presentation").AddComponent<TextMeshPro>();
             iceCounter.transform.SetParent(root.transform, false);
             iceCounter.enabled = true;
-            var bombCounter = new GameObject("Bomb Counter Presentation").AddComponent<TextMeshPro>();
-            bombCounter.transform.SetParent(root.transform, false);
+            iceCounterRenderer = iceCounter.GetComponent<MeshRenderer>();
+            initialIceCounterMaterial = iceCounterRenderer != null ? iceCounterRenderer.sharedMaterial : null;
+            TextMeshPro bombCounter = AttachBombCounter(piece, root.transform, out counterRenderer, out initialCounterMaterial);
             bombCounter.enabled = false;
 
             InvokeAwake(piece);
             SetField(piece, "wholePieceRenderer", whole);
+            SetField(piece, "wholePieceNormalSprite", sprite);
             SetField(piece, "bombOverlayRenderer", bomb);
             SetField(piece, "iceCounterText", iceCounter);
-            SetField(piece, "bombCounterText", bombCounter);
+            SetField(piece, "collisionCellVisuals", new List<SpriteRenderer> { cellVisual });
+            SetField(piece, "fullCollisionCellSizes", new List<Vector2> { Vector2.one });
             SetField(piece, "<IsBomb>k__BackingField", true);
+            SetField(piece, "<BombTimerSeconds>k__BackingField", 10f);
             SetField(piece, "<IsFrozen>k__BackingField", true);
             SetField(piece, "frozenUntilDestroyedCount", 2);
             GetField<List<SpriteRenderer>>(piece, "iceRenderers").Add(ice);
@@ -139,6 +153,7 @@ public sealed class BombPresentationTests
             Assert.That(bombCounter.enabled, Is.False);
 
             // Decrement while still frozen: counters/renderers remain hidden behind the Box.
+            ExpectEditModeCounterMaterialError();
             piece.RefreshFreezeState(1);
             Assert.That(piece.IsFrozen, Is.True);
             Assert.That(whole.enabled, Is.False);
@@ -146,6 +161,7 @@ public sealed class BombPresentationTests
             Assert.That(iceCounter.enabled, Is.False);
 
             // Thaw while still hidden behind the Box: visuals stay hidden until release.
+            ExpectEditModeCounterMaterialError();
             piece.RefreshFreezeState(2);
             Assert.That(piece.IsFrozen, Is.False);
             Assert.That(whole.enabled, Is.False);
@@ -165,7 +181,12 @@ public sealed class BombPresentationTests
         }
         finally
         {
-            Object.DestroyImmediate(root);
+            Material runtimeIceMaterial = iceCounterRenderer != null ? iceCounterRenderer.sharedMaterial : null;
+            DestroyRootAndInstantiatedMaterial(root, counterRenderer, initialCounterMaterial);
+            if (runtimeIceMaterial != null && runtimeIceMaterial != initialIceCounterMaterial)
+                Object.DestroyImmediate(runtimeIceMaterial);
+            Object.DestroyImmediate(sprite);
+            Object.DestroyImmediate(texture);
         }
     }
 

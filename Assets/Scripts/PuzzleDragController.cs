@@ -66,7 +66,10 @@ namespace GravityPuzzle
         private Vector2 lastResolvedDragPosition;
         private bool hasLastResolvedDragPosition;
         private int activeFingerId = -1;
-        private const float FineCellDragThreshold = .5f;
+        private const float FineCellDragThreshold = 1f;
+        private const float SubCellAxisDeadzone = .02f;
+        private const float DragStepEpsilon = 1e-5f;
+        private const int MaxDragSubSteps = 256;
         public static PuzzleDragController Instance { get; private set; }
         private PrototypeBoard subscribedBoard;
         private bool inputLockedByGameState;
@@ -1183,41 +1186,194 @@ namespace GravityPuzzle
                 return false;
 
             int alignmentStride = AlignmentStride(level);
-            fineDragRemainder += dragIntent * level.subdivisions;
-            while (TryGetNextFineDragStep(out GridCoordinate step))
-            {
-                if (board.TryMoveDraggingPieceOnGrid(piece, model.Anchor.Offset(step), out _))
-                {
-                    TryRecordCanonicalDragAnchor(board, piece, model.Anchor, alignmentStride);
-                    if (step.X != 0)
-                        fineDragRemainder.x -= step.X;
-                    else
-                        fineDragRemainder.y -= step.Y;
-                    continue;
-                }
-
-                // Discard only the blocked component. The other axis remains
-                // free to slide this same frame.
-                if (step.X != 0)
-                    fineDragRemainder.x = 0f;
-                else
-                    fineDragRemainder.y = 0f;
-            }
-
             board.CollectJointGroupPieces(piece, selectedJointGroupPieces);
             bool isCombined = selectedJointGroupPieces.Count > 1;
+            Vector2 offset = fineDragRemainder;
+            Vector2 delta = dragIntent * level.subdivisions;
+
+            int subStep = 0;
+            while ((Mathf.Abs(delta.x) > DragStepEpsilon || Mathf.Abs(delta.y) > DragStepEpsilon) &&
+                   subStep++ < MaxDragSubSteps)
+            {
+                if (Mathf.Abs(delta.x) <= DragStepEpsilon)
+                    delta.x = 0f;
+                if (Mathf.Abs(delta.y) <= DragStepEpsilon)
+                    delta.y = 0f;
+
+                int sideX = Mathf.Abs(offset.x) > DragStepEpsilon
+                    ? (offset.x > 0f ? 1 : -1)
+                    : (delta.x != 0f ? (delta.x > 0f ? 1 : -1) : 0);
+                int sideY = Mathf.Abs(offset.y) > DragStepEpsilon
+                    ? (offset.y > 0f ? 1 : -1)
+                    : (delta.y != 0f ? (delta.y > 0f ? 1 : -1) : 0);
+
+                bool xLegal = sideX == 0 ||
+                    CanMoveSelectionBy(board, snapshot.Grid, piece, model, isCombined, new GridCoordinate(sideX, 0));
+                bool yLegal = sideY == 0 ||
+                    CanMoveSelectionBy(board, snapshot.Grid, piece, model, isCombined, new GridCoordinate(0, sideY));
+
+                if (!xLegal)
+                {
+                    if (TryResolveBlockedAxis(
+                            board,
+                            snapshot.Grid,
+                            piece,
+                            model,
+                            isCombined,
+                            alignmentStride,
+                            blockedIsHorizontal: true,
+                            sideBlocked: sideX,
+                            sideFree: sideY,
+                            ref offset.x,
+                            ref offset.y,
+                            ref delta.x,
+                            ref delta.y))
+                    {
+                        continue;
+                    }
+                }
+
+                if (!yLegal)
+                {
+                    if (TryResolveBlockedAxis(
+                            board,
+                            snapshot.Grid,
+                            piece,
+                            model,
+                            isCombined,
+                            alignmentStride,
+                            blockedIsHorizontal: false,
+                            sideBlocked: sideY,
+                            sideFree: sideX,
+                            ref offset.y,
+                            ref offset.x,
+                            ref delta.y,
+                            ref delta.x))
+                    {
+                        continue;
+                    }
+                }
+
+                if (delta.x == 0f && delta.y == 0f)
+                    break;
+
+                sideX = Mathf.Abs(offset.x) > DragStepEpsilon
+                    ? (offset.x > 0f ? 1 : -1)
+                    : (delta.x != 0f ? (delta.x > 0f ? 1 : -1) : 0);
+                sideY = Mathf.Abs(offset.y) > DragStepEpsilon
+                    ? (offset.y > 0f ? 1 : -1)
+                    : (delta.y != 0f ? (delta.y > 0f ? 1 : -1) : 0);
+
+                bool diagBlocked = sideX != 0 && sideY != 0 &&
+                    !CanMoveSelectionBy(board, snapshot.Grid, piece, model, isCombined, new GridCoordinate(sideX, sideY));
+                if (diagBlocked)
+                {
+                    bool xActive = Mathf.Abs(offset.x) > DragStepEpsilon;
+                    bool yActive = Mathf.Abs(offset.y) > DragStepEpsilon;
+                    if (xActive && !yActive)
+                    {
+                        ResolveOverhangingCornerStep(sideX, sideY, ref offset.x, ref delta.x, ref delta.y);
+                        if (Mathf.Abs(delta.x) > DragStepEpsilon || Mathf.Abs(delta.y) > DragStepEpsilon)
+                            continue;
+                        break;
+                    }
+
+                    if (yActive && !xActive)
+                    {
+                        ResolveOverhangingCornerStep(sideY, sideX, ref offset.y, ref delta.y, ref delta.x);
+                        if (Mathf.Abs(delta.x) > DragStepEpsilon || Mathf.Abs(delta.y) > DragStepEpsilon)
+                            continue;
+                        break;
+                    }
+
+                    if (xActive && yActive)
+                    {
+                        float budget = Mathf.Max(Mathf.Abs(delta.x), Mathf.Abs(delta.y));
+                        if (Mathf.Abs(offset.x) <= Mathf.Abs(offset.y))
+                        {
+                            float shrink = Mathf.Min(Mathf.Abs(offset.x), budget);
+                            offset.x = shrink >= Mathf.Abs(offset.x) - DragStepEpsilon ? 0f : offset.x - sideX * shrink;
+                        }
+                        else
+                        {
+                            float shrink = Mathf.Min(Mathf.Abs(offset.y), budget);
+                            offset.y = shrink >= Mathf.Abs(offset.y) - DragStepEpsilon ? 0f : offset.y - sideY * shrink;
+                        }
+                        delta = Vector2.zero;
+                        break;
+                    }
+
+                    offset = Vector2.zero;
+                    if (Mathf.Abs(delta.x) >= Mathf.Abs(delta.y))
+                        delta.y = 0f;
+                    else
+                        delta.x = 0f;
+                }
+
+                float tx = ComputeAxisBoundaryFraction(offset.x, delta.x);
+                float ty = ComputeAxisBoundaryFraction(offset.y, delta.y);
+                float t = Mathf.Min(tx, ty);
+                if (t > DragStepEpsilon)
+                {
+                    offset.x += delta.x * t;
+                    offset.y += delta.y * t;
+                    if (t >= 1f - DragStepEpsilon)
+                    {
+                        delta = Vector2.zero;
+                    }
+                    else
+                    {
+                        delta.x *= 1f - t;
+                        delta.y *= 1f - t;
+                    }
+                }
+                else
+                {
+                    delta = Vector2.zero;
+                }
+
+                if (Mathf.Abs(offset.x) <= DragStepEpsilon)
+                    offset.x = 0f;
+                if (Mathf.Abs(offset.y) <= DragStepEpsilon)
+                    offset.y = 0f;
+
+                bool steppedX = TryCommitFineAxisStep(
+                    board,
+                    snapshot.Grid,
+                    piece,
+                    model,
+                    isCombined,
+                    alignmentStride,
+                    horizontalAxis: true,
+                    ref offset);
+                bool steppedY = TryCommitFineAxisStep(
+                    board,
+                    snapshot.Grid,
+                    piece,
+                    model,
+                    isCombined,
+                    alignmentStride,
+                    horizontalAxis: false,
+                    ref offset);
+
+                if (!steppedX && Mathf.Abs(offset.x) >= FineCellDragThreshold - DragStepEpsilon)
+                {
+                    offset.x = (offset.x > 0f ? 1f : -1f) * (FineCellDragThreshold - DragStepEpsilon * 4f);
+                    delta.x = 0f;
+                }
+                if (!steppedY && Mathf.Abs(offset.y) >= FineCellDragThreshold - DragStepEpsilon)
+                {
+                    offset.y = (offset.y > 0f ? 1f : -1f) * (FineCellDragThreshold - DragStepEpsilon * 4f);
+                    delta.y = 0f;
+                }
+            }
+
+            fineDragRemainder = offset;
             GridCoordinate selectedPivot = new GridCoordinate(
                 model.Anchor.X - model.PivotOffset.X,
                 model.Anchor.Y - model.PivotOffset.Y);
             Vector2 selectedGridPosition = GravityLevelGridCoordinates.FineCellToWorld(level, selectedPivot);
-            Vector2 selectedPresentationOffset = isCombined
-                ? GetContinuousGroupPresentationOffset(board, piece, level, ref fineDragRemainder)
-                : GetContinuousDragPresentationOffset(
-                    board,
-                    snapshot.Grid,
-                    model,
-                    level,
-                    ref fineDragRemainder);
+            Vector2 selectedPresentationOffset = offset / level.subdivisions;
             Vector2 selectedPresentationPosition = selectedGridPosition + selectedPresentationOffset;
             piece.SetGridPresentationPosition(selectedPresentationPosition, synchronizeTransforms: false);
 
@@ -1253,124 +1409,243 @@ namespace GravityPuzzle
             return TryMoveSelectedPieceOnGrid(piece, ConsumeDragIntent());
         }
 
-        private static Vector2 GetContinuousGroupPresentationOffset(
-            PrototypeBoard board,
-            PuzzlePiece piece,
-            GravityLevelDefinition level,
-            ref Vector2 remainder)
-        {
-            int horizontalStep = remainder.x > 0f ? 1 : remainder.x < 0f ? -1 : 0;
-            int verticalStep = remainder.y > 0f ? 1 : remainder.y < 0f ? -1 : 0;
-            bool horizontalLegal = horizontalStep != 0 &&
-                board.CanMovePieceGroupBy(piece, new GridCoordinate(horizontalStep, 0));
-            bool verticalLegal = verticalStep != 0 &&
-                board.CanMovePieceGroupBy(piece, new GridCoordinate(0, verticalStep));
-            if (horizontalStep != 0 && !horizontalLegal)
-                remainder.x = 0f;
-            if (verticalStep != 0 && !verticalLegal)
-                remainder.y = 0f;
-
-            Vector2 offset = Vector2.zero;
-            if (horizontalLegal && verticalLegal && horizontalStep != 0 && verticalStep != 0)
-            {
-                if (board.CanMovePieceGroupBy(piece, new GridCoordinate(horizontalStep, verticalStep)))
-                    offset = remainder;
-                else if (Mathf.Abs(remainder.x) >= Mathf.Abs(remainder.y))
-                    offset.x = remainder.x;
-                else
-                    offset.y = remainder.y;
-            }
-            else if (horizontalLegal)
-            {
-                offset.x = remainder.x;
-            }
-            else if (verticalLegal)
-            {
-                offset.y = remainder.y;
-            }
-
-            return offset / level.subdivisions;
-        }
-
-        private static Vector2 GetContinuousDragPresentationOffset(
+        private bool TryResolveBlockedAxis(
             PrototypeBoard board,
             GravityBoardGrid grid,
+            PuzzlePiece piece,
             PieceModel model,
-            GravityLevelDefinition level,
-            ref Vector2 remainder)
+            bool isCombined,
+            int alignmentStride,
+            bool blockedIsHorizontal,
+            int sideBlocked,
+            int sideFree,
+            ref float blockedOffset,
+            ref float freeOffset,
+            ref float blockedDelta,
+            ref float freeDelta)
         {
-            int horizontalStep = remainder.x > 0f ? 1 : remainder.x < 0f ? -1 : 0;
-            int verticalStep = remainder.y > 0f ? 1 : remainder.y < 0f ? -1 : 0;
-            // A Box is a reveal-owned virtual obstacle, so it has no blocked
-            // cells in GravityBoardGrid. Presentation must use the same board
-            // predicate as the committed drag step or it can ease past a Box
-            // and snap back when the next fine-grid commit is rejected.
-            bool horizontalLegal = horizontalStep != 0 &&
-                board.CanMovePiece(model, model.Anchor.Offset(new GridCoordinate(horizontalStep, 0))) &&
-                grid.CheckPlacementIgnoringPiece(
-                    model,
-                    model.Anchor.Offset(new GridCoordinate(horizontalStep, 0)),
-                    model.Id).IsSuccess;
-            bool verticalLegal = verticalStep != 0 &&
-                board.CanMovePiece(model, model.Anchor.Offset(new GridCoordinate(0, verticalStep))) &&
-                grid.CheckPlacementIgnoringPiece(
-                    model,
-                    model.Anchor.Offset(new GridCoordinate(0, verticalStep)),
-                    model.Id).IsSuccess;
-            if (horizontalStep != 0 && !horizontalLegal)
-                remainder.x = 0f;
-            if (verticalStep != 0 && !verticalLegal)
-                remainder.y = 0f;
-
-            Vector2 offset = Vector2.zero;
-            if (horizontalLegal && verticalLegal && horizontalStep != 0 && verticalStep != 0)
+            // Returning toward Anchor along a blocked axis clears any remaining sub-cell overlap safely.
+            if (Mathf.Abs(blockedOffset) > DragStepEpsilon)
             {
-                GridCoordinate diagonal = new GridCoordinate(horizontalStep, verticalStep);
-                if (board.CanMovePiece(model, model.Anchor.Offset(diagonal)) &&
-                    grid.CheckPlacementIgnoringPiece(
-                        model,
-                        model.Anchor.Offset(diagonal),
-                        model.Id).IsSuccess)
+                if (blockedDelta * sideBlocked < -DragStepEpsilon)
                 {
-                    offset = remainder;
+                    float retreat = Mathf.Min(Mathf.Abs(blockedOffset), Mathf.Abs(blockedDelta));
+                    blockedOffset -= sideBlocked * retreat;
+                    if (Mathf.Abs(blockedOffset) <= DragStepEpsilon)
+                        blockedOffset = 0f;
+                    blockedDelta += sideBlocked * retreat;
+                    return true;
                 }
-                else if (Mathf.Abs(remainder.x) >= Mathf.Abs(remainder.y))
-                {
-                    offset.x = remainder.x;
-                }
-                else
-                {
-                    offset.y = remainder.y;
-                }
-            }
-            else if (horizontalLegal)
-            {
-                offset.x = remainder.x;
-            }
-            else if (verticalLegal)
-            {
-                offset.y = remainder.y;
-            }
 
-            return offset / level.subdivisions;
-        }
-
-        private bool TryGetNextFineDragStep(out GridCoordinate step)
-        {
-            step = default;
-            bool xReady = Mathf.Abs(fineDragRemainder.x) >= FineCellDragThreshold;
-            bool yReady = Mathf.Abs(fineDragRemainder.y) >= FineCellDragThreshold;
-            if (!xReady && !yReady)
-                return false;
-
-            if (xReady && (!yReady || Mathf.Abs(fineDragRemainder.x) >= Mathf.Abs(fineDragRemainder.y)))
-            {
-                step = new GridCoordinate(fineDragRemainder.x > 0f ? 1 : -1, 0);
+                blockedOffset = 0f;
+                blockedDelta = 0f;
                 return true;
             }
 
-            step = new GridCoordinate(0, fineDragRemainder.y > 0f ? 1 : -1);
+            float inwardBlocked = blockedDelta * sideBlocked;
+            if (inwardBlocked <= DragStepEpsilon)
+            {
+                blockedDelta = 0f;
+                return false;
+            }
+
+            // Funnel 1:1 into an adjacent 1-fine-cell opening when already leaned >0.02 fine cells toward it.
+            if (Mathf.Abs(freeOffset) > SubCellAxisDeadzone && sideFree != 0)
+            {
+                GridCoordinate freeStep = blockedIsHorizontal
+                    ? new GridCoordinate(0, sideFree)
+                    : new GridCoordinate(sideFree, 0);
+                GridCoordinate funnelStep = blockedIsHorizontal
+                    ? new GridCoordinate(sideBlocked, sideFree)
+                    : new GridCoordinate(sideFree, sideBlocked);
+
+                if (CanMoveSelectionBy(board, grid, piece, model, isCombined, freeStep) &&
+                    CanMoveSelectionBy(board, grid, piece, model, isCombined, funnelStep))
+                {
+                    float freeInward = freeDelta * sideFree;
+                    float distToBoundary = Mathf.Max(0f, FineCellDragThreshold - Mathf.Abs(freeOffset));
+                    if (freeInward >= 0f)
+                    {
+                        float drive = Mathf.Max(freeInward, inwardBlocked);
+                        float stepMag = Mathf.Min(distToBoundary, drive);
+                        float freeUsed = Mathf.Min(freeInward, stepMag);
+                        float blockedUsed = Mathf.Min(inwardBlocked, Mathf.Max(0f, stepMag - freeUsed));
+                        freeOffset += sideFree * stepMag;
+                        freeDelta -= sideFree * freeUsed;
+                        blockedDelta -= sideBlocked * blockedUsed;
+                    }
+                    else
+                    {
+                        float away = -freeInward;
+                        float bevel = inwardBlocked - away;
+                        if (bevel > DragStepEpsilon)
+                        {
+                            float stepMag = Mathf.Min(distToBoundary, bevel);
+                            float ratio = Mathf.Clamp01(stepMag / bevel);
+                            freeOffset += sideFree * stepMag;
+                            freeDelta *= 1f - ratio;
+                            blockedDelta -= sideBlocked * (ratio * inwardBlocked);
+                        }
+                        else
+                        {
+                            blockedDelta = 0f;
+                            return false;
+                        }
+                    }
+
+                    Vector2 offsetCopy = blockedIsHorizontal
+                        ? new Vector2(blockedOffset, freeOffset)
+                        : new Vector2(freeOffset, blockedOffset);
+                    if (TryCommitFineAxisStep(
+                            board,
+                            grid,
+                            piece,
+                            model,
+                            isCombined,
+                            alignmentStride,
+                            !blockedIsHorizontal,
+                            ref offsetCopy))
+                    {
+                        blockedOffset = blockedIsHorizontal ? offsetCopy.x : offsetCopy.y;
+                        freeOffset = blockedIsHorizontal ? offsetCopy.y : offsetCopy.x;
+                    }
+                    else if (Mathf.Abs(freeOffset) >= FineCellDragThreshold - DragStepEpsilon)
+                    {
+                        freeOffset = sideFree * (FineCellDragThreshold - DragStepEpsilon * 4f);
+                        freeDelta = 0f;
+                        blockedDelta = 0f;
+                    }
+
+                    return true;
+                }
+            }
+
+            blockedDelta = 0f;
+            return false;
+        }
+
+        private static void ResolveOverhangingCornerStep(
+            int sideActive,
+            int sideBlocked,
+            ref float activeOffset,
+            ref float activeDelta,
+            ref float blockedDelta)
+        {
+            if (activeDelta * sideActive < -DragStepEpsilon)
+            {
+                float retreat = Mathf.Min(Mathf.Abs(activeOffset), Mathf.Abs(activeDelta));
+                activeOffset -= sideActive * retreat;
+                if (Mathf.Abs(activeOffset) <= DragStepEpsilon)
+                    activeOffset = 0f;
+                activeDelta += sideActive * retreat;
+                return;
+            }
+
+            float outward = Mathf.Max(0f, activeDelta * sideActive);
+            float inwardBlocked = Mathf.Max(0f, blockedDelta * sideBlocked);
+            if (inwardBlocked <= outward + DragStepEpsilon)
+            {
+                blockedDelta = 0f;
+                return;
+            }
+
+            float bevel = inwardBlocked - outward;
+            float distToZero = Mathf.Abs(activeOffset);
+            if (distToZero <= bevel + DragStepEpsilon)
+            {
+                activeOffset = 0f;
+                activeDelta = 0f;
+                blockedDelta -= sideBlocked * (outward + distToZero);
+            }
+            else
+            {
+                activeOffset -= sideActive * bevel;
+                activeDelta = 0f;
+                blockedDelta = 0f;
+            }
+        }
+
+        private static float ComputeAxisBoundaryFraction(float currentOffset, float axisDelta)
+        {
+            if (Mathf.Abs(axisDelta) <= DragStepEpsilon)
+                return 1f;
+
+            float targetOffset = currentOffset + axisDelta;
+            if ((currentOffset > DragStepEpsilon && targetOffset < -DragStepEpsilon) ||
+                (currentOffset < -DragStepEpsilon && targetOffset > DragStepEpsilon))
+            {
+                return Mathf.Clamp01(-currentOffset / axisDelta);
+            }
+
+            float threshold = axisDelta > 0f ? FineCellDragThreshold : -FineCellDragThreshold;
+            if (Mathf.Abs(targetOffset) >= FineCellDragThreshold - DragStepEpsilon)
+                return Mathf.Clamp01((threshold - currentOffset) / axisDelta);
+
+            return 1f;
+        }
+
+        private bool TryCommitFineAxisStep(
+            PrototypeBoard board,
+            GravityBoardGrid grid,
+            PuzzlePiece piece,
+            PieceModel model,
+            bool isCombined,
+            int alignmentStride,
+            bool horizontalAxis,
+            ref Vector2 offset)
+        {
+            float axisOffset = horizontalAxis ? offset.x : offset.y;
+            if (Mathf.Abs(axisOffset) < FineCellDragThreshold - DragStepEpsilon)
+                return false;
+
+            int stepDir = axisOffset > 0f ? 1 : -1;
+            GridCoordinate step = horizontalAxis
+                ? new GridCoordinate(stepDir, 0)
+                : new GridCoordinate(0, stepDir);
+
+            float perpOffset = horizontalAxis ? offset.y : offset.x;
+            if (Mathf.Abs(perpOffset) > DragStepEpsilon)
+            {
+                int perpDir = perpOffset > 0f ? 1 : -1;
+                GridCoordinate combinedDelta = horizontalAxis
+                    ? new GridCoordinate(stepDir, perpDir)
+                    : new GridCoordinate(perpDir, stepDir);
+                if (!CanMoveSelectionBy(board, grid, piece, model, isCombined, combinedDelta))
+                    return false;
+            }
+
+            if (!board.TryMoveDraggingPieceOnGrid(piece, model.Anchor.Offset(step), out _))
+                return false;
+
+            TryRecordCanonicalDragAnchor(board, piece, model.Anchor, alignmentStride);
+            if (horizontalAxis)
+                offset.x = 0f;
+            else
+                offset.y = 0f;
             return true;
+        }
+
+        private static bool CanMoveSelectionBy(
+            PrototypeBoard board,
+            GravityBoardGrid grid,
+            PuzzlePiece piece,
+            PieceModel model,
+            bool isCombined,
+            GridCoordinate delta)
+        {
+            return isCombined
+                ? board.CanMovePieceGroupBy(piece, delta)
+                : CanMoveSingleModelTo(board, grid, model, model.Anchor.Offset(delta));
+        }
+
+        private static bool CanMoveSingleModelTo(
+            PrototypeBoard board,
+            GravityBoardGrid grid,
+            PieceModel model,
+            GridCoordinate targetAnchor)
+        {
+            return board.CanMovePiece(model, targetAnchor) &&
+                   grid.CheckPlacementIgnoringPiece(model, targetAnchor, model.Id).IsSuccess;
         }
 
         private static bool TryGetSnapshotPiece(
@@ -1404,10 +1679,9 @@ namespace GravityPuzzle
 
         private void ProcessTouchInput()
         {
-            Touch touch = FindActiveTouch();
-
             if (selectedPiece == null)
             {
+                Touch touch = Input.GetTouch(0);
                 if (touch.phase == TouchPhase.Began)
                 {
                     ClearFrozenGroupFeedback();
@@ -1422,18 +1696,22 @@ namespace GravityPuzzle
                 return;
             }
 
-            if (touch.fingerId != activeFingerId)
-                return;
-
-            if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+            if (!TryFindActiveTouch(out Touch activeTouch))
             {
-                UpdateDragTarget(PointerWorldPosition(touch.position) + grabOffset);
                 ReleasePiece();
                 activeFingerId = -1;
                 return;
             }
 
-            UpdateDragTarget(PointerWorldPosition(touch.position) + grabOffset);
+            if (activeTouch.phase == TouchPhase.Ended || activeTouch.phase == TouchPhase.Canceled)
+            {
+                UpdateDragTarget(PointerWorldPosition(activeTouch.position) + grabOffset);
+                ReleasePiece();
+                activeFingerId = -1;
+                return;
+            }
+
+            UpdateDragTarget(PointerWorldPosition(activeTouch.position) + grabOffset);
         }
 
         private void ProcessMouseInput()
@@ -1464,19 +1742,26 @@ namespace GravityPuzzle
                 ReleasePiece();
         }
 
-        private Touch FindActiveTouch()
+        private bool TryFindActiveTouch(out Touch activeTouch)
         {
             if (activeFingerId < 0)
-                return Input.GetTouch(0);
+            {
+                activeTouch = default;
+                return false;
+            }
 
             for (int i = 0; i < Input.touchCount; i++)
             {
                 Touch touch = Input.GetTouch(i);
                 if (touch.fingerId == activeFingerId)
-                    return touch;
+                {
+                    activeTouch = touch;
+                    return true;
+                }
             }
 
-            return Input.GetTouch(0);
+            activeTouch = default;
+            return false;
         }
 
         private void TrySelectPiece(Vector2 pointerPosition)
@@ -1538,6 +1823,8 @@ namespace GravityPuzzle
             // A queued gravity plan or a still-owned fall tween can otherwise
             // restore an old body pose after this drag has started.
             pendingGridGravityMoves.Clear();
+            Vector2 preGrabVisualPosition = body.position;
+            bool hasCommittedPosition = TryGetCommittedGridPresentationPosition(piece, out Vector2 primaryCommittedPosition);
             for (int groupIndex = 0; groupIndex < selectedJointGroupPieces.Count; groupIndex++)
             {
                 PuzzlePiece groupPiece = selectedJointGroupPieces[groupIndex];
@@ -1553,7 +1840,6 @@ namespace GravityPuzzle
             if (selectedJointGroupPieces.Count > 1)
                 Physics2D.SyncTransforms();
 
-            grabOffset = body.position - pointerPosition;
             dragTarget = body.position;
             pendingDragIntent = Vector2.zero;
             fineDragRemainder = Vector2.zero;
@@ -1565,6 +1851,14 @@ namespace GravityPuzzle
                 AlignmentStride(GravityLevelRuntime.FindLevelToPlay()));
             lastResolvedDragPosition = body.position;
             hasLastResolvedDragPosition = true;
+
+            if (hasCommittedPosition && (preGrabVisualPosition - primaryCommittedPosition).sqrMagnitude > 1e-6f)
+                TryMoveSelectedPieceOnGrid(piece, preGrabVisualPosition - primaryCommittedPosition);
+
+            grabOffset = body.position - pointerPosition;
+            dragTarget = body.position;
+            pendingDragIntent = Vector2.zero;
+            lastResolvedDragPosition = body.position;
         }
 
         private static PuzzlePiece TryResolveGridPieceAt(Vector2 worldPosition)
