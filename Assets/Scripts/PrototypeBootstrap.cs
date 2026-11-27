@@ -825,7 +825,22 @@ namespace GravityPuzzle
             if (activePiece != null && activePiece.IsMovementLocked)
                 return false;
 
-            return revealAreaCoordinator == null || revealAreaCoordinator.CanMovePiece(piece, targetAnchor);
+            if (revealAreaCoordinator != null && !revealAreaCoordinator.CanMovePiece(piece, targetAnchor))
+                return false;
+
+            BlockShredder shredder = BlockShredder.Instance;
+            if (shredder != null &&
+                shredder.HasActiveOffBoardPieces &&
+                !targetAnchor.Equals(piece.Anchor) &&
+                shredder.DoesPiecePlacementOverlapOffBoardPieces(
+                    GravityLevelRuntime.FindLevelToPlay(),
+                    piece,
+                    targetAnchor))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         public bool CanPieceParticipateInGravity(PieceModel piece)
@@ -1208,7 +1223,7 @@ namespace GravityPuzzle
         /// operation. No intermediate system may retain a Reserved footprint
         /// or animate a transform between those two states.
         /// </summary>
-        public bool TryEnterOpenFreefallAtMapExit(PuzzlePiece piece)
+        public bool TryEnterOpenFreefallAtMapExit(PuzzlePiece piece, bool wakeGravity = true)
         {
             if (!TryGetPieceModel(piece, out PieceModel model) ||
                 model.State != PieceState.HandoffToPhysics ||
@@ -1223,10 +1238,11 @@ namespace GravityPuzzle
             }
 
             JointSpringPresenter?.PrepareForShredder(piece);
-            BreakJointsForPiece(piece);
+            BreakJointsForPiece(piece, wakeGravity: false);
 
             BoardOccupancyChanged?.Invoke();
-            PuzzleDragController.WakeUpGravity();
+            if (wakeGravity)
+                PuzzleDragController.WakeUpGravity();
             return true;
         }
 
@@ -1843,11 +1859,8 @@ namespace GravityPuzzle
             {
                 PieceModel member = jointGroupModels[index];
                 GridCoordinate targetAnchor = member.Anchor.Offset(delta);
-                if (revealAreaCoordinator != null &&
-                    !revealAreaCoordinator.CanMovePiece(member, targetAnchor))
-                {
+                if (!CanMovePiece(member, targetAnchor))
                     return false;
-                }
 
                 jointGroupTargetAnchors.Add(targetAnchor);
             }
@@ -2022,11 +2035,14 @@ namespace GravityPuzzle
             }
         }
 
-        public int BreakJointsForPiece(PuzzlePiece piece)
+        public int BreakJointsForPiece(PuzzlePiece piece, bool wakeGravity = true)
         {
-            return TryGetPieceModel(piece, out PieceModel model)
+            int removed = TryGetPieceModel(piece, out PieceModel model)
                 ? pieceJointGraph.RemoveJointsForMember(model.Id)
                 : 0;
+            if (removed > 0 && wakeGravity && IsLevelRunning)
+                PuzzleDragController.WakeUpGravity();
+            return removed;
         }
 
         /// <summary>
@@ -2081,6 +2097,7 @@ namespace GravityPuzzle
 
         private readonly List<PieceModel> shredderCheckModels = new List<PieceModel>(1);
         private readonly List<GridCoordinate> shredderCheckAnchors = new List<GridCoordinate>(1);
+        private readonly List<int> shredderJointBuffer = new List<int>(8);
 
         public bool AreAllJointGroupMembersCanonical(PuzzlePiece piece, int alignmentStride)
         {
@@ -2256,34 +2273,77 @@ namespace GravityPuzzle
 
             shredderSupportVisitIds.Clear();
             GravityBoardGrid grid = BoardSnapshot.Grid;
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            BlockShredder shredder = BlockShredder.Instance;
+            bool checkOffBoardShredder = shredder != null && shredder.HasActiveOffBoardPieces && level != null;
+
             for (int index = 0; index < models.Count; index++)
             {
                 PieceModel member = models[index];
                 if (member == null)
                     continue;
 
-                if (CollectShredderOrOccupiedBelow(grid, member, candidateAnchors[index], models))
-                    return true;
+                AddUniqueVisitId(member.Id);
+                EnqueueJointPartnersForShredderSupport(member.Id);
             }
 
             for (int cursor = 0; cursor < shredderSupportVisitIds.Count; cursor++)
             {
                 int pieceId = shredderSupportVisitIds[cursor];
-                if (!BoardSnapshot.TryGetPiece(pieceId, out PieceModel current) || !current.IsOnBoard)
-                    continue;
+                GridCoordinate anchor;
+                PieceModel pieceModel = FindPieceModelInList(models, pieceId, out int listIndex);
+                if (pieceModel != null)
+                {
+                    anchor = candidateAnchors[listIndex];
+                }
+                else
+                {
+                    if (!BoardSnapshot.TryGetPiece(pieceId, out pieceModel) || !pieceModel.IsOnBoard)
+                        continue;
 
-                if (CollectShredderOrOccupiedBelow(grid, current, current.Anchor, models))
+                    anchor = pieceModel.Anchor;
+                }
+
+                if (CollectShredderOrOccupiedBelow(grid, pieceModel, anchor, models, level, shredder, checkOffBoardShredder))
                     return true;
             }
 
             return false;
         }
 
+        private void EnqueueJointPartnersForShredderSupport(int pieceId)
+        {
+            pieceJointGraph.CollectGroupMembers(pieceId, shredderJointBuffer);
+            for (int i = 0; i < shredderJointBuffer.Count; i++)
+                AddUniqueVisitId(shredderJointBuffer[i]);
+        }
+
+        private static PieceModel FindPieceModelInList(
+            IReadOnlyList<PieceModel> models,
+            int pieceId,
+            out int foundIndex)
+        {
+            for (int index = 0; index < models.Count; index++)
+            {
+                if (models[index] != null && models[index].Id == pieceId)
+                {
+                    foundIndex = index;
+                    return models[index];
+                }
+            }
+
+            foundIndex = -1;
+            return null;
+        }
+
         private bool CollectShredderOrOccupiedBelow(
             GravityBoardGrid grid,
             PieceModel model,
             GridCoordinate anchor,
-            IReadOnlyList<PieceModel> ignoredModels)
+            IReadOnlyList<PieceModel> ignoredModels,
+            GravityLevelDefinition level,
+            BlockShredder shredder,
+            bool checkOffBoardShredder)
         {
             for (int cellIndex = 0; cellIndex < model.LocalCells.Count; cellIndex++)
             {
@@ -2292,6 +2352,13 @@ namespace GravityPuzzle
                     continue;
 
                 GridCellState state = grid.GetCellState(below);
+                if (state == GridCellState.Empty)
+                {
+                    if (checkOffBoardShredder && shredder.IsFineCellBlockedByOffBoardPieces(level, below))
+                        return true;
+                    continue;
+                }
+
                 if (state != GridCellState.Reserved && state != GridCellState.Occupied)
                     continue;
 
@@ -2314,7 +2381,10 @@ namespace GravityPuzzle
 
                 // A piece held by the player (Dragging) is temporary input geometry, never shredder follow support.
                 if (occupant.State == PieceState.Placed || occupant.State == PieceState.Falling)
+                {
                     AddUniqueVisitId(occupantId);
+                    EnqueueJointPartnersForShredderSupport(occupantId);
+                }
             }
 
             return false;
@@ -2383,6 +2453,81 @@ namespace GravityPuzzle
 
             for (int index = 0; index < jointGroupModels.Count; index++)
                 TryTransitionPieceState(jointGroupModels[index], PieceState.Falling);
+
+            BoardOccupancyChanged?.Invoke();
+            return true;
+        }
+
+        public bool TryPlanJointGroupGravityRetarget(
+            int sourcePieceId,
+            List<GridGravityMove> moves)
+        {
+            if (moves == null || !TryCollectJointGroupModels(sourcePieceId, jointGroupModels))
+                return false;
+
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                PieceModel member = jointGroupModels[index];
+                if (member == null || member.State != PieceState.Falling || !CanPieceParticipateInGravity(member))
+                    return false;
+            }
+
+            moves.Clear();
+            if (!BoardSnapshot.Grid.TryGetGroupFallTarget(jointGroupModels, jointGroupTargetAnchors, CanMovePieceDelegate))
+                return false;
+
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            int alignmentStride = level != null ? Mathf.Max(1, level.subdivisions) : 1;
+            if (!TryTrimGroupFallTargetsToCanonicalY(jointGroupModels, jointGroupTargetAnchors, alignmentStride))
+                return false;
+
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                PieceModel member = jointGroupModels[index];
+                moves.Add(new GridGravityMove(member.Id, member.Anchor, jointGroupTargetAnchors[index]));
+            }
+
+            return moves.Count > 0;
+        }
+
+        public bool TryCommitJointGroupGravityRetarget(
+            IReadOnlyList<GridGravityMove> moves,
+            out GridPlacementResult result)
+        {
+            result = GridPlacementResult.Failure(
+                GridPlacementFailureReason.EmptyPiece,
+                default,
+                GridCellState.Empty,
+                default);
+            if (moves == null || moves.Count == 0 ||
+                !TryCollectJointGroupModels(moves[0].PieceId, jointGroupModels) ||
+                jointGroupModels.Count != moves.Count)
+            {
+                return false;
+            }
+
+            jointGroupTargetAnchors.Clear();
+            for (int index = 0; index < jointGroupModels.Count; index++)
+            {
+                PieceModel member = jointGroupModels[index];
+                GridGravityMove move = moves[index];
+                if (member.Id != move.PieceId || !member.Anchor.Equals(move.FromAnchor) ||
+                    member.State != PieceState.Falling ||
+                    !CanMovePiece(member, move.ToAnchor))
+                {
+                    return false;
+                }
+
+                jointGroupTargetAnchors.Add(move.ToAnchor);
+            }
+
+            if (!BoardSnapshot.Grid.TryMoveGroupIgnoringMembers(
+                    jointGroupModels,
+                    jointGroupTargetAnchors,
+                    out result))
+            {
+                return false;
+            }
 
             BoardOccupancyChanged?.Invoke();
             return true;
@@ -2507,9 +2652,7 @@ namespace GravityPuzzle
             // drag behaviour depend on combined-block setup.
             if (jointGroupModels.Count == 1)
             {
-                bool revealOk = revealAreaCoordinator == null ||
-                                revealAreaCoordinator.CanMovePiece(source, targetAnchor);
-                if (!revealOk)
+                if (!CanMovePiece(source, targetAnchor))
                 {
                     result = GridPlacementResult.Failure(
                         GridPlacementFailureReason.EmptyPiece,
@@ -2540,9 +2683,7 @@ namespace GravityPuzzle
             {
                 PieceModel member = jointGroupModels[index];
                 GridCoordinate memberTarget = member.Anchor.Offset(delta);
-                bool revealOk = revealAreaCoordinator == null ||
-                                revealAreaCoordinator.CanMovePiece(member, memberTarget);
-                if (!revealOk)
+                if (!CanMovePiece(member, memberTarget))
                 {
                     result = GridPlacementResult.Failure(
                         GridPlacementFailureReason.EmptyPiece,
@@ -2580,9 +2721,7 @@ namespace GravityPuzzle
             {
                 GridCoordinate nextAnchor = jointGroupTargetAnchors[index].Offset(delta);
                 PieceModel member = jointGroupModels[index];
-                bool revealOk = revealAreaCoordinator == null ||
-                                revealAreaCoordinator.CanMovePiece(member, nextAnchor);
-                if (!revealOk)
+                if (!CanMovePiece(member, nextAnchor))
                     return false;
             }
 

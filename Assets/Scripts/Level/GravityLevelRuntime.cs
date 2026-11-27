@@ -236,8 +236,11 @@ namespace GravityPuzzle
             return CurrentLevel;
         }
 
-        public const int InitialPlayerCoinAmount = 1000;
+        public const int InitialPlayerCoinAmount = 9999;
         public const int CoinRewardPerLevel = 40;
+        private const string SpentCoinPrefsKey = "GravityPuzzle.PlayerCoins.Spent.v2";
+
+        public static event Action<int> PlayerCoinAmountChanged;
 
         public static bool HasNextLevel
         {
@@ -305,11 +308,37 @@ namespace GravityPuzzle
             : 0;
 
         /// <summary>
-        /// Player's coin total at the start of the active campaign level.
+        /// Player's coin total at the start of the active campaign level minus any spent coins.
         /// Starts at 1000 on Level 1 and increases by 40 for each completed level.
         /// </summary>
-        public static int CurrentPlayerCoinAmount =>
-            InitialPlayerCoinAmount + (CurrentLevelNumber - 1) * CoinRewardPerLevel;
+        public static int CurrentPlayerCoinAmount
+        {
+            get
+            {
+                int earned = InitialPlayerCoinAmount + (CurrentLevelNumber - 1) * CoinRewardPerLevel;
+                int spent = Mathf.Max(0, PlayerPrefs.GetInt(SpentCoinPrefsKey, 0));
+                return Mathf.Max(0, earned - spent);
+            }
+        }
+
+        /// <summary>
+        /// Attempts to deduct <paramref name="amount"/> coins from the player's balance.
+        /// Returns false without mutating state when the balance is insufficient.
+        /// </summary>
+        public static bool TrySpendPlayerCoins(int amount)
+        {
+            if (amount <= 0)
+                return true;
+
+            if (CurrentPlayerCoinAmount < amount)
+                return false;
+
+            int nextSpent = Mathf.Max(0, PlayerPrefs.GetInt(SpentCoinPrefsKey, 0)) + amount;
+            PlayerPrefs.SetInt(SpentCoinPrefsKey, nextSpent);
+            PlayerPrefs.Save();
+            PlayerCoinAmountChanged?.Invoke(CurrentPlayerCoinAmount);
+            return true;
+        }
 
         /// <summary>
         /// Requests that the next scene load immediately starts the active level without showing the main menu.

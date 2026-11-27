@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GravityPuzzle.Config;
+using GravityPuzzle.Core.Grid;
 using GravityPuzzle.Gameplay.Pieces;
 using GravityPuzzle.Infrastructure.Services;
 using GravityPuzzle.Presentation.VFX;
@@ -13,6 +14,7 @@ namespace GravityPuzzle
     /// Handles block shredding triggers, pre-fractured composite block voxelization,
     /// and pooled shard progress handoff to the level progress manager.
     /// </summary>
+    [DefaultExecutionOrder(0)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AudioSource))]
     public class BlockShredder : MonoBehaviour
@@ -21,11 +23,36 @@ namespace GravityPuzzle
         private static readonly WaitForFixedUpdate FeedPhysicsStep = new WaitForFixedUpdate();
         private const float FeedCeilingOverlapEpsilon = 0.05f;
         private const float FeedCeilingSeamEpsilon = 0.01f;
+        private const float OffBoardBoardOverlapX = 0.02f;
+        private const float OffBoardBoardOverlapY = 0.001f;
+        // Small excess above (dist / dt) guarantees crossing seamY on the final physics step
+        // while keeping AlignShreddingFootprintToCutter snap-up negligible (~0.005u).
+        private const float CutterSeamOvershootSpeedMargin = 0.25f;
         private const float FreefallLateralDriftEpsilon = 0.0005f;
-        private readonly List<PuzzlePiece> activeFeedPieces = new List<PuzzlePiece>();
+
+        private struct ActiveFeedEntry
+        {
+            public PuzzlePiece Piece;
+            public float ClippingSeamY;
+        }
+
+        private readonly List<ActiveFeedEntry> activeFeedPieces = new List<ActiveFeedEntry>();
         private readonly List<Bounds> ceilingFreefallCells = new List<Bounds>();
         private readonly List<Bounds> ceilingFeedCells = new List<Bounds>();
         private readonly List<Bounds> sortCellBoundsBuffer = new List<Bounds>();
+        private readonly List<Bounds> queryOffBoardCellsBuffer = new List<Bounds>(32);
+        private readonly List<Bounds> queryCandidatePieceCellsBuffer = new List<Bounds>(32);
+        private readonly List<ExitHandoff> sortedFreefallBuffer = new List<ExitHandoff>(16);
+        private int[] topoCellStart = new int[16];
+        private int[] topoCellCount = new int[16];
+        private int[] topoInDegree = new int[16];
+        private bool[] topoVisited = new bool[16];
+        private bool[] topoEdges = new bool[256];
+        private int[] offBoardBlockedRowByColumn;
+        private int[] previousBlockedRowByColumn;
+        private int offBoardBlockedCols;
+        private float maxActiveOffBoardTopY = float.NegativeInfinity;
+        private long nextFreefallEntrySequence = 1L;
 
         [Header("Configuration")]
         [Tooltip("Authoring asset used for both this feed behaviour and runtime-created shredder wheels.")]
@@ -58,6 +85,7 @@ namespace GravityPuzzle
             public PuzzlePiece Piece;
             public ShredderCatchZone Zone;
             public float CachedLowestY;
+            public long EntrySequence;
             // Map-exit X; open freefall is a straight vertical drop.
             public float EntryX;
             public bool LateralDriftReported;
@@ -107,6 +135,9 @@ namespace GravityPuzzle
                 if (b.Piece == null)
                     return -1;
                 int cmp = a.CachedLowestY.CompareTo(b.CachedLowestY);
+                if (cmp != 0)
+                    return cmp;
+                cmp = a.EntrySequence.CompareTo(b.EntrySequence);
                 return cmp != 0 ? cmp : a.Piece.SourcePieceId.CompareTo(b.Piece.SourcePieceId);
             }
         }
@@ -260,18 +291,13 @@ namespace GravityPuzzle
             }
 
             if (activeFreefallPieces.Count == 0)
-                return;
-
-            for (int i = 0; i < activeFreefallPieces.Count; i++)
             {
-                ExitHandoff freefall = activeFreefallPieces[i];
-                freefall.CachedLowestY = GetLowestCellY(freefall.Piece);
+                if (HasTrackedBlockedBoardRows())
+                    RefreshOffBoardBlockedRows(wakeIfCleared: true);
+                return;
             }
 
-            // Sort ascending by lowest world-space cell Y.
-            // Lower pieces in the shaft are processed first, allowing pieces
-            // above them to cleanly align their velocity and contact position.
-            activeFreefallPieces.Sort(FreefallYComparer);
+            SortActiveFreefallPiecesTopologically();
 
             for (int index = 0; index < activeFreefallPieces.Count; index++)
             {
@@ -289,6 +315,157 @@ namespace GravityPuzzle
 
                 LimitFreefallDescentAboveObstacles(freefall.Piece, freefall.Zone, index);
             }
+
+            RefreshOffBoardBlockedRows(wakeIfCleared: true);
+        }
+
+        private void EnsureFreefallSortCapacity(int count)
+        {
+            if (topoCellStart.Length < count)
+            {
+                int next = Mathf.Max(count, topoCellStart.Length * 2);
+                topoCellStart = new int[next];
+                topoCellCount = new int[next];
+                topoInDegree = new int[next];
+                topoVisited = new bool[next];
+            }
+
+            int edgeCapacity = count * count;
+            if (topoEdges.Length < edgeCapacity)
+                topoEdges = new bool[Mathf.Max(edgeCapacity, topoEdges.Length * 2)];
+        }
+
+        private int CompareExitHandoffTieBreaker(ExitHandoff a, ExitHandoff b)
+        {
+            return FreefallYComparer.Compare(a, b);
+        }
+
+        /// <summary>
+        /// Orders freefall bodies so every piece strictly below another in at least
+        /// one shared X column executes first, preventing L-shaped overhangs or
+        /// penetrated pieces from sorting ahead of their lower support.
+        /// </summary>
+        private void SortActiveFreefallPiecesTopologically()
+        {
+            int count = activeFreefallPieces.Count;
+            if (count == 0)
+                return;
+
+            for (int i = 0; i < count; i++)
+                activeFreefallPieces[i].CachedLowestY = GetLowestCellY(activeFreefallPieces[i].Piece);
+
+            if (count == 1)
+                return;
+
+            EnsureFreefallSortCapacity(count);
+            sortCellBoundsBuffer.Clear();
+            for (int i = 0; i < count; i++)
+            {
+                topoCellStart[i] = sortCellBoundsBuffer.Count;
+                PuzzlePiece p = activeFreefallPieces[i].Piece;
+                if (p != null)
+                {
+                    p.GetActiveCellBounds(queryOffBoardCellsBuffer);
+                    sortCellBoundsBuffer.AddRange(queryOffBoardCellsBuffer);
+                }
+                topoCellCount[i] = sortCellBoundsBuffer.Count - topoCellStart[i];
+                topoInDegree[i] = 0;
+                topoVisited[i] = false;
+            }
+
+            int edgeStride = count;
+            Array.Clear(topoEdges, 0, count * edgeStride);
+
+            for (int i = 0; i < count; i++)
+            {
+                int iStart = topoCellStart[i];
+                int iCount = topoCellCount[i];
+                for (int j = i + 1; j < count; j++)
+                {
+                    int jStart = topoCellStart[j];
+                    int jCount = topoCellCount[j];
+                    bool iBelowJ = false;
+                    bool jBelowI = false;
+
+                    for (int aIndex = 0; aIndex < iCount; aIndex++)
+                    {
+                        Bounds cellA = sortCellBoundsBuffer[iStart + aIndex];
+                        for (int bIndex = 0; bIndex < jCount; bIndex++)
+                        {
+                            Bounds cellB = sortCellBoundsBuffer[jStart + bIndex];
+                            float overlapX = Mathf.Min(cellA.max.x, cellB.max.x) - Mathf.Max(cellA.min.x, cellB.min.x);
+                            if (overlapX <= FeedCeilingOverlapEpsilon)
+                                continue;
+
+                            float centerDeltaY = cellB.center.y - cellA.center.y;
+                            if (centerDeltaY > OffBoardBoardOverlapY)
+                                iBelowJ = true;
+                            else if (centerDeltaY < -OffBoardBoardOverlapY)
+                                jBelowI = true;
+                        }
+                    }
+
+                    if (iBelowJ && !jBelowI)
+                    {
+                        topoEdges[i * edgeStride + j] = true;
+                        topoInDegree[j]++;
+                    }
+                    else if (jBelowI && !iBelowJ)
+                    {
+                        topoEdges[j * edgeStride + i] = true;
+                        topoInDegree[i]++;
+                    }
+                    else if (iBelowJ && jBelowI)
+                    {
+                        if (CompareExitHandoffTieBreaker(activeFreefallPieces[i], activeFreefallPieces[j]) <= 0)
+                        {
+                            topoEdges[i * edgeStride + j] = true;
+                            topoInDegree[j]++;
+                        }
+                        else
+                        {
+                            topoEdges[j * edgeStride + i] = true;
+                            topoInDegree[i]++;
+                        }
+                    }
+                }
+            }
+
+            sortedFreefallBuffer.Clear();
+            for (int step = 0; step < count; step++)
+            {
+                int bestIndex = -1;
+                for (int i = 0; i < count; i++)
+                {
+                    if (topoVisited[i] || topoInDegree[i] != 0)
+                        continue;
+                    if (bestIndex < 0 || CompareExitHandoffTieBreaker(activeFreefallPieces[i], activeFreefallPieces[bestIndex]) < 0)
+                        bestIndex = i;
+                }
+
+                if (bestIndex < 0)
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (topoVisited[i])
+                            continue;
+                        if (bestIndex < 0 || CompareExitHandoffTieBreaker(activeFreefallPieces[i], activeFreefallPieces[bestIndex]) < 0)
+                            bestIndex = i;
+                    }
+                }
+
+                topoVisited[bestIndex] = true;
+                sortedFreefallBuffer.Add(activeFreefallPieces[bestIndex]);
+                int rowOffset = bestIndex * edgeStride;
+                for (int j = 0; j < count; j++)
+                {
+                    if (!topoVisited[j] && topoEdges[rowOffset + j])
+                        topoInDegree[j]--;
+                }
+            }
+
+            activeFreefallPieces.Clear();
+            activeFreefallPieces.AddRange(sortedFreefallBuffer);
         }
 
         /// <summary>
@@ -333,12 +510,18 @@ namespace GravityPuzzle
                 Quaternion.identity);
         }
 
+        private float GetClippedSeamY(ShredderCatchZone zone)
+        {
+            float ratio = shredderConfig != null ? Mathf.Clamp(shredderConfig.GearClippingRatio, 0.1f, 0.9f) : 0.45f;
+            float wheelRadius = zone.WheelRadius > 0f ? zone.WheelRadius : 0.4f;
+            return zone.ShredY - wheelRadius * ratio;
+        }
+
         private void LimitFreefallDescentAboveObstacles(PuzzlePiece piece, ShredderCatchZone zone, int freefallIndex)
         {
             Rigidbody2D body = piece.Body;
             if (body == null || zone == null || shredderConfig == null)
                 return;
-
 
             // Accelerate from the current descent speed toward terminal speed.
             float currentDescentSpeed = Mathf.Max(shredderConfig.PhysicsFreefallEntrySpeed, -body.velocity.y);
@@ -346,23 +529,22 @@ namespace GravityPuzzle
                 shredderConfig.PhysicsFreefallMaxSpeed,
                 currentDescentSpeed + shredderConfig.PhysicsFreefallAcceleration * Time.fixedDeltaTime);
 
-            if (activeFeedPieces.Count == 0 && freefallIndex == 0)
-            {
-                body.velocity = new Vector2(0f, -targetFreefallSpeed);
-                body.angularVelocity = 0f;
-                return;
-            }
-
-            float seamY = zone.ShredY - zone.WheelRadius * Mathf.Clamp(shredderConfig.GearClippingRatio, 0.1f, 0.9f);
+            float seamY = GetClippedSeamY(zone);
             piece.GetActiveCellBounds(ceilingFreefallCells);
+            float lowestCellY = float.PositiveInfinity;
+            for (int i = 0; i < ceilingFreefallCells.Count; i++)
+                lowestCellY = Mathf.Min(lowestCellY, ceilingFreefallCells[i].min.y);
+
             float minGap = float.PositiveInfinity;
             float targetFeedSpeed = shredderConfig.FeedSpeed > 0f ? shredderConfig.FeedSpeed : 3.8f;
             float closestObstacleSpeed = targetFeedSpeed;
+            float dt = Time.fixedDeltaTime;
 
             // 1. Check active feeding pieces currently being shredded
             for (int i = activeFeedPieces.Count - 1; i >= 0; i--)
             {
-                PuzzlePiece feed = activeFeedPieces[i];
+                ActiveFeedEntry feedEntry = activeFeedPieces[i];
+                PuzzlePiece feed = feedEntry.Piece;
                 if (feed == null || feed.PhysicsProfile != PiecePhysicsProfile.Shredding)
                 {
                     activeFeedPieces.RemoveAt(i);
@@ -373,7 +555,7 @@ namespace GravityPuzzle
                     continue;
 
                 feed.GetActiveCellBounds(ceilingFeedCells);
-                float drop = ComputeFeedCeilingDrop(ceilingFreefallCells, ceilingFeedCells, seamY);
+                float drop = ComputeFeedCeilingDrop(ceilingFreefallCells, ceilingFeedCells, feedEntry.ClippingSeamY);
                 if (drop < minGap)
                 {
                     minGap = drop;
@@ -381,7 +563,7 @@ namespace GravityPuzzle
                 }
             }
 
-            // 2. Check other freefall pieces that are strictly below this piece (earlier in sorted order)
+            // 2. Check other freefall pieces that precede this piece in topological order
             for (int i = 0; i < freefallIndex; i++)
             {
                 PuzzlePiece other = activeFreefallPieces[i].Piece;
@@ -397,27 +579,34 @@ namespace GravityPuzzle
                 }
             }
 
-
-            if (float.IsPositiveInfinity(minGap))
+            float desiredSpeed = targetFreefallSpeed;
+            if (!float.IsPositiveInfinity(minGap))
             {
-                body.velocity = new Vector2(0f, -targetFreefallSpeed);
-                body.angularVelocity = 0f;
-                return;
+                // Instantly resolve penetration so pieces never stay inside one another
+                if (minGap < 0f)
+                {
+                    Vector2 newPos = new Vector2(body.position.x, body.position.y - minGap);
+                    body.position = newPos;
+                    piece.transform.position = new Vector3(newPos.x, newPos.y, piece.transform.position.z);
+                    lowestCellY -= minGap;
+                    minGap = 0f;
+                }
+
+                // Descend matching the obstacle's speed when resting on it; never clamp to 0 (which causes mid-air hanging)
+                float maxAllowedSpeed = Mathf.Max(closestObstacleSpeed, minGap / dt);
+                desiredSpeed = Mathf.Min(desiredSpeed, maxAllowedSpeed);
             }
 
-            // Instantly resolve penetration so colliders never stay inside one another
-            if (minGap < 0f)
+            // Softly cap unobstructed final approach to the cutter seam so a fast freefall body
+            // does not overshoot by 0.5u and jump upward in AlignShreddingFootprintToCutter into a follower.
+            if (lowestCellY > seamY && lowestCellY != float.PositiveInfinity)
             {
-                Vector2 newPos = new Vector2(body.position.x, body.position.y - minGap);
-                body.position = newPos;
-                piece.transform.position = new Vector3(newPos.x, newPos.y, piece.transform.position.z);
-                minGap = 0f;
+                float distanceToSeam = lowestCellY - seamY;
+                float seamArrivalSpeed = distanceToSeam / dt + CutterSeamOvershootSpeedMargin;
+                if (desiredSpeed > seamArrivalSpeed)
+                    desiredSpeed = Mathf.Max(targetFeedSpeed, seamArrivalSpeed);
             }
 
-            // Descend matching the obstacle's speed when resting on it; never clamp to 0 (which causes mid-air hanging)
-            float dt = Time.fixedDeltaTime;
-            float maxAllowedSpeed = Mathf.Max(closestObstacleSpeed, minGap / dt);
-            float desiredSpeed = Mathf.Min(targetFreefallSpeed, maxAllowedSpeed);
             body.velocity = new Vector2(0f, -desiredSpeed);
             body.angularVelocity = 0f;
         }
@@ -512,6 +701,21 @@ namespace GravityPuzzle
                 particleShredAudioSource.Stop();
             activeShredSoundCount = 0;
             activeFeedPieces.Clear();
+            activeFreefallPieces.Clear();
+            sortedFreefallBuffer.Clear();
+            sortCellBoundsBuffer.Clear();
+            queryOffBoardCellsBuffer.Clear();
+            queryCandidatePieceCellsBuffer.Clear();
+            ceilingFreefallCells.Clear();
+            ceilingFeedCells.Clear();
+            bool notifyWake = gameObject.scene.isLoaded &&
+                              PrototypeBoard.Active != null &&
+                              PrototypeBoard.Active.IsLevelRunning;
+            RefreshOffBoardBlockedRows(wakeIfCleared: notifyWake);
+            offBoardBlockedRowByColumn = null;
+            previousBlockedRowByColumn = null;
+            offBoardBlockedCols = 0;
+            maxActiveOffBoardTopY = float.NegativeInfinity;
         }
 
         private void OnDestroy()
@@ -538,11 +742,15 @@ namespace GravityPuzzle
                 !zone.ContainsMapExitFootprint(piece))
                 return false;
 
+            float handoffSpeed = piece.GridFallView != null
+                ? piece.GridFallView.ConsumeHandoffSpeedThisFrame()
+                : 0f;
+
             if (!piece.TryBeginShredderExitHandoff())
                 return false;
 
             PrototypeBoard board = PrototypeBoard.Active;
-            if (board == null || !board.TryEnterOpenFreefallAtMapExit(piece))
+            if (board == null || !board.TryEnterOpenFreefallAtMapExit(piece, wakeGravity: false))
             {
                 Debug.LogError(
                     "[ShredderFreefall] Accepted map exit could not enter isolated freefall.",
@@ -557,17 +765,351 @@ namespace GravityPuzzle
             // The exact grid-exit pose becomes the initial Dynamic pose and
             // Rigidbody2D is the sole movement owner until the cutter seam.
             Physics2D.SyncTransforms();
-            // Continue the board fall's momentum when the piece was captured
-            // in the same frame its grid fall arrived at the map exit.
-            float handoffSpeed = piece.GridFallView != null ? piece.GridFallView.ArrivalSpeedThisFrame : 0f;
             piece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, shredderConfig, handoffSpeed);
             activeFreefallPieces.Add(new ExitHandoff
             {
                 Piece = piece,
                 Zone = zone,
+                EntrySequence = nextFreefallEntrySequence++,
                 EntryX = piece.Body != null ? piece.Body.position.x : piece.transform.position.x,
             });
+
+            // Immediately sort & clamp against active obstacles below so a capture arriving
+            // in Update() or after BlockShredder.FixedUpdate() cannot step into them for 1 tick.
+            SortActiveFreefallPiecesTopologically();
+            for (int index = 0; index < activeFreefallPieces.Count; index++)
+            {
+                if (activeFreefallPieces[index].Piece == piece)
+                {
+                    LimitFreefallDescentAboveObstacles(piece, zone, index);
+                    break;
+                }
+            }
+
+            RefreshOffBoardBlockedRows(wakeIfCleared: false);
+            PuzzleDragController.WakeUpGravity();
             return true;
+        }
+
+        public bool HasActiveOffBoardPieces => activeFreefallPieces.Count > 0 || activeFeedPieces.Count > 0;
+
+        /// <summary>
+        /// True when a grid piece placed at candidateAnchor physically intersects an active
+        /// OpenFreefall or unclipped Shredding piece protruding into or near the board.
+        /// </summary>
+        public bool DoesPiecePlacementOverlapOffBoardPieces(
+            GravityLevelDefinition level,
+            PieceModel model,
+            GridCoordinate candidateAnchor)
+        {
+            if (!HasActiveOffBoardPieces || level == null || model == null || model.LocalCells.Count == 0)
+                return false;
+
+            int subdivisions = Mathf.Max(1, level.subdivisions);
+            float fineCellSize = 1f / subdivisions;
+            float halfFineCell = fineCellSize * 0.5f;
+
+            // O(1) broadphase reject for pieces strictly above all active off-board bodies.
+            if (maxActiveOffBoardTopY != float.NegativeInfinity)
+            {
+                int minLocalY = int.MaxValue;
+                for (int i = 0; i < model.LocalCells.Count; i++)
+                {
+                    if (model.LocalCells[i].Y < minLocalY)
+                        minLocalY = model.LocalCells[i].Y;
+                }
+
+                float candidateMinWorldY =
+                    GravityLevelGridCoordinates.FineCellToWorld(
+                        level,
+                        new GridCoordinate(candidateAnchor.X, candidateAnchor.Y + minLocalY)).y - halfFineCell;
+                if (candidateMinWorldY >= maxActiveOffBoardTopY - OffBoardBoardOverlapY)
+                    return false;
+            }
+
+            for (int i = 0; i < model.LocalCells.Count; i++)
+            {
+                GridCoordinate cell = candidateAnchor.Offset(model.LocalCells[i]);
+                if (IsFineCellBlockedByOffBoardPieces(level, cell))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// True when a single fine grid cell physically intersects an active OpenFreefall
+        /// or unclipped Shredding piece. Shared by placement guards and shredder-support checks.
+        /// </summary>
+        public bool IsFineCellBlockedByOffBoardPieces(
+            GravityLevelDefinition level,
+            GridCoordinate fineCell)
+        {
+            if (!HasActiveOffBoardPieces || level == null)
+                return false;
+
+            int subdivisions = Mathf.Max(1, level.subdivisions);
+            float halfFineCell = 0.5f / subdivisions;
+            Vector2 center = GravityLevelGridCoordinates.FineCellToWorld(level, fineCell);
+            float cellMinX = center.x - halfFineCell;
+            float cellMaxX = center.x + halfFineCell;
+            float cellMinY = center.y - halfFineCell;
+            float cellMaxY = center.y + halfFineCell;
+
+            if (maxActiveOffBoardTopY != float.NegativeInfinity &&
+                cellMinY >= maxActiveOffBoardTopY - OffBoardBoardOverlapY)
+            {
+                return false;
+            }
+
+            return IsWorldBoxBlockedByOffBoardPieces(cellMinX, cellMaxX, cellMinY, cellMaxY, ignoredPiece: null);
+        }
+
+        /// <summary>
+        /// Verifies that no off-board OpenFreefall or Shredding obstacle physically occupies
+        /// the map-exit cell columns at or above the candidate piece's current footprint.
+        /// </summary>
+        public bool CanAdmitPieceAtMapExit(PuzzlePiece piece, ShredderCatchZone zone)
+        {
+            if (piece == null)
+                return false;
+            if (!HasActiveOffBoardPieces)
+                return true;
+
+            piece.GetActiveCellBounds(queryCandidatePieceCellsBuffer);
+            for (int i = 0; i < queryCandidatePieceCellsBuffer.Count; i++)
+            {
+                Bounds candidateCell = queryCandidatePieceCellsBuffer[i];
+                if (IsWorldBoxBlockedByOffBoardPieces(
+                        candidateCell.min.x,
+                        candidateCell.max.x,
+                        candidateCell.min.y,
+                        candidateCell.max.y,
+                        ignoredPiece: piece))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsWorldBoxBlockedByOffBoardPieces(
+            float boxMinX,
+            float boxMaxX,
+            float boxMinY,
+            float boxMaxY,
+            PuzzlePiece ignoredPiece)
+        {
+            for (int i = 0; i < activeFeedPieces.Count; i++)
+            {
+                ActiveFeedEntry feedEntry = activeFeedPieces[i];
+                PuzzlePiece feed = feedEntry.Piece;
+                if (feed == null || feed == ignoredPiece || feed.PhysicsProfile != PiecePhysicsProfile.Shredding)
+                    continue;
+
+                feed.GetActiveCellBounds(queryOffBoardCellsBuffer);
+                for (int c = 0; c < queryOffBoardCellsBuffer.Count; c++)
+                {
+                    Bounds under = queryOffBoardCellsBuffer[c];
+                    if (under.max.y <= feedEntry.ClippingSeamY + FeedCeilingSeamEpsilon)
+                        continue;
+
+                    if (DoesCellOverlapBox(under, boxMinX, boxMaxX, boxMinY, boxMaxY))
+                        return true;
+                }
+            }
+
+            for (int i = 0; i < activeFreefallPieces.Count; i++)
+            {
+                PuzzlePiece freefall = activeFreefallPieces[i].Piece;
+                if (freefall == null || freefall == ignoredPiece || !freefall.IsInOpenFreefall)
+                    continue;
+
+                freefall.GetActiveCellBounds(queryOffBoardCellsBuffer);
+                for (int c = 0; c < queryOffBoardCellsBuffer.Count; c++)
+                {
+                    Bounds under = queryOffBoardCellsBuffer[c];
+                    if (DoesCellOverlapBox(under, boxMinX, boxMaxX, boxMinY, boxMaxY))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool DoesCellOverlapBox(
+            Bounds under,
+            float boxMinX,
+            float boxMaxX,
+            float boxMinY,
+            float boxMaxY)
+        {
+            float overlapX = Mathf.Min(boxMaxX, under.max.x) - Mathf.Max(boxMinX, under.min.x);
+            if (overlapX <= OffBoardBoardOverlapX)
+                return false;
+
+            return under.max.y > boxMinY + OffBoardBoardOverlapY &&
+                   under.min.y < boxMaxY - OffBoardBoardOverlapY;
+        }
+
+        private bool HasTrackedBlockedBoardRows()
+        {
+            if (offBoardBlockedRowByColumn == null)
+                return maxActiveOffBoardTopY != float.NegativeInfinity;
+
+            if (maxActiveOffBoardTopY != float.NegativeInfinity)
+                return true;
+
+            for (int i = 0; i < offBoardBlockedCols; i++)
+            {
+                if (offBoardBlockedRowByColumn[i] >= 0)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void RefreshOffBoardBlockedRows(bool wakeIfCleared)
+        {
+            GravityLevelDefinition level = GravityLevelRuntime.FindLevelToPlay();
+            if (level == null)
+            {
+                maxActiveOffBoardTopY = float.NegativeInfinity;
+                return;
+            }
+
+            int subdivisions = Mathf.Max(1, level.subdivisions);
+            int fineCols = Mathf.Max(1, level.boardColumns) * subdivisions;
+            int fineRows = Mathf.Max(1, level.boardRows) * subdivisions;
+            if (offBoardBlockedRowByColumn == null || offBoardBlockedRowByColumn.Length != fineCols)
+            {
+                offBoardBlockedRowByColumn = new int[fineCols];
+                previousBlockedRowByColumn = new int[fineCols];
+                for (int c = 0; c < fineCols; c++)
+                {
+                    offBoardBlockedRowByColumn[c] = -1;
+                    previousBlockedRowByColumn[c] = -1;
+                }
+                offBoardBlockedCols = fineCols;
+            }
+            else
+            {
+                Array.Copy(offBoardBlockedRowByColumn, previousBlockedRowByColumn, fineCols);
+                for (int c = 0; c < fineCols; c++)
+                    offBoardBlockedRowByColumn[c] = -1;
+            }
+
+            maxActiveOffBoardTopY = float.NegativeInfinity;
+
+            float boardLeftX = -level.boardColumns * 0.5f;
+            float boardRightX = level.boardColumns * 0.5f;
+            float boardBottomY = -level.boardRows * 0.5f;
+            float fineCellSize = 1f / subdivisions;
+
+            for (int i = 0; i < activeFeedPieces.Count; i++)
+            {
+                ActiveFeedEntry feedEntry = activeFeedPieces[i];
+                PuzzlePiece feed = feedEntry.Piece;
+                if (feed == null || feed.PhysicsProfile != PiecePhysicsProfile.Shredding)
+                    continue;
+
+                ProjectCellsIntoBlockedRows(
+                    feed,
+                    feedEntry.ClippingSeamY + FeedCeilingSeamEpsilon,
+                    boardLeftX,
+                    boardRightX,
+                    boardBottomY,
+                    fineCellSize,
+                    fineCols,
+                    fineRows);
+            }
+
+            for (int i = 0; i < activeFreefallPieces.Count; i++)
+            {
+                PuzzlePiece freefall = activeFreefallPieces[i].Piece;
+                if (freefall == null || !freefall.IsInOpenFreefall)
+                    continue;
+
+                ProjectCellsIntoBlockedRows(
+                    freefall,
+                    float.NegativeInfinity,
+                    boardLeftX,
+                    boardRightX,
+                    boardBottomY,
+                    fineCellSize,
+                    fineCols,
+                    fineRows);
+            }
+
+            if (!wakeIfCleared)
+                return;
+
+            for (int c = 0; c < fineCols; c++)
+            {
+                if (offBoardBlockedRowByColumn[c] < previousBlockedRowByColumn[c])
+                {
+                    PuzzleDragController.WakeUpGravity();
+                    return;
+                }
+            }
+        }
+
+        private void ProjectCellsIntoBlockedRows(
+            PuzzlePiece piece,
+            float minRelevantMaxY,
+            float boardLeftX,
+            float boardRightX,
+            float boardBottomY,
+            float fineCellSize,
+            int fineCols,
+            int fineRows)
+        {
+            piece.GetActiveCellBounds(queryOffBoardCellsBuffer);
+            for (int c = 0; c < queryOffBoardCellsBuffer.Count; c++)
+            {
+                Bounds under = queryOffBoardCellsBuffer[c];
+                if (under.max.y <= minRelevantMaxY)
+                    continue;
+
+                if (under.max.y > maxActiveOffBoardTopY)
+                    maxActiveOffBoardTopY = under.max.y;
+
+                if (under.max.y <= boardBottomY + OffBoardBoardOverlapY)
+                    continue;
+
+                if (under.max.x - OffBoardBoardOverlapX <= boardLeftX ||
+                    under.min.x + OffBoardBoardOverlapX >= boardRightX)
+                    continue;
+
+                int minCol = Mathf.Clamp(
+                    Mathf.FloorToInt((under.min.x + OffBoardBoardOverlapX - boardLeftX) / fineCellSize),
+                    0,
+                    fineCols - 1);
+                int maxCol = Mathf.Clamp(
+                    Mathf.FloorToInt((under.max.x - OffBoardBoardOverlapX - boardLeftX) / fineCellSize),
+                    0,
+                    fineCols - 1);
+                int topRow = Mathf.Clamp(
+                    Mathf.FloorToInt((under.max.y - OffBoardBoardOverlapY - boardBottomY) / fineCellSize),
+                    0,
+                    fineRows - 1);
+
+                for (int col = minCol; col <= maxCol; col++)
+                {
+                    if (topRow > offBoardBlockedRowByColumn[col])
+                        offBoardBlockedRowByColumn[col] = topRow;
+                }
+            }
+        }
+
+        private void RemoveActiveFeedPiece(PuzzlePiece piece)
+        {
+            for (int i = activeFeedPieces.Count - 1; i >= 0; i--)
+            {
+                if (activeFeedPieces[i].Piece == piece)
+                    activeFeedPieces.RemoveAt(i);
+            }
         }
 
         private bool TryStartPhysicsIsland(
@@ -954,7 +1496,11 @@ namespace GravityPuzzle
             int hapticPieceId = piece.SourcePieceId;
             ShredderContactGlowView activeGlowView = null;
             ShredderContactGlowPool.TryRent(out activeGlowView);
-            activeFeedPieces.Add(piece);
+            activeFeedPieces.Add(new ActiveFeedEntry
+            {
+                Piece = piece,
+                ClippingSeamY = clippingSeamY,
+            });
 
             try
             {
@@ -968,6 +1514,7 @@ namespace GravityPuzzle
                 PrototypeBoard.Active?.JointSpringPresenter?.UpdateShredderSprings(piece, clippingSeamY, shredderConfig);
 
                 piece.MoveShreddingPresentation(currentFeedSpeed * feedDeltaTime);
+                RefreshOffBoardBlockedRows(wakeIfCleared: true);
 
                 // Sample active block cells directly so concave/notched pieces (L, U, etc.)
                 // never produce false contact in empty air.
@@ -1265,7 +1812,8 @@ namespace GravityPuzzle
             }
             finally
             {
-                activeFeedPieces.Remove(piece);
+                RemoveActiveFeedPiece(piece);
+                RefreshOffBoardBlockedRows(wakeIfCleared: true);
                 PrototypeBoard.Active?.JointSpringPresenter?.FinishShredderSprings(piece);
                 IReadOnlyList<ShredderWheel> activeWheels = ShredderWheel.ActiveWheels;
                 for (int w = 0; w < activeWheels.Count; w++)

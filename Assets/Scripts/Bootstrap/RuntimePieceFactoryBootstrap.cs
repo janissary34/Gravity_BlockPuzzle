@@ -191,6 +191,8 @@ namespace GravityPuzzle.Bootstrap
 
             ResolveDifficultyDisplayText();
             ResolveCoinDisplayText();
+            GravityLevelRuntime.PlayerCoinAmountChanged -= HandlePlayerCoinAmountChanged;
+            GravityLevelRuntime.PlayerCoinAmountChanged += HandlePlayerCoinAmountChanged;
             UpdateLevelDisplays(selectedLevel);
 
             string pieceValidationError = "BlockPiece prefab or PoolConfig is not assigned.";
@@ -269,8 +271,15 @@ namespace GravityPuzzle.Bootstrap
 
         private void OnDestroy()
         {
+            GravityLevelRuntime.PlayerCoinAmountChanged -= HandlePlayerCoinAmountChanged;
             HapticFeedbackRuntime.StopAll();
             SoundFeedbackRuntime.Release(soundFeedbackAudioSource, clockTickingAudioSource);
+        }
+
+        private void HandlePlayerCoinAmountChanged(int coinAmount)
+        {
+            if (coinDisplayText != null)
+                coinDisplayText.SetText("{0}", coinAmount);
         }
 
         public static bool ShouldShowDifficultyTag(LevelDifficulty difficulty)

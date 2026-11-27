@@ -21,27 +21,17 @@ use authored assets or prewarmed typed pools (`LevelRuntimeRoot`, `RevealAreaPoo
 Do not extend that path. Migrate pin objects to authored or prewarmed adapters in a
 separate change while preserving pin collision behaviour.
 
-## Joined piece hangs while its partner is in freefall
-
-Status: root cause verified in code; not reproduced on device.
-
-Map-exit capture (`BlockShredder.TryCapturePiece`) moves one joint-group member to
-`OpenFreefall` without breaking its joints. Joints break only at cutter capture
-(`BlockShredder.TryCaptureFreefallPieceAtCutter`). Joint-group gravity requires every
-member to be `Placed` (`PuzzleDragController.cs:687`), so the members still on the
-board stay suspended until the freefall member reaches the cutter. This explanation
-does not cover the same symptom on unjoined pieces.
-
 ## Mid-drag shredder capture strands joint-group members in Dragging
 
-Status: root cause verified in code; not reproduced on device.
+Status: guarded in `PuzzleDragController`; residual surface remains if called externally.
 
 Starting a drag moves every joint-group member to `Dragging`
-(`PrototypeBoard.TryBeginPieceDrag`, `PrototypeBootstrap.cs:1098-1102`). When the held
-member is captured at the map exit, `PuzzleDragController` only drops its selection
-(`PuzzleDragController.cs:197-201`, `334-338`), and `CancelGridFallForTargetedAction`
-returns only the captured piece to `Placed` (`:129`). Grid gravity plans only `Placed`
-pieces (`:687`, `:707`), so the remaining members do not fall until touched again.
+(`PrototypeBoard.TryBeginPieceDrag`). `PuzzleDragController.CapturePiecesAtShredderBoundary`
+skips `selectedPiece`, `IsSelected`, and all joint-group members of `selectedPiece`, so
+normal gameplay input no longer tears a held group mid-drag. However, `ShredderCatchZone`
+still admits `PieceState.Dragging` directly and `PuzzleDragController.Update` resets
+selection without transitioning other `Dragging` members back to `Placed` if an external
+caller captures a held piece directly.
 
 ## Booster buttons can subscribe to a discarded inventory
 

@@ -23,6 +23,8 @@ namespace GravityPuzzle
         private float captureApproachDistance;
         private static readonly GridCoordinate Down = new GridCoordinate(0, -1);
         private const float CorridorEpsilon = .0001f;
+        private const float FallingMapExitLegacyApproachMargin = 0.5f;
+        private const float FallingMapExitBoardArrivalTolerance = 0.08f;
         // Catch decisions use real occupied cell geometry rather than the
         // enclosing CompositeCollider2D AABB. This keeps notched shapes from
         // claiming empty space in a mouth lane.
@@ -91,11 +93,22 @@ namespace GravityPuzzle
             if (!hasShredderEntryCell)
                 return false;
 
-            // A falling piece is admitted once its visual cells arrive at or near
-            // the mouth, preventing an unnatural freeze/snap at the boundary.
-            if (model.State == PieceState.Falling &&
-                (!TryGetCellVerticalExtents(piece, out float lowestCellY, out _) ||
-                 lowestCellY > captureTopY + captureApproachDistance + 0.5f))
+            // A falling piece is admitted only once its visual cells arrive at
+            // the exit boundary (not high above the board) and nothing off-board
+            // physically blocks its entry columns.
+            if (model.State == PieceState.Falling)
+            {
+                float boardBottomY = -level.boardRows * .5f;
+                float maxAdmitLowestY = Mathf.Min(
+                    captureTopY + captureApproachDistance + FallingMapExitLegacyApproachMargin,
+                    boardBottomY + FallingMapExitBoardArrivalTolerance);
+                if (!TryGetCellVerticalExtents(piece, out float lowestCellY, out _) ||
+                    lowestCellY > maxAdmitLowestY)
+                    return false;
+            }
+
+            BlockShredder shredder = BlockShredder.Instance;
+            if (shredder != null && !shredder.CanAdmitPieceAtMapExit(piece, this))
                 return false;
 
             return true;

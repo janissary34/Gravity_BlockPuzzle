@@ -83,13 +83,27 @@ gates through `PuzzleDragController` + `GridReleaseSnapPlanner` so resting `Plac
 pieces stay aligned to canonical coarse-block coordinates (`Anchor % subdivisions == 0`)
 without falling back to unsnapped half-block commits. Gravity preserves 1-fine-cell
 tracking when a piece is transitively supported by an active shredder `Reserved`
-reservation, and otherwise trims non-shredder falls to canonical coarse rows; coarse
-Box partial-exposure row gates (`RevealAreaCoordinator`) likewise quantize to whole
-`subdivisions` rows. Gravity falls accelerate from a start speed to a terminal speed (`TweenConfig` grid-fall
+reservation or an off-board `OpenFreefall`/`Shredding` cell protruding above the board
+bottom (traversing across both grid support links and `PieceJointGraph` edges for
+cantilevered combined blocks), and otherwise trims non-shredder falls to canonical coarse
+rows; coarse Box partial-exposure row gates (`RevealAreaCoordinator`) likewise quantize
+to whole `subdivisions` rows. `BlockShredder` prevents grid movement and map-exit
+admission into cells still physically overlapped by active `OpenFreefall` or unclipped
+`Shredding` pieces and wakes gravity whenever a fine column's blocked row drops;
+`PuzzleDragController` (`[DefaultExecutionOrder(-50)]`) runs before `BlockShredder`
+(`[DefaultExecutionOrder(0)]`), synchronizes combined blocks in support stacks and
+group retargets (ordered by lowest grid cell Y), defers boundary capture while a
+co-falling joint partner is finishing its tween, and avoids prematurely capturing
+falling pieces high above the board bottom. Within `OpenFreefall`, `BlockShredder`
+topologically orders freefall pieces per shared X column (`under` before `above`)
+instead of scalar lowest-Y alone and softly caps unobstructed seam arrivals so
+intersecting/interlocking or tall pieces cannot invert or pop upward on entry. Gravity
+falls accelerate from a start speed to a terminal speed (`TweenConfig` grid-fall
 values); a retarget keeps the current speed. A piece captured in the same frame its
-fall arrives enters `OpenFreefall` with that arrival speed (never below
-`ShredderConfig.PhysicsFreefallEntrySpeed`) and keeps accelerating to
-`PhysicsFreefallMaxSpeed`, so the drop has no visible speed reset. When
+fall arrives or is cancelled at the exit boundary enters `OpenFreefall` with that downward
+speed (never below `ShredderConfig.PhysicsFreefallEntrySpeed`), is clamped immediately
+against active obstacles below, and keeps accelerating to `PhysicsFreefallMaxSpeed`,
+so the drop has no visible speed reset. When
 the presentation completes, `PuzzlePiece.SetGridPresentationPosition` synchronizes
 the dormant body pose with the committed grid transform before any later handoff.
 

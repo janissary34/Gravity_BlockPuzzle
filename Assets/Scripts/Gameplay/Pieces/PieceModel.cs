@@ -36,6 +36,22 @@ namespace GravityPuzzle.Gameplay.Pieces
             return Anchor.Offset(localCells[localCellIndex]);
         }
 
+        public int GetLowestWorldCellY()
+        {
+            if (localCells == null || localCells.Count == 0)
+                return Anchor.Y;
+
+            int lowestY = int.MaxValue;
+            for (int index = 0; index < localCells.Count; index++)
+            {
+                int cellY = Anchor.Y + localCells[index].Y;
+                if (cellY < lowestY)
+                    lowestY = cellY;
+            }
+
+            return lowestY;
+        }
+
         public void SetAnchor(GridCoordinate anchor)
         {
             Anchor = anchor;

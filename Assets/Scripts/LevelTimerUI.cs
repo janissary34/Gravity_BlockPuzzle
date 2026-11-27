@@ -53,17 +53,30 @@ namespace GravityPuzzle
         [Tooltip("Non-ad continue button on the keep-on-playing panel.")]
         [SerializeField] private Button playOnButton;
 
+        [Tooltip("Coin-based revive button on the keep-on-playing panel.")]
+        [SerializeField] private Button reviveButton;
+
         [Tooltip("Button that declines the continue offer and opens the fail panel.")]
         [SerializeField] private Button closeKeepOnPlayingButton;
 
         [Tooltip("Body text on the continue panel displaying the seconds granted (e.g., 'Get 60 seconds to keep playing!').")]
         [SerializeField] private TMP_Text keepOnPlayingText;
 
-        [Tooltip("Seconds granted for each progressive continue stage (e.g., 60, 120, 180).")]
-        [SerializeField] private float[] continueTimeStages = new float[] { 60f, 120f, 180f };
+        [Tooltip("Seconds granted for each progressive continue stage (e.g., 60, 120, 180, 180).")]
+        [SerializeField] private float[] continueTimeStages = new float[] { 60f, 120f, 180f, 180f };
+
+        [Tooltip("Gold cost for each progressive continue stage (e.g., 900, 1900, 2900, 3900).")]
+        [SerializeField] private int[] continueCoinCosts = new int[] { 900, 1900, 2900, 3900 };
 
         [Tooltip("Seconds granted after the player accepts the continue offer (fallback if stages not configured).")]
         [Min(0.01f)] [SerializeField] private float continueTimeSeconds = 60f;
+
+        [Header("Timer Expiry Confirmation (Are You Sure) Panel")]
+        [Tooltip("Are-you-sure panel shown when closing the revive panel after timer expiry.")]
+        [SerializeField] private GameObject timerExpiryConfirmationPanel;
+
+        [Tooltip("HUD coin display brought above the revive panel while it is open.")]
+        [SerializeField] private RectTransform uiCoinTransform;
 
         [Header("Buttons")]
         [Tooltip("Drag your Retry button here")]
@@ -110,6 +123,14 @@ namespace GravityPuzzle
         private bool continueOfferIsActive;
         private bool levelFailureHandled;
         private float currentContinueTimeSeconds = 60f;
+        private int currentContinueCoinCost = 900;
+        private TMP_Text reviveGoldText;
+        private Button timerExpiryConfirmReviveButton;
+        private TMP_Text timerExpiryConfirmReviveGoldText;
+        private Button timerExpiryConfirmRetryButton;
+        private Button timerExpiryConfirmCloseButton;
+        private int uiCoinOriginalSiblingIndex = -1;
+        private bool uiCoinRaised;
         private PrototypeBoard retryConfirmationPausedBoard;
 
         private void Awake()
@@ -118,9 +139,12 @@ namespace GravityPuzzle
             IsGameOver = false;
 
             ResolveKeepOnPlayingTextReference();
+            ResolveUiCoinReference();
             int initialStage = board != null ? board.TimerExpiryContinueCount : 0;
             currentContinueTimeSeconds = GetContinueSecondsForStage(initialStage);
+            currentContinueCoinCost = GetContinueCoinCostForStage(initialStage);
             UpdateKeepOnPlayingText(currentContinueTimeSeconds);
+            UpdateReviveCostTexts(currentContinueCoinCost);
 
             // Keep the fail overlay out of the EventSystem raycast results as
             // soon as the scene is initialized. Waiting until Start leaves a
@@ -131,6 +155,9 @@ namespace GravityPuzzle
 
             if (keepOnPlayingPanel != null)
                 keepOnPlayingPanel.SetActive(false);
+
+            if (timerExpiryConfirmationPanel != null)
+                timerExpiryConfirmationPanel.SetActive(false);
 
             if (timerUrgencyFrame != null && timerUrgencyCanvasGroup == null)
                 timerUrgencyCanvasGroup = timerUrgencyFrame.GetComponent<CanvasGroup>();
@@ -161,6 +188,7 @@ namespace GravityPuzzle
         {
             SoundFeedbackRuntime.SetClockTickingActive(false);
             ResumeTimerForRetryConfirmation();
+            uiCoinRaised = false;
             timerUrgencyFadeTween?.Kill();
             timerUrgencyFadeTween = null;
             timerUrgencyScaleTween?.Kill();
@@ -183,6 +211,7 @@ namespace GravityPuzzle
                 mainMenuButton.onClick.AddListener(OnMainMenuClicked);
 
             BindKeepOnPlayingButtons();
+            BindTimerExpiryConfirmationButtons();
 
             if (openRetryConfirmationButton != null)
                 openRetryConfirmationButton.onClick.AddListener(OpenRetryConfirmation);
@@ -473,6 +502,11 @@ namespace GravityPuzzle
             if (keepOnPlayingPanel != null)
                 keepOnPlayingPanel.SetActive(false);
 
+            if (timerExpiryConfirmationPanel != null)
+                timerExpiryConfirmationPanel.SetActive(false);
+
+            RestoreUiCoinSiblingOrder();
+
             SoundFeedbackRuntime.SetClockTickingActive(false);
             SetTimerUrgencyFrameVisible(false);
             SetTimerTextUrgencyPulseVisible(false);
@@ -492,23 +526,43 @@ namespace GravityPuzzle
             if (failPopupPanel != null)
                 failPopupPanel.SetActive(false);
 
+            if (timerExpiryConfirmationPanel != null)
+                timerExpiryConfirmationPanel.SetActive(false);
+
             int stageIndex = board != null ? board.TimerExpiryContinueCount : 0;
             currentContinueTimeSeconds = GetContinueSecondsForStage(stageIndex);
+            currentContinueCoinCost = GetContinueCoinCostForStage(stageIndex);
             UpdateKeepOnPlayingText(currentContinueTimeSeconds);
             BindKeepOnPlayingButtons();
+            BindTimerExpiryConfirmationButtons();
+            BindTimerExpiryConfirmationButtons();
+            UpdateReviveCostTexts(currentContinueCoinCost);
 
             if (keepOnPlayingPanel != null)
                 keepOnPlayingPanel.SetActive(true);
+
+            BringUiCoinAboveRevivePanel();
+            SoundFeedbackRuntime.ElevatorOpened();
         }
 
         public float GetContinueSecondsForStage(int stageIndex)
         {
             float[] stages = (continueTimeStages != null && continueTimeStages.Length > 0)
                 ? continueTimeStages
-                : new float[] { 60f, 120f, 180f };
+                : new float[] { 60f, 120f, 180f, 180f };
 
             int clampedIndex = Mathf.Clamp(stageIndex, 0, stages.Length - 1);
             return stages[clampedIndex];
+        }
+
+        public int GetContinueCoinCostForStage(int stageIndex)
+        {
+            int[] costs = (continueCoinCosts != null && continueCoinCosts.Length > 0)
+                ? continueCoinCosts
+                : new int[] { 900, 1900, 2900, 3900 };
+
+            int clampedIndex = Mathf.Clamp(stageIndex, 0, costs.Length - 1);
+            return costs[clampedIndex];
         }
 
         private void UpdateKeepOnPlayingText(float seconds)
@@ -591,11 +645,33 @@ namespace GravityPuzzle
                     }
                 }
             }
+
+            if (reviveButton == null || !reviveButton.transform.IsChildOf(keepOnPlayingPanel.transform))
+            {
+                for (int i = 0; i < buttons.Length; i++)
+                {
+                    if (buttons[i] != null &&
+                        buttons[i].gameObject.name.Contains("Revive"))
+                    {
+                        reviveButton = buttons[i];
+                        break;
+                    }
+                }
+            }
+
+            if (reviveButton != null && reviveGoldText == null)
+                reviveGoldText = FindGoldTextOnReviveButton(reviveButton.transform);
         }
 
         private void BindKeepOnPlayingButtons()
         {
             ResolveKeepOnPlayingButtons();
+
+            if (reviveButton != null)
+            {
+                reviveButton.onClick.RemoveListener(OnReviveClicked);
+                reviveButton.onClick.AddListener(OnReviveClicked);
+            }
 
             if (liveAddsButton != null)
             {
@@ -614,6 +690,195 @@ namespace GravityPuzzle
                 closeKeepOnPlayingButton.onClick.RemoveListener(OnKeepOnPlayingClosed);
                 closeKeepOnPlayingButton.onClick.AddListener(OnKeepOnPlayingClosed);
             }
+        }
+
+        private void BindTimerExpiryConfirmationButtons()
+        {
+            if (timerExpiryConfirmationPanel == null)
+                return;
+
+            Button[] buttons = timerExpiryConfirmationPanel.GetComponentsInChildren<Button>(true);
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                Button candidate = buttons[i];
+                if (candidate == null)
+                    continue;
+
+                string btnName = candidate.gameObject.name;
+                if (btnName.Contains("Revive"))
+                {
+                    timerExpiryConfirmReviveButton = candidate;
+                    if (timerExpiryConfirmReviveGoldText == null)
+                        timerExpiryConfirmReviveGoldText = FindGoldTextOnReviveButton(candidate.transform);
+                }
+                else if (btnName.Contains("Close") || btnName.Contains("close"))
+                {
+                    timerExpiryConfirmCloseButton = candidate;
+                }
+                else if (btnName.Contains("retry") || btnName.Contains("Retry"))
+                {
+                    timerExpiryConfirmRetryButton = candidate;
+                }
+            }
+
+            if (timerExpiryConfirmReviveButton != null)
+            {
+                timerExpiryConfirmReviveButton.onClick.RemoveListener(OnReviveClicked);
+                timerExpiryConfirmReviveButton.onClick.AddListener(OnReviveClicked);
+            }
+
+            if (timerExpiryConfirmCloseButton != null)
+            {
+                timerExpiryConfirmCloseButton.onClick.RemoveListener(OnTimerExpiryConfirmClosed);
+                timerExpiryConfirmCloseButton.onClick.AddListener(OnTimerExpiryConfirmClosed);
+            }
+
+            if (timerExpiryConfirmRetryButton != null)
+            {
+                timerExpiryConfirmRetryButton.onClick.RemoveListener(OnRetryClicked);
+                timerExpiryConfirmRetryButton.onClick.AddListener(OnRetryClicked);
+            }
+        }
+
+        private static TMP_Text FindGoldTextOnReviveButton(Transform reviveButtonRoot)
+        {
+            if (reviveButtonRoot == null)
+                return null;
+
+            TMP_Text[] texts = reviveButtonRoot.GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 0; i < texts.Length; i++)
+            {
+                if (texts[i] != null && texts[i].gameObject.name.Contains("gold"))
+                    return texts[i];
+            }
+
+            return null;
+        }
+
+        private void UpdateReviveCostTexts(int coinCost)
+        {
+            if (reviveGoldText != null)
+                reviveGoldText.SetText("{0}", coinCost);
+
+            if (timerExpiryConfirmReviveGoldText != null)
+                timerExpiryConfirmReviveGoldText.SetText("{0}", coinCost);
+        }
+
+        private void UpdateTimerExpiryConfirmationLevelText()
+        {
+            if (timerExpiryConfirmationPanel == null)
+                return;
+
+            Transform titleTransform = timerExpiryConfirmationPanel.transform.Find("Header_Yellow/Text (TMP)");
+            if (titleTransform == null)
+                titleTransform = timerExpiryConfirmationPanel.transform.Find("Retry_title/Text (TMP)");
+
+            if (titleTransform == null)
+                return;
+
+            TMP_Text titleText = titleTransform.GetComponent<TMP_Text>();
+            if (titleText != null)
+                titleText.SetText("Level {0}", GravityLevelRuntime.CurrentLevelNumber);
+        }
+
+        private void ResolveUiCoinReference()
+        {
+            if (uiCoinTransform != null)
+            {
+                if (uiCoinOriginalSiblingIndex < 0)
+                    uiCoinOriginalSiblingIndex = uiCoinTransform.GetSiblingIndex();
+                return;
+            }
+
+            Transform found = transform.Find("UI_Coin");
+            if (found == null && transform.parent != null)
+                found = transform.parent.Find("UI_Coin");
+
+            if (found is RectTransform rect)
+            {
+                uiCoinTransform = rect;
+                uiCoinOriginalSiblingIndex = rect.GetSiblingIndex();
+            }
+        }
+
+        private void BringUiCoinAboveRevivePanel()
+        {
+            ResolveUiCoinReference();
+            if (uiCoinTransform == null)
+                return;
+
+            if (uiCoinOriginalSiblingIndex < 0)
+                uiCoinOriginalSiblingIndex = uiCoinTransform.GetSiblingIndex();
+
+            uiCoinTransform.gameObject.SetActive(true);
+            uiCoinTransform.SetAsLastSibling();
+            uiCoinRaised = true;
+        }
+
+        private void RestoreUiCoinSiblingOrder()
+        {
+            if (!uiCoinRaised || uiCoinTransform == null)
+                return;
+
+            if (uiCoinOriginalSiblingIndex >= 0 &&
+                uiCoinTransform.parent != null &&
+                uiCoinTransform.parent.gameObject.activeInHierarchy)
+            {
+                int maxIndex = Mathf.Max(0, uiCoinTransform.parent.childCount - 1);
+                uiCoinTransform.SetSiblingIndex(Mathf.Clamp(uiCoinOriginalSiblingIndex, 0, maxIndex));
+            }
+
+            uiCoinRaised = false;
+        }
+
+        /// <summary>
+        /// Handles the coin-based Revive button on both the revive panel and the
+        /// timer-expiry confirmation panel.
+        /// </summary>
+        public void OnReviveClicked()
+        {
+            if (board == null)
+                board = PrototypeBoard.Active;
+
+            if (board == null)
+            {
+                Debug.LogWarning("[LevelTimerUI] OnReviveClicked ignored because board is null.");
+                return;
+            }
+
+            if (!continueOfferIsActive &&
+                (keepOnPlayingPanel == null || !keepOnPlayingPanel.activeSelf) &&
+                (timerExpiryConfirmationPanel == null || !timerExpiryConfirmationPanel.activeSelf))
+            {
+                Debug.LogWarning("[LevelTimerUI] OnReviveClicked ignored because continue offer is inactive.");
+                return;
+            }
+
+            if (!GravityLevelRuntime.TrySpendPlayerCoins(currentContinueCoinCost))
+            {
+                Debug.LogWarning($"[LevelTimerUI] Not enough gold for revive ({GravityLevelRuntime.CurrentPlayerCoinAmount}/{currentContinueCoinCost}).");
+                return;
+            }
+
+            if (!board.TryResumeAfterTimerExpiry(currentContinueTimeSeconds))
+            {
+                Debug.LogWarning($"[LevelTimerUI] TryResumeAfterTimerExpiry failed for {currentContinueTimeSeconds}s.");
+                return;
+            }
+
+            continueOfferIsActive = false;
+            levelFailureHandled = false;
+            IsGameOver = false;
+            lastDisplayedSecond = -1;
+            SetTimerUrgencyFrameVisible(false);
+            SetTimerTextUrgencyPulseVisible(false);
+            RestoreUiCoinSiblingOrder();
+
+            if (keepOnPlayingPanel != null)
+                keepOnPlayingPanel.SetActive(false);
+
+            if (timerExpiryConfirmationPanel != null)
+                timerExpiryConfirmationPanel.SetActive(false);
         }
 
         /// <summary>
@@ -656,6 +921,32 @@ namespace GravityPuzzle
 
         private void OnKeepOnPlayingClosed()
         {
+            if (keepOnPlayingPanel != null)
+                keepOnPlayingPanel.SetActive(false);
+
+            if (timerExpiryConfirmationPanel != null)
+            {
+                BindTimerExpiryConfirmationButtons();
+                if (timerExpiryConfirmReviveButton != null)
+                    timerExpiryConfirmReviveButton.gameObject.SetActive(true);
+                if (timerExpiryConfirmRetryButton != null)
+                    timerExpiryConfirmRetryButton.gameObject.SetActive(false);
+                UpdateReviveCostTexts(currentContinueCoinCost);
+                UpdateTimerExpiryConfirmationLevelText();
+                timerExpiryConfirmationPanel.SetActive(true);
+                BringUiCoinAboveRevivePanel();
+                return;
+            }
+
+            RestoreUiCoinSiblingOrder();
+            ShowFailPopup();
+        }
+
+        private void OnTimerExpiryConfirmClosed()
+        {
+            if (timerExpiryConfirmationPanel != null)
+                timerExpiryConfirmationPanel.SetActive(false);
+
             ShowFailPopup();
         }
 
@@ -666,6 +957,14 @@ namespace GravityPuzzle
 
             if (retryConfirmationPanel != null)
             {
+                Transform reviveChild = retryConfirmationPanel.transform.Find("Revive_btn");
+                if (reviveChild != null)
+                    reviveChild.gameObject.SetActive(false);
+
+                Transform retryChild = retryConfirmationPanel.transform.Find("retry_btn");
+                if (retryChild != null)
+                    retryChild.gameObject.SetActive(true);
+
                 retryConfirmationPanel.SetActive(true);
                 PauseTimerForRetryConfirmation();
             }

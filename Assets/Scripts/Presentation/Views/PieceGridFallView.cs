@@ -22,6 +22,8 @@ namespace GravityPuzzle.Presentation.Views
         private float fallElapsed;
         private float arrivalSpeed;
         private int arrivalFrame = -1;
+        private float cancelledSpeed;
+        private int cancelledFrame = -1;
 
         private DOGetter<float> elapsedGetter;
         private DOSetter<float> elapsedSetter;
@@ -48,6 +50,24 @@ namespace GravityPuzzle.Presentation.Views
         /// </summary>
         public float ArrivalSpeedThisFrame => arrivalFrame == Time.frameCount ? arrivalSpeed : 0f;
 
+        /// <summary>
+        /// Downward speed carried when an active fall was cancelled this frame
+        /// (for example by boundary shredder capture before OnComplete fired).
+        /// </summary>
+        public float CancelledSpeedThisFrame => cancelledFrame == Time.frameCount ? cancelledSpeed : 0f;
+
+        /// <summary>
+        /// Reads and clears this frame's arrival or cancellation downward speed
+        /// so a single fall handoff cannot be consumed twice within one frame.
+        /// </summary>
+        public float ConsumeHandoffSpeedThisFrame()
+        {
+            float speed = Mathf.Max(ArrivalSpeedThisFrame, CancelledSpeedThisFrame);
+            arrivalFrame = -1;
+            cancelledFrame = -1;
+            return speed;
+        }
+
         private void Awake()
         {
             elapsedGetter = () => fallElapsed;
@@ -59,6 +79,7 @@ namespace GravityPuzzle.Presentation.Views
         {
             Cancel();
             arrivalFrame = -1;
+            cancelledFrame = -1;
         }
 
         public bool PlayFallTo(Vector2 targetPosition, Action onComplete)
@@ -108,6 +129,7 @@ namespace GravityPuzzle.Presentation.Views
             fallElapsed = 0f;
             pendingOnComplete = onComplete;
             arrivalFrame = -1;
+            cancelledFrame = -1;
 
             float duration = tweenConfig.GetGridFallDuration(fallDistance, startSpeed);
             activeFallTween = DOTween.To(elapsedGetter, elapsedSetter, duration, duration)
@@ -147,6 +169,16 @@ namespace GravityPuzzle.Presentation.Views
         /// </summary>
         public void Cancel()
         {
+            if (IsAnimating && tweenConfig != null)
+            {
+                cancelledSpeed = tweenConfig.GetGridFallSpeed(fallElapsed, fallStartSpeed) * Mathf.Max(0f, -fallDirection.y);
+                cancelledFrame = Time.frameCount;
+            }
+            else
+            {
+                cancelledFrame = -1;
+            }
+
             activeFallTween?.Kill();
             activeFallTween = null;
             pendingOnComplete = null;
