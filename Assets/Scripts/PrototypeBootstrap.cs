@@ -2991,7 +2991,7 @@ namespace GravityPuzzle
             bombElapsedSeconds = 0f;
         }
 
-        public void NotifyPieceDestroyed(PuzzlePiece destroyedPiece)
+        public void NotifyPieceDestroyed(PuzzlePiece destroyedPiece, bool wakeGravity = true)
         {
             if (!IsLevelRunning || destroyedPiece == null)
                 return;
@@ -3039,7 +3039,8 @@ namespace GravityPuzzle
             }
 
             keyLockCoordinator.NotifyPieceDestroyed(destroyedPiece, pieces);
-            PuzzleDragController.WakeUpGravity();
+            if (wakeGravity)
+                PuzzleDragController.WakeUpGravity();
         }
 
         /// <summary>

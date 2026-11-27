@@ -215,7 +215,9 @@ namespace GravityPuzzle.Tests.PlayMode
                 col.size = new Vector2(subdivisions * fineSize, subdivisions * fineSize);
                 colliders.Add(col);
 
-                SpriteRenderer sr = cGo.AddComponent<SpriteRenderer>();
+                GameObject visGo = Track(new GameObject($"Visual_{x}_{y}"));
+                visGo.transform.SetParent(cGo.transform, false);
+                SpriteRenderer sr = visGo.AddComponent<SpriteRenderer>();
                 sr.sprite = cachedUnitSprite;
                 visuals.Add(sr);
             }
@@ -262,9 +264,10 @@ namespace GravityPuzzle.Tests.PlayMode
             var middle = CreateSimulatedBlock(2, 4, 8, 4, 4, sim.level, sim.tweenConfig);
             var top = CreateSimulatedBlock(3, 4, 12, 4, 4, sim.level, sim.tweenConfig);
 
-            Assert.That((bool)GridType.GetMethod("TryPlace").Invoke(grid, new[] { bottom.model }), Is.True);
-            Assert.That((bool)GridType.GetMethod("TryPlace").Invoke(grid, new[] { middle.model }), Is.True);
-            Assert.That((bool)GridType.GetMethod("TryPlace").Invoke(grid, new[] { top.model }), Is.True);
+            MethodInfo tryPlace = GridType.GetMethod("TryPlace", new[] { PieceModelType });
+            Assert.That((bool)tryPlace.Invoke(grid, new[] { bottom.model }), Is.True);
+            Assert.That((bool)tryPlace.Invoke(grid, new[] { middle.model }), Is.True);
+            Assert.That((bool)tryPlace.Invoke(grid, new[] { top.model }), Is.True);
 
             IList modelList = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(PieceModelType));
             modelList.Add(bottom.model);
@@ -326,8 +329,9 @@ namespace GravityPuzzle.Tests.PlayMode
             var lower = CreateSimulatedBlock(10, 4, 4, 4, 8, sim.level, sim.tweenConfig);
             var upper = CreateSimulatedBlock(11, 4, 12, 4, 4, sim.level, sim.tweenConfig);
 
-            Assert.That((bool)GridType.GetMethod("TryPlace").Invoke(grid, new[] { lower.model }), Is.True);
-            Assert.That((bool)GridType.GetMethod("TryPlace").Invoke(grid, new[] { upper.model }), Is.True);
+            MethodInfo tryPlace = GridType.GetMethod("TryPlace", new[] { PieceModelType });
+            Assert.That((bool)tryPlace.Invoke(grid, new[] { lower.model }), Is.True);
+            Assert.That((bool)tryPlace.Invoke(grid, new[] { upper.model }), Is.True);
 
             IList modelList = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(PieceModelType));
             modelList.Add(lower.model);
@@ -388,9 +392,10 @@ namespace GravityPuzzle.Tests.PlayMode
             var combinedLeft = CreateSimulatedBlock(20, 4, 8, 4, 4, sim.level, sim.tweenConfig);
             var combinedRight = CreateSimulatedBlock(21, 8, 8, 4, 4, sim.level, sim.tweenConfig);
 
-            Assert.That((bool)GridType.GetMethod("TryPlace").Invoke(grid, new[] { basePiece.model }), Is.True);
-            Assert.That((bool)GridType.GetMethod("TryPlace").Invoke(grid, new[] { combinedLeft.model }), Is.True);
-            Assert.That((bool)GridType.GetMethod("TryPlace").Invoke(grid, new[] { combinedRight.model }), Is.True);
+            MethodInfo tryPlace = GridType.GetMethod("TryPlace", new[] { PieceModelType });
+            Assert.That((bool)tryPlace.Invoke(grid, new[] { basePiece.model }), Is.True);
+            Assert.That((bool)tryPlace.Invoke(grid, new[] { combinedLeft.model }), Is.True);
+            Assert.That((bool)tryPlace.Invoke(grid, new[] { combinedRight.model }), Is.True);
 
             IList modelList = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(PieceModelType));
             modelList.Add(basePiece.model);

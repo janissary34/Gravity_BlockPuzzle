@@ -112,7 +112,11 @@ approach plane. Only when the lowest real cell crosses that seam does the board
 transition the already-off-board model from `OpenFreefall` to `Shredding`.
 This transition never recreates a grid reservation. It ends freefall physics and
 starts the established controlled cutter feed, which owns row-by-row clipping,
-visual tremor, pooled debris, HUD progress, and final pool return. It does not
+visual-only tremor (skipping transforms shared with collision cells), pooled debris,
+HUD progress, and final pool return. `BlockShredder` defers gravity/destruction
+wakeups until the transitioning piece is aligned and registered in active feeds, and
+steps `TickActiveFeeds` inside `FixedUpdate` before `TickFreefallPieces` so followers
+never observe a one-frame registration gap or post-physics feed lag. It does not
 take transform or Rigidbody ownership before the cutter transition, so it cannot
 block or slow a piece in the open freefall area.
 

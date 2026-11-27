@@ -19,11 +19,8 @@ namespace GravityPuzzle
         public float RightX => rightX;
         private float leftX;
         private float rightX;
-        private float captureTopY;
-        private float captureApproachDistance;
         private static readonly GridCoordinate Down = new GridCoordinate(0, -1);
         private const float CorridorEpsilon = .0001f;
-        private const float FallingMapExitLegacyApproachMargin = 0.5f;
         private const float FallingMapExitBoardArrivalTolerance = 0.08f;
         // Catch decisions use real occupied cell geometry rather than the
         // enclosing CompositeCollider2D AABB. This keeps notched shapes from
@@ -45,8 +42,6 @@ namespace GravityPuzzle
             WheelRadius = Mathf.Max(0.1f, wheelRadius);
             leftX = position.x - size.x * .5f;
             rightX = position.x + size.x * .5f;
-            captureTopY = position.y + size.y * .5f;
-            captureApproachDistance = Mathf.Max(0f, approachDistance);
         }
 
         /// <summary>
@@ -99,9 +94,7 @@ namespace GravityPuzzle
             if (model.State == PieceState.Falling)
             {
                 float boardBottomY = -level.boardRows * .5f;
-                float maxAdmitLowestY = Mathf.Min(
-                    captureTopY + captureApproachDistance + FallingMapExitLegacyApproachMargin,
-                    boardBottomY + FallingMapExitBoardArrivalTolerance);
+                float maxAdmitLowestY = boardBottomY + FallingMapExitBoardArrivalTolerance;
                 if (!TryGetCellVerticalExtents(piece, out float lowestCellY, out _) ||
                     lowestCellY > maxAdmitLowestY)
                     return false;
@@ -229,8 +222,6 @@ namespace GravityPuzzle
             WheelRadius = 0f;
             leftX = 0f;
             rightX = 0f;
-            captureTopY = 0f;
-            captureApproachDistance = 0f;
         }
 
         public void OnDespawn()
@@ -240,8 +231,6 @@ namespace GravityPuzzle
             WheelRadius = 0f;
             leftX = 0f;
             rightX = 0f;
-            captureTopY = 0f;
-            captureApproachDistance = 0f;
         }
 
         private void OnEnable()

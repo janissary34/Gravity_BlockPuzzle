@@ -18,17 +18,37 @@ namespace GravityPuzzle.Tests.Editor
         [TearDown]
         public void TearDown()
         {
+            PrototypeBoard activeBoard = PrototypeBoard.Active;
+            if (activeBoard != null)
+            {
+                InvokeNonPublicMethod(activeBoard, "OnDisable");
+                DestroyImmediateTracked(activeBoard.gameObject);
+            }
+
             BlockShredder shredder = BlockShredder.Instance;
             if (shredder != null)
             {
+                InvokeNonPublicMethod(shredder, "OnDisable");
                 DestroyImmediateTracked(shredder.gameObject);
             }
 
             for (int index = cleanupObjects.Count - 1; index >= 0; index--)
             {
                 UnityEngine.Object obj = cleanupObjects[index];
-                if (obj != null)
-                    DestroyImmediateTracked(obj);
+                if (obj == null)
+                    continue;
+
+                if (obj is GameObject go)
+                {
+                    ShredderCatchZone zone = go.GetComponent<ShredderCatchZone>();
+                    if (zone != null)
+                        InvokeNonPublicMethod(zone, "OnDisable");
+                    PuzzlePiece piece = go.GetComponent<PuzzlePiece>();
+                    if (piece != null)
+                        InvokeNonPublicMethod(piece, "OnDisable");
+                }
+
+                DestroyImmediateTracked(obj);
             }
 
             cleanupObjects.Clear();
@@ -140,6 +160,7 @@ namespace GravityPuzzle.Tests.Editor
             ConfigureRuntimeLevel(level);
             GameObject boardGo = Track(new GameObject("Board"));
             PrototypeBoard board = boardGo.AddComponent<PrototypeBoard>();
+            InvokeNonPublicMethod(board, "OnEnable");
 
             GravityBoardGrid grid = new GravityBoardGrid(16, 24);
             PieceModel lower = CreatePieceModel(1, 0, 8, 4, 4);
@@ -183,6 +204,7 @@ namespace GravityPuzzle.Tests.Editor
             ConfigureRuntimeLevel(level);
             GameObject boardGo = Track(new GameObject("Board"));
             PrototypeBoard board = boardGo.AddComponent<PrototypeBoard>();
+            InvokeNonPublicMethod(board, "OnEnable");
 
             GravityBoardGrid grid = new GravityBoardGrid(16, 24);
             PieceModel shredderPiece = CreatePieceModel(10, 0, 0, 4, 3);
@@ -250,6 +272,7 @@ namespace GravityPuzzle.Tests.Editor
 
             GameObject boardGo = Track(new GameObject("Board"));
             PrototypeBoard board = boardGo.AddComponent<PrototypeBoard>();
+            InvokeNonPublicMethod(board, "OnEnable");
 
             GravityBoardGrid grid = new GravityBoardGrid(16, 24);
             PieceModel fallingModel = CreatePieceModel(1, 0, 0, 4, 4);
@@ -318,6 +341,7 @@ namespace GravityPuzzle.Tests.Editor
 
             GameObject boardGo = Track(new GameObject("Board"));
             PrototypeBoard board = boardGo.AddComponent<PrototypeBoard>();
+            InvokeNonPublicMethod(board, "OnEnable");
             GravityBoardGrid grid = new GravityBoardGrid(16, 24);
             PieceModel supportModel = CreatePieceModel(1, 0, 0, 4, 4);
             PieceModel overhangModel = CreatePieceModel(2, 0, 4, 4, 4);

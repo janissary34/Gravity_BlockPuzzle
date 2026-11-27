@@ -34,6 +34,7 @@ namespace GravityPuzzle
         {
             public PuzzlePiece Piece;
             public float ClippingSeamY;
+            public float FeedSpeed;
         }
 
         private readonly List<ActiveFeedEntry> activeFeedPieces = new List<ActiveFeedEntry>();
@@ -257,6 +258,7 @@ namespace GravityPuzzle
 
         private void FixedUpdate()
         {
+            TickActiveFeeds();
             TickFreefallPieces();
             for (int index = activePhysicsIslands.Count - 1; index >= 0; index--)
             {
@@ -268,6 +270,64 @@ namespace GravityPuzzle
                 activePhysicsIslands.RemoveAt(index);
                 ReleasePhysicsMouthIfIdle(island.Zone);
             }
+        }
+
+        private void EnsureActiveFeedEntry(PuzzlePiece piece, float clippingSeamY, float feedSpeed)
+        {
+            if (piece == null)
+                return;
+
+            for (int i = 0; i < activeFeedPieces.Count; i++)
+            {
+                if (activeFeedPieces[i].Piece == piece)
+                {
+                    activeFeedPieces[i] = new ActiveFeedEntry
+                    {
+                        Piece = piece,
+                        ClippingSeamY = clippingSeamY,
+                        FeedSpeed = feedSpeed,
+                    };
+                    return;
+                }
+            }
+
+            activeFeedPieces.Add(new ActiveFeedEntry
+            {
+                Piece = piece,
+                ClippingSeamY = clippingSeamY,
+                FeedSpeed = feedSpeed,
+            });
+        }
+
+        private void TickActiveFeeds()
+        {
+            if (activeFeedPieces.Count == 0)
+                return;
+
+            float dt = Time.fixedDeltaTime;
+            bool movedAny = false;
+            for (int i = activeFeedPieces.Count - 1; i >= 0; i--)
+            {
+                ActiveFeedEntry entry = activeFeedPieces[i];
+                PuzzlePiece piece = entry.Piece;
+                if (piece == null ||
+                    !piece.gameObject.activeInHierarchy ||
+                    piece.PhysicsProfile != PiecePhysicsProfile.Shredding)
+                {
+                    activeFeedPieces.RemoveAt(i);
+                    movedAny = true;
+                    continue;
+                }
+
+                if (entry.FeedSpeed > 0f && dt > 0f)
+                {
+                    piece.MoveShreddingPresentation(entry.FeedSpeed * dt);
+                    movedAny = true;
+                }
+            }
+
+            if (movedAny)
+                RefreshOffBoardBlockedRows(wakeIfCleared: true);
         }
 
         private float GetLowestCellY(PuzzlePiece piece)
@@ -559,7 +619,9 @@ namespace GravityPuzzle
                 if (drop < minGap)
                 {
                     minGap = drop;
-                    closestObstacleSpeed = targetFeedSpeed;
+                    // TickActiveFeeds advances active Shredding feeds before Physics2D steps
+                    // freefall bodies, so followers may close at most minGap on this tick.
+                    closestObstacleSpeed = 0f;
                 }
             }
 
@@ -655,12 +717,13 @@ namespace GravityPuzzle
             ShredderCatchZone zone)
         {
             if (piece == null || zone == null || shredderConfig == null ||
-                !zone.ContainsFreefallCutterFootprint(piece, shredderConfig.GearClippingRatio))
+                !zone.ContainsFreefallCutterFootprint(piece, shredderConfig.GearClippingRatio) ||
+                !piece.TryGetActiveCellVerticalExtents(out _, out _))
             {
                 return false;
             }
 
-            if (!piece.TryBeginOffBoardFreefallShredding())
+            if (!piece.TryBeginOffBoardFreefallShredding(wakeGravity: false))
             {
                 Debug.LogError(
                     "[ShredderFreefall] Cutter capture rejected an off-board handoff piece.",
@@ -675,12 +738,20 @@ namespace GravityPuzzle
                 Debug.LogError(
                     "[ShredderFreefall] Could not align the freefall footprint to the cutter seam.",
                     piece);
+                RefreshOffBoardBlockedRows(wakeIfCleared: false);
+                PuzzleDragController.WakeUpGravity();
                 return false;
             }
 
             PrototypeBoard board = PrototypeBoard.Active;
             board?.JointSpringPresenter?.PrepareForShredder(piece);
-            board?.BreakJointsForPiece(piece);
+            board?.BreakJointsForPiece(piece, wakeGravity: false);
+
+            float feedSpeed = shredderConfig.FeedSpeed > 0f ? shredderConfig.FeedSpeed : 3.8f;
+            EnsureActiveFeedEntry(piece, cutterSeamY, feedSpeed);
+            RefreshOffBoardBlockedRows(wakeIfCleared: false);
+            PuzzleDragController.WakeUpGravity();
+
             // Cutter contact ends open physics ownership. The established
             // controlled feed then owns only presentation: row-by-row clipping,
             // tremor, debris and progress must not be bypassed for freefall.
@@ -759,7 +830,7 @@ namespace GravityPuzzle
             }
 
             board.JointSpringPresenter?.PrepareForShredder(piece);
-            board.BreakJointsForPiece(piece);
+            board.BreakJointsForPiece(piece, wakeGravity: false);
 
             // There is deliberately no transform-driven approach phase here.
             // The exact grid-exit pose becomes the initial Dynamic pose and
@@ -1163,9 +1234,7 @@ namespace GravityPuzzle
 
             // The root is now committed to the feed. Split it from its
             // combined graph before the presentation-only island continues.
-            board.JointSpringPresenter?.PrepareForShredder(root);
-            board.BreakJointsForPiece(root);
-            StartCoroutine(FeedPieceIntoShredder(root, zone));
+            StartRegisteredFeedFromBoard(board, root, zone);
             activePhysicsIslands.Add(new ShredderPhysicsIsland(
                 this,
                 shredderConfig,
@@ -1312,6 +1381,19 @@ namespace GravityPuzzle
         /// plane, not a trigger. From this point the established feed owns the
         /// piece as a kinematic motor and presentation pipeline.
         /// </summary>
+        private void StartRegisteredFeedFromBoard(
+            PrototypeBoard board,
+            PuzzlePiece piece,
+            ShredderCatchZone zone)
+        {
+            board.JointSpringPresenter?.PrepareForShredder(piece);
+            int brokenJoints = board.BreakJointsForPiece(piece, wakeGravity: false);
+            StartCoroutine(FeedPieceIntoShredder(piece, zone));
+            RefreshOffBoardBlockedRows(wakeIfCleared: false);
+            if (brokenJoints > 0 && board.IsLevelRunning)
+                PuzzleDragController.WakeUpGravity();
+        }
+
         internal bool TryCapturePhysicsIslandMember(
             PuzzlePiece piece,
             ShredderCatchZone zone)
@@ -1331,9 +1413,7 @@ namespace GravityPuzzle
             if (!piece.TryBeginShredderFeedFromPhysicsIsland())
                 return false;
 
-            board.JointSpringPresenter?.PrepareForShredder(piece);
-            board.BreakJointsForPiece(piece);
-            StartCoroutine(FeedPieceIntoShredder(piece, zone));
+            StartRegisteredFeedFromBoard(board, piece, zone);
             return true;
         }
 
@@ -1359,9 +1439,7 @@ namespace GravityPuzzle
                 return false;
             }
 
-            board.JointSpringPresenter?.PrepareForShredder(piece);
-            board.BreakJointsForPiece(piece);
-            StartCoroutine(FeedPieceIntoShredder(piece, zone));
+            StartRegisteredFeedFromBoard(board, piece, zone);
             return true;
         }
 
@@ -1496,25 +1574,19 @@ namespace GravityPuzzle
             int hapticPieceId = piece.SourcePieceId;
             ShredderContactGlowView activeGlowView = null;
             ShredderContactGlowPool.TryRent(out activeGlowView);
-            activeFeedPieces.Add(new ActiveFeedEntry
-            {
-                Piece = piece,
-                ClippingSeamY = clippingSeamY,
-            });
+            EnsureActiveFeedEntry(piece, clippingSeamY, currentFeedSpeed);
 
             try
             {
-                // 3. The kinematic feed owns the descent while this coroutine watches
-                // the crossing cells and converts them to shred effects.
+                // 3. The kinematic feed coroutine updates clipping, tremor, debris,
+                // and progress on WaitForFixedUpdate while TickActiveFeeds advances
+                // the physical descent cleanly before TickFreefallPieces and Physics2D.
                 while (piece != null && elapsed < maxTime)
             {
                 yield return FeedPhysicsStep;
                 float feedDeltaTime = Time.fixedDeltaTime;
                 elapsed += feedDeltaTime;
                 PrototypeBoard.Active?.JointSpringPresenter?.UpdateShredderSprings(piece, clippingSeamY, shredderConfig);
-
-                piece.MoveShreddingPresentation(currentFeedSpeed * feedDeltaTime);
-                RefreshOffBoardBlockedRows(wakeIfCleared: true);
 
                 // Sample active block cells directly so concave/notched pieces (L, U, etc.)
                 // never produce false contact in empty air.

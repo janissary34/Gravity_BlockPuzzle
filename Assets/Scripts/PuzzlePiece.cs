@@ -2359,6 +2359,21 @@ namespace GravityPuzzle
             }
         }
 
+        private bool IsCollisionCellTransform(Transform candidate)
+        {
+            if (candidate == null || collisionCells == null)
+                return false;
+
+            for (int i = 0; i < collisionCells.Count; i++)
+            {
+                BoxCollider2D cell = collisionCells[i];
+                if (cell != null && cell.transform == candidate)
+                    return true;
+            }
+
+            return false;
+        }
+
         public void ApplyShredderVisualJitter(Vector2 jitterOffset)
         {
             Vector2 delta = jitterOffset - currentVisualJitterOffset;
@@ -2371,7 +2386,9 @@ namespace GravityPuzzle
                 for (int i = 0; i < shredderPresentationRenderers.Length; i++)
                 {
                     SpriteRenderer r = shredderPresentationRenderers[i];
-                    if (r != null && r.transform.IsChildOf(transform))
+                    if (r != null &&
+                        r.transform.IsChildOf(transform) &&
+                        !IsCollisionCellTransform(r.transform))
                         r.transform.localPosition += (Vector3)delta;
                 }
             }
@@ -2400,7 +2417,9 @@ namespace GravityPuzzle
                 for (int i = 0; i < shredderPresentationRenderers.Length; i++)
                 {
                     SpriteRenderer r = shredderPresentationRenderers[i];
-                    if (r != null && r.transform.IsChildOf(transform))
+                    if (r != null &&
+                        r.transform.IsChildOf(transform) &&
+                        !IsCollisionCellTransform(r.transform))
                         r.transform.localPosition += (Vector3)undoDelta;
                 }
             }
@@ -3035,7 +3054,7 @@ namespace GravityPuzzle
             }
         }
 
-        public void ReportDestroyed()
+        public void ReportDestroyed(bool wakeGravity = true)
         {
             if (destructionReported)
                 return;
@@ -3043,7 +3062,7 @@ namespace GravityPuzzle
             destructionReported = true;
             PrototypeBoard board = PrototypeBoard.Active;
             if (board != null)
-                board.NotifyPieceDestroyed(this);
+                board.NotifyPieceDestroyed(this, wakeGravity);
         }
 
         /// <summary>
@@ -3816,7 +3835,7 @@ namespace GravityPuzzle
         /// Unity physics began, so this path deliberately has no reservation
         /// capture or frontier-release ownership.
         /// </summary>
-        public bool TryBeginOffBoardFreefallShredding()
+        public bool TryBeginOffBoardFreefallShredding(bool wakeGravity = true)
         {
             if (IsMovementLocked)
                 return false;
@@ -3831,7 +3850,7 @@ namespace GravityPuzzle
             keepShredderGridReservationUntilDespawn = false;
             SetSelected(false);
             board.TryLockFinalShredderOutcome(this);
-            ReportDestroyed();
+            ReportDestroyed(wakeGravity);
             return true;
         }
 
