@@ -11,6 +11,7 @@ namespace GravityPuzzle.Tests.PlayMode
 {
     public sealed class BoxRevealPresentationPlayModeTests
     {
+        private const string BoxRevealAreaPrefabPath = "Assets/MainPrefabs/BoxRevealArea.prefab";
         private static readonly Type ViewType = Type.GetType("GravityPuzzle.Presentation.Views.BoxRevealAreaView, Assembly-CSharp");
         private static readonly Type KindType = Type.GetType("GravityPuzzle.Gameplay.Reveal.RevealAreaKind, Assembly-CSharp");
         private static readonly Type ConfigType = Type.GetType("GravityPuzzle.Config.RevealPresentationConfig, Assembly-CSharp");
@@ -27,7 +28,7 @@ namespace GravityPuzzle.Tests.PlayMode
             Assert.That(ViewType, Is.Not.Null);
             Assert.That(KindType, Is.Not.Null);
             Assert.That(ConfigType, Is.Not.Null);
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/BoxRevealArea.prefab");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoxRevealAreaPrefabPath);
             var config = AssetDatabase.LoadAssetAtPath("Assets/Config/RevealPresentationConfig.asset", ConfigType);
             Assert.That(prefab, Is.Not.Null);
             Assert.That(config, Is.Not.Null);
@@ -53,10 +54,16 @@ namespace GravityPuzzle.Tests.PlayMode
                 initialize.Invoke(view, new object[] { "test", Vector2.zero, new Vector2(3f, 2f), config });
                 Vector2 frameSize = frame.size;
                 Vector3 framePosition = frame.transform.localPosition;
-                Assert.That(panel.bounds.size.x, Is.EqualTo(3f).Within(.001f));
-                Assert.That(panel.bounds.size.y, Is.EqualTo(2f).Within(.001f));
-                Assert.That(previewMask.bounds.size.x, Is.EqualTo(3f).Within(.001f));
-                Assert.That(previewMask.bounds.size.y, Is.EqualTo(2f).Within(.001f));
+                float thickness = Mathf.Max(.01f, (float)ConfigType.GetField("boxFrameThickness").GetValue(config));
+                float pixelToWorld = thickness / frame.sprite.pixelsPerUnit;
+                float outset = (float)ConfigType.GetField("boxFrameOutsetPixels").GetValue(config);
+                Vector4 panelInsetPixels = (Vector4)ConfigType.GetField("boxPanelInsetPixels").GetValue(config);
+                Vector4 inset = (panelInsetPixels - new Vector4(outset, outset, outset, 0f)) * pixelToWorld;
+                Vector2 expectedPanelSize = new Vector2(3f - inset.x - inset.y, 2f - inset.z - inset.w);
+                Assert.That(panel.bounds.size.x, Is.EqualTo(expectedPanelSize.x).Within(.001f));
+                Assert.That(panel.bounds.size.y, Is.EqualTo(expectedPanelSize.y).Within(.001f));
+                Assert.That(previewMask.bounds.size.x, Is.EqualTo(expectedPanelSize.x).Within(.001f));
+                Assert.That(previewMask.bounds.size.y, Is.EqualTo(expectedPanelSize.y).Within(.001f));
                 panel.GetPropertyBlock(properties);
                 Assert.That(properties.GetVector("_ContentUvRect"),
                     Is.EqualTo((Vector4)ConfigType.GetField("boxPanelSourceUvRect").GetValue(config)));
@@ -104,7 +111,7 @@ namespace GravityPuzzle.Tests.PlayMode
         [UnityTest]
         public IEnumerator SimultaneousBurstsRemainIndependentWhenOneViewReturnsToPool()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/BoxRevealArea.prefab");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoxRevealAreaPrefabPath);
             var sourceConfig = AssetDatabase.LoadAssetAtPath("Assets/Config/RevealPresentationConfig.asset", ConfigType);
             Assert.That(prefab, Is.Not.Null);
             Assert.That(sourceConfig, Is.Not.Null);
@@ -160,7 +167,7 @@ namespace GravityPuzzle.Tests.PlayMode
         [UnityTest]
         public IEnumerator HiddenPiecePreviewTracksOpeningAndResetsOnPoolReturn()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/BoxRevealArea.prefab");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoxRevealAreaPrefabPath);
             var sourceConfig = AssetDatabase.LoadAssetAtPath("Assets/Config/RevealPresentationConfig.asset", ConfigType);
             Assert.That(prefab, Is.Not.Null);
             Assert.That(sourceConfig, Is.Not.Null);
@@ -267,7 +274,7 @@ namespace GravityPuzzle.Tests.PlayMode
         [UnityTest]
         public IEnumerator PreviewOwnershipAndExposureCallbackAreScopedPerHiddenDefinition()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/BoxRevealArea.prefab");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoxRevealAreaPrefabPath);
             var sourceConfig = AssetDatabase.LoadAssetAtPath("Assets/Config/RevealPresentationConfig.asset", ConfigType);
             Assert.That(prefab, Is.Not.Null);
             Assert.That(sourceConfig, Is.Not.Null);

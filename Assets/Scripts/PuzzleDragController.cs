@@ -967,13 +967,13 @@ namespace GravityPuzzle
                 model.Anchor.Y - model.PivotOffset.Y);
             Vector2 selectedGridPosition = GravityLevelGridCoordinates.FineCellToWorld(level, selectedPivot);
             Vector2 selectedPresentationOffset = isCombined
-                ? GetContinuousGroupPresentationOffset(board, piece, level, fineDragRemainder)
+                ? GetContinuousGroupPresentationOffset(board, piece, level, ref fineDragRemainder)
                 : GetContinuousDragPresentationOffset(
                     board,
                     snapshot.Grid,
                     model,
                     level,
-                    fineDragRemainder);
+                    ref fineDragRemainder);
             Vector2 selectedPresentationPosition = selectedGridPosition + selectedPresentationOffset;
             piece.SetGridPresentationPosition(selectedPresentationPosition, synchronizeTransforms: false);
 
@@ -1013,7 +1013,7 @@ namespace GravityPuzzle
             PrototypeBoard board,
             PuzzlePiece piece,
             GravityLevelDefinition level,
-            Vector2 remainder)
+            ref Vector2 remainder)
         {
             int horizontalStep = remainder.x > 0f ? 1 : remainder.x < 0f ? -1 : 0;
             int verticalStep = remainder.y > 0f ? 1 : remainder.y < 0f ? -1 : 0;
@@ -1021,6 +1021,10 @@ namespace GravityPuzzle
                 board.CanMovePieceGroupBy(piece, new GridCoordinate(horizontalStep, 0));
             bool verticalLegal = verticalStep != 0 &&
                 board.CanMovePieceGroupBy(piece, new GridCoordinate(0, verticalStep));
+            if (horizontalStep != 0 && !horizontalLegal)
+                remainder.x = 0f;
+            if (verticalStep != 0 && !verticalLegal)
+                remainder.y = 0f;
 
             Vector2 offset = Vector2.zero;
             if (horizontalLegal && verticalLegal && horizontalStep != 0 && verticalStep != 0)
@@ -1049,7 +1053,7 @@ namespace GravityPuzzle
             GravityBoardGrid grid,
             PieceModel model,
             GravityLevelDefinition level,
-            Vector2 remainder)
+            ref Vector2 remainder)
         {
             int horizontalStep = remainder.x > 0f ? 1 : remainder.x < 0f ? -1 : 0;
             int verticalStep = remainder.y > 0f ? 1 : remainder.y < 0f ? -1 : 0;
@@ -1069,6 +1073,10 @@ namespace GravityPuzzle
                     model,
                     model.Anchor.Offset(new GridCoordinate(0, verticalStep)),
                     model.Id).IsSuccess;
+            if (horizontalStep != 0 && !horizontalLegal)
+                remainder.x = 0f;
+            if (verticalStep != 0 && !verticalLegal)
+                remainder.y = 0f;
 
             Vector2 offset = Vector2.zero;
             if (horizontalLegal && verticalLegal && horizontalStep != 0 && verticalStep != 0)
@@ -1186,22 +1194,30 @@ namespace GravityPuzzle
 
         private void ProcessMouseInput()
         {
+            bool mouseDown = Input.GetMouseButtonDown(0);
+            bool mouseUp = Input.GetMouseButtonUp(0);
+            bool mouseHeld = Input.GetMouseButton(0);
+
+            if (selectedPiece == null && !mouseDown)
+            {
+                if (mouseUp)
+                    ClearFrozenGroupFeedback();
+                return;
+            }
+
             Vector2 pointer = PointerWorldPosition(Input.mousePosition);
 
-            if (Input.GetMouseButtonDown(0))
+            if (mouseDown)
             {
                 ClearFrozenGroupFeedback();
                 TrySelectPiece(pointer);
             }
 
-            if (selectedPiece != null &&
-                (Input.GetMouseButton(0) || Input.GetMouseButtonUp(0)))
+            if (selectedPiece != null && (mouseHeld || mouseUp))
                 UpdateDragTarget(pointer + grabOffset);
 
-            if (selectedPiece != null && Input.GetMouseButtonUp(0))
+            if (selectedPiece != null && mouseUp)
                 ReleasePiece();
-            else if (selectedPiece == null && Input.GetMouseButtonUp(0))
-                ClearFrozenGroupFeedback();
         }
 
         private Touch FindActiveTouch()
@@ -1859,6 +1875,9 @@ namespace GravityPuzzle
 
         private Vector2 PointerWorldPosition(Vector2 screenPoint)
         {
+            if (gameCamera == null)
+                return Vector2.zero;
+
             Vector3 screenPosition = screenPoint;
             screenPosition.z = -gameCamera.transform.position.z;
             return gameCamera.ScreenToWorldPoint(screenPosition);

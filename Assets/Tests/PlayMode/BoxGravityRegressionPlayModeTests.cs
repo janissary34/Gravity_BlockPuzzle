@@ -14,6 +14,7 @@ namespace GravityPuzzle.Tests.PlayMode
             "GravityPuzzle.Core.Grid.GravityBoardGrid, Assembly-CSharp");
         private static readonly Type CoordinateType = Type.GetType(
             "GravityPuzzle.Core.Grid.GridCoordinate, Assembly-CSharp");
+        private static readonly FieldInfo CoordinateYField = CoordinateType?.GetField("Y");
         private static readonly Type PieceModelType = Type.GetType(
             "GravityPuzzle.Gameplay.Pieces.PieceModel, Assembly-CSharp");
         private static readonly Type CoordinatorType = Type.GetType(
@@ -38,6 +39,12 @@ namespace GravityPuzzle.Tests.PlayMode
         private object CreateCoordinate(int x, int y)
         {
             return Activator.CreateInstance(CoordinateType, x, y);
+        }
+
+        private static int GetCoordinateY(object coordinate)
+        {
+            Assert.That(CoordinateYField, Is.Not.Null);
+            return (int)CoordinateYField.GetValue(coordinate);
         }
 
         private object CreateGrid(int columns, int rows)
@@ -152,8 +159,7 @@ namespace GravityPuzzle.Tests.PlayMode
                 bool moved = (bool)tryGetFallTarget.Invoke(grid, parameters);
 
                 Assert.That(moved, Is.True);
-                object targetAnchor = parameters[1];
-                int targetY = (int)CoordinateType.GetProperty("Y").GetValue(targetAnchor);
+                int targetY = GetCoordinateY(parameters[1]);
                 Assert.That(targetY, Is.EqualTo(6), "Piece must stop on top of the closed box (Y=6), not fall through it.");
             }
             finally
@@ -188,8 +194,7 @@ namespace GravityPuzzle.Tests.PlayMode
                 bool moved = (bool)tryGetFallTarget.Invoke(grid, parameters);
 
                 Assert.That(moved, Is.True);
-                object targetAnchor = parameters[1];
-                int targetY = (int)CoordinateType.GetProperty("Y").GetValue(targetAnchor);
+                int targetY = GetCoordinateY(parameters[1]);
                 Assert.That(targetY, Is.EqualTo(6), "Piece must stop at Y=6 and not tunnel through the mid-air closed box to Y=0.");
             }
             finally
@@ -382,14 +387,14 @@ namespace GravityPuzzle.Tests.PlayMode
                 object[] p1Params = new object[] { pieceAboveBox, null, canMoveDelegate };
                 bool p1Moved = (bool)tryGetFallTarget.Invoke(grid, p1Params);
                 Assert.That(p1Moved, Is.True);
-                int p1TargetY = (int)CoordinateType.GetProperty("Y").GetValue(p1Params[1]);
+                int p1TargetY = GetCoordinateY(p1Params[1]);
                 Assert.That(p1TargetY, Is.EqualTo(6));
 
                 // Piece in free column falls all the way to floor Y=0
                 object[] p2Params = new object[] { pieceInFreeCol, null, canMoveDelegate };
                 bool p2Moved = (bool)tryGetFallTarget.Invoke(grid, p2Params);
                 Assert.That(p2Moved, Is.True);
-                int p2TargetY = (int)CoordinateType.GetProperty("Y").GetValue(p2Params[1]);
+                int p2TargetY = GetCoordinateY(p2Params[1]);
                 Assert.That(p2TargetY, Is.EqualTo(0));
             }
             finally
@@ -432,8 +437,8 @@ namespace GravityPuzzle.Tests.PlayMode
                 bool moved = (bool)tryGetGroupFallTarget.Invoke(grid, parameters);
 
                 Assert.That(moved, Is.True);
-                int t1Y = (int)CoordinateType.GetProperty("Y").GetValue(targets[0]);
-                int t2Y = (int)CoordinateType.GetProperty("Y").GetValue(targets[1]);
+                int t1Y = GetCoordinateY(targets[0]);
+                int t2Y = GetCoordinateY(targets[1]);
                 Assert.That(t1Y, Is.EqualTo(6), "Member 1 must stop on top of box (Y=6).");
                 Assert.That(t2Y, Is.EqualTo(6), "Member 2 must stop on top of box (Y=6).");
             }

@@ -439,6 +439,7 @@ namespace GravityPuzzle.Tests.PlayMode
         private sealed class DragRuntimeFixture : IDisposable
         {
             private const string CombinedLevelPath = "Assets/combineblock.asset";
+            private static readonly Type BootstrapType = Type.GetType("GravityPuzzle.PrototypeBootstrap, Assembly-CSharp");
             private static readonly Type BoardType = Type.GetType("GravityPuzzle.PrototypeBoard, Assembly-CSharp");
             private static readonly Type ControllerType = Type.GetType("GravityPuzzle.PuzzleDragController, Assembly-CSharp");
             private static readonly Type PieceType = Type.GetType("GravityPuzzle.PuzzlePiece, Assembly-CSharp");
@@ -504,6 +505,13 @@ namespace GravityPuzzle.Tests.PlayMode
                 Invoke(board, "InitializeBoardSnapshot", snapshot);
                 Invoke(board, "ConfigurePieceJoints", level);
 
+                GameObject cameraObject = new GameObject("Drag Test Camera");
+                objects.Add(cameraObject);
+                Camera testCamera = cameraObject.AddComponent<Camera>();
+                testCamera.orthographic = true;
+                testCamera.transform.position = new Vector3(0f, 0f, -10f);
+                ConfigureSceneCamera(testCamera);
+
                 GameObject controllerObject = new GameObject("Drag Test Controller");
                 objects.Add(controllerObject);
                 controller = controllerObject.AddComponent(ControllerType);
@@ -530,7 +538,7 @@ namespace GravityPuzzle.Tests.PlayMode
                 int id = combined ? 5 : 8;
                 Component piece = pieces[id];
                 dragPointer = piece.GetComponent<Rigidbody2D>().position;
-                Invoke(controller, "TrySelectPiece", dragPointer, .01f);
+                Invoke(controller, "TrySelectPiece", dragPointer);
             }
 
             public void MoveSelectedByWorld(float deltaX, float deltaY)
@@ -678,16 +686,33 @@ namespace GravityPuzzle.Tests.PlayMode
             public void BlockNormalPieceAtHorizontalOffset(int offset)
             {
                 Vector2Int anchor = initialAnchors[8];
-                Vector2Int local = FirstLocalCell(8);
-                Invoke(grid, "SetBlocked", Coordinate(anchor.x + offset + local.x, anchor.y + local.y));
+                Vector2Int rightEdgeCell = FirstLocalCell(8);
+                foreach (object localCell in (IEnumerable)PieceModelType.GetProperty("LocalCells").GetValue(models[8]))
+                {
+                    Vector2Int cell = ToVector2Int(localCell);
+                    if (cell.x > rightEdgeCell.x || (cell.x == rightEdgeCell.x && cell.y < rightEdgeCell.y))
+                        rightEdgeCell = cell;
+                }
+
+                Invoke(grid, "SetBlocked", Coordinate(anchor.x + rightEdgeCell.x + offset, anchor.y + rightEdgeCell.y));
             }
 
             public void BlockEveryVerticalCandidateForNormalPiece(int horizontalDistance)
             {
                 Vector2Int anchor = initialAnchors[8];
-                Vector2Int local = FirstLocalCell(8);
-                for (int x = 0; x <= horizontalDistance; x++)
-                    Invoke(grid, "SetBlocked", Coordinate(anchor.x + x + local.x, anchor.y + local.y + 1));
+                int minLocalX = int.MaxValue;
+                int maxLocalX = int.MinValue;
+                int maxLocalY = int.MinValue;
+                foreach (object localCell in (IEnumerable)PieceModelType.GetProperty("LocalCells").GetValue(models[8]))
+                {
+                    Vector2Int cell = ToVector2Int(localCell);
+                    minLocalX = Mathf.Min(minLocalX, cell.x);
+                    maxLocalX = Mathf.Max(maxLocalX, cell.x);
+                    maxLocalY = Mathf.Max(maxLocalY, cell.y);
+                }
+
+                for (int x = minLocalX; x <= maxLocalX + horizontalDistance; x++)
+                    Invoke(grid, "SetBlocked", Coordinate(anchor.x + x, anchor.y + maxLocalY + 1));
             }
 
             public void Dispose()
@@ -698,6 +723,7 @@ namespace GravityPuzzle.Tests.PlayMode
                         UnityEngine.Object.DestroyImmediate(objects[index]);
                 }
                 objects.Clear();
+                ConfigureSceneCamera(null);
                 ResetRuntimeLevel();
                 if (level is UnityEngine.Object levelObject)
                     UnityEngine.Object.DestroyImmediate(levelObject);
@@ -807,6 +833,16 @@ namespace GravityPuzzle.Tests.PlayMode
                 }
 
                 return null;
+            }
+
+            private static void ConfigureSceneCamera(Camera camera)
+            {
+                Assert.That(BootstrapType, Is.Not.Null);
+                MethodInfo configureCamera = BootstrapType.GetMethod(
+                    "ConfigureSceneCamera",
+                    BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+                Assert.That(configureCamera, Is.Not.Null);
+                configureCamera.Invoke(null, new object[] { camera });
             }
 
             private static void ConfigureRuntimeLevel(object activeLevel)
