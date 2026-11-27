@@ -57,7 +57,9 @@ namespace GravityPuzzle.Gameplay.Pieces
             Quaternion localRotation,
             SpriteDrawMode drawMode,
             Vector2 size,
-            bool flipX)
+            bool flipX,
+            int sortingOrderOffset = 0,
+            bool isOverlay = false)
         {
             Sprite = sprite;
             Material = material;
@@ -68,6 +70,8 @@ namespace GravityPuzzle.Gameplay.Pieces
             DrawMode = drawMode;
             Size = size;
             FlipX = flipX;
+            SortingOrderOffset = sortingOrderOffset;
+            IsOverlay = isOverlay;
         }
 
         public Sprite Sprite { get; }
@@ -79,6 +83,8 @@ namespace GravityPuzzle.Gameplay.Pieces
         public SpriteDrawMode DrawMode { get; }
         public Vector2 Size { get; }
         public bool FlipX { get; }
+        public int SortingOrderOffset { get; }
+        public bool IsOverlay { get; }
     }
     //arda
     public static class RuntimePieceFactory
@@ -186,13 +192,9 @@ namespace GravityPuzzle.Gameplay.Pieces
             if (sprite == null || sprite.bounds.size.x <= 0f || sprite.bounds.size.y <= 0f)
                 return;
 
-            Material material = isFrozenIce && pieceVisualConfig != null
-                ? pieceVisualConfig.IceMaterial
-                : presentationMaterial != null ? presentationMaterial : GetFallbackSpriteMaterial();
-            Color color = isFrozenIce || presentationMaterial != null ? Color.white : visualColor;
-            float iceScale = isFrozenIce && pieceVisualConfig != null
-                ? pieceVisualConfig.ModularIceCellScale
-                : 1f;
+            Material fallbackBaseMaterial = GetFallbackSpriteMaterial();
+            Material material = presentationMaterial != null ? presentationMaterial : fallbackBaseMaterial;
+            Color color = presentationMaterial != null ? Color.white : visualColor;
             for (int index = 0; index < parts.Count; index++)
             {
                 PiecePartGeometry part = parts[index];
@@ -202,13 +204,106 @@ namespace GravityPuzzle.Gameplay.Pieces
                     color,
                     part.LocalPosition,
                     new Vector3(
-                        part.Size.x / sprite.bounds.size.x * iceScale,
-                        part.Size.y / sprite.bounds.size.y * iceScale,
+                        part.Size.x / sprite.bounds.size.x,
+                        part.Size.y / sprite.bounds.size.y,
                         1f),
                     Quaternion.identity,
                     SpriteDrawMode.Simple,
                     Vector2.one,
                     false));
+            }
+
+            if (isFrozenIce)
+                AppendIceOverlayPreviewVisuals(parts, fallbackBaseMaterial, results);
+        }
+
+        private static void AppendIceOverlayPreviewVisuals(
+            IReadOnlyList<PiecePartGeometry> parts,
+            Material fallbackMaterial,
+            List<RuntimePiecePreviewVisual> results)
+        {
+            if (parts == null || parts.Count == 0 || results == null)
+                return;
+
+            float iceScale = pieceVisualConfig != null ? pieceVisualConfig.ModularIceCellScale : 1f;
+            Material iceMaterial = pieceVisualConfig != null && pieceVisualConfig.IceMaterial != null
+                ? pieceVisualConfig.IceMaterial
+                : fallbackMaterial;
+            Sprite overlaySprite = pieceVisualConfig != null ? pieceVisualConfig.IceOverlaySprite : null;
+            Color overlayTint = pieceVisualConfig != null
+                ? pieceVisualConfig.IceOverlayTint
+                : new Color(0.84f, 0.96f, 1f, 0.42f);
+
+            if (overlaySprite != null &&
+                overlaySprite.bounds.size.x > 0f &&
+                overlaySprite.bounds.size.y > 0f)
+            {
+                for (int index = 0; index < parts.Count; index++)
+                {
+                    PiecePartGeometry part = parts[index];
+                    results.Add(new RuntimePiecePreviewVisual(
+                        overlaySprite,
+                        iceMaterial,
+                        overlayTint,
+                        part.LocalPosition,
+                        new Vector3(
+                            part.Size.x / overlaySprite.bounds.size.x * iceScale,
+                            part.Size.y / overlaySprite.bounds.size.y * iceScale,
+                            1f),
+                        Quaternion.identity,
+                        SpriteDrawMode.Simple,
+                        Vector2.one,
+                        false,
+                        sortingOrderOffset: 1,
+                        isOverlay: true));
+                }
+
+                return;
+            }
+
+            Sprite squareSprite = PrototypeBootstrap.GetSquareSprite();
+            if (squareSprite == null ||
+                squareSprite.bounds.size.x <= 0f ||
+                squareSprite.bounds.size.y <= 0f)
+            {
+                return;
+            }
+
+            Color frostTint = pieceVisualConfig != null
+                ? pieceVisualConfig.IceFrostTint
+                : new Color(0.95f, 0.99f, 1f, 0.34f);
+
+            for (int index = 0; index < parts.Count; index++)
+            {
+                PiecePartGeometry part = parts[index];
+                Vector3 primaryScale = new Vector3(
+                    part.Size.x / squareSprite.bounds.size.x * iceScale,
+                    part.Size.y / squareSprite.bounds.size.y * iceScale,
+                    1f);
+                results.Add(new RuntimePiecePreviewVisual(
+                    squareSprite,
+                    iceMaterial,
+                    overlayTint,
+                    part.LocalPosition,
+                    primaryScale,
+                    Quaternion.identity,
+                    SpriteDrawMode.Simple,
+                    Vector2.one,
+                    false,
+                    sortingOrderOffset: 1,
+                    isOverlay: true));
+                results.Add(new RuntimePiecePreviewVisual(
+                    squareSprite,
+                    iceMaterial,
+                    frostTint,
+                    part.LocalPosition,
+                    new Vector3(primaryScale.x * 0.72f, primaryScale.y * 0.72f, 1f),
+                    Quaternion.identity,
+                    SpriteDrawMode.Simple,
+                    Vector2.one,
+                    false,
+                    sortingOrderOffset: 2,
+                    isOverlay: true));
             }
         }
 
@@ -1629,10 +1724,11 @@ namespace GravityPuzzle.Gameplay.Pieces
 
             bool useModularIce = isFrozenIce &&
                                  (pieceVisualConfig.UseUnifiedModularIce || visual.PreferModularIce);
-            Sprite sprite = isFrozenIce && visual.IceSprite != null && !useModularIce
+            bool usesWholeIceSprite = isFrozenIce && visual.IceSprite != null && !useModularIce;
+            Sprite sprite = usesWholeIceSprite
                 ? visual.IceSprite
                 : visual.NormalSprite;
-            if (sprite == null || visual.PreferModularNormal || useModularIce ||
+            if (sprite == null || visual.PreferModularNormal ||
                 sprite.bounds.size.x <= 0f || sprite.bounds.size.y <= 0f)
             {
                 return false;
@@ -1669,10 +1765,11 @@ namespace GravityPuzzle.Gameplay.Pieces
                     1f);
             }
 
-            Material material = isFrozenIce && visual.IceSprite != null
-                ? pieceVisualConfig.IceMaterial
-                : presentationMaterial != null ? presentationMaterial : GetFallbackSpriteMaterial();
-            Color color = isFrozenIce || presentationMaterial != null ? Color.white : visualColor;
+            Material fallbackBaseMaterial = GetFallbackSpriteMaterial();
+            Material material = usesWholeIceSprite
+                ? (pieceVisualConfig.IceMaterial != null ? pieceVisualConfig.IceMaterial : fallbackBaseMaterial)
+                : presentationMaterial != null ? presentationMaterial : fallbackBaseMaterial;
+            Color color = usesWholeIceSprite || presentationMaterial != null ? Color.white : visualColor;
             results.Add(new RuntimePiecePreviewVisual(
                 sprite,
                 material,
@@ -1683,6 +1780,9 @@ namespace GravityPuzzle.Gameplay.Pieces
                 drawMode,
                 tiledSize,
                 transform.FlipX));
+            if (isFrozenIce && !usesWholeIceSprite)
+                AppendIceOverlayPreviewVisuals(parts, fallbackBaseMaterial, results);
+
             return true;
         }
 

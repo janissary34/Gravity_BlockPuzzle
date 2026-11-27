@@ -106,9 +106,9 @@ namespace GravityPuzzle.Tests.Editor
 
             PuzzlePiece piece = go.AddComponent<PuzzlePiece>();
             InvokeNonPublicMethod(piece, "Awake");
-            SetNonPublicField(piece, "sourcePieceId", sourceId);
-            SetNonPublicField(piece, "isSpawnedFromPool", true);
-            SetNonPublicField(piece, "collisionCells", new List<BoxCollider2D> { collider });
+            piece.ConfigureSourcePieceId(sourceId);
+            piece.ConfigureProgressUnits(1);
+            piece.ConfigureCollisionGeometry(null, new List<BoxCollider2D> { collider }, new List<SpriteRenderer>());
 
             Vector2 originWorld = GravityLevelGridCoordinates.FineCellToWorld(level, new GridCoordinate(worldCellX, worldCellY));
             go.transform.position = originWorld;
@@ -232,6 +232,7 @@ namespace GravityPuzzle.Tests.Editor
             SetNonPublicField(config, "physicsFreefallEntrySpeed", 12.5f);
             SetNonPublicField(config, "physicsFreefallMaxSpeed", 25f);
             SetNonPublicField(config, "feedSpeed", 2f);
+            SetNonPublicField(config, "enablePhysicsIsland", false);
 
             GameObject shredderGo = Track(new GameObject("BlockShredder"));
             BlockShredder shredder = shredderGo.AddComponent<BlockShredder>();
@@ -241,6 +242,8 @@ namespace GravityPuzzle.Tests.Editor
             GameObject zoneGo = Track(new GameObject("CatchZone"));
             zoneGo.AddComponent<BoxCollider2D>();
             ShredderCatchZone zone = zoneGo.AddComponent<ShredderCatchZone>();
+            InvokeNonPublicMethod(zone, "Awake");
+            InvokeNonPublicMethod(zone, "OnEnable");
             float boardBottomY = -level.boardRows * 0.5f;
             float shredY = boardBottomY - 1.0f;
             zone.Configure(new Vector2(0f, shredY - 5f), new Vector2(4f, 10f), shredY, 0.7f, 0.5f);
@@ -250,11 +253,14 @@ namespace GravityPuzzle.Tests.Editor
 
             GravityBoardGrid grid = new GravityBoardGrid(16, 24);
             PieceModel fallingModel = CreatePieceModel(1, 0, 0, 4, 4);
+            PieceModel blockingModel = CreatePieceModel(2, 0, 0, 4, 4);
             Assert.That(grid.TryPlace(fallingModel), Is.True);
             Assert.That(fallingModel.TrySetState(PieceState.Falling), Is.True);
+            Assert.That(blockingModel.TrySetState(PieceState.HandoffToPhysics), Is.True);
+            Assert.That(blockingModel.TrySetState(PieceState.OpenFreefall), Is.True);
             board.InitializeBoardSnapshot(new LevelBoardSnapshot(
                 grid,
-                new List<PieceModel> { fallingModel },
+                new List<PieceModel> { fallingModel, blockingModel },
                 new List<LevelBoardSnapshotIssue>()));
 
             PuzzlePiece fallingPiece = CreateRuntimePieceStub(1, 0, 0, 1f, 1f, level);
@@ -273,7 +279,6 @@ namespace GravityPuzzle.Tests.Editor
             // Place an active OpenFreefall obstacle overlapping row Y=0 in the same column: admission & CanMove must block!
             PuzzlePiece blockingPiece = CreateRuntimePieceStub(2, 0, 0, 1f, 1f, level);
             blockingPiece.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, config, 12.5f);
-            SetNonPublicField(blockingPiece, "isInOpenFreefall", true);
 
             object handoffTypeInstance = Activator.CreateInstance(
                 typeof(BlockShredder).GetNestedType("ExitHandoff", BindingFlags.NonPublic),
@@ -309,6 +314,21 @@ namespace GravityPuzzle.Tests.Editor
             SetNonPublicField(config, "physicsFreefallEntrySpeed", 12.5f);
             SetNonPublicField(config, "physicsFreefallMaxSpeed", 25f);
             SetNonPublicField(config, "feedSpeed", 2f);
+            SetNonPublicField(config, "enablePhysicsIsland", false);
+
+            GameObject boardGo = Track(new GameObject("Board"));
+            PrototypeBoard board = boardGo.AddComponent<PrototypeBoard>();
+            GravityBoardGrid grid = new GravityBoardGrid(16, 24);
+            PieceModel supportModel = CreatePieceModel(1, 0, 0, 4, 4);
+            PieceModel overhangModel = CreatePieceModel(2, 0, 4, 4, 4);
+            Assert.That(supportModel.TrySetState(PieceState.HandoffToPhysics), Is.True);
+            Assert.That(supportModel.TrySetState(PieceState.OpenFreefall), Is.True);
+            Assert.That(overhangModel.TrySetState(PieceState.HandoffToPhysics), Is.True);
+            Assert.That(overhangModel.TrySetState(PieceState.OpenFreefall), Is.True);
+            board.InitializeBoardSnapshot(new LevelBoardSnapshot(
+                grid,
+                new List<PieceModel> { supportModel, overhangModel },
+                new List<LevelBoardSnapshotIssue>()));
 
             GameObject shredderGo = Track(new GameObject("BlockShredder"));
             BlockShredder shredder = shredderGo.AddComponent<BlockShredder>();
@@ -318,6 +338,8 @@ namespace GravityPuzzle.Tests.Editor
             GameObject zoneGo = Track(new GameObject("CatchZone"));
             zoneGo.AddComponent<BoxCollider2D>();
             ShredderCatchZone zone = zoneGo.AddComponent<ShredderCatchZone>();
+            InvokeNonPublicMethod(zone, "Awake");
+            InvokeNonPublicMethod(zone, "OnEnable");
             zone.Configure(new Vector2(0f, -8f), new Vector2(6f, 10f), -3f, 0.7f, 0.5f);
 
             // Lower support P in column X=-0.5..0.5, Y=-3.2..-2.2 (CachedLowestY = -3.2)
@@ -327,15 +349,11 @@ namespace GravityPuzzle.Tests.Editor
             pCell.transform.localPosition = Vector3.zero;
             pCell.size = new Vector2(1f, 1f);
             supportP.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, config, 12.5f);
-            SetNonPublicField(supportP, "isInOpenFreefall", true);
 
             // Overhanging piece Q rests ON support P in column X=0 (Y=-2.1..-1.1),
             // PLUS has an adjacent prong in column X=1 reaching LOWER (Y=-3.6..-2.6 -> CachedLowestY = -3.6 < -3.2!).
             GameObject qGo = Track(new GameObject("Piece_Q"));
-            PuzzlePiece overhangQ = qGo.AddComponent<PuzzlePiece>();
-            InvokeNonPublicMethod(overhangQ, "Awake");
-            SetNonPublicField(overhangQ, "sourcePieceId", 2);
-            SetNonPublicField(overhangQ, "isSpawnedFromPool", true);
+            qGo.SetActive(false);
             qGo.transform.position = Vector3.zero;
 
             GameObject qTop = Track(new GameObject("QTop"));
@@ -350,10 +368,13 @@ namespace GravityPuzzle.Tests.Editor
             BoxCollider2D qProngCol = qProng.AddComponent<BoxCollider2D>();
             qProngCol.size = new Vector2(1f, 1f);
 
-            SetNonPublicField(overhangQ, "collisionCells", new List<BoxCollider2D> { qTopCol, qProngCol });
-            InvokeNonPublicMethod(overhangQ, "OnEnable");
+            PuzzlePiece overhangQ = qGo.AddComponent<PuzzlePiece>();
+            InvokeNonPublicMethod(overhangQ, "Awake");
+            overhangQ.ConfigureSourcePieceId(2);
+            overhangQ.ConfigureProgressUnits(2);
+            overhangQ.ConfigureCollisionGeometry(null, new List<BoxCollider2D> { qTopCol, qProngCol }, new List<SpriteRenderer>());
+            qGo.SetActive(true);
             overhangQ.ApplyLifecyclePhysicsProfile(PieceState.OpenFreefall, config, 12.5f);
-            SetNonPublicField(overhangQ, "isInOpenFreefall", true);
 
             Type handoffType = typeof(BlockShredder).GetNestedType("ExitHandoff", BindingFlags.NonPublic);
             System.Collections.IList activeList = (System.Collections.IList)typeof(BlockShredder)

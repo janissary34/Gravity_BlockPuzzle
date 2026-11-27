@@ -95,6 +95,81 @@ public sealed class BombPresentationTests
     }
 
     [Test]
+    public void FreezeRefreshWhileBoxRevealHidden_SynchronizesThawedStateWithoutLeakingVisuals()
+    {
+        var root = new GameObject("Box Reveal Hidden Freeze Test");
+        try
+        {
+            var piece = root.AddComponent<PuzzlePiece>();
+            var whole = new GameObject("Whole Piece Presentation").AddComponent<SpriteRenderer>();
+            whole.transform.SetParent(root.transform, false);
+            whole.enabled = true;
+
+            var slots = new GameObject("Ice Presentation Slots").transform;
+            slots.SetParent(root.transform, false);
+            var ice = new GameObject("Ice").AddComponent<SpriteRenderer>();
+            ice.transform.SetParent(slots, false);
+            ice.enabled = true;
+            var bomb = new GameObject("Bomb").AddComponent<SpriteRenderer>();
+            bomb.transform.SetParent(slots, false);
+            bomb.enabled = false;
+
+            var iceCounter = new GameObject("Ice Counter Presentation").AddComponent<TextMeshPro>();
+            iceCounter.transform.SetParent(root.transform, false);
+            iceCounter.enabled = true;
+            var bombCounter = new GameObject("Bomb Counter Presentation").AddComponent<TextMeshPro>();
+            bombCounter.transform.SetParent(root.transform, false);
+            bombCounter.enabled = false;
+
+            InvokeAwake(piece);
+            SetField(piece, "wholePieceRenderer", whole);
+            SetField(piece, "bombOverlayRenderer", bomb);
+            SetField(piece, "iceCounterText", iceCounter);
+            SetField(piece, "bombCounterText", bombCounter);
+            SetField(piece, "<IsBomb>k__BackingField", true);
+            SetField(piece, "<IsFrozen>k__BackingField", true);
+            SetField(piece, "frozenUntilDestroyedCount", 2);
+            GetField<List<SpriteRenderer>>(piece, "iceRenderers").Add(ice);
+
+            piece.HideBoxRevealContentVisual();
+            Assert.That(whole.enabled, Is.False);
+            Assert.That(ice.enabled, Is.False);
+            Assert.That(bomb.enabled, Is.False);
+            Assert.That(iceCounter.enabled, Is.False);
+            Assert.That(bombCounter.enabled, Is.False);
+
+            // Decrement while still frozen: counters/renderers remain hidden behind the Box.
+            piece.RefreshFreezeState(1);
+            Assert.That(piece.IsFrozen, Is.True);
+            Assert.That(whole.enabled, Is.False);
+            Assert.That(ice.enabled, Is.False);
+            Assert.That(iceCounter.enabled, Is.False);
+
+            // Thaw while still hidden behind the Box: visuals stay hidden until release.
+            piece.RefreshFreezeState(2);
+            Assert.That(piece.IsFrozen, Is.False);
+            Assert.That(whole.enabled, Is.False);
+            Assert.That(ice.enabled, Is.False);
+            Assert.That(bomb.enabled, Is.False);
+            Assert.That(iceCounter.enabled, Is.False);
+            Assert.That(bombCounter.enabled, Is.False);
+
+            // Releasing the Box lease restores the thawed bomb state without re-enabling stale ice.
+            piece.RestoreBoxRevealContentVisual();
+            Assert.That(whole.enabled, Is.True);
+            Assert.That(ice.enabled, Is.False);
+            Assert.That(iceCounter.enabled, Is.False);
+            Assert.That(bomb.enabled, Is.True);
+            Assert.That(bombCounter.enabled, Is.True);
+            Assert.That(bombCounter.gameObject.activeSelf, Is.True);
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
     public void HammerHitOnArmedBomb_DefusesWithoutRemovingItsBlock()
     {
         var root = new GameObject("Hammer bomb defuse test");

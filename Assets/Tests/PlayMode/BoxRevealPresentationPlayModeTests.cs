@@ -21,6 +21,9 @@ namespace GravityPuzzle.Tests.PlayMode
         private static readonly Type PieceDefinitionType = Type.GetType("GravityPuzzle.PieceDefinition, Assembly-CSharp");
         private static readonly Type PieceCellDefinitionType = Type.GetType("GravityPuzzle.PieceCellDefinition, Assembly-CSharp");
         private static readonly Type PieceCellType = Type.GetType("GravityPuzzle.PieceCellType, Assembly-CSharp");
+        private static readonly Type PieceSpecialBlockType = Type.GetType("GravityPuzzle.PieceSpecialBlockType, Assembly-CSharp");
+        private static readonly Type PieceVisualConfigType = Type.GetType("GravityPuzzle.Config.PieceVisualConfig, Assembly-CSharp");
+        private static readonly Type RuntimePieceFactoryType = Type.GetType("GravityPuzzle.Gameplay.Pieces.RuntimePieceFactory, Assembly-CSharp");
 
         [UnityTest]
         public IEnumerator ProgressRetargetsWithoutMovingTheFrameAndCompletesBeforeUnlock()
@@ -330,6 +333,214 @@ namespace GravityPuzzle.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator SingleBlockIcePreviewRendersBaseBrickAndOverlayWithinMaskWithoutOverlayShadow()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoxRevealAreaPrefabPath);
+            var sourceConfig = AssetDatabase.LoadAssetAtPath("Assets/Config/RevealPresentationConfig.asset", ConfigType);
+            var visualConfig = AssetDatabase.LoadAssetAtPath("Assets/PieceVisualConfig.asset", PieceVisualConfigType);
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(sourceConfig, Is.Not.Null);
+            Assert.That(visualConfig, Is.Not.Null);
+            Assert.That(RuntimePieceFactoryType, Is.Not.Null);
+
+            FieldInfo visualConfigField = RuntimePieceFactoryType.GetField(
+                "pieceVisualConfig",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            MethodInfo setVisualConfig = RuntimePieceFactoryType.GetMethod("SetVisualConfig");
+            Assert.That(visualConfigField, Is.Not.Null);
+            Assert.That(setVisualConfig, Is.Not.Null);
+
+            object previousVisualConfig = visualConfigField.GetValue(null);
+            var config = UnityEngine.Object.Instantiate(sourceConfig);
+            ScriptableObject level = ScriptableObject.CreateInstance(LevelType);
+            LevelType.GetField("boardColumns").SetValue(level, 4);
+            LevelType.GetField("boardRows").SetValue(level, 4);
+            LevelType.GetField("subdivisions").SetValue(level, 4);
+            object definition = Activator.CreateInstance(BoxDefinitionType);
+            object bounds = Activator.CreateInstance(BoundsType);
+            BoundsType.GetField("origin").SetValue(bounds, new Vector2Int(0, 0));
+            BoundsType.GetField("size").SetValue(bounds, new Vector2Int(8, 8));
+            BoxDefinitionType.GetField("bounds").SetValue(definition, bounds);
+            IList hiddenPieces = CreateTypedList(PieceDefinitionType);
+            BoxDefinitionType.GetField("hiddenPieces").SetValue(definition, hiddenPieces);
+            hiddenPieces.Add(CreateBlockPiece(
+                Vector2Int.zero,
+                subdivisions: 4,
+                Color.white,
+                "Orange",
+                frozenMoveCount: 11));
+
+            GameObject instance = UnityEngine.Object.Instantiate(prefab);
+            Component view = instance.GetComponent(ViewType);
+            MethodInfo initialize = ViewType.GetMethod("Initialize");
+            MethodInfo configurePreview = ViewType.GetMethod("ConfigureBoxPreview");
+            MethodInfo setPreviewVisible = ViewType.GetMethod("SetContentPreviewVisible");
+            MethodInfo applyShutterHeight = ViewType.GetMethod(
+                "ApplyShutterHeight",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo despawn = ViewType.GetMethod("OnDespawn");
+
+            Transform baseSlot = instance.transform.Find("Shutter/Preview Content/Preview Slot 1");
+            Transform baseShadowSlot = instance.transform.Find("Shutter/Preview Content/Preview Shadow Slot 1");
+            Transform overlaySlot = instance.transform.Find("Shutter/Preview Content/Preview Slot 2");
+            Transform overlayShadowSlot = instance.transform.Find("Shutter/Preview Content/Preview Shadow Slot 2");
+            Transform thirdSlot = instance.transform.Find("Shutter/Preview Content/Preview Slot 3");
+            Transform panel = instance.transform.Find("Shutter/Box Moving Shutter");
+            Transform mask = instance.transform.Find("Shutter/Preview Content/Aperture Mask");
+
+            try
+            {
+                setVisualConfig.Invoke(null, new object[] { visualConfig });
+                initialize.Invoke(view, new object[] { "ice_1x1", Vector2.zero, new Vector2(2f, 2f), config });
+                configurePreview.Invoke(view, new object[] { level, definition });
+
+                SpriteRenderer baseRenderer = baseSlot.GetComponent<SpriteRenderer>();
+                SpriteRenderer baseShadowRenderer = baseShadowSlot.GetComponent<SpriteRenderer>();
+                SpriteRenderer overlayRenderer = overlaySlot.GetComponent<SpriteRenderer>();
+                SpriteRenderer panelRenderer = panel.GetComponent<SpriteRenderer>();
+                SpriteMask previewMask = mask.GetComponent<SpriteMask>();
+
+                Sprite expectedOverlaySprite = (Sprite)PieceVisualConfigType.GetProperty("IceOverlaySprite").GetValue(visualConfig);
+                Material expectedIceMaterial = (Material)PieceVisualConfigType.GetProperty("IceMaterial").GetValue(visualConfig);
+                Color expectedOverlayTint = (Color)PieceVisualConfigType.GetProperty("IceOverlayTint").GetValue(visualConfig);
+                object[] materialArgs = new object[] { "Orange", null };
+                Assert.That((bool)PieceVisualConfigType.GetMethod("TryGetPaletteMaterial").Invoke(visualConfig, materialArgs), Is.True);
+                Material expectedOrangeMaterial = (Material)materialArgs[1];
+
+                Assert.That(baseSlot.gameObject.activeSelf, Is.True);
+                Assert.That(baseRenderer.sharedMaterial, Is.EqualTo(expectedOrangeMaterial));
+                Assert.That(baseRenderer.maskInteraction, Is.EqualTo(SpriteMaskInteraction.VisibleInsideMask));
+                Assert.That(baseShadowSlot.gameObject.activeSelf, Is.True);
+                Assert.That(baseShadowRenderer.sortingOrder, Is.LessThan(baseRenderer.sortingOrder));
+
+                Assert.That(overlaySlot.gameObject.activeSelf, Is.True);
+                Assert.That(overlayRenderer.sprite, Is.EqualTo(expectedOverlaySprite));
+                Assert.That(overlayRenderer.sharedMaterial, Is.EqualTo(expectedIceMaterial));
+                Assert.That(overlayRenderer.maskInteraction, Is.EqualTo(SpriteMaskInteraction.VisibleInsideMask));
+                Assert.That(overlayRenderer.sortingOrder, Is.GreaterThan(baseRenderer.sortingOrder));
+                Assert.That(overlayRenderer.sortingOrder, Is.LessThan(panelRenderer.sortingOrder));
+                Assert.That(overlayShadowSlot.gameObject.activeSelf, Is.False);
+                Assert.That(thirdSlot.gameObject.activeSelf, Is.False);
+
+                Assert.That(previewMask.backSortingOrder, Is.LessThan(baseShadowRenderer.sortingOrder));
+                Assert.That(previewMask.frontSortingOrder, Is.GreaterThan(overlayRenderer.sortingOrder));
+
+                applyShutterHeight.Invoke(view, new object[] { 1f });
+                Assert.That(overlayRenderer.color.a, Is.EqualTo(expectedOverlayTint.a).Within(.001f));
+                Assert.That(overlayRenderer.color.r, Is.LessThan(expectedOverlayTint.r));
+
+                setPreviewVisible.Invoke(view, new object[] { 0, false });
+                Assert.That(baseSlot.gameObject.activeSelf, Is.False);
+                Assert.That(overlaySlot.gameObject.activeSelf, Is.False);
+                Assert.That(baseShadowSlot.gameObject.activeSelf, Is.False);
+                Assert.That(overlayShadowSlot.gameObject.activeSelf, Is.False);
+
+                setPreviewVisible.Invoke(view, new object[] { 0, true });
+                Assert.That(baseSlot.gameObject.activeSelf, Is.True);
+                Assert.That(overlaySlot.gameObject.activeSelf, Is.True);
+                Assert.That(baseShadowSlot.gameObject.activeSelf, Is.True);
+                Assert.That(overlayShadowSlot.gameObject.activeSelf, Is.False);
+
+                despawn.Invoke(view, null);
+                Assert.That(baseSlot.gameObject.activeSelf, Is.False);
+                Assert.That(overlaySlot.gameObject.activeSelf, Is.False);
+                Assert.That(baseShadowSlot.gameObject.activeSelf, Is.False);
+                Assert.That(overlayShadowSlot.gameObject.activeSelf, Is.False);
+            }
+            finally
+            {
+                setVisualConfig.Invoke(null, new[] { previousVisualConfig });
+                UnityEngine.Object.Destroy(instance);
+                UnityEngine.Object.Destroy(config);
+                UnityEngine.Object.Destroy(level);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ModularAndFallbackFrostIcePreviewPreserveBaseVisualsAndOrderWithinMask()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoxRevealAreaPrefabPath);
+            var sourceConfig = AssetDatabase.LoadAssetAtPath("Assets/Config/RevealPresentationConfig.asset", ConfigType);
+            var sourceVisualConfig = AssetDatabase.LoadAssetAtPath("Assets/PieceVisualConfig.asset", PieceVisualConfigType);
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(sourceConfig, Is.Not.Null);
+            Assert.That(sourceVisualConfig, Is.Not.Null);
+
+            FieldInfo visualConfigField = RuntimePieceFactoryType.GetField(
+                "pieceVisualConfig",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            MethodInfo setVisualConfig = RuntimePieceFactoryType.GetMethod("SetVisualConfig");
+            object previousVisualConfig = visualConfigField.GetValue(null);
+
+            var config = UnityEngine.Object.Instantiate(sourceConfig);
+            var clonedVisualConfig = UnityEngine.Object.Instantiate((UnityEngine.Object)sourceVisualConfig);
+            PieceVisualConfigType.GetField("iceOverlaySprite", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(clonedVisualConfig, null);
+
+            ScriptableObject level = ScriptableObject.CreateInstance(LevelType);
+            LevelType.GetField("boardColumns").SetValue(level, 4);
+            LevelType.GetField("boardRows").SetValue(level, 4);
+            LevelType.GetField("subdivisions").SetValue(level, 1);
+            object definition = Activator.CreateInstance(BoxDefinitionType);
+            object bounds = Activator.CreateInstance(BoundsType);
+            BoundsType.GetField("origin").SetValue(bounds, Vector2Int.zero);
+            BoundsType.GetField("size").SetValue(bounds, new Vector2Int(2, 2));
+            BoxDefinitionType.GetField("bounds").SetValue(definition, bounds);
+            IList hiddenPieces = CreateTypedList(PieceDefinitionType);
+            BoxDefinitionType.GetField("hiddenPieces").SetValue(definition, hiddenPieces);
+            hiddenPieces.Add(CreateBlockPiece(
+                Vector2Int.zero,
+                subdivisions: 1,
+                Color.white,
+                "Orange",
+                frozenMoveCount: 3));
+
+            GameObject instance = UnityEngine.Object.Instantiate(prefab);
+            Component view = instance.GetComponent(ViewType);
+            MethodInfo initialize = ViewType.GetMethod("Initialize");
+            MethodInfo configurePreview = ViewType.GetMethod("ConfigureBoxPreview");
+
+            Transform baseSlot = instance.transform.Find("Shutter/Preview Content/Preview Slot 1");
+            Transform primaryFrostSlot = instance.transform.Find("Shutter/Preview Content/Preview Slot 2");
+            Transform secondaryFrostSlot = instance.transform.Find("Shutter/Preview Content/Preview Slot 3");
+            Transform secondaryFrostShadow = instance.transform.Find("Shutter/Preview Content/Preview Shadow Slot 3");
+            Transform panel = instance.transform.Find("Shutter/Box Moving Shutter");
+            Transform mask = instance.transform.Find("Shutter/Preview Content/Aperture Mask");
+
+            try
+            {
+                setVisualConfig.Invoke(null, new object[] { clonedVisualConfig });
+                initialize.Invoke(view, new object[] { "ice_frost_fallback", Vector2.zero, new Vector2(2f, 2f), config });
+                configurePreview.Invoke(view, new object[] { level, definition });
+
+                SpriteRenderer baseRenderer = baseSlot.GetComponent<SpriteRenderer>();
+                SpriteRenderer primaryFrost = primaryFrostSlot.GetComponent<SpriteRenderer>();
+                SpriteRenderer secondaryFrost = secondaryFrostSlot.GetComponent<SpriteRenderer>();
+                SpriteRenderer panelRenderer = panel.GetComponent<SpriteRenderer>();
+                SpriteMask previewMask = mask.GetComponent<SpriteMask>();
+
+                Assert.That(baseSlot.gameObject.activeSelf, Is.True);
+                Assert.That(primaryFrostSlot.gameObject.activeSelf, Is.True);
+                Assert.That(secondaryFrostSlot.gameObject.activeSelf, Is.True);
+                Assert.That(secondaryFrostShadow.gameObject.activeSelf, Is.False);
+                Assert.That(primaryFrost.sortingOrder, Is.GreaterThan(baseRenderer.sortingOrder));
+                Assert.That(secondaryFrost.sortingOrder, Is.GreaterThan(primaryFrost.sortingOrder));
+                Assert.That(secondaryFrost.sortingOrder, Is.LessThan(panelRenderer.sortingOrder));
+                Assert.That(previewMask.frontSortingOrder, Is.GreaterThan(secondaryFrost.sortingOrder));
+            }
+            finally
+            {
+                setVisualConfig.Invoke(null, new[] { previousVisualConfig });
+                UnityEngine.Object.Destroy(clonedVisualConfig);
+                UnityEngine.Object.Destroy(instance);
+                UnityEngine.Object.Destroy(config);
+                UnityEngine.Object.Destroy(level);
+            }
+            yield return null;
+        }
+
         private static IList CreateTypedList(Type itemType)
         {
             return (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(itemType));
@@ -346,6 +557,39 @@ namespace GravityPuzzle.Tests.PlayMode
                 PieceCellDefinitionType,
                 Vector2Int.zero,
                 Enum.ToObject(PieceCellType, 0)));
+            return piece;
+        }
+
+        private static object CreateBlockPiece(
+            Vector2Int origin,
+            int subdivisions,
+            Color color,
+            string paletteId,
+            int frozenMoveCount)
+        {
+            object piece = Activator.CreateInstance(PieceDefinitionType);
+            PieceDefinitionType.GetField("origin").SetValue(piece, origin);
+            PieceDefinitionType.GetField("color").SetValue(piece, color);
+            PieceDefinitionType.GetField("paletteId").SetValue(piece, paletteId);
+            PieceDefinitionType.GetField("specialBlockType").SetValue(
+                piece,
+                Enum.ToObject(PieceSpecialBlockType, frozenMoveCount > 0 ? 1 : 0));
+            PieceDefinitionType.GetField("frozenMoveCount").SetValue(piece, frozenMoveCount);
+            IList cells = CreateTypedList(PieceCellDefinitionType);
+            PieceDefinitionType.GetField("cells").SetValue(piece, cells);
+            object blockType = Enum.ToObject(PieceCellType, 0);
+            int span = Mathf.Max(1, subdivisions);
+            for (int y = 0; y < span; y++)
+            {
+                for (int x = 0; x < span; x++)
+                {
+                    cells.Add(Activator.CreateInstance(
+                        PieceCellDefinitionType,
+                        new Vector2Int(x, y),
+                        blockType));
+                }
+            }
+
             return piece;
         }
     }

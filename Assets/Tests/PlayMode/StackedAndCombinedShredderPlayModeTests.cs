@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
@@ -122,15 +123,18 @@ namespace GravityPuzzle.Tests.PlayMode
             RuntimeType.GetField("currentLevelIndex", BindingFlags.Static | BindingFlags.NonPublic).SetValue(null, 0);
             RuntimeType.GetField("levelSequenceInitialized", BindingFlags.Static | BindingFlags.NonPublic).SetValue(null, true);
 
-            ScriptableObject shredderConfig = AssetDatabase.LoadAssetAtPath<ScriptableObject>("Assets/ShredderConfig.asset");
-            if (shredderConfig == null)
-            {
-                shredderConfig = Track(ScriptableObject.CreateInstance(ShredderConfigType));
-                SetField(shredderConfig, "physicsFreefallEntrySpeed", 12.5f);
-                SetField(shredderConfig, "physicsFreefallMaxSpeed", 25f);
-                SetField(shredderConfig, "feedSpeed", 2f);
-                SetField(shredderConfig, "gearClippingRatio", 0.45f);
-            }
+            ScriptableObject shredderConfig = Track(ScriptableObject.CreateInstance(ShredderConfigType));
+            SetField(shredderConfig, "physicsHandoffDistanceBelowMap", 1f);
+            SetField(shredderConfig, "physicsFreefallDistanceBelowHandoff", 0.5f);
+            SetField(shredderConfig, "physicsFreefallGravityScale", 0f);
+            SetField(shredderConfig, "physicsFreefallEntrySpeed", 12.5f);
+            SetField(shredderConfig, "physicsFreefallAcceleration", 60f);
+            SetField(shredderConfig, "physicsFreefallMaxSpeed", 25f);
+            SetField(shredderConfig, "gearClippingRatio", 0.45f);
+            SetField(shredderConfig, "captureApproachDistance", 0.04f);
+            SetField(shredderConfig, "feedSpeed", 2f);
+            SetField(shredderConfig, "enablePhysicsIsland", false);
+            SetField(shredderConfig, "enableContactDebrisPresentation", false);
 
             ScriptableObject tweenConfig = AssetDatabase.LoadAssetAtPath<ScriptableObject>("Assets/TweenConfig.asset");
             Assert.That(tweenConfig, Is.Not.Null, "Expected Assets/TweenConfig.asset to exist.");
@@ -219,11 +223,22 @@ namespace GravityPuzzle.Tests.PlayMode
             object fallView = go.AddComponent(FallViewType);
             SetField(fallView, "tweenConfig", tweenConfig);
             object piece = go.AddComponent(PuzzlePieceType);
-            SetField(piece, "sourcePieceId", id);
-            SetField(piece, "isSpawnedFromPool", true);
-            SetField(piece, "collisionCells", colliders);
-            SetField(piece, "collisionCellVisuals", visuals);
-            SetField(piece, "progressUnits", Mathf.Max(1, visuals.Count));
+            PuzzlePieceType.GetMethod("ConfigureSourcePieceId").Invoke(piece, new object[] { id });
+            PuzzlePieceType.GetMethod("ConfigureProgressUnits").Invoke(piece, new object[] { Mathf.Max(1, visuals.Count) });
+            PuzzlePieceType.GetMethod(
+                "ConfigureCollisionGeometry",
+                new[] { typeof(CompositeCollider2D), typeof(List<BoxCollider2D>), typeof(List<SpriteRenderer>) })
+                .Invoke(piece, new object[] { null, colliders, visuals });
+
+            ParameterExpression param = Expression.Parameter(PuzzlePieceType, "p");
+            Delegate poolHandler = Expression.Lambda(
+                typeof(Action<>).MakeGenericType(PuzzlePieceType),
+                Expression.Call(
+                    Expression.Property(param, "gameObject"),
+                    typeof(GameObject).GetMethod("SetActive"),
+                    Expression.Constant(false)),
+                param).Compile();
+            PuzzlePieceType.GetMethod("SetPoolReturnHandler").Invoke(piece, new object[] { poolHandler });
 
             Vector2 startPos = (Vector2)CoordsType.GetMethod("FineCellToWorld").Invoke(null, new[] { level, Coord(anchorX, anchorY) });
             go.transform.position = startPos;

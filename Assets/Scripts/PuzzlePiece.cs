@@ -2644,25 +2644,37 @@ namespace GravityPuzzle
             if (!IsBomb || IsShredderInteractionLocked || IsBombDefused)
                 return;
 
-            if (IsFrozen)
+            bool rehideBoxReveal = boxRevealPresentationCaptured;
+            if (rehideBoxReveal)
+                RestoreBoxRevealContentVisual();
+
+            try
             {
-                if (bombOverlayRenderer != null)
-                    bombOverlayRenderer.enabled = false;
-                if (bombCounterText != null && bombCounterText != iceCounterText)
+                if (IsFrozen)
                 {
-                    bombCounterText.enabled = false;
-                    bombCounterText.gameObject.SetActive(false);
+                    if (bombOverlayRenderer != null)
+                        bombOverlayRenderer.enabled = false;
+                    if (bombCounterText != null && bombCounterText != iceCounterText)
+                    {
+                        bombCounterText.enabled = false;
+                        bombCounterText.gameObject.SetActive(false);
+                    }
+                    return;
                 }
-                return;
+
+                if (bombOverlayRenderer == null && bombOverlaySprite != null)
+                    BuildBombVisuals();
+                else if (bombOverlayRenderer != null)
+                    bombOverlayRenderer.enabled = true;
+
+                previousBombRemaining = -1;
+                UpdateBombCounter(Mathf.CeilToInt(BombTimerSeconds));
             }
-
-            if (bombOverlayRenderer == null && bombOverlaySprite != null)
-                BuildBombVisuals();
-            else if (bombOverlayRenderer != null)
-                bombOverlayRenderer.enabled = true;
-
-            previousBombRemaining = -1;
-            UpdateBombCounter(Mathf.CeilToInt(BombTimerSeconds));
+            finally
+            {
+                if (rehideBoxReveal)
+                    HideBoxRevealContentVisual();
+            }
         }
 
         public void RefreshBombTimer(float secondsRemaining)
@@ -2672,11 +2684,29 @@ namespace GravityPuzzle
 
             int remainingSeconds = Mathf.CeilToInt(Mathf.Max(0f, secondsRemaining));
             TextMeshPro counter = bombCounterText != null ? bombCounterText : iceCounterText;
-            if (remainingSeconds == previousBombRemaining && counter != null && counter.enabled)
-                return;
+            bool rehideBoxReveal = boxRevealPresentationCaptured;
+            if (rehideBoxReveal)
+            {
+                if (remainingSeconds == previousBombRemaining)
+                    return;
 
-            previousBombRemaining = remainingSeconds;
-            UpdateBombCounter(remainingSeconds);
+                RestoreBoxRevealContentVisual();
+            }
+            else if (remainingSeconds == previousBombRemaining && counter != null && counter.enabled)
+            {
+                return;
+            }
+
+            try
+            {
+                previousBombRemaining = remainingSeconds;
+                UpdateBombCounter(remainingSeconds);
+            }
+            finally
+            {
+                if (rehideBoxReveal)
+                    HideBoxRevealContentVisual();
+            }
         }
 
         /// <summary>
@@ -2746,42 +2776,54 @@ namespace GravityPuzzle
         /// </summary>
         public void RefreshKeyLockBadge()
         {
-            if (IsFrozen)
+            bool rehideBoxReveal = boxRevealPresentationCaptured;
+            if (rehideBoxReveal)
+                RestoreBoxRevealContentVisual();
+
+            try
             {
-                keyLockBadge?.ClearBadge();
-                return;
+                if (IsFrozen)
+                {
+                    keyLockBadge?.ClearBadge();
+                    return;
+                }
+
+                if (keyLockBadge == null || keyLockBadge.HasBadge)
+                    return;
+
+                Sprite sprite = IsKeyLocked
+                    ? lockBadgeSprite
+                    : IsKey && !keyBadgeDetached ? keyBadgeSprite : null;
+                if (sprite == null ||
+                    !TryResolveCentralOverlayPlacement(
+                        out SpriteRenderer sortingSource,
+                        out Vector2 center,
+                        out Vector2 targetSize))
+                    return;
+
+                if (!TryGetAvailableIceSlot(out SpriteRenderer slot))
+                {
+                    Debug.LogWarning("[KeyLock] Key/Lock presentation slot capacity exceeded.", this);
+                    return;
+                }
+
+                keyLockBadge.ShowBadge(
+                    slot,
+                    transform,
+                    sprite,
+                    keyLockBadgeMaterial,
+                    keyLockBadgeColor,
+                    new Vector3(center.x, center.y, transform.position.z - .01f),
+                    GetOverlayScaleToFit(targetSize, sprite, keyLockBadgeFill),
+                    sortingSource.sortingLayerID,
+                    sortingSource.sortingOrder + 5,
+                    IsKeyLocked ? "Lock Badge" : "Key Badge");
             }
-
-            if (keyLockBadge == null || keyLockBadge.HasBadge)
-                return;
-
-            Sprite sprite = IsKeyLocked
-                ? lockBadgeSprite
-                : IsKey && !keyBadgeDetached ? keyBadgeSprite : null;
-            if (sprite == null ||
-                !TryResolveCentralOverlayPlacement(
-                    out SpriteRenderer sortingSource,
-                    out Vector2 center,
-                    out Vector2 targetSize))
-                return;
-
-            if (!TryGetAvailableIceSlot(out SpriteRenderer slot))
+            finally
             {
-                Debug.LogWarning("[KeyLock] Key/Lock presentation slot capacity exceeded.", this);
-                return;
+                if (rehideBoxReveal)
+                    HideBoxRevealContentVisual();
             }
-
-            keyLockBadge.ShowBadge(
-                slot,
-                transform,
-                sprite,
-                keyLockBadgeMaterial,
-                keyLockBadgeColor,
-                new Vector3(center.x, center.y, transform.position.z - .01f),
-                GetOverlayScaleToFit(targetSize, sprite, keyLockBadgeFill),
-                sortingSource.sortingLayerID,
-                sortingSource.sortingOrder + 5,
-                IsKeyLocked ? "Lock Badge" : "Key Badge");
         }
 
         /// <summary>
@@ -2920,58 +2962,76 @@ namespace GravityPuzzle
                 destroyedPieceCount < frozenUntilDestroyedCount &&
                 !IsShredderInteractionLocked;
 
-            bool wasFrozen = IsFrozen;
-            if (wasFrozen && !shouldBeFrozen)
+            bool rehideBoxReveal = boxRevealPresentationCaptured;
+            if (rehideBoxReveal)
+                RestoreBoxRevealContentVisual();
+
+            try
             {
-                CaptureWholePieceIceReleaseLayer();
-                PrototypeBoard activeBoard = PrototypeBoard.Active;
-                if (activeBoard != null)
-                    SyncFrozenBombElapsed(activeBoard.BombElapsedSeconds);
-            }
-
-            IsFrozen = shouldBeFrozen;
-            RefreshWholePiecePresentation();
-            if (shouldBeFrozen)
-            {
-                if (bombOverlayRenderer != null)
-                    bombOverlayRenderer.enabled = false;
-                keyLockBadge?.ClearBadge();
-
-                if (iceRenderers.Count == 0 &&
-                    (wholePieceIceSprite == null || preferModularIcePresentation))
-                    BuildIceVisuals();
-
-                int remainingCount = frozenUntilDestroyedCount - destroyedPieceCount;
-                if (previousFrozenRemaining >= 0 && remainingCount < previousFrozenRemaining)
-                    PlayIceCrackFeedback();
-
-                iceReleaseAnimating = false;
-                previousFrozenRemaining = remainingCount;
-                UpdateIceCounter(remainingCount);
-            }
-            else
-            {
-                previousFrozenRemaining = -1;
-                if (iceCounterText != null &&
-                    (iceCounterText != bombCounterText || !IsBomb || IsBombDefused))
+                bool wasFrozen = IsFrozen;
+                if (wasFrozen && !shouldBeFrozen)
                 {
-                    iceCounterText.enabled = false;
-                    iceCounterText.gameObject.SetActive(false);
+                    CaptureWholePieceIceReleaseLayer();
+                    PrototypeBoard activeBoard = PrototypeBoard.Active;
+                    if (activeBoard != null)
+                        SyncFrozenBombElapsed(activeBoard.BombElapsedSeconds);
                 }
 
-                if ((wasFrozen || iceRenderers.Count > 0) && !iceReleaseAnimating)
-                    PlayIceReleaseAnimation();
-                else if (!iceReleaseAnimating)
-                    ClearIceVisuals();
+                IsFrozen = shouldBeFrozen;
+                RefreshWholePiecePresentation();
+                if (shouldBeFrozen)
+                {
+                    if (bombOverlayRenderer != null)
+                        bombOverlayRenderer.enabled = false;
+                    keyLockBadge?.ClearBadge();
 
-                if (IsBomb && !IsBombDefused)
-                    RefreshBombState();
-                if (IsKey || IsKeyLocked)
-                    RefreshKeyLockBadge();
+                    if (iceRenderers.Count == 0 &&
+                        (wholePieceIceSprite == null || preferModularIcePresentation))
+                        BuildIceVisuals();
 
-                if (Body != null)
-                    Body.WakeUp();
+                    int remainingCount = frozenUntilDestroyedCount - destroyedPieceCount;
+                    if (previousFrozenRemaining >= 0 && remainingCount < previousFrozenRemaining)
+                        PlayIceCrackFeedback();
 
+                    iceReleaseAnimating = false;
+                    previousFrozenRemaining = remainingCount;
+                    UpdateIceCounter(remainingCount);
+                }
+                else
+                {
+                    previousFrozenRemaining = -1;
+                    if (iceCounterText != null &&
+                        (iceCounterText != bombCounterText || !IsBomb || IsBombDefused))
+                    {
+                        iceCounterText.enabled = false;
+                        iceCounterText.gameObject.SetActive(false);
+                    }
+
+                    if ((wasFrozen || iceRenderers.Count > 0) && !iceReleaseAnimating)
+                    {
+                        if (rehideBoxReveal)
+                            ClearIceVisuals();
+                        else
+                            PlayIceReleaseAnimation();
+                    }
+                    else if (!iceReleaseAnimating)
+                    {
+                        ClearIceVisuals();
+                    }
+
+                    if (IsBomb && !IsBombDefused)
+                        RefreshBombState();
+                    if (IsKey || IsKeyLocked)
+                        RefreshKeyLockBadge();
+
+                    if (Body != null)
+                        Body.WakeUp();
+                }
+            }
+            finally
+            {
+                if (rehideBoxReveal)
+                    HideBoxRevealContentVisual();
             }
         }
 

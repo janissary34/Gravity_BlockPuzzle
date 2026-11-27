@@ -250,7 +250,9 @@ namespace GravityPuzzle.Presentation.Views
                             visual.LocalRotation,
                             visual.DrawMode,
                             visual.Size,
-                            visual.FlipX));
+                            visual.FlipX,
+                            visual.SortingOrderOffset,
+                            visual.IsOverlay));
                     }
                 }
 
@@ -274,6 +276,7 @@ namespace GravityPuzzle.Presentation.Views
                 if (renderer == null)
                     continue;
 
+                int baseSortingOrder = config != null ? config.boxSortingOrder - 4 : 196;
                 RuntimePiecePreviewVisual visual = previewVisuals[index];
                 renderer.sprite = visual.Sprite;
                 renderer.sharedMaterial = visual.Material;
@@ -282,7 +285,7 @@ namespace GravityPuzzle.Presentation.Views
                 renderer.size = visual.Size;
                 renderer.flipX = visual.FlipX;
                 renderer.flipY = false;
-                renderer.sortingOrder = config != null ? config.boxSortingOrder - 2 : 198;
+                renderer.sortingOrder = baseSortingOrder + visual.SortingOrderOffset;
                 renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
                 renderer.transform.localPosition = visual.LocalPosition;
                 renderer.transform.localScale = visual.LocalScale;
@@ -294,18 +297,25 @@ namespace GravityPuzzle.Presentation.Views
                     SpriteRenderer shadowRenderer = boxPreviewShadowRenderers[index];
                     if (shadowRenderer != null)
                     {
-                        shadowRenderer.sprite = visual.Sprite;
-                        shadowRenderer.sharedMaterial = visual.Material;
-                        shadowRenderer.drawMode = visual.DrawMode;
-                        shadowRenderer.size = visual.Size;
-                        shadowRenderer.flipX = visual.FlipX;
-                        shadowRenderer.flipY = false;
-                        shadowRenderer.sortingOrder = config != null ? config.boxSortingOrder - 3 : 197;
-                        shadowRenderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
-                        shadowRenderer.transform.localPosition = visual.LocalPosition;
-                        shadowRenderer.transform.localScale = visual.LocalScale;
-                        shadowRenderer.transform.localRotation = visual.LocalRotation;
-                        shadowRenderer.gameObject.SetActive(true);
+                        if (visual.IsOverlay)
+                        {
+                            shadowRenderer.gameObject.SetActive(false);
+                        }
+                        else
+                        {
+                            shadowRenderer.sprite = visual.Sprite;
+                            shadowRenderer.sharedMaterial = visual.Material;
+                            shadowRenderer.drawMode = visual.DrawMode;
+                            shadowRenderer.size = visual.Size;
+                            shadowRenderer.flipX = visual.FlipX;
+                            shadowRenderer.flipY = false;
+                            shadowRenderer.sortingOrder = config != null ? config.boxSortingOrder - 5 : 195;
+                            shadowRenderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+                            shadowRenderer.transform.localPosition = visual.LocalPosition;
+                            shadowRenderer.transform.localScale = visual.LocalScale;
+                            shadowRenderer.transform.localRotation = visual.LocalRotation;
+                            shadowRenderer.gameObject.SetActive(true);
+                        }
                     }
                 }
 
@@ -351,7 +361,8 @@ namespace GravityPuzzle.Presentation.Views
                 if (boxPreviewShadowRenderers != null && index < boxPreviewShadowRenderers.Length &&
                     boxPreviewShadowRenderers[index] != null)
                 {
-                    boxPreviewShadowRenderers[index].gameObject.SetActive(visible);
+                    bool showShadow = visible && index < previewVisuals.Count && !previewVisuals[index].IsOverlay;
+                    boxPreviewShadowRenderers[index].gameObject.SetActive(showShadow);
                 }
             }
 
@@ -486,7 +497,7 @@ namespace GravityPuzzle.Presentation.Views
             Vector2 backingSize = boxBackingRenderer.sprite.bounds.size;
             boxBackingRenderer.transform.localScale = new Vector3(panelSize.x / backingSize.x, panelSize.y / backingSize.y, 1f);
             boxBackingRenderer.color = config.boxBackingColor;
-            boxBackingRenderer.sortingOrder = config.boxSortingOrder - 4;
+            boxBackingRenderer.sortingOrder = config.boxSortingOrder - 6;
             boxBackingRenderer.gameObject.SetActive(true);
 
             boxPanelRenderer.transform.localPosition = panelPosition;
@@ -506,12 +517,11 @@ namespace GravityPuzzle.Presentation.Views
                 previewMask.transform.localScale = new Vector3(panelSize.x / maskSize.x, panelSize.y / maskSize.y, 1f);
                 previewMask.transform.localRotation = boxPanelRenderer.transform.localRotation;
                 previewMask.isCustomRangeActive = true;
-                // SpriteMask's custom range has to straddle the preview
-                // sorting order. A collapsed range at the preview's order
-                // rejects renderers using the real piece Shader Graph
-                // material on some URP versions, leaving only the backing
-                // visible through an opened shutter.
-                previewMask.backSortingOrder = config.boxSortingOrder - 4;
+                // SpriteMask's custom range has to straddle the preview base
+                // and ice-overlay sorting orders. A collapsed range rejects
+                // renderers using Shader Graph materials on some URP versions,
+                // leaving only the backing visible through an opened shutter.
+                previewMask.backSortingOrder = config.boxSortingOrder - 6;
                 previewMask.frontSortingOrder = config.boxSortingOrder - 1;
                 previewMask.gameObject.SetActive(true);
             }

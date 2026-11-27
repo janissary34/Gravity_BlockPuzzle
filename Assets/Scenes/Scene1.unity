@@ -9271,12 +9271,24 @@ PrefabInstance:
       value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 1050
+      value: 1186.7425
       objectReference: {fileID: 0}
     - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 278
+      value: 186.898
       objectReference: {fileID: 0}
     - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -10820,12 +10832,24 @@ PrefabInstance:
       value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 1050
+      value: 1186.7425
       objectReference: {fileID: 0}
     - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 278
+      value: 186.898
       objectReference: {fileID: 0}
     - target: {fileID: 801308797400075003, guid: 1352ccef988aa4407a445646db008d47, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -11318,7 +11342,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 4
   m_Sprite: {fileID: 21300000, guid: 2a8ffa1a88d864287a3690a79c814c3a, type: 3}
-  m_Color: {r: 0.03137255, g: 0.02745098, b: 0.13725491, a: 0.9607843}
+  m_Color: {r: 0.01, g: 0.01, b: 0.045, a: 0.985}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
