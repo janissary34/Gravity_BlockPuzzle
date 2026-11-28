@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using GravityPuzzle.Config;
+using GravityPuzzle.Gameplay.Pieces;
 using UnityEditor;
 using UnityEngine;
 
@@ -25,6 +26,7 @@ namespace GravityPuzzle.Editor
         private const float SidebarWidth = 310f;
         private const float ToolbarHeight = 38f;
         private const string PreviewPathKey = "GravityPuzzle.PreviewLevelPath";
+        private const string PieceVisualConfigPath = "Assets/PieceVisualConfig.asset";
 
         // Editor-only source of truth for the palette preview and generated pieces.
         private static readonly CommonPieceTemplate[] CommonPieceTemplates =
@@ -85,6 +87,9 @@ namespace GravityPuzzle.Editor
         private bool validationIsCurrent;
         private readonly List<string> validationMessages = new List<string>();
         private static readonly Color InactiveMapShapeColor = new Color(1f, .22f, .58f);
+        private PieceVisualConfig cachedVisualConfig;
+        private string[] cachedPaletteIds = System.Array.Empty<string>();
+        private string[] cachedPaletteLabels = System.Array.Empty<string>();
 
         [MenuItem("Gravity Puzzle/Level Editor")]
         private static void Open()
@@ -744,11 +749,7 @@ namespace GravityPuzzle.Editor
                 GUILayout.Label("Selected Piece", EditorStyles.boldLabel);
                 string newName = EditorGUILayout.TextField("Name", piece.name);
                 Color newColor = EditorGUILayout.ColorField("Color", piece.color);
-                string newPaletteId = EditorGUILayout.TextField(
-                    new GUIContent("Material Palette", "PieceVisualConfig palette ID; changing Color selects the matching palette."),
-                    piece.paletteId);
-                if (newColor != piece.color)
-                    newPaletteId = PiecePaletteMigration.ResolvePaletteId(newColor);
+                string newPaletteId = DrawPiecePaletteSelector(ref newColor, piece.paletteId, newColor != piece.color);
                 string newVisualId = EditorGUILayout.TextField(
                     new GUIContent("Visual Id", "Optional key resolved through Piece Visual Config."),
                     piece.visualId);
@@ -1075,6 +1076,87 @@ namespace GravityPuzzle.Editor
                 }
                 GUILayout.EndHorizontal();
             }
+        }
+
+        private void EnsurePaletteOptionsLoaded()
+        {
+            if (cachedVisualConfig == null)
+                cachedVisualConfig = AssetDatabase.LoadAssetAtPath<PieceVisualConfig>(PieceVisualConfigPath);
+
+            int count = cachedVisualConfig != null ? cachedVisualConfig.PaletteDefinitions.Count : 0;
+            if (cachedPaletteIds.Length == count + 1)
+                return;
+
+            cachedPaletteIds = new string[count + 1];
+            cachedPaletteLabels = new string[count + 1];
+            for (int index = 0; index < count; index++)
+            {
+                string id = cachedVisualConfig.PaletteDefinitions[index].PaletteId;
+                cachedPaletteIds[index] = id;
+                cachedPaletteLabels[index] = id;
+            }
+
+            cachedPaletteIds[count] = null;
+            cachedPaletteLabels[count] = "Custom / Manual";
+        }
+
+        private string DrawPiecePaletteSelector(ref Color color, string currentPaletteId, bool colorChanged)
+        {
+            string resolvedPalette = colorChanged
+                ? PiecePaletteMigration.ResolvePaletteId(color)
+                : (currentPaletteId ?? string.Empty);
+
+            EnsurePaletteOptionsLoaded();
+            int customIndex = cachedPaletteIds.Length - 1;
+            int currentIndex = customIndex;
+            for (int index = 0; index < customIndex; index++)
+            {
+                if (string.Equals(cachedPaletteIds[index], resolvedPalette, System.StringComparison.Ordinal))
+                {
+                    currentIndex = index;
+                    break;
+                }
+            }
+
+            int chosenIndex = EditorGUILayout.Popup(
+                new GUIContent("Material Palette", "PieceVisualConfig palette ID rendered in Play Mode."),
+                currentIndex,
+                cachedPaletteLabels);
+            if (chosenIndex != currentIndex)
+            {
+                if (chosenIndex >= 0 && chosenIndex < customIndex)
+                {
+                    resolvedPalette = cachedPaletteIds[chosenIndex] ?? string.Empty;
+                    if (cachedVisualConfig != null &&
+                        cachedVisualConfig.TryGetPaletteMaterial(resolvedPalette, out Material material))
+                    {
+                        color = RuntimePieceFactory.ResolvePresentationMaterialColor(material, color);
+                    }
+                }
+                else
+                {
+                    resolvedPalette = string.Empty;
+                }
+            }
+
+            if (chosenIndex == customIndex)
+            {
+                resolvedPalette = EditorGUILayout.TextField(
+                    new GUIContent("Custom Palette ID", "Manual PieceVisualConfig palette ID or leave blank for Color tint."),
+                    resolvedPalette);
+            }
+
+            string suggestedPalette = PiecePaletteMigration.ResolvePaletteId(color);
+            if (!string.Equals(suggestedPalette, resolvedPalette, System.StringComparison.Ordinal))
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField($"Color suggests '{suggestedPalette}'", EditorStyles.miniLabel);
+                if (GUILayout.Button($"Use {suggestedPalette}", GUILayout.Width(118f)))
+                    resolvedPalette = suggestedPalette;
+                EditorGUILayout.EndHorizontal();
+            }
+
+            return resolvedPalette;
         }
 
         private bool CanCombineSelectedPieces()

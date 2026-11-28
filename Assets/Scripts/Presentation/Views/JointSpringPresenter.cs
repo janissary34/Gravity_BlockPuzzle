@@ -53,6 +53,23 @@ namespace GravityPuzzle.Presentation.Views
         private readonly List<FeedingSpring> feedingSprings = new List<FeedingSpring>();
         private readonly List<JointSpringView> releasingSprings = new List<JointSpringView>();
         private Transform releaseParent;
+        private int configuredPoolCapacity;
+        private bool loggedPoolExhaustion;
+
+        public static int ResolveRequiredSpringCapacity(GravityLevelDefinition level)
+        {
+            if (level == null || level.joints == null)
+                return 0;
+
+            int jointCount = 0;
+            for (int i = 0; i < level.joints.Count; i++)
+            {
+                if (level.joints[i] != null)
+                    jointCount++;
+            }
+
+            return jointCount * 2;
+        }
 
 #if UNITY_EDITOR
         private void OnValidate()
@@ -94,7 +111,11 @@ namespace GravityPuzzle.Presentation.Views
 
             Transform parent = poolParent != null ? poolParent : transform;
             releaseParent = parent;
-            JointSpringPool.Configure(springPrefab, parent, prewarmCapacity);
+            int levelCapacity = ResolveRequiredSpringCapacity(level);
+            int graphCapacity = graph != null ? graph.JointCount * 2 : 0;
+            configuredPoolCapacity = Mathf.Max(prewarmCapacity, Mathf.Max(levelCapacity, graphCapacity));
+            loggedPoolExhaustion = false;
+            JointSpringPool.Configure(springPrefab, parent, configuredPoolCapacity);
 
             if (jointGraph != null)
             {
@@ -116,6 +137,8 @@ namespace GravityPuzzle.Presentation.Views
             releasingSprings.Clear();
             jointBuffer.Clear();
             springKeysToRemove.Clear();
+            configuredPoolCapacity = 0;
+            loggedPoolExhaustion = false;
             JointSpringPool.ResetPool();
         }
 
@@ -295,6 +318,13 @@ namespace GravityPuzzle.Presentation.Views
                     }
 
                     activeSpringViews[key] = view;
+                }
+                else if (!loggedPoolExhaustion)
+                {
+                    loggedPoolExhaustion = true;
+                    Debug.LogWarning(
+                        $"[JointSpring] Spring pool exhausted (capacity {configuredPoolCapacity}) while spawning key {key} for joint {joint.Id}.",
+                        this);
                 }
             }
             else

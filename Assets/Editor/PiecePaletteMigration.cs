@@ -100,9 +100,12 @@ namespace GravityPuzzle.Editor
         // Shared by migration and level authoring; runtime consumes explicit IDs.
         public static string ResolvePaletteId(Color source)
         {
-            Color.RGBToHSV(source, out float hue, out float saturation, out _);
+            Color.RGBToHSV(source, out float hue, out float saturation, out float value);
+            if (value < .18f || (value < .28f && saturation < .25f))
+                return "Black";
+
             if (saturation < .12f)
-                return "BlueDark";
+                return value < .5f ? "Black" : "White";
 
             // Legacy levels use lightened source tints, while the final
             // materials are deeply saturated. Map by the deliberately

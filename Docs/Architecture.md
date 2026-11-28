@@ -98,7 +98,16 @@ admission into cells still physically overlapped by active `OpenFreefall` or unc
 (`[DefaultExecutionOrder(0)]`), synchronizes combined blocks in support stacks and
 group retargets (ordered by lowest grid cell Y), defers boundary capture while a
 co-falling joint partner is finishing its tween, and avoids prematurely capturing
-falling pieces high above the board bottom. Within `OpenFreefall`, `BlockShredder`
+falling pieces high above the board bottom. Grid gravity also advances and retargets
+immediately while a drag is active (including on committed fine-grid drag steps and
+`WakeUpGravity`/`FixedUpdate`), and starts newly unsupported pieces in columns
+disjoint from already-animating falls (`gridFallingPieces`) or release snaps
+(`gridReleasePresentationPieces`) without waiting for unrelated falls or the active
+drag to finish. During active drag, `PuzzleDragController` blocks dragging into the
+remaining vertical visual sweep of animating `Falling` pieces (from current transform
+height down to their committed destination) and clamps overhanging sub-cell drag
+remainders after gravity commits, while `CommitDragEnd` canonical release snapping
+remains strictly grid-authoritative. Within `OpenFreefall`, `BlockShredder`
 topologically orders freefall pieces per shared X column (`under` before `above`)
 instead of scalar lowest-Y alone and softly caps unobstructed seam arrivals so
 intersecting/interlocking or tall pieces cannot invert or pop upward on entry. Gravity

@@ -35,14 +35,12 @@ namespace ThreadFever.UI
         private bool _hasOriginalScale;
         private bool _hasOriginalAlpha;
 
-        private void Awake()
-        {
-            CacheRestState();
-        }
-
         private void OnEnable()
         {
             StopPulse();
+            // Capture rest state on first enable rather than Awake: a disabled
+            // pulse component managed by PanelEntrancePresentation may awaken
+            // after the parent entrance has already zeroed its transform scale.
             CacheRestState();
 
             transform.localScale = _originalScale;

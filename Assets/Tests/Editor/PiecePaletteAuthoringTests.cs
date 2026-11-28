@@ -16,6 +16,12 @@ namespace GravityPuzzle.Tests.Editor
         [TestCase(.692f, .3f, 1f, "Purple")]
         [TestCase(1f, .3f, .51f, "Pink")]
         [TestCase(1f, .888f, .3f, "Orange")]
+        [TestCase(0f, 0f, 0f, "Black")]
+        [TestCase(.08f, .08f, .12f, "Black")]
+        [TestCase(.2f, .2f, .2f, "Black")]
+        [TestCase(.128f, .138f, .160f, "Black")]
+        [TestCase(1f, 1f, 1f, "White")]
+        [TestCase(.92f, .92f, .95f, "White")]
         public void LegacyColoursSelectSceneTunaPalette(float r, float g, float b, string expected)
         {
             Assert.That(PiecePaletteMigration.ResolvePaletteId(new Color(r, g, b)), Is.EqualTo(expected));
@@ -30,6 +36,8 @@ namespace GravityPuzzle.Tests.Editor
         [TestCase("BlueDark")]
         [TestCase("Purple")]
         [TestCase("Pink")]
+        [TestCase("Black")]
+        [TestCase("White")]
         public void PaletteMaterialsResolveNonWhiteVoxelColors(string paletteId)
         {
             PieceVisualConfig config = AssetDatabase.LoadAssetAtPath<PieceVisualConfig>("Assets/PieceVisualConfig.asset");
