@@ -18,7 +18,7 @@ MonoBehaviour:
   boardColumns: 9
   boardRows: 10
   subdivisions: 4
-  backgroundColor: {r: 0.19330722, g: 0.19817603, b: 0.2264151, a: 1}
+  backgroundColor: {r: 0.18262728, g: 0.1923579, b: 0.2264151, a: 1}
   frameColor: {r: 0.16, g: 0.18, b: 0.32, a: 1}
   frameThickness: 0.5
   gravityScale: 1.5
@@ -407,7 +407,7 @@ MonoBehaviour:
     tutorialTargetId: 
     visualId: 
     paletteId: Black
-    color: {r: 0, g: 0, b: 0, a: 1}
+    color: {r: 0.20754719, g: 0.17328233, b: 0.17328233, a: 1}
     origin: {x: 0, y: 8}
     quarterTurns: 0
     specialBlockType: 0

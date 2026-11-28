@@ -140,7 +140,7 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SampleGI: 0
-    - _ShineStrength: 0.9
+    - _ShineStrength: 2.6
     - _Shininess: 0
     - _Smoothness: 0.5
     - _SmoothnessSource: 0
@@ -154,11 +154,11 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.015, g: 0.017, b: 0.022, a: 1}
+    - _Color: {r: 0.13, g: 0.15, b: 0.2, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
-    - _ShadowColor: {r: 0.001, g: 0.001, b: 0.002, a: 1}
-    - _ShineColor: {r: 0.04, g: 0.045, b: 0.055, a: 1}
+    - _ShadowColor: {r: 0.035, g: 0.055, b: 0.105, a: 1}
+    - _ShineColor: {r: 0.25, g: 0.27, b: 0.33, a: 1}
     - _SpecColor: {r: 0.6981132, g: 0.6981132, b: 0.6981132, a: 1}
   m_BuildTextureStacks: []

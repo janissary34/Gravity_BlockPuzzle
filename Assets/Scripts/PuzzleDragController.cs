@@ -49,6 +49,8 @@ namespace GravityPuzzle
         private readonly List<PuzzlePiece> completionJointGroupBuffer = new List<PuzzlePiece>();
         private readonly Dictionary<int, bool> coordinatedFallReleaseMode = new Dictionary<int, bool>();
         private readonly List<PuzzlePiece> gravityGroupPieces = new List<PuzzlePiece>();
+        private readonly List<PuzzlePiece> pendingSettleAssertions = new List<PuzzlePiece>();
+        private readonly HashSet<int> settleCheckBlockedColumns = new HashSet<int>();
         private GridCoordinate selectedPieceStartAnchor;
         private bool hasSelectedPieceStartAnchor;
         private GridCoordinate lastCanonicalDragAnchor;
@@ -114,9 +116,12 @@ namespace GravityPuzzle
             if (Instance == null)
                 return;
 
-            Instance.gridFallingPieces.Remove(piece);
+            bool removedFall = Instance.gridFallingPieces.Remove(piece);
+            Instance.pendingSettleAssertions.Remove(piece);
             Instance.coordinatedFallReleaseMode.Remove(piece.SourcePieceId);
             Instance.CancelGridReleasePresentationIfContains(piece);
+            if (removedFall && Instance.pendingSettleAssertions.Count > 0)
+                Instance.hasPendingGravityWakeup = true;
         }
 
         /// <summary>
@@ -152,11 +157,14 @@ namespace GravityPuzzle
             if (Instance == null)
                 return;
 
-            Instance.gridFallingPieces.Remove(piece);
+            bool removedFall = Instance.gridFallingPieces.Remove(piece);
+            Instance.pendingSettleAssertions.Remove(piece);
             Instance.coordinatedFallReleaseMode.Remove(piece.SourcePieceId);
             Instance.CancelGridReleasePresentationIfContains(piece);
             Instance.pendingGridGravityMoves.Clear();
             PrototypeBoard.Active?.TrySetPieceState(piece, PieceState.Placed);
+            if (removedFall && Instance.pendingSettleAssertions.Count > 0)
+                Instance.hasPendingGravityWakeup = true;
         }
 
         /// <summary>
@@ -199,6 +207,8 @@ namespace GravityPuzzle
         private void OnDisable()
         {
             BindBoardEvents(null);
+            pendingSettleAssertions.Clear();
+            settleCheckBlockedColumns.Clear();
 
             if (Instance == this)
                 Instance = null;
@@ -351,6 +361,8 @@ namespace GravityPuzzle
             foreach (PuzzlePiece fallingPiece in gridFallingPieces)
                 fallingPiece.GridFallView?.Cancel();
             gridFallingPieces.Clear();
+            pendingSettleAssertions.Clear();
+            settleCheckBlockedColumns.Clear();
             coordinatedFallReleaseMode.Clear();
             retargetVisitedIds.Clear();
             retargetGroupMoves.Clear();
@@ -500,6 +512,7 @@ namespace GravityPuzzle
                 if (startedAny && selectedPiece != null)
                     ClampSelectedDragPresentationToLegalCells();
 
+                FlushPendingCanonicalSettleAssertions(activeBoard, snapshot);
                 return startedAny || gridFallingPieces.Count > 0;
             }
             finally
@@ -688,9 +701,9 @@ namespace GravityPuzzle
             // Keep columns with an active fall or release snap sequential while
             // letting unrelated disjoint columns start falling immediately.
             foreach (PuzzlePiece fallingPiece in gridFallingPieces)
-                SeedPieceGroupColumnsIntoBatch(activeBoard, snapshot, fallingPiece);
+                SeedPieceGroupColumnsIntoSet(activeBoard, snapshot, fallingPiece, gravityBatchColumns);
             for (int index = 0; index < gridReleasePresentationPieces.Count; index++)
-                SeedPieceGroupColumnsIntoBatch(activeBoard, snapshot, gridReleasePresentationPieces[index]);
+                SeedPieceGroupColumnsIntoSet(activeBoard, snapshot, gridReleasePresentationPieces[index], gravityBatchColumns);
 
             bool committedAny = false;
             while (TryCommitIndependentGravityGroup(activeBoard, snapshot))
@@ -698,18 +711,19 @@ namespace GravityPuzzle
             return committedAny;
         }
 
-        private void SeedPieceGroupColumnsIntoBatch(
+        private void SeedPieceGroupColumnsIntoSet(
             PrototypeBoard board,
             LevelBoardSnapshot snapshot,
-            PuzzlePiece piece)
+            PuzzlePiece piece,
+            HashSet<int> targetColumns)
         {
-            if (piece == null)
+            if (piece == null || targetColumns == null)
                 return;
 
             board.CollectJointGroupPieces(piece, gravityGroupPieces);
             if (gravityGroupPieces.Count == 0)
             {
-                AddPieceColumnsToGravityBatch(snapshot, piece.SourcePieceId);
+                AddPieceColumnsToSet(snapshot, piece.SourcePieceId, targetColumns);
                 return;
             }
 
@@ -717,17 +731,20 @@ namespace GravityPuzzle
             {
                 PuzzlePiece member = gravityGroupPieces[index];
                 if (member != null)
-                    AddPieceColumnsToGravityBatch(snapshot, member.SourcePieceId);
+                    AddPieceColumnsToSet(snapshot, member.SourcePieceId, targetColumns);
             }
         }
 
-        private void AddPieceColumnsToGravityBatch(LevelBoardSnapshot snapshot, int sourcePieceId)
+        private static void AddPieceColumnsToSet(
+            LevelBoardSnapshot snapshot,
+            int sourcePieceId,
+            HashSet<int> targetColumns)
         {
-            if (!snapshot.TryGetPiece(sourcePieceId, out PieceModel model))
+            if (snapshot == null || targetColumns == null || !snapshot.TryGetPiece(sourcePieceId, out PieceModel model))
                 return;
 
             for (int cellIndex = 0; cellIndex < model.LocalCells.Count; cellIndex++)
-                gravityBatchColumns.Add(model.GetWorldCell(cellIndex).X);
+                targetColumns.Add(model.GetWorldCell(cellIndex).X);
         }
 
         private bool TryCommitIndependentGravityGroup(
@@ -856,11 +873,7 @@ namespace GravityPuzzle
 
                 for (int index = 0; index < selectedJointGravityMoves.Count; index++)
                 {
-                    if (snapshot.TryGetPiece(selectedJointGravityMoves[index].PieceId, out PieceModel member))
-                    {
-                        for (int cellIndex = 0; cellIndex < member.LocalCells.Count; cellIndex++)
-                            gravityBatchColumns.Add(member.GetWorldCell(cellIndex).X);
-                    }
+                    AddPieceColumnsToSet(snapshot, selectedJointGravityMoves[index].PieceId, gravityBatchColumns);
                     pendingGridGravityMoves.Enqueue(selectedJointGravityMoves[index]);
                 }
                 return true;
@@ -1155,7 +1168,7 @@ namespace GravityPuzzle
             SnapPieceToCommittedGridPosition(piece);
             PrototypeBoard board = PrototypeBoard.Active;
             board?.TrySetPieceState(piece, PieceState.Placed);
-            AssertCanonicalRestingAnchorIfApplicable(piece, "gravity settle");
+            QueueCanonicalSettleAssertion(piece);
 
             // When a combined block lands together, wait until every sibling in the
             // same fall batch finishes its tween before capturing into the shredder or
@@ -2140,8 +2153,11 @@ namespace GravityPuzzle
                 return;
 
             piece.GridFallView?.Cancel();
-            gridFallingPieces.Remove(piece);
+            bool removedFall = gridFallingPieces.Remove(piece);
+            pendingSettleAssertions.Remove(piece);
             CancelGridReleasePresentationIfContains(piece);
+            if (removedFall && pendingSettleAssertions.Count > 0)
+                hasPendingGravityWakeup = true;
         }
 
         private void ReleasePiece()
@@ -2569,6 +2585,98 @@ namespace GravityPuzzle
         private static int AlignmentStride(GravityLevelDefinition level)
         {
             return level != null ? Mathf.Max(1, level.subdivisions) : 1;
+        }
+
+        private void QueueCanonicalSettleAssertion(PuzzlePiece piece)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (piece == null || ContainsPieceReference(pendingSettleAssertions, piece))
+                return;
+
+            pendingSettleAssertions.Add(piece);
+#endif
+        }
+
+        private void FlushPendingCanonicalSettleAssertions(
+            PrototypeBoard board,
+            LevelBoardSnapshot snapshot)
+        {
+            if (pendingSettleAssertions.Count == 0 || board == null || snapshot == null)
+                return;
+
+            settleCheckBlockedColumns.Clear();
+            foreach (PuzzlePiece fallingPiece in gridFallingPieces)
+                SeedPieceGroupColumnsIntoSet(board, snapshot, fallingPiece, settleCheckBlockedColumns);
+            for (int index = 0; index < gridReleasePresentationPieces.Count; index++)
+                SeedPieceGroupColumnsIntoSet(board, snapshot, gridReleasePresentationPieces[index], settleCheckBlockedColumns);
+
+            for (int index = pendingSettleAssertions.Count - 1; index >= 0; index--)
+            {
+                PuzzlePiece candidate = pendingSettleAssertions[index];
+                if (candidate == null || !candidate.gameObject.activeInHierarchy ||
+                    candidate.IsShredderInteractionLocked ||
+                    !board.TryGetPieceModel(candidate, out PieceModel model) ||
+                    !model.IsOnBoard ||
+                    model.State != PieceState.Placed)
+                {
+                    pendingSettleAssertions.RemoveAt(index);
+                    continue;
+                }
+
+                if (HasFallingJointPartner(board, candidate) ||
+                    DoesPieceGroupOverlapColumns(board, snapshot, candidate, settleCheckBlockedColumns))
+                {
+                    continue;
+                }
+
+                pendingSettleAssertions.RemoveAt(index);
+                AssertCanonicalRestingAnchorIfApplicable(candidate, "gravity settle");
+            }
+        }
+
+        private bool DoesPieceGroupOverlapColumns(
+            PrototypeBoard board,
+            LevelBoardSnapshot snapshot,
+            PuzzlePiece piece,
+            HashSet<int> columns)
+        {
+            if (piece == null || columns == null || columns.Count == 0)
+                return false;
+
+            completionJointGroupBuffer.Clear();
+            board.CollectJointGroupPieces(piece, completionJointGroupBuffer);
+            if (completionJointGroupBuffer.Count == 0)
+                return DoesPieceOverlapColumns(snapshot, piece.SourcePieceId, columns);
+
+            for (int index = 0; index < completionJointGroupBuffer.Count; index++)
+            {
+                PuzzlePiece member = completionJointGroupBuffer[index];
+                if (member != null && DoesPieceOverlapColumns(snapshot, member.SourcePieceId, columns))
+                {
+                    completionJointGroupBuffer.Clear();
+                    return true;
+                }
+            }
+
+            completionJointGroupBuffer.Clear();
+            return false;
+        }
+
+        private static bool DoesPieceOverlapColumns(
+            LevelBoardSnapshot snapshot,
+            int sourcePieceId,
+            HashSet<int> columns)
+        {
+            if (snapshot == null || columns == null || !snapshot.TryGetPiece(sourcePieceId, out PieceModel model))
+                return false;
+
+            for (int cellIndex = 0; cellIndex < model.LocalCells.Count; cellIndex++)
+            {
+                if (columns.Contains(model.GetWorldCell(cellIndex).X))
+                    return true;
+            }
+
+            return false;
         }
 
         private static void AssertCanonicalRestingGroupInvariant(
